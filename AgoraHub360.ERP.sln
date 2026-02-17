@@ -1,12 +1,78 @@
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version
-VisualStudioVersion = 17.0.31919.168
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-"Project" = "{d213d6a7-23ba-4070-871d-d967745b7490}", "AgoraHub360.ERP.Domain\AgoraHub360.ERP.Domain.csproj", "{Guid}"
-"Project" = "{e4628052-d2a5-4bc6-aa1b-3ed5aeaa343c}", "AgoraHub360.ERP.Application\AgoraHub360.ERP.Application.csproj", "{Guid}"
-"Project" = "{c58eedd9-e8c3-47ce-8e63-ed57c0543bb6}", "AgoraHub360.ERP.Persistence\AgoraHub360.ERP.Persistence.csproj", "{Guid}"
-"Project" = "{0e561c64-39f8-4b68-b9d1-37114a8f2c43}", "AgoraHub360.ERP.Infrastructure\AgoraHub360.ERP.Infrastructure.csproj", "{Guid}"
-"Project" = "{5a772514-4bb6-4c08-8a93-1ac89469d34d}", "AgoraHub360.ERP.Api\AgoraHub360.ERP.Api.csproj", "{Guid}"
-"Project" = "{4154f736-ef6d-4eac-b2f6-b6f1e6c2e41a}", "AgoraHub360.ERP.Web\AgoraHub360.ERP.Web.csproj", "{Guid}"
-"Project" = "{bc0caaed-207d-4c2b-8fa2-c3c3157e1d07}", "AgoraHub360.ERP.Shared\AgoraHub360.ERP.Shared.csproj", "{Guid}"
-"Project" = "{d8ef73e9-0287-49c2-9c46-418513c21da0}", "AgoraHub360.ERP.Tests\AgoraHub360.ERP.Tests.csproj", "{Guid}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{1DF1F44A-C4AC-4779-A1FF-7C0227FBC72B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgoraHub360.ERP.Domain", "src\AgoraHub360.ERP.Domain\AgoraHub360.ERP.Domain.csproj", "{13177927-2A17-4583-A26F-F127F71F08A5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgoraHub360.ERP.Application", "src\AgoraHub360.ERP.Application\AgoraHub360.ERP.Application.csproj", "{393FB6C7-3362-4982-A3F4-A8C9EFADDEA3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgoraHub360.ERP.Persistence", "src\AgoraHub360.ERP.Persistence\AgoraHub360.ERP.Persistence.csproj", "{D8AC9281-5271-421F-A8BF-40A3C30CEE02}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgoraHub360.ERP.Infrastructure", "src\AgoraHub360.ERP.Infrastructure\AgoraHub360.ERP.Infrastructure.csproj", "{A0B1F3E3-96C5-49F7-92B4-D117D94E260D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgoraHub360.ERP.Api", "src\AgoraHub360.ERP.Api\AgoraHub360.ERP.Api.csproj", "{AAE350BB-314C-42C4-9EBF-DCBAFC306A75}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgoraHub360.ERP.Web", "src\AgoraHub360.ERP.Web\AgoraHub360.ERP.Web.csproj", "{24CC3E2B-FA38-40E2-B618-D2FF5710F9E1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgoraHub360.ERP.Shared", "src\AgoraHub360.ERP.Shared\AgoraHub360.ERP.Shared.csproj", "{FD7308D9-ACF2-4A81-BF22-227EB69100B0}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{E62857B2-1A77-47A0-90FF-680F338DF843}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AgoraHub360.ERP.Tests", "tests\AgoraHub360.ERP.Tests\AgoraHub360.ERP.Tests.csproj", "{F2FABFA5-5667-4BB8-BC8A-98525C2D5C73}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{13177927-2A17-4583-A26F-F127F71F08A5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{13177927-2A17-4583-A26F-F127F71F08A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{13177927-2A17-4583-A26F-F127F71F08A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{13177927-2A17-4583-A26F-F127F71F08A5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{393FB6C7-3362-4982-A3F4-A8C9EFADDEA3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{393FB6C7-3362-4982-A3F4-A8C9EFADDEA3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{393FB6C7-3362-4982-A3F4-A8C9EFADDEA3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{393FB6C7-3362-4982-A3F4-A8C9EFADDEA3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D8AC9281-5271-421F-A8BF-40A3C30CEE02}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D8AC9281-5271-421F-A8BF-40A3C30CEE02}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D8AC9281-5271-421F-A8BF-40A3C30CEE02}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D8AC9281-5271-421F-A8BF-40A3C30CEE02}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A0B1F3E3-96C5-49F7-92B4-D117D94E260D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A0B1F3E3-96C5-49F7-92B4-D117D94E260D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A0B1F3E3-96C5-49F7-92B4-D117D94E260D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A0B1F3E3-96C5-49F7-92B4-D117D94E260D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AAE350BB-314C-42C4-9EBF-DCBAFC306A75}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AAE350BB-314C-42C4-9EBF-DCBAFC306A75}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AAE350BB-314C-42C4-9EBF-DCBAFC306A75}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AAE350BB-314C-42C4-9EBF-DCBAFC306A75}.Release|Any CPU.Build.0 = Release|Any CPU
+		{24CC3E2B-FA38-40E2-B618-D2FF5710F9E1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{24CC3E2B-FA38-40E2-B618-D2FF5710F9E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{24CC3E2B-FA38-40E2-B618-D2FF5710F9E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{24CC3E2B-FA38-40E2-B618-D2FF5710F9E1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FD7308D9-ACF2-4A81-BF22-227EB69100B0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FD7308D9-ACF2-4A81-BF22-227EB69100B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FD7308D9-ACF2-4A81-BF22-227EB69100B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FD7308D9-ACF2-4A81-BF22-227EB69100B0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F2FABFA5-5667-4BB8-BC8A-98525C2D5C73}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F2FABFA5-5667-4BB8-BC8A-98525C2D5C73}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F2FABFA5-5667-4BB8-BC8A-98525C2D5C73}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F2FABFA5-5667-4BB8-BC8A-98525C2D5C73}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{13177927-2A17-4583-A26F-F127F71F08A5} = {1DF1F44A-C4AC-4779-A1FF-7C0227FBC72B}
+		{393FB6C7-3362-4982-A3F4-A8C9EFADDEA3} = {1DF1F44A-C4AC-4779-A1FF-7C0227FBC72B}
+		{D8AC9281-5271-421F-A8BF-40A3C30CEE02} = {1DF1F44A-C4AC-4779-A1FF-7C0227FBC72B}
+		{A0B1F3E3-96C5-49F7-92B4-D117D94E260D} = {1DF1F44A-C4AC-4779-A1FF-7C0227FBC72B}
+		{AAE350BB-314C-42C4-9EBF-DCBAFC306A75} = {1DF1F44A-C4AC-4779-A1FF-7C0227FBC72B}
+		{24CC3E2B-FA38-40E2-B618-D2FF5710F9E1} = {1DF1F44A-C4AC-4779-A1FF-7C0227FBC72B}
+		{FD7308D9-ACF2-4A81-BF22-227EB69100B0} = {1DF1F44A-C4AC-4779-A1FF-7C0227FBC72B}
+		{F2FABFA5-5667-4BB8-BC8A-98525C2D5C73} = {E62857B2-1A77-47A0-90FF-680F338DF843}
+	EndGlobalSection
+EndGlobal
