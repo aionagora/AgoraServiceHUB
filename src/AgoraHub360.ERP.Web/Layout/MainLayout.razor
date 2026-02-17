@@ -1,4 +1,5 @@
 @inherits LayoutComponentBase
+@using System.Security.Claims
 @inject EmpresaHttpService EmpresaSvc
 @inject EmpresaStateService EmpresaState
 @inject JwtAuthStateProvider AuthState
@@ -38,16 +39,53 @@
                         }
                     </select>
                 </div>
+                
+                <!-- Menú de Usuario -->
                 <AuthorizeView>
                     <Authorized>
-                        <span class="user-info">
-                            <i class="bi bi-person-circle"></i>
-                            @context.User.Identity?.Name
-                        </span>
-                        <button class="btn btn-outline-light btn-sm ms-2" @onclick="LogoutAsync" title="Cerrar sesión">
-                            <i class="bi bi-box-arrow-right"></i>
-                        </button>
+                        <div class="user-menu">
+                            <button class="user-menu-toggle" @onclick="ToggleUserMenu">
+                                <i class="bi bi-person-circle"></i>
+                                <span class="user-name">@context.User.Identity?.Name</span>
+                                <i class="bi bi-chevron-down ms-1"></i>
+                            </button>
+                            
+                            @if (_showUserMenu)
+                            {
+                                <div class="user-dropdown">
+                                    <div class="user-dropdown-header">
+                                        <div class="user-avatar">
+                                            <i class="bi bi-person-circle"></i>
+                                        </div>
+                                        <div class="user-details">
+                                            <div class="user-name-full">@context.User.Identity?.Name</div>
+                                            <div class="user-email">@GetUserEmail(context.User)</div>
+                                        </div>
+                                    </div>
+                                    <div class="user-dropdown-divider"></div>
+                                    <a href="/perfil" class="user-dropdown-item" @onclick="CloseUserMenu">
+                                        <i class="bi bi-person"></i>
+                                        <span>Mi Perfil</span>
+                                    </a>
+                                    <a href="/config/usuarios" class="user-dropdown-item" @onclick="CloseUserMenu">
+                                        <i class="bi bi-gear"></i>
+                                        <span>Configuración</span>
+                                    </a>
+                                    <div class="user-dropdown-divider"></div>
+                                    <button class="user-dropdown-item logout" @onclick="HandleLogout">
+                                        <i class="bi bi-box-arrow-right"></i>
+                                        <span>Cerrar Sesión</span>
+                                    </button>
+                                </div>
+                            }
+                        </div>
                     </Authorized>
+                    <NotAuthorized>
+                        <a href="/login" class="btn btn-primary btn-sm">
+                            <i class="bi bi-box-arrow-in-right me-1"></i>
+                            Iniciar Sesión
+                        </a>
+                    </NotAuthorized>
                 </AuthorizeView>
             </div>
         </header>
@@ -60,6 +98,7 @@
 
 @code {
     private bool SidebarCollapsed { get; set; }
+    private bool _showUserMenu { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -106,10 +145,37 @@
         SidebarCollapsed = !SidebarCollapsed;
     }
 
+    private void ToggleUserMenu()
+    {
+        _showUserMenu = !_showUserMenu;
+    }
+
+    private void CloseUserMenu()
+    {
+        _showUserMenu = false;
+    }
+
+    private async Task HandleLogout()
+    {
+        _showUserMenu = false;
+        await LogoutAsync();
+    }
+
     private async Task LogoutAsync()
     {
+        // Limpiar el estado de la empresa
+        await EmpresaState.ClearAsync();
+        
+        // Cerrar sesión
         await AuthState.LogoutAsync();
-        Nav.NavigateTo("/login", forceLoad: false);
+        
+        // Redirigir al login
+        Nav.NavigateTo("/login", forceLoad: true);
+    }
+
+    private string GetUserEmail(ClaimsPrincipal user)
+    {
+        return user.FindFirst(ClaimTypes.Email)?.Value ?? "Sin email";
     }
 
     public void Dispose()

@@ -29,15 +29,44 @@ public class ParametroHttpService
 
     public async Task<ApiResponse<ParametroSistemaDto>> UpsertAsync(UpsertParametroDto dto)
     {
-        var response = await _http.PostAsJsonAsync(BaseUrl, dto);
-        return await response.Content.ReadFromJsonAsync<ApiResponse<ParametroSistemaDto>>()
-            ?? ApiResponse<ParametroSistemaDto>.Fail("Error de comunicación.");
+        try
+        {
+            var response = await _http.PostAsJsonAsync(BaseUrl, dto);
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                return ApiResponse<ParametroSistemaDto>.Fail(
+                    $"Error HTTP {(int)response.StatusCode}: {errorContent}");
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<ApiResponse<ParametroSistemaDto>>();
+            return result ?? ApiResponse<ParametroSistemaDto>.Fail("Respuesta vacía del servidor.");
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<ParametroSistemaDto>.Fail($"Error de comunicación: {ex.Message}");
+        }
     }
 
     public async Task<ApiResponse<bool>> DeleteAsync(int id)
     {
-        var response = await _http.DeleteAsync($"{BaseUrl}/{id}");
-        return await response.Content.ReadFromJsonAsync<ApiResponse<bool>>()
-            ?? ApiResponse<bool>.Fail("Error de comunicación.");
+        try
+        {
+            var response = await _http.DeleteAsync($"{BaseUrl}/{id}");
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                return ApiResponse<bool>.Fail($"Error HTTP {(int)response.StatusCode}: {errorContent}");
+            }
+
+            var result = await response.Content.ReadFromJsonAsync<ApiResponse<bool>>();
+            return result ?? ApiResponse<bool>.Fail("Respuesta vacía del servidor.");
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<bool>.Fail($"Error de comunicación: {ex.Message}");
+        }
     }
 }

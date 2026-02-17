@@ -10,33 +10,55 @@ public class NumeracionDocumentoService : INumeracionDocumentoService
 {
     private readonly IRepository<NumeracionDocumento> _repository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ICurrentUserService _currentUserService;
 
-    public NumeracionDocumentoService(IRepository<NumeracionDocumento> repository, IUnitOfWork unitOfWork)
+    public NumeracionDocumentoService(
+        IRepository<NumeracionDocumento> repository, 
+        IUnitOfWork unitOfWork,
+        ICurrentUserService currentUserService)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
+        _currentUserService = currentUserService;
     }
 
     public async Task<Result<IReadOnlyList<NumeracionDocumentoDto>>> GetAllAsync(CancellationToken ct = default)
     {
-        var items = await _repository.GetAllAsync(ct);
+        var empresaId = _currentUserService.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<IReadOnlyList<NumeracionDocumentoDto>>.Failure("No se pudo determinar la empresa activa del usuario.");
+
+        var items = await _repository.FindAsync(n => n.EmpresaId == empresaId.Value, ct);
         return Result<IReadOnlyList<NumeracionDocumentoDto>>.Success(
             items.Select(MapToDto).ToList().AsReadOnly());
     }
 
     public async Task<Result<NumeracionDocumentoDto>> GetByIdAsync(int id, CancellationToken ct = default)
     {
+        var empresaId = _currentUserService.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<NumeracionDocumentoDto>.Failure("No se pudo determinar la empresa activa del usuario.");
+
         var entity = await _repository.GetByIdAsync(id, ct);
         if (entity is null)
             return Result<NumeracionDocumentoDto>.Failure("Numeración no encontrada.");
+
+        // Verificar que pertenece a la empresa del usuario
+        if (entity.EmpresaId != empresaId.Value)
+            return Result<NumeracionDocumentoDto>.Failure("No tiene permisos para acceder a esta numeración.");
 
         return Result<NumeracionDocumentoDto>.Success(MapToDto(entity));
     }
 
     public async Task<Result<NumeracionDocumentoDto>> CreateAsync(CreateNumeracionDto dto, CancellationToken ct = default)
     {
-        // Validar unicidad de TipoDocumento en la empresa (filtro global de tenant aplica)
-        var existing = await _repository.FindAsync(n => n.TipoDocumento == dto.TipoDocumento, ct);
+        var empresaId = _currentUserService.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<NumeracionDocumentoDto>.Failure("No se pudo determinar la empresa activa del usuario.");
+
+        // Validar unicidad de TipoDocumento en la empresa
+        var existing = await _repository.FindAsync(
+            n => n.EmpresaId == empresaId.Value && n.TipoDocumento == dto.TipoDocumento, ct);
         if (existing.Any())
             return Result<NumeracionDocumentoDto>.Failure(
                 $"Ya existe una numeración para el tipo '{dto.TipoDocumento}' en esta empresa.");
@@ -47,7 +69,9 @@ public class NumeracionDocumentoService : INumeracionDocumentoService
             Descripcion = dto.Descripcion,
             Prefijo = dto.Prefijo,
             SiguienteNumero = dto.SiguienteNumero,
-            Digitos = dto.Digitos
+            Digitos = dto.Digitos,
+            EmpresaId = empresaId.Value,
+            Activo = true
         };
 
         await _repository.AddAsync(entity, ct);
@@ -58,9 +82,17 @@ public class NumeracionDocumentoService : INumeracionDocumentoService
 
     public async Task<Result<NumeracionDocumentoDto>> UpdateAsync(int id, UpdateNumeracionDto dto, CancellationToken ct = default)
     {
+        var empresaId = _currentUserService.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<NumeracionDocumentoDto>.Failure("No se pudo determinar la empresa activa del usuario.");
+
         var entity = await _repository.GetByIdAsync(id, ct);
         if (entity is null)
             return Result<NumeracionDocumentoDto>.Failure("Numeración no encontrada.");
+
+        // Verificar que pertenece a la empresa del usuario
+        if (entity.EmpresaId != empresaId.Value)
+            return Result<NumeracionDocumentoDto>.Failure("No tiene permisos para modificar esta numeración.");
 
         entity.Descripcion = dto.Descripcion;
         entity.Prefijo = dto.Prefijo;
@@ -76,9 +108,17 @@ public class NumeracionDocumentoService : INumeracionDocumentoService
 
     public async Task<Result<bool>> DeleteAsync(int id, CancellationToken ct = default)
     {
+        var empresaId = _currentUserService.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<bool>.Failure("No se pudo determinar la empresa activa del usuario.");
+
         var entity = await _repository.GetByIdAsync(id, ct);
         if (entity is null)
             return Result<bool>.Failure("Numeración no encontrada.");
+
+        // Verificar que pertenece a la empresa del usuario
+        if (entity.EmpresaId != empresaId.Value)
+            return Result<bool>.Failure("No tiene permisos para eliminar esta numeración.");
 
         await _repository.DeleteAsync(entity, ct);
         await _unitOfWork.SaveChangesAsync(ct);
