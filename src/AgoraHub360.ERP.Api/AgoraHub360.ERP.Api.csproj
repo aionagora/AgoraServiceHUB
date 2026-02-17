@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.24" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AgoraHub360.ERP.Application\AgoraHub360.ERP.Application.csproj" />
+    <ProjectReference Include="..\AgoraHub360.ERP.Persistence\AgoraHub360.ERP.Persistence.csproj" />
+    <ProjectReference Include="..\AgoraHub360.ERP.Infrastructure\AgoraHub360.ERP.Infrastructure.csproj" />
+    <ProjectReference Include="..\AgoraHub360.ERP.Shared\AgoraHub360.ERP.Shared.csproj" />
+  </ItemGroup>
+
+</Project>
