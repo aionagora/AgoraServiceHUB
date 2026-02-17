@@ -33,6 +33,7 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<UsuarioEmpresa> UsuarioEmpresas => Set<UsuarioEmpresa>();
     public DbSet<Moneda> Monedas => Set<Moneda>();
+    public DbSet<Rol> Roles => Set<Rol>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
