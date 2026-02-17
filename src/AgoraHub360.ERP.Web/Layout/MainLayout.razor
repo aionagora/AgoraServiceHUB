@@ -119,7 +119,8 @@
     {
         try
         {
-            var empresas = await EmpresaSvc.GetAllAsync();
+            // Cargar solo las empresas asignadas al usuario (Admin ve todas)
+            var empresas = await EmpresaSvc.GetMisEmpresasAsync();
             EmpresaState.SetEmpresas(empresas);
         }
         catch

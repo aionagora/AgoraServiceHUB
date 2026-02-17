@@ -2,6 +2,7 @@ namespace AgoraHub360.ERP.Api.Controllers.V1;
 
 using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Shared.DTOs;
+using AgoraHub360.ERP.Shared.DTOs.Empresa;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,10 +13,17 @@ using Microsoft.AspNetCore.Mvc;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
+    private readonly IUsuarioService _usuarioService;
+    private readonly IEmpresaService _empresaService;
 
-    public AuthController(IAuthService authService)
+    public AuthController(
+        IAuthService authService,
+        IUsuarioService usuarioService,
+        IEmpresaService empresaService)
     {
         _authService = authService;
+        _usuarioService = usuarioService;
+        _empresaService = empresaService;
     }
 
     /// <summary>
@@ -56,5 +64,41 @@ public class AuthController : ControllerBase
         };
 
         return Ok(ApiResponse<object>.Ok(info));
+    }
+
+    /// <summary>
+    /// Devuelve las empresas asignadas al usuario autenticado.
+    /// Si el usuario tiene rol Admin, devuelve todas las empresas del sistema.
+    /// </summary>
+    [HttpGet("mis-empresas")]
+    [Authorize]
+    public async Task<IActionResult> MisEmpresas(CancellationToken ct)
+    {
+        var rol = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+        var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        // Admin del sistema ve todas las empresas
+        if (string.Equals(rol, "Admin", StringComparison.OrdinalIgnoreCase))
+        {
+            var allResult = await _empresaService.GetAllAsync(ct);
+            return Ok(ApiResponse<IReadOnlyList<EmpresaDto>>.Ok(allResult.Value!));
+        }
+
+        // Usuarios normales solo ven sus empresas asignadas
+        if (!int.TryParse(userIdStr, out var userId))
+            return Unauthorized(ApiResponse<IReadOnlyList<EmpresaDto>>.Fail("Usuario no identificado."));
+
+        var asignaciones = await _usuarioService.GetEmpresasAsignadasAsync(userId, ct);
+        if (!asignaciones.IsSuccess)
+            return BadRequest(ApiResponse<IReadOnlyList<EmpresaDto>>.Fail(asignaciones.Error!));
+
+        // Convertir UsuarioEmpresaRolDto a EmpresaDto obteniendo los datos completos
+        var empresaIds = asignaciones.Value!.Select(a => a.EmpresaId).ToHashSet();
+        var todasEmpresas = await _empresaService.GetAllAsync(ct);
+        var misEmpresas = todasEmpresas.Value!
+            .Where(e => empresaIds.Contains(e.Id))
+            .ToList() as IReadOnlyList<EmpresaDto>;
+
+        return Ok(ApiResponse<IReadOnlyList<EmpresaDto>>.Ok(misEmpresas));
     }
 }
