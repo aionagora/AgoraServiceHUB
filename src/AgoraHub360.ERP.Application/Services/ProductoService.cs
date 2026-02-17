@@ -4,7 +4,7 @@ using AgoraHub360.ERP.Application.Common;
 using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Interfaces;
-using AgoraHub360.ERP.Shared.DTOs.MDM;
+using AgoraHub360.ERP.Shared.DTOs.Producto;
 
 public class ProductoService : IProductoService
 {
@@ -30,9 +30,14 @@ public class ProductoService : IProductoService
 
     public async Task<Result<IReadOnlyList<ProductoDto>>> GetAllAsync(CancellationToken ct = default)
     {
-        var items = await _repository.GetAllAsync(ct);
-        var categorias = await _categoriaRepo.GetAllAsync(ct);
-        var unidades = await _unidadRepo.GetAllAsync(ct);
+        var empresaId = _currentUser.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<IReadOnlyList<ProductoDto>>.Failure("No se pudo determinar la empresa activa.");
+
+        var items = await _repository.FindAsync(p => p.EmpresaId == empresaId.Value, ct);
+        var categorias = await _categoriaRepo.FindAsync(c => c.EmpresaId == empresaId.Value, ct);
+        var unidades = await _unidadRepo.FindAsync(u => u.EmpresaId == empresaId.Value, ct);
+        
         var catMap = categorias.ToDictionary(c => c.Id, c => c.Nombre);
         var uniMap = unidades.ToDictionary(u => u.Id, u => u.Nombre);
 
@@ -42,12 +47,20 @@ public class ProductoService : IProductoService
 
     public async Task<Result<ProductoDto>> GetByIdAsync(int id, CancellationToken ct = default)
     {
+        var empresaId = _currentUser.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<ProductoDto>.Failure("No se pudo determinar la empresa activa.");
+
         var entity = await _repository.GetByIdAsync(id, ct);
         if (entity is null)
             return Result<ProductoDto>.Failure($"Producto con Id {id} no encontrado.");
 
-        var categorias = await _categoriaRepo.GetAllAsync(ct);
-        var unidades = await _unidadRepo.GetAllAsync(ct);
+        if (entity.EmpresaId != empresaId.Value)
+            return Result<ProductoDto>.Failure("No tiene permisos para acceder a este producto.");
+
+        var categorias = await _categoriaRepo.FindAsync(c => c.EmpresaId == empresaId.Value, ct);
+        var unidades = await _unidadRepo.FindAsync(u => u.EmpresaId == empresaId.Value, ct);
+        
         var catMap = categorias.ToDictionary(c => c.Id, c => c.Nombre);
         var uniMap = unidades.ToDictionary(u => u.Id, u => u.Nombre);
 
@@ -63,22 +76,18 @@ public class ProductoService : IProductoService
         // Validar código único
         var byCodigo = await _repository.FindAsync(
             p => p.EmpresaId == empresaId.Value && p.Codigo == dto.Codigo, ct);
-        if (byCodigo.Count > 0)
+        if (byCodigo.Any())
             return Result<ProductoDto>.Failure($"Ya existe un producto con código '{dto.Codigo}'.");
 
         // Validar que la categoría existe y pertenece a la empresa
         var categoria = await _categoriaRepo.GetByIdAsync(dto.CategoriaProductoId, ct);
-        if (categoria is null)
-            return Result<ProductoDto>.Failure($"Categoría con Id {dto.CategoriaProductoId} no encontrada.");
+        if (categoria is null || categoria.EmpresaId != empresaId.Value)
+            return Result<ProductoDto>.Failure("Categoría no encontrada o no pertenece a su empresa.");
 
         // Validar que la unidad de medida existe y pertenece a la empresa
         var unidad = await _unidadRepo.GetByIdAsync(dto.UnidadMedidaId, ct);
-        if (unidad is null)
-            return Result<ProductoDto>.Failure($"Unidad de medida con Id {dto.UnidadMedidaId} no encontrada.");
-
-        // Validar precios
-        if (dto.PrecioVenta < dto.PrecioCompra)
-            return Result<ProductoDto>.Failure("El precio de venta no puede ser menor al precio de compra.");
+        if (unidad is null || unidad.EmpresaId != empresaId.Value)
+            return Result<ProductoDto>.Failure("Unidad de medida no encontrada o no pertenece a su empresa.");
 
         var entity = new Producto
         {
@@ -94,7 +103,8 @@ public class ProductoService : IProductoService
             TipoProducto = dto.TipoProducto,
             ControlStock = dto.ControlStock,
             CostoBase = dto.CostoBase,
-            EmpresaId = empresaId.Value
+            EmpresaId = empresaId.Value,
+            Activo = true
         };
 
         await _repository.AddAsync(entity, ct);
@@ -108,29 +118,32 @@ public class ProductoService : IProductoService
 
     public async Task<Result<ProductoDto>> UpdateAsync(int id, UpdateProductoDto dto, CancellationToken ct = default)
     {
+        var empresaId = _currentUser.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<ProductoDto>.Failure("No se pudo determinar la empresa activa.");
+
         var entity = await _repository.GetByIdAsync(id, ct);
         if (entity is null)
             return Result<ProductoDto>.Failure($"Producto con Id {id} no encontrado.");
 
+        if (entity.EmpresaId != empresaId.Value)
+            return Result<ProductoDto>.Failure("No tiene permisos para modificar este producto.");
+
         // Validar código único (excluyendo el actual)
         var byCodigo = await _repository.FindAsync(
-            p => p.EmpresaId == entity.EmpresaId && p.Codigo == dto.Codigo && p.Id != id, ct);
-        if (byCodigo.Count > 0)
+            p => p.EmpresaId == empresaId.Value && p.Codigo == dto.Codigo && p.Id != id, ct);
+        if (byCodigo.Any())
             return Result<ProductoDto>.Failure($"Ya existe otro producto con código '{dto.Codigo}'.");
 
         // Validar categoría
         var categoria = await _categoriaRepo.GetByIdAsync(dto.CategoriaProductoId, ct);
-        if (categoria is null)
-            return Result<ProductoDto>.Failure($"Categoría con Id {dto.CategoriaProductoId} no encontrada.");
+        if (categoria is null || categoria.EmpresaId != empresaId.Value)
+            return Result<ProductoDto>.Failure("Categoría no encontrada o no pertenece a su empresa.");
 
         // Validar unidad de medida
         var unidad = await _unidadRepo.GetByIdAsync(dto.UnidadMedidaId, ct);
-        if (unidad is null)
-            return Result<ProductoDto>.Failure($"Unidad de medida con Id {dto.UnidadMedidaId} no encontrada.");
-
-        // Validar precios
-        if (dto.PrecioVenta < dto.PrecioCompra)
-            return Result<ProductoDto>.Failure("El precio de venta no puede ser menor al precio de compra.");
+        if (unidad is null || unidad.EmpresaId != empresaId.Value)
+            return Result<ProductoDto>.Failure("Unidad de medida no encontrada o no pertenece a su empresa.");
 
         entity.Codigo = dto.Codigo;
         entity.Nombre = dto.Nombre;
@@ -157,9 +170,16 @@ public class ProductoService : IProductoService
 
     public async Task<Result<bool>> DeleteAsync(int id, CancellationToken ct = default)
     {
+        var empresaId = _currentUser.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<bool>.Failure("No se pudo determinar la empresa activa.");
+
         var entity = await _repository.GetByIdAsync(id, ct);
         if (entity is null)
             return Result<bool>.Failure($"Producto con Id {id} no encontrado.");
+
+        if (entity.EmpresaId != empresaId.Value)
+            return Result<bool>.Failure("No tiene permisos para eliminar este producto.");
 
         await _repository.DeleteAsync(entity, ct);
         await _unitOfWork.SaveChangesAsync(ct);
@@ -187,6 +207,6 @@ public class ProductoService : IProductoService
         ControlStock = p.ControlStock,
         CostoBase = p.CostoBase,
         Activo = p.Activo,
-        FechaCreacion = p.FechaCreacion
+        EmpresaId = p.EmpresaId
     };
 }

@@ -2,14 +2,14 @@ namespace AgoraHub360.ERP.Api.Controllers.V1;
 
 using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Shared.DTOs;
-using AgoraHub360.ERP.Shared.DTOs.MDM;
+using AgoraHub360.ERP.Shared.DTOs.Cliente;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
 [ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/[controller]")]
+[Route("api/v{version:apiVersion}/clientes")]
 [Authorize]
 public class ClientesController : ControllerBase
 {
@@ -42,7 +42,11 @@ public class ClientesController : ControllerBase
         var result = await _service.CreateAsync(dto, ct);
         if (!result.IsSuccess)
             return BadRequest(ApiResponse<ClienteDto>.Fail(result.Error!));
-        return Ok(ApiResponse<ClienteDto>.Ok(result.Value!, "Cliente creado exitosamente."));
+        
+        return CreatedAtAction(
+            nameof(GetById),
+            new { id = result.Value!.Id },
+            ApiResponse<ClienteDto>.Ok(result.Value!, "Cliente creado exitosamente."));
     }
 
     [HttpPut("{id:int}")]
@@ -50,7 +54,11 @@ public class ClientesController : ControllerBase
     {
         var result = await _service.UpdateAsync(id, dto, ct);
         if (!result.IsSuccess)
+        {
+            if (result.Error!.Contains("no encontrado"))
+                return NotFound(ApiResponse<ClienteDto>.Fail(result.Error!));
             return BadRequest(ApiResponse<ClienteDto>.Fail(result.Error!));
+        }
         return Ok(ApiResponse<ClienteDto>.Ok(result.Value!, "Cliente actualizado exitosamente."));
     }
 

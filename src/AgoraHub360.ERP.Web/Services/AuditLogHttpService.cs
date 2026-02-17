@@ -4,6 +4,8 @@ using System.Net.Http.Json;
 using AgoraHub360.ERP.Shared.DTOs;
 using AgoraHub360.ERP.Shared.DTOs.AuditLog;
 
+using PaginatedResultDtoAudit = AgoraHub360.ERP.Shared.DTOs.AuditLog.PaginatedResultDto<AgoraHub360.ERP.Shared.DTOs.AuditLog.AuditLogDto>;
+
 public class AuditLogHttpService
 {
     private readonly HttpClient _http;
@@ -14,7 +16,7 @@ public class AuditLogHttpService
         _http = http;
     }
 
-    public async Task<PaginatedResultDto<AuditLogDto>> GetLogsAsync(AuditLogFilterDto filter)
+    public async Task<PaginatedResultDtoAudit> GetLogsAsync(AuditLogFilterDto filter)
     {
         var queryParams = new List<string>();
 
@@ -37,8 +39,8 @@ public class AuditLogHttpService
         queryParams.Add($"tamanoPagina={filter.TamanoPagina}");
 
         var url = $"{BaseUrl}?{string.Join("&", queryParams)}";
-        var response = await _http.GetFromJsonAsync<ApiResponse<PaginatedResultDto<AuditLogDto>>>(url);
-        return response?.Data ?? new PaginatedResultDto<AuditLogDto>();
+        var response = await _http.GetFromJsonAsync<ApiResponse<PaginatedResultDtoAudit>>(url);
+        return response?.Data ?? new PaginatedResultDtoAudit();
     }
 
     public async Task<AuditLogDto?> GetByIdAsync(long id)

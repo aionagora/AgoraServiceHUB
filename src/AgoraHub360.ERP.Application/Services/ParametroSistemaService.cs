@@ -24,7 +24,7 @@ public class ParametroSistemaService : IParametroSistemaService
 
     public async Task<Result<IReadOnlyList<ParametroSistemaDto>>> GetAllAsync(CancellationToken ct = default)
     {
-        var empresaId = _currentUser.EmpresaId;
+        var empresaId = _currentUserService.EmpresaId;
         if (!empresaId.HasValue)
             return Result<IReadOnlyList<ParametroSistemaDto>>.Failure("No se pudo determinar la empresa activa del usuario.");
 
@@ -35,7 +35,7 @@ public class ParametroSistemaService : IParametroSistemaService
 
     public async Task<Result<IReadOnlyList<ParametroSistemaDto>>> GetByCategoriaAsync(string categoria, CancellationToken ct = default)
     {
-        var empresaId = _currentUser.EmpresaId;
+        var empresaId = _currentUserService.EmpresaId;
         if (!empresaId.HasValue)
             return Result<IReadOnlyList<ParametroSistemaDto>>.Failure("No se pudo determinar la empresa activa del usuario.");
 
@@ -46,7 +46,7 @@ public class ParametroSistemaService : IParametroSistemaService
 
     public async Task<Result<ParametroSistemaDto>> GetByClaveAsync(string clave, CancellationToken ct = default)
     {
-        var empresaId = _currentUser.EmpresaId;
+        var empresaId = _currentUserService.EmpresaId;
         if (!empresaId.HasValue)
             return Result<ParametroSistemaDto>.Failure("No se pudo determinar la empresa activa del usuario.");
 
@@ -60,7 +60,7 @@ public class ParametroSistemaService : IParametroSistemaService
 
     public async Task<Result<ParametroSistemaDto>> UpsertAsync(UpsertParametroDto dto, CancellationToken ct = default)
     {
-        var empresaId = _currentUser.EmpresaId;
+        var empresaId = _currentUserService.EmpresaId;
         if (!empresaId.HasValue)
             return Result<ParametroSistemaDto>.Failure("No se pudo determinar la empresa activa del usuario.");
 
@@ -98,7 +98,7 @@ public class ParametroSistemaService : IParametroSistemaService
 
     public async Task<Result<bool>> DeleteAsync(int id, CancellationToken ct = default)
     {
-        var empresaId = _currentUser.EmpresaId;
+        var empresaId = _currentUserService.EmpresaId;
         if (!empresaId.HasValue)
             return Result<bool>.Failure("No se pudo determinar la empresa activa del usuario.");
 

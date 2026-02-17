@@ -1,269 +1,364 @@
 @page "/mdm/productos"
 @attribute [Authorize]
-@inject ProductoHttpService ProductoSvc
-@inject CategoriaProductoHttpService CategoriaSvc
-@inject UnidadMedidaHttpService UnidadSvc
+@inject ProductoHttpService ProductoService
+@inject CategoriaProductoHttpService CategoriaService
+@inject UnidadMedidaHttpService UnidadMedidaService
+@inject IJSRuntime JS
 
-<PageTitle>Productos - AgoraHub360 ERP</PageTitle>
+<PageTitle>Productos</PageTitle>
 
-<div class="page-header">
-    <h1>Productos</h1>
-    <p class="text-muted mb-0">Datos Maestros &rsaquo; Productos</p>
-</div>
-
-@if (!string.IsNullOrEmpty(_mensaje))
-{
-    <div class="alert @(_esError ? "alert-danger" : "alert-success") alert-dismissible fade show">
-        @_mensaje
-        <button type="button" class="btn-close" @onclick="() => _mensaje = null"></button>
-    </div>
-}
-
-<div class="card mb-3">
-    <div class="card-header d-flex justify-content-between align-items-center py-3">
-        <div class="d-flex align-items-center gap-3">
-            <span>Productos (@ItemsFiltrados.Count)</span>
-            <input type="text" class="form-control form-control-sm" placeholder="Buscar..."
-                   style="width: 220px;" @bind="_search" @bind:event="oninput" />
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3>?? Catálogo de Productos</h3>
         </div>
-        <button class="btn btn-primary btn-sm" @onclick="ShowCrear">
-            <i class="bi bi-plus-circle me-1"></i> Nuevo Producto
-        </button>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="ShowCreateModal">
+                <i class="bi bi-plus-circle"></i> Nuevo Producto
+            </button>
+        </div>
     </div>
 
-    @if (_loading)
+    @if (!string.IsNullOrEmpty(successMessage))
     {
-        <div class="card-body text-center py-5">
-            <div class="spinner-border text-primary"></div>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
         </div>
     }
-    else if (_items.Count == 0)
+
+    @if (!string.IsNullOrEmpty(errorMessage))
     {
-        <div class="card-body text-center py-5">
-            <i class="bi bi-box-seam" style="font-size: 3rem; color: var(--agora-text-light);"></i>
-            <p class="text-muted mt-3">No hay productos registrados.</p>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (loading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-2">Cargando productos...</p>
+        </div>
+    }
+    else if (productos.Count == 0)
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> No hay productos registrados. Crea el primer producto usando el botón "Nuevo Producto".
         </div>
     }
     else
     {
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead>
-                    <tr>
-                        <th>Codigo</th>
-                        <th>Nombre</th>
-                        <th>Tipo</th>
-                        <th>Categoria</th>
-                        <th>U.M.</th>
-                        <th class="text-end">P. Compra</th>
-                        <th class="text-end">P. Venta</th>
-                        <th class="text-end">Stock Min.</th>
-                        <th class="text-center">Estado</th>
-                        <th class="text-end">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var item in ItemsPaginados)
-                    {
-                        <tr>
-                            <td class="fw-semibold">@item.Codigo</td>
-                            <td>@item.Nombre</td>
-                            <td>
-                                @{
-                                    var tipoBadge = item.TipoProducto switch
-                                    {
-                                        "MateriaPrima" => "bg-warning",
-                                        "ProductoTerminado" => "bg-success",
-                                        "Servicio" => "bg-info",
-                                        _ => "bg-secondary"
-                                    };
-                                }
-                                <span class="badge @tipoBadge">@item.TipoProducto</span>
-                            </td>
-                            <td><span class="badge bg-primary">@item.CategoriaNombre</span></td>
-                            <td>@item.UnidadMedidaNombre</td>
-                            <td class="text-end">@item.PrecioCompra.ToString("N2")</td>
-                            <td class="text-end">@item.PrecioVenta.ToString("N2")</td>
-                            <td class="text-end">@item.StockMinimo.ToString("N2")</td>
-                            <td class="text-center">
-                                <span class="badge @(item.Activo ? "bg-success" : "bg-secondary")">
-                                    @(item.Activo ? "Activo" : "Inactivo")
-                                </span>
-                            </td>
-                            <td class="text-end">
-                                <button class="btn btn-outline-primary btn-sm me-1"
-                                        @onclick="() => ShowEditar(item)" title="Editar">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                <button class="btn btn-outline-danger btn-sm"
-                                        @onclick="() => ConfirmDelete(item)" title="Eliminar">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-
-        @if (TotalPaginas > 1)
-        {
-            <div class="card-footer d-flex justify-content-between align-items-center py-2">
-                <small class="text-muted">Mostrando @ItemsPaginados.Count de @ItemsFiltrados.Count</small>
-                <nav>
-                    <ul class="pagination pagination-sm mb-0">
-                        <li class="page-item @(_currentPage <= 1 ? "disabled" : "")">
-                            <button class="page-link" @onclick="() => _currentPage--">&laquo;</button>
-                        </li>
-                        @for (var p = 1; p <= TotalPaginas; p++)
-                        {
-                            var page = p;
-                            <li class="page-item @(page == _currentPage ? "active" : "")">
-                                <button class="page-link" @onclick="() => _currentPage = page">@page</button>
-                            </li>
-                        }
-                        <li class="page-item @(_currentPage >= TotalPaginas ? "disabled" : "")">
-                            <button class="page-link" @onclick="() => _currentPage++">&raquo;</button>
-                        </li>
-                    </ul>
-                </nav>
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Nombre</th>
+                                <th>Categoría</th>
+                                <th>UM</th>
+                                <th>Tipo</th>
+                                <th class="text-end">P. Compra</th>
+                                <th class="text-end">P. Venta</th>
+                                <th class="text-end">Stock Mín</th>
+                                <th>Estado</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var producto in productos)
+                            {
+                                <tr>
+                                    <td><code>@producto.Codigo</code></td>
+                                    <td><strong>@producto.Nombre</strong></td>
+                                    <td><span class="badge bg-secondary">@producto.CategoriaNombre</span></td>
+                                    <td><span class="badge bg-info">@producto.UnidadMedidaNombre</span></td>
+                                    <td><small>@producto.TipoProducto</small></td>
+                                    <td class="text-end">@producto.PrecioCompra.ToString("N2")</td>
+                                    <td class="text-end"><strong>@producto.PrecioVenta.ToString("N2")</strong></td>
+                                    <td class="text-end">@producto.StockMinimo.ToString("N2")</td>
+                                    <td>
+                                        @if (producto.Activo)
+                                        {
+                                            <span class="badge bg-success">Activo</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Inactivo</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditModal(producto)">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger ms-1" @onclick="() => DeleteProducto(producto)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        }
+        </div>
     }
 </div>
 
-<!-- Modal Crear/Editar -->
-@if (_showForm)
+@* Modal Crear *@
+@if (showCreateModal)
 {
-    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
-        <div class="modal-dialog modal-lg">
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-xl">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">@(_editId.HasValue ? "Editar Producto" : "Nuevo Producto")</h5>
-                    <button type="button" class="btn-close" @onclick="CloseForm"></button>
+                    <h5 class="modal-title">Nuevo Producto</h5>
+                    <button type="button" class="btn-close" @onclick="CloseCreateModal"></button>
                 </div>
-                <EditForm Model="_formModel" OnValidSubmit="SaveAsync">
-                    <DataAnnotationsValidator />
-                    <div class="modal-body">
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <label class="form-label">Codigo *</label>
-                                <InputText class="form-control" @bind-Value="_formModel.Codigo" />
-                                <ValidationMessage For="() => _formModel.Codigo" />
+                <div class="modal-body">
+                    <EditForm Model="createDto" OnValidSubmit="CreateProducto">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="text-danger" />
+
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Código *</label>
+                                <InputText class="form-control" @bind-Value="createDto.Codigo" placeholder="PROD-001" />
+                                <ValidationMessage For="@(() => createDto.Codigo)" />
                             </div>
-                            <div class="col-md-8">
+
+                            <div class="col-md-6 mb-3">
                                 <label class="form-label">Nombre *</label>
-                                <InputText class="form-control" @bind-Value="_formModel.Nombre" />
-                                <ValidationMessage For="() => _formModel.Nombre" />
+                                <InputText class="form-control" @bind-Value="createDto.Nombre" placeholder="Nombre del producto" />
+                                <ValidationMessage For="@(() => createDto.Nombre)" />
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">SKU</label>
+                                <InputText class="form-control" @bind-Value="createDto.Sku" placeholder="SKU opcional" />
+                                <ValidationMessage For="@(() => createDto.Sku)" />
                             </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">Descripcion</label>
-                            <InputText class="form-control" @bind-Value="_formModel.Descripcion" />
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <label class="form-label">Tipo Producto *</label>
-                                <InputSelect class="form-select" @bind-Value="_formModel.TipoProducto">
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Categoría *</label>
+                                <InputSelect class="form-select" @bind-Value="createDto.CategoriaProductoId">
+                                    <option value="0">-- Seleccione categoría --</option>
+                                    @foreach (var cat in categorias)
+                                    {
+                                        <option value="@cat.Id">@cat.Nombre</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="@(() => createDto.CategoriaProductoId)" />
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Unidad de Medida *</label>
+                                <InputSelect class="form-select" @bind-Value="createDto.UnidadMedidaId">
+                                    <option value="0">-- Seleccione UM --</option>
+                                    @foreach (var um in unidadesMedida)
+                                    {
+                                        <option value="@um.Id">@um.Nombre (@um.Abreviatura)</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="@(() => createDto.UnidadMedidaId)" />
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Tipo de Producto *</label>
+                                <InputSelect class="form-select" @bind-Value="createDto.TipoProducto">
                                     <option value="MateriaPrima">Materia Prima</option>
                                     <option value="ProductoTerminado">Producto Terminado</option>
                                     <option value="Servicio">Servicio</option>
                                 </InputSelect>
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Categoria *</label>
-                                <InputSelect class="form-select" @bind-Value="_formModel.CategoriaProductoId">
-                                    <option value="0">â€” Seleccionar â€”</option>
-                                    @foreach (var c in _categorias.Where(c => c.Activo))
-                                    {
-                                        <option value="@c.Id">@c.Nombre</option>
-                                    }
-                                </InputSelect>
-                                <ValidationMessage For="() => _formModel.CategoriaProductoId" />
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Unidad de Medida *</label>
-                                <InputSelect class="form-select" @bind-Value="_formModel.UnidadMedidaId">
-                                    <option value="0">â€” Seleccionar â€”</option>
-                                    @foreach (var u in _unidades.Where(u => u.Activo))
-                                    {
-                                        <option value="@u.Id">@u.Nombre (@u.Abreviatura)</option>
-                                    }
-                                </InputSelect>
-                                <ValidationMessage For="() => _formModel.UnidadMedidaId" />
+                                <ValidationMessage For="@(() => createDto.TipoProducto)" />
                             </div>
                         </div>
-                        <div class="row mb-3">
-                            <div class="col-md-3">
+
+                        <div class="mb-3">
+                            <label class="form-label">Descripción</label>
+                            <InputTextArea class="form-control" @bind-Value="createDto.Descripcion" rows="2" placeholder="Descripción del producto" />
+                            <ValidationMessage For="@(() => createDto.Descripcion)" />
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
                                 <label class="form-label">Precio Compra</label>
-                                <InputNumber class="form-control" @bind-Value="_formModel.PrecioCompra" />
-                                <ValidationMessage For="() => _formModel.PrecioCompra" />
+                                <InputNumber class="form-control" @bind-Value="createDto.PrecioCompra" />
+                                <ValidationMessage For="@(() => createDto.PrecioCompra)" />
                             </div>
-                            <div class="col-md-3">
+
+                            <div class="col-md-3 mb-3">
                                 <label class="form-label">Precio Venta</label>
-                                <InputNumber class="form-control" @bind-Value="_formModel.PrecioVenta" />
-                                <ValidationMessage For="() => _formModel.PrecioVenta" />
+                                <InputNumber class="form-control" @bind-Value="createDto.PrecioVenta" />
+                                <ValidationMessage For="@(() => createDto.PrecioVenta)" />
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label">Stock Minimo</label>
-                                <InputNumber class="form-control" @bind-Value="_formModel.StockMinimo" />
-                                <ValidationMessage For="() => _formModel.StockMinimo" />
-                            </div>
-                            <div class="col-md-3">
+
+                            <div class="col-md-3 mb-3">
                                 <label class="form-label">Costo Base</label>
-                                <InputNumber class="form-control" @bind-Value="_formModel.CostoBase" />
-                                <ValidationMessage For="() => _formModel.CostoBase" />
+                                <InputNumber class="form-control" @bind-Value="createDto.CostoBase" />
+                                <ValidationMessage For="@(() => createDto.CostoBase)" />
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Stock Mínimo</label>
+                                <InputNumber class="form-control" @bind-Value="createDto.StockMinimo" />
+                                <ValidationMessage For="@(() => createDto.StockMinimo)" />
                             </div>
                         </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label">SKU</label>
-                                <InputText class="form-control" @bind-Value="_formModel.Sku" />
-                            </div>
-                            <div class="col-md-6 d-flex align-items-end">
-                                <div class="form-check">
-                                    <InputCheckbox class="form-check-input" @bind-Value="_formModel.ControlStock" />
-                                    <label class="form-check-label">Control de Stock</label>
-                                </div>
-                            </div>
+
+                        <div class="mb-3 form-check">
+                            <InputCheckbox class="form-check-input" id="controlStockCheck" @bind-Value="createDto.ControlStock" />
+                            <label class="form-check-label" for="controlStockCheck">Controlar Stock</label>
                         </div>
-                        @if (_editId.HasValue)
-                        {
-                            <div class="form-check">
-                                <InputCheckbox class="form-check-input" @bind-Value="_formActivo" />
-                                <label class="form-check-label">Activo</label>
-                            </div>
-                        }
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" @onclick="CloseForm">Cancelar</button>
-                        <button type="submit" class="btn btn-primary" disabled="@_saving">
-                            @if (_saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                            @(_editId.HasValue ? "Guardar" : "Crear Producto")
-                        </button>
-                    </div>
-                </EditForm>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseCreateModal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary" disabled="@saving">
+                                @if (saving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                Guardar
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
             </div>
         </div>
     </div>
 }
 
-<!-- Modal Eliminar -->
-@if (_deleteTarget is not null)
+@* Modal Editar (similar estructura) *@
+@if (showEditModal)
 {
-    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
-        <div class="modal-dialog modal-sm">
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-xl">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Confirmar</h5>
-                    <button type="button" class="btn-close" @onclick="() => _deleteTarget = null"></button>
+                    <h5 class="modal-title">Editar Producto</h5>
+                    <button type="button" class="btn-close" @onclick="CloseEditModal"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Eliminar el producto <strong>@_deleteTarget.Nombre</strong>?</p>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary btn-sm" @onclick="() => _deleteTarget = null">Cancelar</button>
-                    <button class="btn btn-danger btn-sm" @onclick="DeleteAsync" disabled="@_saving">Eliminar</button>
+                    <EditForm Model="updateDto" OnValidSubmit="UpdateProducto">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="text-danger" />
+
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Código *</label>
+                                <InputText class="form-control" @bind-Value="updateDto.Codigo" placeholder="PROD-001" />
+                                <ValidationMessage For="@(() => updateDto.Codigo)" />
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Nombre *</label>
+                                <InputText class="form-control" @bind-Value="updateDto.Nombre" placeholder="Nombre del producto" />
+                                <ValidationMessage For="@(() => updateDto.Nombre)" />
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">SKU</label>
+                                <InputText class="form-control" @bind-Value="updateDto.Sku" placeholder="SKU opcional" />
+                                <ValidationMessage For="@(() => updateDto.Sku)" />
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Categoría *</label>
+                                <InputSelect class="form-select" @bind-Value="updateDto.CategoriaProductoId">
+                                    <option value="0">-- Seleccione categoría --</option>
+                                    @foreach (var cat in categorias)
+                                    {
+                                        <option value="@cat.Id">@cat.Nombre</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="@(() => updateDto.CategoriaProductoId)" />
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Unidad de Medida *</label>
+                                <InputSelect class="form-select" @bind-Value="updateDto.UnidadMedidaId">
+                                    <option value="0">-- Seleccione UM --</option>
+                                    @foreach (var um in unidadesMedida)
+                                    {
+                                        <option value="@um.Id">@um.Nombre (@um.Abreviatura)</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="@(() => updateDto.UnidadMedidaId)" />
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Tipo de Producto *</label>
+                                <InputSelect class="form-select" @bind-Value="updateDto.TipoProducto">
+                                    <option value="MateriaPrima">Materia Prima</option>
+                                    <option value="ProductoTerminado">Producto Terminado</option>
+                                    <option value="Servicio">Servicio</option>
+                                </InputSelect>
+                                <ValidationMessage For="@(() => updateDto.TipoProducto)" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Descripción</label>
+                            <InputTextArea class="form-control" @bind-Value="updateDto.Descripcion" rows="2" placeholder="Descripción del producto" />
+                            <ValidationMessage For="@(() => updateDto.Descripcion)" />
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Precio Compra</label>
+                                <InputNumber class="form-control" @bind-Value="updateDto.PrecioCompra" />
+                                <ValidationMessage For="@(() => updateDto.PrecioCompra)" />
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Precio Venta</label>
+                                <InputNumber class="form-control" @bind-Value="updateDto.PrecioVenta" />
+                                <ValidationMessage For="@(() => updateDto.PrecioVenta)" />
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Costo Base</label>
+                                <InputNumber class="form-control" @bind-Value="updateDto.CostoBase" />
+                                <ValidationMessage For="@(() => updateDto.CostoBase)" />
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Stock Mínimo</label>
+                                <InputNumber class="form-control" @bind-Value="updateDto.StockMinimo" />
+                                <ValidationMessage For="@(() => updateDto.StockMinimo)" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <InputCheckbox class="form-check-input" id="controlStockEditCheck" @bind-Value="updateDto.ControlStock" />
+                            <label class="form-check-label" for="controlStockEditCheck">Controlar Stock</label>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <InputCheckbox class="form-check-input" id="activoCheck" @bind-Value="updateDto.Activo" />
+                            <label class="form-check-label" for="activoCheck">Activo</label>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseEditModal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary" disabled="@saving">
+                                @if (saving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                Actualizar
+                            </button>
+                        </div>
+                    </EditForm>
                 </div>
             </div>
         </div>
@@ -271,147 +366,193 @@
 }
 
 @code {
-    private List<ProductoDto> _items = new();
-    private List<CategoriaProductoDto> _categorias = new();
-    private List<UnidadMedidaDto> _unidades = new();
-    private bool _loading = true, _saving;
-    private string? _mensaje;
-    private bool _esError;
-
-    private bool _showForm;
-    private int? _editId;
-    private CreateProductoDto _formModel = new();
-    private bool _formActivo = true;
-    private ProductoDto? _deleteTarget;
-
-    private string _search = string.Empty;
-    private int _currentPage = 1;
-    private int _pageSize = 15;
-
-    private List<ProductoDto> ItemsFiltrados => _items
-        .Where(i => string.IsNullOrEmpty(_search)
-            || i.Codigo.Contains(_search, StringComparison.OrdinalIgnoreCase)
-            || i.Nombre.Contains(_search, StringComparison.OrdinalIgnoreCase)
-            || (i.Sku ?? "").Contains(_search, StringComparison.OrdinalIgnoreCase))
-        .ToList();
-
-    private List<ProductoDto> ItemsPaginados => ItemsFiltrados
-        .Skip((_currentPage - 1) * _pageSize)
-        .Take(_pageSize)
-        .ToList();
-
-    private int TotalPaginas => (int)Math.Ceiling(ItemsFiltrados.Count / (double)_pageSize);
+    private List<ProductoDto> productos = new();
+    private List<CategoriaProductoDto> categorias = new();
+    private List<UnidadMedidaDto> unidadesMedida = new();
+    
+    private bool loading = true;
+    private bool saving = false;
+    private bool showCreateModal = false;
+    private bool showEditModal = false;
+    private string? errorMessage;
+    private string? successMessage;
+    
+    private CreateProductoDto createDto = new();
+    private UpdateProductoDto updateDto = new();
+    private int editingId;
 
     protected override async Task OnInitializedAsync()
     {
-        await Task.WhenAll(LoadDataAsync(), LoadCatalogosAsync());
+        await LoadData();
     }
 
-    private async Task LoadDataAsync()
-    {
-        _loading = true;
-        try { _items = await ProductoSvc.GetAllAsync(); }
-        catch { _mensaje = "Error al cargar productos."; _esError = true; }
-        _loading = false;
-    }
-
-    private async Task LoadCatalogosAsync()
+    private async Task LoadData()
     {
         try
         {
-            _categorias = await CategoriaSvc.GetAllAsync();
-            _unidades = await UnidadSvc.GetAllAsync();
-        }
-        catch { /* catalogos opcionales en carga inicial */ }
-    }
+            loading = true;
+            errorMessage = null;
+            
+            var productosTask = ProductoService.GetAllAsync();
+            var categoriasTask = CategoriaService.GetAllAsync();
+            var unidadesTask = UnidadMedidaService.GetAllAsync();
+            
+            await Task.WhenAll(productosTask, categoriasTask, unidadesTask);
+            
+            productos = await productosTask;
+            categorias = await categoriasTask;
+            unidadesMedida = await unidadesTask;
 
-    private void ShowCrear()
-    {
-        _editId = null;
-        _formModel = new CreateProductoDto();
-        _formActivo = true;
-        _showForm = true;
-    }
-
-    private void ShowEditar(ProductoDto item)
-    {
-        _editId = item.Id;
-        _formModel = new CreateProductoDto
-        {
-            Codigo = item.Codigo,
-            Nombre = item.Nombre,
-            Descripcion = item.Descripcion,
-            CategoriaProductoId = item.CategoriaProductoId,
-            UnidadMedidaId = item.UnidadMedidaId,
-            PrecioCompra = item.PrecioCompra,
-            PrecioVenta = item.PrecioVenta,
-            StockMinimo = item.StockMinimo,
-            Sku = item.Sku,
-            TipoProducto = item.TipoProducto,
-            ControlStock = item.ControlStock,
-            CostoBase = item.CostoBase
-        };
-        _formActivo = item.Activo;
-        _showForm = true;
-    }
-
-    private void CloseForm() { _showForm = false; _editId = null; }
-
-    private async Task SaveAsync()
-    {
-        _saving = true;
-        try
-        {
-            if (_editId.HasValue)
+            if (categorias.Count == 0)
             {
-                var dto = new UpdateProductoDto
-                {
-                    Codigo = _formModel.Codigo,
-                    Nombre = _formModel.Nombre,
-                    Descripcion = _formModel.Descripcion,
-                    CategoriaProductoId = _formModel.CategoriaProductoId,
-                    UnidadMedidaId = _formModel.UnidadMedidaId,
-                    PrecioCompra = _formModel.PrecioCompra,
-                    PrecioVenta = _formModel.PrecioVenta,
-                    StockMinimo = _formModel.StockMinimo,
-                    Sku = _formModel.Sku,
-                    TipoProducto = _formModel.TipoProducto,
-                    ControlStock = _formModel.ControlStock,
-                    CostoBase = _formModel.CostoBase,
-                    Activo = _formActivo
-                };
-                var r = await ProductoSvc.UpdateAsync(_editId.Value, dto);
-                if (!r.Success) { _mensaje = r.Message; _esError = true; _saving = false; return; }
-                _mensaje = "Producto actualizado."; _esError = false;
+                errorMessage = "Debe crear al menos una categoría antes de agregar productos.";
+            }
+
+            if (unidadesMedida.Count == 0)
+            {
+                errorMessage = "Debe crear al menos una unidad de medida antes de agregar productos.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar datos: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private void ShowCreateModal()
+    {
+        if (categorias.Count == 0 || unidadesMedida.Count == 0)
+        {
+            errorMessage = "Debe crear categorías y unidades de medida antes de crear productos.";
+            return;
+        }
+
+        createDto = new CreateProductoDto();
+        showCreateModal = true;
+    }
+
+    private void CloseCreateModal()
+    {
+        showCreateModal = false;
+    }
+
+    private void ShowEditModal(ProductoDto producto)
+    {
+        updateDto = new UpdateProductoDto
+        {
+            Codigo = producto.Codigo,
+            Nombre = producto.Nombre,
+            Descripcion = producto.Descripcion,
+            CategoriaProductoId = producto.CategoriaProductoId,
+            UnidadMedidaId = producto.UnidadMedidaId,
+            PrecioCompra = producto.PrecioCompra,
+            PrecioVenta = producto.PrecioVenta,
+            StockMinimo = producto.StockMinimo,
+            Sku = producto.Sku,
+            TipoProducto = producto.TipoProducto,
+            ControlStock = producto.ControlStock,
+            CostoBase = producto.CostoBase,
+            Activo = producto.Activo
+        };
+        editingId = producto.Id;
+        showEditModal = true;
+    }
+
+    private void CloseEditModal()
+    {
+        showEditModal = false;
+    }
+
+    private async Task CreateProducto()
+    {
+        try
+        {
+            saving = true;
+            errorMessage = null;
+            successMessage = null;
+
+            var response = await ProductoService.CreateAsync(createDto);
+
+            if (response.Success)
+            {
+                successMessage = "Producto creado exitosamente";
+                CloseCreateModal();
+                await LoadData();
             }
             else
             {
-                var r = await ProductoSvc.CreateAsync(_formModel);
-                if (!r.Success) { _mensaje = r.Message; _esError = true; _saving = false; return; }
-                _mensaje = "Producto creado."; _esError = false;
+                errorMessage = response.Message;
             }
-            CloseForm();
-            await LoadDataAsync();
         }
-        catch { _mensaje = "Error de comunicacion."; _esError = true; }
-        _saving = false;
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            saving = false;
+        }
     }
 
-    private void ConfirmDelete(ProductoDto item) => _deleteTarget = item;
-
-    private async Task DeleteAsync()
+    private async Task UpdateProducto()
     {
-        if (_deleteTarget is null) return;
-        _saving = true;
         try
         {
-            var r = await ProductoSvc.DeleteAsync(_deleteTarget.Id);
-            _mensaje = r.Success ? "Producto eliminado." : r.Message;
-            _esError = !r.Success;
-            _deleteTarget = null;
-            await LoadDataAsync();
+            saving = true;
+            errorMessage = null;
+            successMessage = null;
+
+            var response = await ProductoService.UpdateAsync(editingId, updateDto);
+
+            if (response.Success)
+            {
+                successMessage = "Producto actualizado exitosamente";
+                CloseEditModal();
+                await LoadData();
+            }
+            else
+            {
+                errorMessage = response.Message;
+            }
         }
-        catch { _mensaje = "Error de comunicacion."; _esError = true; }
-        _saving = false;
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private async Task DeleteProducto(ProductoDto producto)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"¿Eliminar el producto '{producto.Nombre}'?"))
+            return;
+
+        try
+        {
+            errorMessage = null;
+            successMessage = null;
+
+            var response = await ProductoService.DeleteAsync(producto.Id);
+            if (response.Success)
+            {
+                successMessage = "Producto eliminado exitosamente";
+                await LoadData();
+            }
+            else
+            {
+                errorMessage = response.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al eliminar: {ex.Message}";
+        }
     }
 }

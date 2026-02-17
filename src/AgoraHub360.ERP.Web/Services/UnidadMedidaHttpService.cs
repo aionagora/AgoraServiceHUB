@@ -2,7 +2,7 @@ namespace AgoraHub360.ERP.Web.Services;
 
 using System.Net.Http.Json;
 using AgoraHub360.ERP.Shared.DTOs;
-using AgoraHub360.ERP.Shared.DTOs.MDM;
+using AgoraHub360.ERP.Shared.DTOs.UnidadMedida;
 
 public class UnidadMedidaHttpService
 {
@@ -17,7 +17,13 @@ public class UnidadMedidaHttpService
     public async Task<List<UnidadMedidaDto>> GetAllAsync()
     {
         var response = await _http.GetFromJsonAsync<ApiResponse<List<UnidadMedidaDto>>>(BaseUrl);
-        return response?.Data ?? new();
+        return response?.Data ?? new List<UnidadMedidaDto>();
+    }
+
+    public async Task<UnidadMedidaDto?> GetByIdAsync(int id)
+    {
+        var response = await _http.GetFromJsonAsync<ApiResponse<UnidadMedidaDto>>($"{BaseUrl}/{id}");
+        return response?.Data;
     }
 
     public async Task<ApiResponse<UnidadMedidaDto>> CreateAsync(CreateUnidadMedidaDto dto)
@@ -29,7 +35,7 @@ public class UnidadMedidaHttpService
             return ApiResponse<UnidadMedidaDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<UnidadMedidaDto>>()
-            ?? ApiResponse<UnidadMedidaDto>.Fail("Error de comunicaciÃ³n.");
+            ?? ApiResponse<UnidadMedidaDto>.Fail("Error de comunicación con el servidor.");
     }
 
     public async Task<ApiResponse<UnidadMedidaDto>> UpdateAsync(int id, UpdateUnidadMedidaDto dto)
@@ -41,7 +47,7 @@ public class UnidadMedidaHttpService
             return ApiResponse<UnidadMedidaDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<UnidadMedidaDto>>()
-            ?? ApiResponse<UnidadMedidaDto>.Fail("Error de comunicaciÃ³n.");
+            ?? ApiResponse<UnidadMedidaDto>.Fail("Error de comunicación con el servidor.");
     }
 
     public async Task<ApiResponse<bool>> DeleteAsync(int id)
@@ -53,6 +59,6 @@ public class UnidadMedidaHttpService
             return ApiResponse<bool>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<bool>>()
-            ?? ApiResponse<bool>.Fail("Error de comunicaciÃ³n.");
+            ?? ApiResponse<bool>.Fail("Error de comunicación con el servidor.");
     }
 }

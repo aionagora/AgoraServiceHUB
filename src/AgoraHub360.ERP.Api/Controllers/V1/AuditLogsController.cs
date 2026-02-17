@@ -7,6 +7,8 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using PaginatedResultDtoAudit = AgoraHub360.ERP.Shared.DTOs.AuditLog.PaginatedResultDto<AgoraHub360.ERP.Shared.DTOs.AuditLog.AuditLogDto>;
+
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/audit-logs")]
@@ -24,7 +26,7 @@ public class AuditLogsController : ControllerBase
     public async Task<IActionResult> GetLogs([FromQuery] AuditLogFilterDto filter)
     {
         var result = await _auditLogService.GetLogsAsync(filter);
-        return Ok(ApiResponse<PaginatedResultDto<AuditLogDto>>.Ok(result));
+        return Ok(ApiResponse<PaginatedResultDtoAudit>.Ok(result));
     }
 
     [HttpGet("{id:long}")]

@@ -1,4 +1,4 @@
-namespace AgoraHub360.ERP.Shared.DTOs.MDM;
+namespace AgoraHub360.ERP.Shared.DTOs.UnidadMedida;
 
 public class UnidadMedidaDto
 {
@@ -6,5 +6,5 @@ public class UnidadMedidaDto
     public string Nombre { get; set; } = string.Empty;
     public string Abreviatura { get; set; } = string.Empty;
     public bool Activo { get; set; }
-    public DateTime FechaCreacion { get; set; }
+    public int EmpresaId { get; set; }
 }

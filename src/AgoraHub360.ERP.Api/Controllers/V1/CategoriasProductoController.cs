@@ -2,14 +2,14 @@ namespace AgoraHub360.ERP.Api.Controllers.V1;
 
 using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Shared.DTOs;
-using AgoraHub360.ERP.Shared.DTOs.MDM;
+using AgoraHub360.ERP.Shared.DTOs.CategoriaProducto;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
 [ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/categorias-producto")]
+[Route("api/v{version:apiVersion}/categorias")]
 [Authorize]
 public class CategoriasProductoController : ControllerBase
 {
@@ -42,7 +42,11 @@ public class CategoriasProductoController : ControllerBase
         var result = await _service.CreateAsync(dto, ct);
         if (!result.IsSuccess)
             return BadRequest(ApiResponse<CategoriaProductoDto>.Fail(result.Error!));
-        return Ok(ApiResponse<CategoriaProductoDto>.Ok(result.Value!, "CategorÃ­a creada exitosamente."));
+        
+        return CreatedAtAction(
+            nameof(GetById),
+            new { id = result.Value!.Id },
+            ApiResponse<CategoriaProductoDto>.Ok(result.Value!, "Categoría creada exitosamente."));
     }
 
     [HttpPut("{id:int}")]
@@ -50,8 +54,12 @@ public class CategoriasProductoController : ControllerBase
     {
         var result = await _service.UpdateAsync(id, dto, ct);
         if (!result.IsSuccess)
+        {
+            if (result.Error!.Contains("no encontrada"))
+                return NotFound(ApiResponse<CategoriaProductoDto>.Fail(result.Error!));
             return BadRequest(ApiResponse<CategoriaProductoDto>.Fail(result.Error!));
-        return Ok(ApiResponse<CategoriaProductoDto>.Ok(result.Value!, "CategorÃ­a actualizada exitosamente."));
+        }
+        return Ok(ApiResponse<CategoriaProductoDto>.Ok(result.Value!, "Categoría actualizada exitosamente."));
     }
 
     [HttpDelete("{id:int}")]
@@ -60,6 +68,6 @@ public class CategoriasProductoController : ControllerBase
         var result = await _service.DeleteAsync(id, ct);
         if (!result.IsSuccess)
             return NotFound(ApiResponse<bool>.Fail(result.Error!));
-        return Ok(ApiResponse<bool>.Ok(true, "CategorÃ­a eliminada exitosamente."));
+        return Ok(ApiResponse<bool>.Ok(true, "Categoría eliminada exitosamente."));
     }
 }

@@ -1,6 +1,6 @@
 @page "/mdm/unidades-medida"
 @attribute [Authorize]
-@inject UnidadMedidaHttpService UnidadSvc
+@inject UnidadMedidaHttpService UnidadMedidaSvc
 
 <PageTitle>Unidades de Medida - AgoraHub360 ERP</PageTitle>
 
@@ -59,7 +59,7 @@
                     {
                         <tr>
                             <td class="fw-semibold">@item.Nombre</td>
-                            <td><span class="badge bg-secondary">@item.Abreviatura</span></td>
+                            <td><span class="badge bg-info">@item.Abreviatura</span></td>
                             <td class="text-center">
                                 <span class="badge @(item.Activo ? "bg-success" : "bg-secondary")">
                                     @(item.Activo ? "Activo" : "Inactivo")
@@ -94,7 +94,7 @@
                         {
                             var page = p;
                             <li class="page-item @(page == _currentPage ? "active" : "")">
-                                <button class="page-link" @onclick="() => _currentPage = page">@page</button>
+                                <button class="page-link" @onclick="() => _currentPage = page">@(page)</button>
                             </li>
                         }
                         <li class="page-item @(_currentPage >= TotalPaginas ? "disabled" : "")">
@@ -114,7 +114,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">@(_editId.HasValue ? "Editar Unidad" : "Nueva Unidad de Medida")</h5>
+                    <h5 class="modal-title">@(_editId.HasValue ? "Editar Unidad de Medida" : "Nueva Unidad de Medida")</h5>
                     <button type="button" class="btn-close" @onclick="CloseForm"></button>
                 </div>
                 <EditForm Model="_formModel" OnValidSubmit="SaveAsync">
@@ -122,12 +122,14 @@
                     <div class="modal-body">
                         <div class="mb-3">
                             <label class="form-label">Nombre *</label>
-                            <InputText class="form-control" @bind-Value="_formModel.Nombre" />
+                            <InputText class="form-control" @bind-Value="_formModel.Nombre" 
+                                       placeholder="Ej: Kilogramo, Litro, Unidad" />
                             <ValidationMessage For="() => _formModel.Nombre" />
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Abreviatura *</label>
-                            <InputText class="form-control" @bind-Value="_formModel.Abreviatura" />
+                            <InputText class="form-control" @bind-Value="_formModel.Abreviatura" 
+                                       placeholder="Ej: Kg, L, Und" />
                             <ValidationMessage For="() => _formModel.Abreviatura" />
                         </div>
                         @if (_editId.HasValue)
@@ -142,7 +144,7 @@
                         <button type="button" class="btn btn-secondary" @onclick="CloseForm">Cancelar</button>
                         <button type="submit" class="btn btn-primary" disabled="@_saving">
                             @if (_saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                            @(_editId.HasValue ? "Guardar" : "Crear Unidad")
+                            @(_editId.HasValue ? "Guardar" : "Crear")
                         </button>
                     </div>
                 </EditForm>
@@ -162,7 +164,7 @@
                     <button type="button" class="btn-close" @onclick="() => _deleteTarget = null"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Eliminar la unidad <strong>@_deleteTarget.Nombre</strong>?</p>
+                    <p>¿Eliminar la unidad de medida <strong>@_deleteTarget.Nombre</strong>?</p>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary btn-sm" @onclick="() => _deleteTarget = null">Cancelar</button>
@@ -210,7 +212,7 @@
     private async Task LoadDataAsync()
     {
         _loading = true;
-        try { _items = await UnidadSvc.GetAllAsync(); }
+        try { _items = await UnidadMedidaSvc.GetAllAsync(); }
         catch { _mensaje = "Error al cargar unidades de medida."; _esError = true; }
         _loading = false;
     }
@@ -250,20 +252,20 @@
                     Abreviatura = _formModel.Abreviatura,
                     Activo = _formActivo
                 };
-                var r = await UnidadSvc.UpdateAsync(_editId.Value, dto);
+                var r = await UnidadMedidaSvc.UpdateAsync(_editId.Value, dto);
                 if (!r.Success) { _mensaje = r.Message; _esError = true; _saving = false; return; }
-                _mensaje = "Unidad actualizada."; _esError = false;
+                _mensaje = "Unidad de medida actualizada."; _esError = false;
             }
             else
             {
-                var r = await UnidadSvc.CreateAsync(_formModel);
+                var r = await UnidadMedidaSvc.CreateAsync(_formModel);
                 if (!r.Success) { _mensaje = r.Message; _esError = true; _saving = false; return; }
-                _mensaje = "Unidad creada."; _esError = false;
+                _mensaje = "Unidad de medida creada."; _esError = false;
             }
             CloseForm();
             await LoadDataAsync();
         }
-        catch { _mensaje = "Error de comunicacion."; _esError = true; }
+        catch { _mensaje = "Error de comunicación."; _esError = true; }
         _saving = false;
     }
 
@@ -275,13 +277,13 @@
         _saving = true;
         try
         {
-            var r = await UnidadSvc.DeleteAsync(_deleteTarget.Id);
-            _mensaje = r.Success ? "Unidad eliminada." : r.Message;
+            var r = await UnidadMedidaSvc.DeleteAsync(_deleteTarget.Id);
+            _mensaje = r.Success ? "Unidad de medida eliminada." : r.Message;
             _esError = !r.Success;
             _deleteTarget = null;
             await LoadDataAsync();
         }
-        catch { _mensaje = "Error de comunicacion."; _esError = true; }
+        catch { _mensaje = "Error de comunicación."; _esError = true; }
         _saving = false;
     }
 }

@@ -1,7 +1,7 @@
 namespace AgoraHub360.ERP.Application.Interfaces;
 
 using AgoraHub360.ERP.Application.Common;
-using AgoraHub360.ERP.Shared.DTOs.MDM;
+using AgoraHub360.ERP.Shared.DTOs.Proveedor;
 
 public interface IProveedorService
 {

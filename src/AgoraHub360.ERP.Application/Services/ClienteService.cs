@@ -4,7 +4,7 @@ using AgoraHub360.ERP.Application.Common;
 using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Interfaces;
-using AgoraHub360.ERP.Shared.DTOs.MDM;
+using AgoraHub360.ERP.Shared.DTOs.Cliente;
 
 public class ClienteService : IClienteService
 {
@@ -24,16 +24,28 @@ public class ClienteService : IClienteService
 
     public async Task<Result<IReadOnlyList<ClienteDto>>> GetAllAsync(CancellationToken ct = default)
     {
-        var items = await _repository.GetAllAsync(ct);
+        var empresaId = _currentUser.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<IReadOnlyList<ClienteDto>>.Failure("No se pudo determinar la empresa activa.");
+
+        var items = await _repository.FindAsync(c => c.EmpresaId == empresaId.Value, ct);
         return Result<IReadOnlyList<ClienteDto>>.Success(
             items.Select(MapToDto).ToList().AsReadOnly());
     }
 
     public async Task<Result<ClienteDto>> GetByIdAsync(int id, CancellationToken ct = default)
     {
+        var empresaId = _currentUser.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<ClienteDto>.Failure("No se pudo determinar la empresa activa.");
+
         var entity = await _repository.GetByIdAsync(id, ct);
         if (entity is null)
             return Result<ClienteDto>.Failure($"Cliente con Id {id} no encontrado.");
+
+        if (entity.EmpresaId != empresaId.Value)
+            return Result<ClienteDto>.Failure("No tiene permisos para acceder a este cliente.");
+
         return Result<ClienteDto>.Success(MapToDto(entity));
     }
 
@@ -43,32 +55,21 @@ public class ClienteService : IClienteService
         if (!empresaId.HasValue)
             return Result<ClienteDto>.Failure("No se pudo determinar la empresa activa.");
 
-        // Validar código único
-        var byCodigo = await _repository.FindAsync(
-            c => c.EmpresaId == empresaId.Value && c.Codigo == dto.Codigo, ct);
-        if (byCodigo.Count > 0)
-            return Result<ClienteDto>.Failure($"Ya existe un cliente con código '{dto.Codigo}'.");
-
-        // Validar NIT único si se proporcionó
-        if (!string.IsNullOrWhiteSpace(dto.NIT))
-        {
-            var byNit = await _repository.FindAsync(
-                c => c.EmpresaId == empresaId.Value && c.NIT == dto.NIT, ct);
-            if (byNit.Count > 0)
-                return Result<ClienteDto>.Failure($"Ya existe un cliente con NIT '{dto.NIT}'.");
-        }
+        // Validar NIT único
+        var byNit = await _repository.FindAsync(
+            c => c.EmpresaId == empresaId.Value && c.NIT == dto.NIT, ct);
+        if (byNit.Any())
+            return Result<ClienteDto>.Failure($"Ya existe un cliente con NIT '{dto.NIT}'.");
 
         var entity = new Cliente
         {
-            Codigo = dto.Codigo,
             RazonSocial = dto.RazonSocial,
             NIT = dto.NIT,
-            Direccion = dto.Direccion,
             Telefono = dto.Telefono,
             Email = dto.Email,
-            NombreContacto = dto.NombreContacto,
-            TipoCliente = dto.TipoCliente,
-            EmpresaId = empresaId.Value
+            Direccion = dto.Direccion,
+            EmpresaId = empresaId.Value,
+            Activo = true
         };
 
         await _repository.AddAsync(entity, ct);
@@ -79,33 +80,28 @@ public class ClienteService : IClienteService
 
     public async Task<Result<ClienteDto>> UpdateAsync(int id, UpdateClienteDto dto, CancellationToken ct = default)
     {
+        var empresaId = _currentUser.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<ClienteDto>.Failure("No se pudo determinar la empresa activa.");
+
         var entity = await _repository.GetByIdAsync(id, ct);
         if (entity is null)
             return Result<ClienteDto>.Failure($"Cliente con Id {id} no encontrado.");
 
-        // Validar código único
-        var byCodigo = await _repository.FindAsync(
-            c => c.EmpresaId == entity.EmpresaId && c.Codigo == dto.Codigo && c.Id != id, ct);
-        if (byCodigo.Count > 0)
-            return Result<ClienteDto>.Failure($"Ya existe otro cliente con código '{dto.Codigo}'.");
+        if (entity.EmpresaId != empresaId.Value)
+            return Result<ClienteDto>.Failure("No tiene permisos para modificar este cliente.");
 
         // Validar NIT único
-        if (!string.IsNullOrWhiteSpace(dto.NIT))
-        {
-            var byNit = await _repository.FindAsync(
-                c => c.EmpresaId == entity.EmpresaId && c.NIT == dto.NIT && c.Id != id, ct);
-            if (byNit.Count > 0)
-                return Result<ClienteDto>.Failure($"Ya existe otro cliente con NIT '{dto.NIT}'.");
-        }
+        var byNit = await _repository.FindAsync(
+            c => c.EmpresaId == empresaId.Value && c.NIT == dto.NIT && c.Id != id, ct);
+        if (byNit.Any())
+            return Result<ClienteDto>.Failure($"Ya existe otro cliente con NIT '{dto.NIT}'.");
 
-        entity.Codigo = dto.Codigo;
         entity.RazonSocial = dto.RazonSocial;
         entity.NIT = dto.NIT;
-        entity.Direccion = dto.Direccion;
         entity.Telefono = dto.Telefono;
         entity.Email = dto.Email;
-        entity.NombreContacto = dto.NombreContacto;
-        entity.TipoCliente = dto.TipoCliente;
+        entity.Direccion = dto.Direccion;
         entity.Activo = dto.Activo;
 
         await _repository.UpdateAsync(entity, ct);
@@ -116,9 +112,16 @@ public class ClienteService : IClienteService
 
     public async Task<Result<bool>> DeleteAsync(int id, CancellationToken ct = default)
     {
+        var empresaId = _currentUser.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<bool>.Failure("No se pudo determinar la empresa activa.");
+
         var entity = await _repository.GetByIdAsync(id, ct);
         if (entity is null)
             return Result<bool>.Failure($"Cliente con Id {id} no encontrado.");
+
+        if (entity.EmpresaId != empresaId.Value)
+            return Result<bool>.Failure("No tiene permisos para eliminar este cliente.");
 
         await _repository.DeleteAsync(entity, ct);
         await _unitOfWork.SaveChangesAsync(ct);
@@ -128,15 +131,12 @@ public class ClienteService : IClienteService
     private static ClienteDto MapToDto(Cliente e) => new()
     {
         Id = e.Id,
-        Codigo = e.Codigo,
         RazonSocial = e.RazonSocial,
         NIT = e.NIT,
-        Direccion = e.Direccion,
         Telefono = e.Telefono,
         Email = e.Email,
-        NombreContacto = e.NombreContacto,
-        TipoCliente = e.TipoCliente,
+        Direccion = e.Direccion,
         Activo = e.Activo,
-        FechaCreacion = e.FechaCreacion
+        EmpresaId = e.EmpresaId
     };
 }

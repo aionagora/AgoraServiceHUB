@@ -4,7 +4,7 @@ using AgoraHub360.ERP.Application.Common;
 using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Interfaces;
-using AgoraHub360.ERP.Shared.DTOs.MDM;
+using AgoraHub360.ERP.Shared.DTOs.Proveedor;
 
 public class ProveedorService : IProveedorService
 {
@@ -24,16 +24,28 @@ public class ProveedorService : IProveedorService
 
     public async Task<Result<IReadOnlyList<ProveedorDto>>> GetAllAsync(CancellationToken ct = default)
     {
-        var items = await _repository.GetAllAsync(ct);
+        var empresaId = _currentUser.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<IReadOnlyList<ProveedorDto>>.Failure("No se pudo determinar la empresa activa.");
+
+        var items = await _repository.FindAsync(p => p.EmpresaId == empresaId.Value, ct);
         return Result<IReadOnlyList<ProveedorDto>>.Success(
             items.Select(MapToDto).ToList().AsReadOnly());
     }
 
     public async Task<Result<ProveedorDto>> GetByIdAsync(int id, CancellationToken ct = default)
     {
+        var empresaId = _currentUser.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<ProveedorDto>.Failure("No se pudo determinar la empresa activa.");
+
         var entity = await _repository.GetByIdAsync(id, ct);
         if (entity is null)
             return Result<ProveedorDto>.Failure($"Proveedor con Id {id} no encontrado.");
+
+        if (entity.EmpresaId != empresaId.Value)
+            return Result<ProveedorDto>.Failure("No tiene permisos para acceder a este proveedor.");
+
         return Result<ProveedorDto>.Success(MapToDto(entity));
     }
 
@@ -43,34 +55,22 @@ public class ProveedorService : IProveedorService
         if (!empresaId.HasValue)
             return Result<ProveedorDto>.Failure("No se pudo determinar la empresa activa.");
 
-        // Validar código único
-        var byCodigo = await _repository.FindAsync(
-            p => p.EmpresaId == empresaId.Value && p.Codigo == dto.Codigo, ct);
-        if (byCodigo.Count > 0)
-            return Result<ProveedorDto>.Failure($"Ya existe un proveedor con código '{dto.Codigo}'.");
-
-        // Validar NIT único si se proporcionó
-        if (!string.IsNullOrWhiteSpace(dto.NIT))
-        {
-            var byNit = await _repository.FindAsync(
-                p => p.EmpresaId == empresaId.Value && p.NIT == dto.NIT, ct);
-            if (byNit.Count > 0)
-                return Result<ProveedorDto>.Failure($"Ya existe un proveedor con NIT '{dto.NIT}'.");
-        }
+        // Validar NIT único
+        var byNit = await _repository.FindAsync(
+            p => p.EmpresaId == empresaId.Value && p.NIT == dto.NIT, ct);
+        if (byNit.Any())
+            return Result<ProveedorDto>.Failure($"Ya existe un proveedor con NIT '{dto.NIT}'.");
 
         var entity = new Proveedor
         {
-            Codigo = dto.Codigo,
             RazonSocial = dto.RazonSocial,
             NIT = dto.NIT,
-            Direccion = dto.Direccion,
             Telefono = dto.Telefono,
             Email = dto.Email,
-            NombreContacto = dto.NombreContacto,
+            Direccion = dto.Direccion,
             TipoProveedor = dto.TipoProveedor,
-            Pais = dto.Pais,
-            CondicionPago = dto.CondicionPago,
-            EmpresaId = empresaId.Value
+            EmpresaId = empresaId.Value,
+            Activo = true
         };
 
         await _repository.AddAsync(entity, ct);
@@ -81,35 +81,29 @@ public class ProveedorService : IProveedorService
 
     public async Task<Result<ProveedorDto>> UpdateAsync(int id, UpdateProveedorDto dto, CancellationToken ct = default)
     {
+        var empresaId = _currentUser.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<ProveedorDto>.Failure("No se pudo determinar la empresa activa.");
+
         var entity = await _repository.GetByIdAsync(id, ct);
         if (entity is null)
             return Result<ProveedorDto>.Failure($"Proveedor con Id {id} no encontrado.");
 
-        // Validar código único
-        var byCodigo = await _repository.FindAsync(
-            p => p.EmpresaId == entity.EmpresaId && p.Codigo == dto.Codigo && p.Id != id, ct);
-        if (byCodigo.Count > 0)
-            return Result<ProveedorDto>.Failure($"Ya existe otro proveedor con código '{dto.Codigo}'.");
+        if (entity.EmpresaId != empresaId.Value)
+            return Result<ProveedorDto>.Failure("No tiene permisos para modificar este proveedor.");
 
         // Validar NIT único
-        if (!string.IsNullOrWhiteSpace(dto.NIT))
-        {
-            var byNit = await _repository.FindAsync(
-                p => p.EmpresaId == entity.EmpresaId && p.NIT == dto.NIT && p.Id != id, ct);
-            if (byNit.Count > 0)
-                return Result<ProveedorDto>.Failure($"Ya existe otro proveedor con NIT '{dto.NIT}'.");
-        }
+        var byNit = await _repository.FindAsync(
+            p => p.EmpresaId == empresaId.Value && p.NIT == dto.NIT && p.Id != id, ct);
+        if (byNit.Any())
+            return Result<ProveedorDto>.Failure($"Ya existe otro proveedor con NIT '{dto.NIT}'.");
 
-        entity.Codigo = dto.Codigo;
         entity.RazonSocial = dto.RazonSocial;
         entity.NIT = dto.NIT;
-        entity.Direccion = dto.Direccion;
         entity.Telefono = dto.Telefono;
         entity.Email = dto.Email;
-        entity.NombreContacto = dto.NombreContacto;
+        entity.Direccion = dto.Direccion;
         entity.TipoProveedor = dto.TipoProveedor;
-        entity.Pais = dto.Pais;
-        entity.CondicionPago = dto.CondicionPago;
         entity.Activo = dto.Activo;
 
         await _repository.UpdateAsync(entity, ct);
@@ -120,9 +114,16 @@ public class ProveedorService : IProveedorService
 
     public async Task<Result<bool>> DeleteAsync(int id, CancellationToken ct = default)
     {
+        var empresaId = _currentUser.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<bool>.Failure("No se pudo determinar la empresa activa.");
+
         var entity = await _repository.GetByIdAsync(id, ct);
         if (entity is null)
             return Result<bool>.Failure($"Proveedor con Id {id} no encontrado.");
+
+        if (entity.EmpresaId != empresaId.Value)
+            return Result<bool>.Failure("No tiene permisos para eliminar este proveedor.");
 
         await _repository.DeleteAsync(entity, ct);
         await _unitOfWork.SaveChangesAsync(ct);
@@ -132,17 +133,13 @@ public class ProveedorService : IProveedorService
     private static ProveedorDto MapToDto(Proveedor e) => new()
     {
         Id = e.Id,
-        Codigo = e.Codigo,
         RazonSocial = e.RazonSocial,
         NIT = e.NIT,
-        Direccion = e.Direccion,
         Telefono = e.Telefono,
         Email = e.Email,
-        NombreContacto = e.NombreContacto,
+        Direccion = e.Direccion,
         TipoProveedor = e.TipoProveedor,
-        Pais = e.Pais,
-        CondicionPago = e.CondicionPago,
         Activo = e.Activo,
-        FechaCreacion = e.FechaCreacion
+        EmpresaId = e.EmpresaId
     };
 }

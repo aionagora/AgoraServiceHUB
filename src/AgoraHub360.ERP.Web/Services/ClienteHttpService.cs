@@ -2,7 +2,7 @@ namespace AgoraHub360.ERP.Web.Services;
 
 using System.Net.Http.Json;
 using AgoraHub360.ERP.Shared.DTOs;
-using AgoraHub360.ERP.Shared.DTOs.MDM;
+using AgoraHub360.ERP.Shared.DTOs.Cliente;
 
 public class ClienteHttpService
 {
@@ -17,7 +17,13 @@ public class ClienteHttpService
     public async Task<List<ClienteDto>> GetAllAsync()
     {
         var response = await _http.GetFromJsonAsync<ApiResponse<List<ClienteDto>>>(BaseUrl);
-        return response?.Data ?? new();
+        return response?.Data ?? new List<ClienteDto>();
+    }
+
+    public async Task<ClienteDto?> GetByIdAsync(int id)
+    {
+        var response = await _http.GetFromJsonAsync<ApiResponse<ClienteDto>>($"{BaseUrl}/{id}");
+        return response?.Data;
     }
 
     public async Task<ApiResponse<ClienteDto>> CreateAsync(CreateClienteDto dto)
@@ -29,7 +35,7 @@ public class ClienteHttpService
             return ApiResponse<ClienteDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<ClienteDto>>()
-            ?? ApiResponse<ClienteDto>.Fail("Error de comunicación.");
+            ?? ApiResponse<ClienteDto>.Fail("Error de comunicación con el servidor.");
     }
 
     public async Task<ApiResponse<ClienteDto>> UpdateAsync(int id, UpdateClienteDto dto)
@@ -41,7 +47,7 @@ public class ClienteHttpService
             return ApiResponse<ClienteDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<ClienteDto>>()
-            ?? ApiResponse<ClienteDto>.Fail("Error de comunicación.");
+            ?? ApiResponse<ClienteDto>.Fail("Error de comunicación con el servidor.");
     }
 
     public async Task<ApiResponse<bool>> DeleteAsync(int id)
@@ -53,6 +59,6 @@ public class ClienteHttpService
             return ApiResponse<bool>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<bool>>()
-            ?? ApiResponse<bool>.Fail("Error de comunicación.");
+            ?? ApiResponse<bool>.Fail("Error de comunicación con el servidor.");
     }
 }

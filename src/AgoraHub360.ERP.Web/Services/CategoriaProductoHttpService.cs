@@ -2,12 +2,12 @@ namespace AgoraHub360.ERP.Web.Services;
 
 using System.Net.Http.Json;
 using AgoraHub360.ERP.Shared.DTOs;
-using AgoraHub360.ERP.Shared.DTOs.MDM;
+using AgoraHub360.ERP.Shared.DTOs.CategoriaProducto;
 
 public class CategoriaProductoHttpService
 {
     private readonly HttpClient _http;
-    private const string BaseUrl = "api/v1/categorias-producto";
+    private const string BaseUrl = "api/v1/categorias";
 
     public CategoriaProductoHttpService(HttpClient http)
     {
@@ -17,7 +17,13 @@ public class CategoriaProductoHttpService
     public async Task<List<CategoriaProductoDto>> GetAllAsync()
     {
         var response = await _http.GetFromJsonAsync<ApiResponse<List<CategoriaProductoDto>>>(BaseUrl);
-        return response?.Data ?? new();
+        return response?.Data ?? new List<CategoriaProductoDto>();
+    }
+
+    public async Task<CategoriaProductoDto?> GetByIdAsync(int id)
+    {
+        var response = await _http.GetFromJsonAsync<ApiResponse<CategoriaProductoDto>>($"{BaseUrl}/{id}");
+        return response?.Data;
     }
 
     public async Task<ApiResponse<CategoriaProductoDto>> CreateAsync(CreateCategoriaProductoDto dto)
@@ -29,7 +35,7 @@ public class CategoriaProductoHttpService
             return ApiResponse<CategoriaProductoDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<CategoriaProductoDto>>()
-            ?? ApiResponse<CategoriaProductoDto>.Fail("Error de comunicación.");
+            ?? ApiResponse<CategoriaProductoDto>.Fail("Error de comunicación con el servidor.");
     }
 
     public async Task<ApiResponse<CategoriaProductoDto>> UpdateAsync(int id, UpdateCategoriaProductoDto dto)
@@ -41,7 +47,7 @@ public class CategoriaProductoHttpService
             return ApiResponse<CategoriaProductoDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<CategoriaProductoDto>>()
-            ?? ApiResponse<CategoriaProductoDto>.Fail("Error de comunicación.");
+            ?? ApiResponse<CategoriaProductoDto>.Fail("Error de comunicación con el servidor.");
     }
 
     public async Task<ApiResponse<bool>> DeleteAsync(int id)
@@ -53,6 +59,6 @@ public class CategoriaProductoHttpService
             return ApiResponse<bool>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<bool>>()
-            ?? ApiResponse<bool>.Fail("Error de comunicación.");
+            ?? ApiResponse<bool>.Fail("Error de comunicación con el servidor.");
     }
 }
