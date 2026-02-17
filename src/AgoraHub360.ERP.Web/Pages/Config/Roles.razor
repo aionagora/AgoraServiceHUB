@@ -1,0 +1,220 @@
+@page "/config/roles"
+@inject RolHttpService RolSvc
+
+<PageTitle>Roles - AgoraHub360 ERP</PageTitle>
+
+<div class="page-header">
+    <h1>Roles</h1>
+    <p class="text-muted mb-0">Sistema &rsaquo; Roles</p>
+</div>
+
+@if (!string.IsNullOrEmpty(_mensaje))
+{
+    <div class="alert @(_esError ? "alert-danger" : "alert-success") alert-dismissible fade show">
+        @_mensaje
+        <button type="button" class="btn-close" @onclick="() => _mensaje = null"></button>
+    </div>
+}
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center py-3">
+        <span>Roles del sistema (@_roles.Count)</span>
+        <button class="btn btn-primary btn-sm" @onclick="ShowCrear">
+            <i class="bi bi-plus-circle me-1"></i> Nuevo Rol
+        </button>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="card-body text-center py-5">
+            <div class="spinner-border text-primary"></div>
+            <p class="text-muted mt-2">Cargando roles...</p>
+        </div>
+    }
+    else if (_roles.Count == 0)
+    {
+        <div class="card-body text-center py-5">
+            <i class="bi bi-shield-lock" style="font-size: 3rem; color: var(--agora-text-light);"></i>
+            <p class="text-muted mt-3">No hay roles registrados.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Descripcion</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var rol in _roles)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@rol.Nombre</td>
+                            <td>@(rol.Descripcion ?? "—")</td>
+                            <td class="text-center">
+                                <span class="badge @(rol.Activo ? "bg-success" : "bg-secondary")">
+                                    @(rol.Activo ? "Activo" : "Inactivo")
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-outline-primary btn-sm me-1"
+                                        @onclick="() => ShowEditar(rol)" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm"
+                                        @onclick="() => ConfirmDelete(rol)" title="Eliminar">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@if (_showForm)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(_editId.HasValue ? "Editar Rol" : "Nuevo Rol")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseForm"></button>
+                </div>
+                <EditForm Model="_formModel" OnValidSubmit="SaveAsync">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Nombre *</label>
+                            <InputText class="form-control" @bind-Value="_formModel.Nombre" />
+                            <ValidationMessage For="() => _formModel.Nombre" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Descripcion</label>
+                            <InputText class="form-control" @bind-Value="_formModel.Descripcion" />
+                        </div>
+                        @if (_editId.HasValue)
+                        {
+                            <div class="form-check">
+                                <InputCheckbox class="form-check-input" @bind-Value="_formActivo" />
+                                <label class="form-check-label">Activo</label>
+                            </div>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseForm">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" disabled="@_saving">
+                            @if (_saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                            @(_editId.HasValue ? "Guardar" : "Crear Rol")
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@if (_deleteTarget is not null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar</h5>
+                    <button type="button" class="btn-close" @onclick="() => _deleteTarget = null"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Eliminar el rol <strong>@_deleteTarget.Nombre</strong>?</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary btn-sm" @onclick="() => _deleteTarget = null">Cancelar</button>
+                    <button class="btn btn-danger btn-sm" @onclick="DeleteAsync" disabled="@_saving">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<RolDto> _roles = new();
+    private bool _loading = true, _saving;
+    private string? _mensaje;
+    private bool _esError;
+    private bool _showForm;
+    private int? _editId;
+    private CreateRolDto _formModel = new();
+    private bool _formActivo = true;
+    private RolDto? _deleteTarget;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try { _roles = await RolSvc.GetAllAsync(); }
+        catch { _mensaje = "Error al cargar roles."; _esError = true; }
+        _loading = false;
+    }
+
+    private void ShowCrear() { _editId = null; _formModel = new(); _formActivo = true; _showForm = true; }
+
+    private void ShowEditar(RolDto r)
+    {
+        _editId = r.Id;
+        _formModel = new() { Nombre = r.Nombre, Descripcion = r.Descripcion };
+        _formActivo = r.Activo;
+        _showForm = true;
+    }
+
+    private void CloseForm() { _showForm = false; _editId = null; }
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+        try
+        {
+            if (_editId.HasValue)
+            {
+                var dto = new UpdateRolDto { Nombre = _formModel.Nombre, Descripcion = _formModel.Descripcion, Activo = _formActivo };
+                var r = await RolSvc.UpdateAsync(_editId.Value, dto);
+                if (!r.Success) { _mensaje = r.Message; _esError = true; _saving = false; return; }
+                _mensaje = "Rol actualizado."; _esError = false;
+            }
+            else
+            {
+                var r = await RolSvc.CreateAsync(_formModel);
+                if (!r.Success) { _mensaje = r.Message; _esError = true; _saving = false; return; }
+                _mensaje = "Rol creado."; _esError = false;
+            }
+            CloseForm();
+            await LoadAsync();
+        }
+        catch { _mensaje = "Error de comunicacion."; _esError = true; }
+        _saving = false;
+    }
+
+    private void ConfirmDelete(RolDto r) => _deleteTarget = r;
+
+    private async Task DeleteAsync()
+    {
+        if (_deleteTarget is null) return;
+        _saving = true;
+        try
+        {
+            var r = await RolSvc.DeleteAsync(_deleteTarget.Id);
+            _mensaje = r.Success ? "Rol eliminado." : r.Message;
+            _esError = !r.Success;
+            _deleteTarget = null;
+            await LoadAsync();
+        }
+        catch { _mensaje = "Error de comunicacion."; _esError = true; }
+        _saving = false;
+    }
+}

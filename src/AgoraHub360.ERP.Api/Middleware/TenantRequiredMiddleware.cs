@@ -15,6 +15,8 @@ public class TenantRequiredMiddleware
     private static readonly string[] ExemptPaths = new[]
     {
         "/api/v1/empresas",
+        "/api/v1/roles",
+        "/api/v1/usuarios",
         "/api/v1/diagnostics",
         "/health",
         "/swagger"

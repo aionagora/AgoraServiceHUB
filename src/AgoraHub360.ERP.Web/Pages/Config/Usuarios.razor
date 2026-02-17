@@ -1,4 +1,7 @@
 @page "/config/usuarios"
+@inject UsuarioHttpService UsuarioSvc
+@inject RolHttpService RolSvc
+@inject EmpresaHttpService EmpresaSvc
 
 <PageTitle>Usuarios - AgoraHub360 ERP</PageTitle>
 
@@ -7,15 +10,429 @@
     <p class="text-muted mb-0">Sistema &rsaquo; Usuarios</p>
 </div>
 
-<div class="card">
+@if (!string.IsNullOrEmpty(_mensaje))
+{
+    <div class="alert @(_esError ? "alert-danger" : "alert-success") alert-dismissible fade show">
+        @_mensaje
+        <button type="button" class="btn-close" @onclick="() => _mensaje = null"></button>
+    </div>
+}
+
+<!-- Listado -->
+<div class="card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center py-3">
-        <span>Listado de Usuarios</span>
-        <button class="btn btn-primary btn-sm" disabled>
+        <span>Usuarios (@_usuarios.Count)</span>
+        <button class="btn btn-primary btn-sm" @onclick="ShowCrear">
             <i class="bi bi-plus-circle me-1"></i> Nuevo Usuario
         </button>
     </div>
-    <div class="card-body text-center py-5">
-        <i class="bi bi-person-gear" style="font-size: 3rem; color: var(--agora-text-light);"></i>
-        <p class="text-muted mt-3">Modulo en construccion.</p>
-    </div>
+
+    @if (_loading)
+    {
+        <div class="card-body text-center py-5">
+            <div class="spinner-border text-primary"></div>
+        </div>
+    }
+    else if (_usuarios.Count == 0)
+    {
+        <div class="card-body text-center py-5">
+            <i class="bi bi-person-gear" style="font-size: 3rem; color: var(--agora-text-light);"></i>
+            <p class="text-muted mt-3">No hay usuarios registrados.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Usuario</th>
+                        <th>Nombre</th>
+                        <th>Email</th>
+                        <th>Empresas / Roles</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var u in _usuarios)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@u.NombreUsuario</td>
+                            <td>@u.NombreCompleto</td>
+                            <td>@u.Email</td>
+                            <td>
+                                @if (u.EmpresasAsignadas.Count == 0)
+                                {
+                                    <span class="text-muted small">Sin asignar</span>
+                                }
+                                else
+                                {
+                                    @foreach (var ea in u.EmpresasAsignadas)
+                                    {
+                                        <span class="badge bg-primary me-1" title="@ea.EmpresaNombre">
+                                            @ea.EmpresaNombre: @ea.Rol
+                                        </span>
+                                    }
+                                }
+                            </td>
+                            <td class="text-center">
+                                <span class="badge @(u.Activo ? "bg-success" : "bg-secondary")">
+                                    @(u.Activo ? "Activo" : "Inactivo")
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-outline-info btn-sm me-1"
+                                        @onclick="() => ShowAsignar(u)" title="Asignar Rol">
+                                    <i class="bi bi-shield-plus"></i>
+                                </button>
+                                <button class="btn btn-outline-primary btn-sm me-1"
+                                        @onclick="() => ShowEditar(u)" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm"
+                                        @onclick="() => ConfirmDelete(u)" title="Eliminar">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
 </div>
+
+<!-- Modal Crear/Editar Usuario -->
+@if (_showForm)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(_editId.HasValue ? "Editar Usuario" : "Nuevo Usuario")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseForm"></button>
+                </div>
+                <EditForm Model="_createModel" OnValidSubmit="SaveUsuarioAsync">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Usuario *</label>
+                                <InputText class="form-control" @bind-Value="_createModel.NombreUsuario" />
+                                <ValidationMessage For="() => _createModel.NombreUsuario" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Email *</label>
+                                <InputText class="form-control" @bind-Value="_createModel.Email" />
+                                <ValidationMessage For="() => _createModel.Email" />
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Nombre Completo *</label>
+                            <InputText class="form-control" @bind-Value="_createModel.NombreCompleto" />
+                            <ValidationMessage For="() => _createModel.NombreCompleto" />
+                        </div>
+                        @if (!_editId.HasValue)
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">Contrasena *</label>
+                                <InputText class="form-control" type="password" @bind-Value="_createModel.Password" />
+                                <ValidationMessage For="() => _createModel.Password" />
+                            </div>
+                        }
+                        @if (_editId.HasValue)
+                        {
+                            <div class="form-check">
+                                <InputCheckbox class="form-check-input" @bind-Value="_formActivo" />
+                                <label class="form-check-label">Activo</label>
+                            </div>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseForm">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" disabled="@_saving">
+                            @if (_saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                            @(_editId.HasValue ? "Guardar" : "Crear Usuario")
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal Asignar Rol -->
+@if (_showAsignar)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Asignar Rol - @_asignarUsuario?.NombreCompleto</h5>
+                    <button type="button" class="btn-close" @onclick="() => _showAsignar = false"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Asignaciones actuales -->
+                    @if (_asignarUsuario?.EmpresasAsignadas.Count > 0)
+                    {
+                        <h6 class="mb-2">Asignaciones actuales</h6>
+                        <table class="table table-sm mb-3">
+                            <thead><tr><th>Empresa</th><th>Rol</th><th></th></tr></thead>
+                            <tbody>
+                                @foreach (var ea in _asignarUsuario.EmpresasAsignadas)
+                                {
+                                    <tr>
+                                        <td>@ea.EmpresaNombre</td>
+                                        <td><span class="badge bg-primary">@ea.Rol</span></td>
+                                        <td class="text-end">
+                                            <button class="btn btn-outline-danger btn-sm"
+                                                    @onclick="() => RemoverAsync(ea.EmpresaId)">
+                                                <i class="bi bi-x"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+
+                    <!-- Nueva asignacion -->
+                    <h6 class="mb-2">Nueva asignacion</h6>
+                    <div class="row g-2">
+                        <div class="col-md-5">
+                            <select class="form-select form-select-sm" @bind="_asignarEmpresaId">
+                                <option value="0">— Empresa —</option>
+                                @foreach (var e in _empresas.Where(e => e.Activo))
+                                {
+                                    <option value="@e.Id">@e.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-select form-select-sm" @bind="_asignarRol">
+                                <option value="">— Rol —</option>
+                                @foreach (var r in _roles.Where(r => r.Activo))
+                                {
+                                    <option value="@r.Nombre">@r.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-primary btn-sm w-100" @onclick="AsignarAsync"
+                                    disabled="@(_asignarEmpresaId == 0 || string.IsNullOrEmpty(_asignarRol) || _saving)">
+                                Asignar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="() => _showAsignar = false">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal Eliminar -->
+@if (_deleteTarget is not null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar</h5>
+                    <button type="button" class="btn-close" @onclick="() => _deleteTarget = null"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Eliminar al usuario <strong>@_deleteTarget.NombreUsuario</strong>?</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary btn-sm" @onclick="() => _deleteTarget = null">Cancelar</button>
+                    <button class="btn btn-danger btn-sm" @onclick="DeleteAsync" disabled="@_saving">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<UsuarioDto> _usuarios = new();
+    private List<RolDto> _roles = new();
+    private List<EmpresaDto> _empresas = new();
+    private bool _loading = true, _saving;
+    private string? _mensaje;
+    private bool _esError;
+
+    // Crear/Editar
+    private bool _showForm;
+    private int? _editId;
+    private CreateUsuarioDto _createModel = new();
+    private bool _formActivo = true;
+
+    // Asignar
+    private bool _showAsignar;
+    private UsuarioDto? _asignarUsuario;
+    private int _asignarEmpresaId;
+    private string _asignarRol = string.Empty;
+
+    // Delete
+    private UsuarioDto? _deleteTarget;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.WhenAll(LoadUsuariosAsync(), LoadCatalogosAsync());
+    }
+
+    private async Task LoadUsuariosAsync()
+    {
+        _loading = true;
+        try { _usuarios = await UsuarioSvc.GetAllAsync(); }
+        catch { _mensaje = "Error al cargar usuarios."; _esError = true; }
+        _loading = false;
+    }
+
+    private async Task LoadCatalogosAsync()
+    {
+        try
+        {
+            _roles = await RolSvc.GetAllAsync();
+            _empresas = await EmpresaSvc.GetAllAsync();
+        }
+        catch { /* catalogos opcionales en carga inicial */ }
+    }
+
+    // ── Crear/Editar ──
+    private void ShowCrear()
+    {
+        _editId = null;
+        _createModel = new CreateUsuarioDto();
+        _formActivo = true;
+        _showForm = true;
+    }
+
+    private void ShowEditar(UsuarioDto u)
+    {
+        _editId = u.Id;
+        _createModel = new CreateUsuarioDto
+        {
+            NombreUsuario = u.NombreUsuario,
+            Email = u.Email,
+            NombreCompleto = u.NombreCompleto,
+            Password = "______" // placeholder, no se envia
+        };
+        _formActivo = u.Activo;
+        _showForm = true;
+    }
+
+    private void CloseForm() { _showForm = false; _editId = null; }
+
+    private async Task SaveUsuarioAsync()
+    {
+        _saving = true;
+        try
+        {
+            if (_editId.HasValue)
+            {
+                var dto = new UpdateUsuarioDto
+                {
+                    NombreUsuario = _createModel.NombreUsuario,
+                    Email = _createModel.Email,
+                    NombreCompleto = _createModel.NombreCompleto,
+                    Activo = _formActivo
+                };
+                var r = await UsuarioSvc.UpdateAsync(_editId.Value, dto);
+                if (!r.Success) { _mensaje = r.Message; _esError = true; _saving = false; return; }
+                _mensaje = "Usuario actualizado."; _esError = false;
+            }
+            else
+            {
+                var r = await UsuarioSvc.CreateAsync(_createModel);
+                if (!r.Success) { _mensaje = r.Message; _esError = true; _saving = false; return; }
+                _mensaje = "Usuario creado."; _esError = false;
+            }
+            CloseForm();
+            await LoadUsuariosAsync();
+        }
+        catch { _mensaje = "Error de comunicacion."; _esError = true; }
+        _saving = false;
+    }
+
+    // ── Asignar Rol ──
+    private void ShowAsignar(UsuarioDto u)
+    {
+        _asignarUsuario = u;
+        _asignarEmpresaId = 0;
+        _asignarRol = string.Empty;
+        _showAsignar = true;
+    }
+
+    private async Task AsignarAsync()
+    {
+        if (_asignarUsuario is null) return;
+        _saving = true;
+        try
+        {
+            var dto = new AsignarRolDto { EmpresaId = _asignarEmpresaId, Rol = _asignarRol };
+            var r = await UsuarioSvc.AsignarRolAsync(_asignarUsuario.Id, dto);
+            if (r.Success)
+            {
+                _mensaje = "Rol asignado."; _esError = false;
+                await RefreshAsignarUsuario();
+            }
+            else { _mensaje = r.Message; _esError = true; }
+        }
+        catch { _mensaje = "Error de comunicacion."; _esError = true; }
+        _saving = false;
+    }
+
+    private async Task RemoverAsync(int empresaId)
+    {
+        if (_asignarUsuario is null) return;
+        _saving = true;
+        try
+        {
+            var r = await UsuarioSvc.RemoverDeEmpresaAsync(_asignarUsuario.Id, empresaId);
+            if (r.Success)
+            {
+                _mensaje = "Asignacion removida."; _esError = false;
+                await RefreshAsignarUsuario();
+            }
+            else { _mensaje = r.Message; _esError = true; }
+        }
+        catch { _mensaje = "Error de comunicacion."; _esError = true; }
+        _saving = false;
+    }
+
+    private async Task RefreshAsignarUsuario()
+    {
+        if (_asignarUsuario is null) return;
+        var u = await UsuarioSvc.GetByIdAsync(_asignarUsuario.Id);
+        if (u is not null)
+        {
+            _asignarUsuario = u;
+            // Actualizar tambien en la lista
+            var idx = _usuarios.FindIndex(x => x.Id == u.Id);
+            if (idx >= 0) _usuarios[idx] = u;
+        }
+    }
+
+    // ── Delete ──
+    private void ConfirmDelete(UsuarioDto u) => _deleteTarget = u;
+
+    private async Task DeleteAsync()
+    {
+        if (_deleteTarget is null) return;
+        _saving = true;
+        try
+        {
+            var r = await UsuarioSvc.DeleteAsync(_deleteTarget.Id);
+            _mensaje = r.Success ? "Usuario eliminado." : r.Message;
+            _esError = !r.Success;
+            _deleteTarget = null;
+            await LoadUsuariosAsync();
+        }
+        catch { _mensaje = "Error de comunicacion."; _esError = true; }
+        _saving = false;
+    }
+}

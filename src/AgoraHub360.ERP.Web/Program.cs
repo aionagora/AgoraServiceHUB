@@ -23,5 +23,7 @@ builder.Services.AddScoped(sp => new HttpClient
 // Servicios
 builder.Services.AddScoped<EmpresaHttpService>();
 builder.Services.AddScoped<EmpresaStateService>();
+builder.Services.AddScoped<RolHttpService>();
+builder.Services.AddScoped<UsuarioHttpService>();
 
 await builder.Build().RunAsync();
