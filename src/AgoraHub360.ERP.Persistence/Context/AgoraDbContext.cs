@@ -3,6 +3,7 @@ namespace AgoraHub360.ERP.Persistence.Context;
 using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Domain.Common;
 using AgoraHub360.ERP.Domain.Entities.Core;
+using AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -38,6 +39,13 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     // Configuración
     public DbSet<ParametroSistema> ParametrosSistema => Set<ParametroSistema>();
     public DbSet<NumeracionDocumento> NumeracionesDocumento => Set<NumeracionDocumento>();
+
+    // MDM (Datos Maestros)
+    public DbSet<CategoriaProducto> CategoriasProducto => Set<CategoriaProducto>();
+    public DbSet<UnidadMedida> UnidadesMedida => Set<UnidadMedida>();
+    public DbSet<Producto> Productos => Set<Producto>();
+    public DbSet<Cliente> Clientes => Set<Cliente>();
+    public DbSet<Proveedor> Proveedores => Set<Proveedor>();
 
     // Auditoría
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();

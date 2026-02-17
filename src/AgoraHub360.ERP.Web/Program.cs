@@ -32,4 +32,11 @@ builder.Services.AddScoped<AuditLogHttpService>();
 builder.Services.AddScoped<ParametroHttpService>();
 builder.Services.AddScoped<NumeracionHttpService>();
 
+// ──── Servicios HTTP MDM ────
+builder.Services.AddScoped<CategoriaProductoHttpService>();
+builder.Services.AddScoped<UnidadMedidaHttpService>();
+builder.Services.AddScoped<ProductoHttpService>();
+builder.Services.AddScoped<ClienteHttpService>();
+builder.Services.AddScoped<ProveedorHttpService>();
+
 await builder.Build().RunAsync();

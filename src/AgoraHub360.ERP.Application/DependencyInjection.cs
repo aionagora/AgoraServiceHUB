@@ -17,6 +17,13 @@ public static class DependencyInjection
         services.AddScoped<IParametroSistemaService, ParametroSistemaService>();
         services.AddScoped<INumeracionDocumentoService, NumeracionDocumentoService>();
 
+        // MDM (Datos Maestros)
+        services.AddScoped<ICategoriaProductoService, CategoriaProductoService>();
+        services.AddScoped<IUnidadMedidaService, UnidadMedidaService>();
+        services.AddScoped<IProductoService, ProductoService>();
+        services.AddScoped<IClienteService, ClienteService>();
+        services.AddScoped<IProveedorService, ProveedorService>();
+
         return services;
     }
 }

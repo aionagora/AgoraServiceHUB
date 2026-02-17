@@ -1,4 +1,8 @@
 @page "/mdm/productos"
+@attribute [Authorize]
+@inject ProductoHttpService ProductoSvc
+@inject CategoriaProductoHttpService CategoriaSvc
+@inject UnidadMedidaHttpService UnidadSvc
 
 <PageTitle>Productos - AgoraHub360 ERP</PageTitle>
 
@@ -7,15 +11,321 @@
     <p class="text-muted mb-0">Datos Maestros &rsaquo; Productos</p>
 </div>
 
-<div class="card">
+@if (!string.IsNullOrEmpty(_mensaje))
+{
+    <div class="alert @(_esError ? "alert-danger" : "alert-success") alert-dismissible fade show">
+        @_mensaje
+        <button type="button" class="btn-close" @onclick="() => _mensaje = null"></button>
+    </div>
+}
+
+<div class="card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center py-3">
-        <span>Listado de Productos</span>
-        <button class="btn btn-primary btn-sm" disabled>
+        <span>Productos (@_items.Count)</span>
+        <button class="btn btn-primary btn-sm" @onclick="ShowCrear">
             <i class="bi bi-plus-circle me-1"></i> Nuevo Producto
         </button>
     </div>
-    <div class="card-body text-center py-5">
-        <i class="bi bi-box-seam" style="font-size: 3rem; color: var(--agora-text-light);"></i>
-        <p class="text-muted mt-3">Modulo en construccion.</p>
-    </div>
+
+    @if (_loading)
+    {
+        <div class="card-body text-center py-5">
+            <div class="spinner-border text-primary"></div>
+        </div>
+    }
+    else if (_items.Count == 0)
+    {
+        <div class="card-body text-center py-5">
+            <i class="bi bi-box-seam" style="font-size: 3rem; color: var(--agora-text-light);"></i>
+            <p class="text-muted mt-3">No hay productos registrados.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Nombre</th>
+                        <th>Categoría</th>
+                        <th>U.M.</th>
+                        <th class="text-end">P. Compra</th>
+                        <th class="text-end">P. Venta</th>
+                        <th class="text-end">Stock Mín.</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in _items)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@item.Codigo</td>
+                            <td>@item.Nombre</td>
+                            <td><span class="badge bg-primary">@item.CategoriaNombre</span></td>
+                            <td>@item.UnidadMedidaNombre</td>
+                            <td class="text-end">@item.PrecioCompra.ToString("N2")</td>
+                            <td class="text-end">@item.PrecioVenta.ToString("N2")</td>
+                            <td class="text-end">@item.StockMinimo.ToString("N2")</td>
+                            <td class="text-center">
+                                <span class="badge @(item.Activo ? "bg-success" : "bg-secondary")">
+                                    @(item.Activo ? "Activo" : "Inactivo")
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-outline-primary btn-sm me-1"
+                                        @onclick="() => ShowEditar(item)" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm"
+                                        @onclick="() => ConfirmDelete(item)" title="Eliminar">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
 </div>
+
+<!-- Modal Crear/Editar -->
+@if (_showForm)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(_editId.HasValue ? "Editar Producto" : "Nuevo Producto")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseForm"></button>
+                </div>
+                <EditForm Model="_formModel" OnValidSubmit="SaveAsync">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body">
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Código *</label>
+                                <InputText class="form-control" @bind-Value="_formModel.Codigo" />
+                                <ValidationMessage For="() => _formModel.Codigo" />
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label">Nombre *</label>
+                                <InputText class="form-control" @bind-Value="_formModel.Nombre" />
+                                <ValidationMessage For="() => _formModel.Nombre" />
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Descripción</label>
+                            <InputText class="form-control" @bind-Value="_formModel.Descripcion" />
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Categoría *</label>
+                                <InputSelect class="form-select" @bind-Value="_formModel.CategoriaProductoId">
+                                    <option value="0">— Seleccionar —</option>
+                                    @foreach (var c in _categorias.Where(c => c.Activo))
+                                    {
+                                        <option value="@c.Id">@c.Nombre</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="() => _formModel.CategoriaProductoId" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Unidad de Medida *</label>
+                                <InputSelect class="form-select" @bind-Value="_formModel.UnidadMedidaId">
+                                    <option value="0">— Seleccionar —</option>
+                                    @foreach (var u in _unidades.Where(u => u.Activo))
+                                    {
+                                        <option value="@u.Id">@u.Nombre (@u.Abreviatura)</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="() => _formModel.UnidadMedidaId" />
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Precio Compra</label>
+                                <InputNumber class="form-control" @bind-Value="_formModel.PrecioCompra" />
+                                <ValidationMessage For="() => _formModel.PrecioCompra" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Precio Venta</label>
+                                <InputNumber class="form-control" @bind-Value="_formModel.PrecioVenta" />
+                                <ValidationMessage For="() => _formModel.PrecioVenta" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Stock Mínimo</label>
+                                <InputNumber class="form-control" @bind-Value="_formModel.StockMinimo" />
+                                <ValidationMessage For="() => _formModel.StockMinimo" />
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">SKU</label>
+                            <InputText class="form-control" @bind-Value="_formModel.Sku" />
+                        </div>
+                        @if (_editId.HasValue)
+                        {
+                            <div class="form-check">
+                                <InputCheckbox class="form-check-input" @bind-Value="_formActivo" />
+                                <label class="form-check-label">Activo</label>
+                            </div>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseForm">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" disabled="@_saving">
+                            @if (_saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                            @(_editId.HasValue ? "Guardar" : "Crear Producto")
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal Eliminar -->
+@if (_deleteTarget is not null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar</h5>
+                    <button type="button" class="btn-close" @onclick="() => _deleteTarget = null"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Eliminar el producto <strong>@_deleteTarget.Nombre</strong>?</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary btn-sm" @onclick="() => _deleteTarget = null">Cancelar</button>
+                    <button class="btn btn-danger btn-sm" @onclick="DeleteAsync" disabled="@_saving">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<ProductoDto> _items = new();
+    private List<CategoriaProductoDto> _categorias = new();
+    private List<UnidadMedidaDto> _unidades = new();
+    private bool _loading = true, _saving;
+    private string? _mensaje;
+    private bool _esError;
+
+    private bool _showForm;
+    private int? _editId;
+    private CreateProductoDto _formModel = new();
+    private bool _formActivo = true;
+    private ProductoDto? _deleteTarget;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.WhenAll(LoadDataAsync(), LoadCatalogosAsync());
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        try { _items = await ProductoSvc.GetAllAsync(); }
+        catch { _mensaje = "Error al cargar productos."; _esError = true; }
+        _loading = false;
+    }
+
+    private async Task LoadCatalogosAsync()
+    {
+        try
+        {
+            _categorias = await CategoriaSvc.GetAllAsync();
+            _unidades = await UnidadSvc.GetAllAsync();
+        }
+        catch { /* catálogos opcionales en carga inicial */ }
+    }
+
+    private void ShowCrear()
+    {
+        _editId = null;
+        _formModel = new CreateProductoDto();
+        _formActivo = true;
+        _showForm = true;
+    }
+
+    private void ShowEditar(ProductoDto item)
+    {
+        _editId = item.Id;
+        _formModel = new CreateProductoDto
+        {
+            Codigo = item.Codigo,
+            Nombre = item.Nombre,
+            Descripcion = item.Descripcion,
+            CategoriaProductoId = item.CategoriaProductoId,
+            UnidadMedidaId = item.UnidadMedidaId,
+            PrecioCompra = item.PrecioCompra,
+            PrecioVenta = item.PrecioVenta,
+            StockMinimo = item.StockMinimo,
+            Sku = item.Sku
+        };
+        _formActivo = item.Activo;
+        _showForm = true;
+    }
+
+    private void CloseForm() { _showForm = false; _editId = null; }
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+        try
+        {
+            if (_editId.HasValue)
+            {
+                var dto = new UpdateProductoDto
+                {
+                    Codigo = _formModel.Codigo,
+                    Nombre = _formModel.Nombre,
+                    Descripcion = _formModel.Descripcion,
+                    CategoriaProductoId = _formModel.CategoriaProductoId,
+                    UnidadMedidaId = _formModel.UnidadMedidaId,
+                    PrecioCompra = _formModel.PrecioCompra,
+                    PrecioVenta = _formModel.PrecioVenta,
+                    StockMinimo = _formModel.StockMinimo,
+                    Sku = _formModel.Sku,
+                    Activo = _formActivo
+                };
+                var r = await ProductoSvc.UpdateAsync(_editId.Value, dto);
+                if (!r.Success) { _mensaje = r.Message; _esError = true; _saving = false; return; }
+                _mensaje = "Producto actualizado."; _esError = false;
+            }
+            else
+            {
+                var r = await ProductoSvc.CreateAsync(_formModel);
+                if (!r.Success) { _mensaje = r.Message; _esError = true; _saving = false; return; }
+                _mensaje = "Producto creado."; _esError = false;
+            }
+            CloseForm();
+            await LoadDataAsync();
+        }
+        catch { _mensaje = "Error de comunicación."; _esError = true; }
+        _saving = false;
+    }
+
+    private void ConfirmDelete(ProductoDto item) => _deleteTarget = item;
+
+    private async Task DeleteAsync()
+    {
+        if (_deleteTarget is null) return;
+        _saving = true;
+        try
+        {
+            var r = await ProductoSvc.DeleteAsync(_deleteTarget.Id);
+            _mensaje = r.Success ? "Producto eliminado." : r.Message;
+            _esError = !r.Success;
+            _deleteTarget = null;
+            await LoadDataAsync();
+        }
+        catch { _mensaje = "Error de comunicación."; _esError = true; }
+        _saving = false;
+    }
+}
