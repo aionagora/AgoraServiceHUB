@@ -141,6 +141,7 @@ public class ParametroSistemaServiceTests
     private class FakeCurrentUserService : ICurrentUserService
     {
         public string? UserId { get; set; }
+        public int? UserIdInt { get; set; }
         public string? UserName { get; set; }
         public int? EmpresaId { get; set; }
     }

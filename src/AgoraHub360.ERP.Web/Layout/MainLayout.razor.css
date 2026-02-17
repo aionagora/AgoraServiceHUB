@@ -108,6 +108,27 @@
     outline: none;
 }
 
+/* Nuevo: Badge de empresa cuando solo hay una asignada */
+.empresa-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--agora-primary);
+    background: rgba(26, 58, 92, 0.08);
+    padding: 0.4rem 0.75rem;
+    border-radius: var(--radius-sm);
+    font-weight: 500;
+}
+
+.empresa-badge i {
+    font-size: 1rem;
+}
+
+.empresa-nombre {
+    font-weight: 600;
+}
+
 .user-info {
     font-size: 0.85rem;
     color: var(--agora-text-muted);
@@ -146,7 +167,8 @@
         padding: 1rem;
     }
 
-    .topbar-right .empresa-selector {
+    .topbar-right .empresa-selector,
+    .topbar-right .empresa-badge {
         display: none;
     }
 }

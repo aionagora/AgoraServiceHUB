@@ -20,25 +20,36 @@
                 <span class="breadcrumb-text">AgoraHub360 ERP</span>
             </div>
             <div class="topbar-right">
-                <!-- Selector de Empresa -->
-                <div class="empresa-selector">
-                    <i class="bi bi-building"></i>
-                    <select class="empresa-select" @onchange="OnEmpresaChanged">
-                        @if (EmpresaState.Empresas.Count == 0)
-                        {
-                            <option>Sin empresas</option>
-                        }
-                        else
-                        {
-                            @foreach (var emp in EmpresaState.Empresas.Where(e => e.Activo))
+                <!-- Selector de Empresa (solo se muestra si tiene más de una empresa asignada) -->
+                @if (EmpresaState.Empresas.Count > 1)
+                {
+                    <div class="empresa-selector">
+                        <i class="bi bi-building"></i>
+                        <select class="empresa-select" @onchange="OnEmpresaChanged">
+                            @if (EmpresaState.Empresas.Count == 0)
                             {
-                                <option value="@emp.Id" selected="@(emp.Id == EmpresaState.EmpresaActivaId)">
-                                    @emp.Nombre
-                                </option>
+                                <option>Sin empresas</option>
                             }
-                        }
-                    </select>
-                </div>
+                            else
+                            {
+                                @foreach (var emp in EmpresaState.Empresas.Where(e => e.Activo))
+                                {
+                                    <option value="@emp.Id" selected="@(emp.Id == EmpresaState.EmpresaActivaId)">
+                                        @emp.Nombre
+                                    </option>
+                                }
+                            }
+                        </select>
+                    </div>
+                }
+                else if (EmpresaState.EmpresaActiva != null)
+                {
+                    <!-- Mostrar nombre de la empresa sin selector si solo tiene una -->
+                    <div class="empresa-badge">
+                        <i class="bi bi-building"></i>
+                        <span class="empresa-nombre">@EmpresaState.EmpresaActiva.Nombre</span>
+                    </div>
+                }
                 
                 <!-- Menú de Usuario -->
                 <AuthorizeView>
@@ -119,9 +130,15 @@
     {
         try
         {
-            // Cargar solo las empresas asignadas al usuario (Admin ve todas)
+            // Cargar solo las empresas asignadas al usuario autenticado
             var empresas = await EmpresaSvc.GetMisEmpresasAsync();
             EmpresaState.SetEmpresas(empresas);
+            
+            // Si solo tiene una empresa, establecerla automáticamente como activa
+            if (empresas.Count == 1)
+            {
+                await EmpresaState.SetEmpresaActivaAsync(empresas[0]);
+            }
         }
         catch
         {

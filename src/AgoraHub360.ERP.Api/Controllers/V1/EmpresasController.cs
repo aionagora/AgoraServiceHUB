@@ -14,10 +14,17 @@ using Microsoft.AspNetCore.Mvc;
 public class EmpresasController : ControllerBase
 {
     private readonly IEmpresaService _empresaService;
+    private readonly ICurrentUserService _currentUserService;
+    private readonly IUsuarioService _usuarioService;
 
-    public EmpresasController(IEmpresaService empresaService)
+    public EmpresasController(
+        IEmpresaService empresaService,
+        ICurrentUserService currentUserService,
+        IUsuarioService usuarioService)
     {
         _empresaService = empresaService;
+        _currentUserService = currentUserService;
+        _usuarioService = usuarioService;
     }
 
     [HttpGet]
@@ -25,6 +32,29 @@ public class EmpresasController : ControllerBase
     {
         var result = await _empresaService.GetAllAsync(ct);
         return Ok(ApiResponse<IReadOnlyList<EmpresaDto>>.Ok(result.Value!));
+    }
+
+    /// <summary>
+    /// Obtiene solo las empresas asignadas al usuario logueado
+    /// </summary>
+    [HttpGet("mis-empresas")]
+    public async Task<IActionResult> GetMisEmpresas(CancellationToken ct)
+    {
+        var userId = _currentUserService.UserIdInt;
+        if (!userId.HasValue)
+            return Unauthorized(ApiResponse<IReadOnlyList<EmpresaDto>>.Fail("Usuario no autenticado"));
+
+        // Obtener empresas asignadas al usuario
+        var empresasResult = await _usuarioService.GetEmpresasAsignadasAsync(userId.Value, ct);
+        if (!empresasResult.IsSuccess)
+            return BadRequest(ApiResponse<IReadOnlyList<EmpresaDto>>.Fail(empresasResult.Error!));
+
+        // Obtener detalles completos de las empresas
+        var allEmpresas = await _empresaService.GetAllAsync(ct);
+        var empresaIds = empresasResult.Value!.Select(e => e.EmpresaId).ToHashSet();
+        var misEmpresas = allEmpresas.Value!.Where(e => empresaIds.Contains(e.Id) && e.Activo).ToList();
+
+        return Ok(ApiResponse<IReadOnlyList<EmpresaDto>>.Ok(misEmpresas.AsReadOnly()));
     }
 
     [HttpGet("{id:int}")]

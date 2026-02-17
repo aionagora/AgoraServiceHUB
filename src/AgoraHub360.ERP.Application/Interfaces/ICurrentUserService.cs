@@ -6,6 +6,7 @@ namespace AgoraHub360.ERP.Application.Interfaces;
 public interface ICurrentUserService
 {
     string? UserId { get; }
+    int? UserIdInt { get; }
     string? UserName { get; }
     int? EmpresaId { get; }
 }

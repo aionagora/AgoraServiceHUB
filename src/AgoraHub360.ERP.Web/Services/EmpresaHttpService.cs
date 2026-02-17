@@ -22,11 +22,10 @@ public class EmpresaHttpService
 
     /// <summary>
     /// Obtiene solo las empresas asignadas al usuario autenticado.
-    /// Admins ven todas las empresas.
     /// </summary>
     public async Task<List<EmpresaDto>> GetMisEmpresasAsync()
     {
-        var response = await _http.GetFromJsonAsync<ApiResponse<List<EmpresaDto>>>("api/v1/auth/mis-empresas");
+        var response = await _http.GetFromJsonAsync<ApiResponse<List<EmpresaDto>>>($"{BaseUrl}/mis-empresas");
         return response?.Data ?? new List<EmpresaDto>();
     }
 
