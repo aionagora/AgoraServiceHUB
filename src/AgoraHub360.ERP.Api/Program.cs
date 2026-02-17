@@ -1,3 +1,4 @@
+using System.Text;
 using AgoraHub360.ERP.Api.Auth;
 using AgoraHub360.ERP.Api.Middleware;
 using AgoraHub360.ERP.Api.Services;
@@ -8,6 +9,8 @@ using AgoraHub360.ERP.Persistence;
 using AgoraHub360.ERP.Persistence.Context;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -24,11 +27,33 @@ builder.Services.AddApplication();
 builder.Services.AddPersistence(connectionString);
 builder.Services.AddInfrastructure();
 
-// ──── Autenticación Stub (desarrollo) ────
-builder.Services.AddAuthentication(StubAuthHandler.SchemeName)
-    .AddScheme<AuthenticationSchemeOptions, StubAuthHandler>(
-        StubAuthHandler.SchemeName, _ => { });
+// ──── Autenticación JWT + Stub (desarrollo) ────
+var jwtKey = builder.Configuration["Jwt:Key"] ?? "AgoraHub360-ERP-Dev-Secret-Key-2024-MinLength32!";
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "AgoraHub360.ERP";
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "AgoraHub360.ERP.Web";
 
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = jwtIssuer,
+        ValidAudience = jwtAudience,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+    };
+})
+.AddScheme<AuthenticationSchemeOptions, StubAuthHandler>(
+    StubAuthHandler.SchemeName, _ => { });
+
+builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddAuthorization();
 
 // ──── API Versioning ────

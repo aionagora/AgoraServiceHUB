@@ -14,6 +14,7 @@ public class TenantRequiredMiddleware
     // Rutas exentas de validacion tenant (operaciones globales)
     private static readonly string[] ExemptPaths = new[]
     {
+        "/api/v1/auth",
         "/api/v1/empresas",
         "/api/v1/roles",
         "/api/v1/usuarios",

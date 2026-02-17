@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using AgoraHub360.ERP.Web;
@@ -7,20 +8,22 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-// HttpClient configurado para la API
+// HttpClient configurado para la API (sin token hardcodeado; JwtAuthStateProvider lo inyecta)
 var apiBaseUrl = builder.Configuration.GetValue<string>("ApiBaseUrl")
     ?? builder.HostEnvironment.BaseAddress;
 
 builder.Services.AddScoped(sp => new HttpClient
 {
-    BaseAddress = new Uri(apiBaseUrl),
-    DefaultRequestHeaders =
-    {
-        { "Authorization", "Bearer stub-token" }
-    }
+    BaseAddress = new Uri(apiBaseUrl)
 });
 
-// Servicios
+// ──── Autenticación ────
+builder.Services.AddAuthorizationCore();
+builder.Services.AddScoped<JwtAuthStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<JwtAuthStateProvider>());
+
+// ──── Servicios HTTP ────
+builder.Services.AddScoped<AuthHttpService>();
 builder.Services.AddScoped<EmpresaHttpService>();
 builder.Services.AddScoped<EmpresaStateService>();
 builder.Services.AddScoped<RolHttpService>();
