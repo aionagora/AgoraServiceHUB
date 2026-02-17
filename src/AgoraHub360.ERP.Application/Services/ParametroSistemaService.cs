@@ -10,16 +10,16 @@ public class ParametroSistemaService : IParametroSistemaService
 {
     private readonly IRepository<ParametroSistema> _repository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly ICurrentUserService _currentUser;
+    private readonly ICurrentUserService _currentUserService;
 
     public ParametroSistemaService(
         IRepository<ParametroSistema> repository,
         IUnitOfWork unitOfWork,
-        ICurrentUserService currentUser)
+        ICurrentUserService currentUserService)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
-        _currentUser = currentUser;
+        _currentUserService = currentUserService;
     }
 
     public async Task<Result<IReadOnlyList<ParametroSistemaDto>>> GetAllAsync(CancellationToken ct = default)
@@ -86,7 +86,8 @@ public class ParametroSistemaService : IParametroSistemaService
                 Descripcion = dto.Descripcion,
                 Categoria = dto.Categoria,
                 TipoDato = dto.TipoDato,
-                EmpresaId = _currentUser.EmpresaId ?? 0
+                EmpresaId = empresaId.Value,
+                Activo = true
             };
             await _repository.AddAsync(existing, ct);
         }
