@@ -67,6 +67,9 @@ public class ProveedorService : IProveedorService
             Telefono = dto.Telefono,
             Email = dto.Email,
             NombreContacto = dto.NombreContacto,
+            TipoProveedor = dto.TipoProveedor,
+            Pais = dto.Pais,
+            CondicionPago = dto.CondicionPago,
             EmpresaId = empresaId.Value
         };
 
@@ -104,6 +107,9 @@ public class ProveedorService : IProveedorService
         entity.Telefono = dto.Telefono;
         entity.Email = dto.Email;
         entity.NombreContacto = dto.NombreContacto;
+        entity.TipoProveedor = dto.TipoProveedor;
+        entity.Pais = dto.Pais;
+        entity.CondicionPago = dto.CondicionPago;
         entity.Activo = dto.Activo;
 
         await _repository.UpdateAsync(entity, ct);
@@ -133,6 +139,9 @@ public class ProveedorService : IProveedorService
         Telefono = e.Telefono,
         Email = e.Email,
         NombreContacto = e.NombreContacto,
+        TipoProveedor = e.TipoProveedor,
+        Pais = e.Pais,
+        CondicionPago = e.CondicionPago,
         Activo = e.Activo,
         FechaCreacion = e.FechaCreacion
     };

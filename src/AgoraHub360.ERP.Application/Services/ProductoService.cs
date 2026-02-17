@@ -91,6 +91,9 @@ public class ProductoService : IProductoService
             PrecioVenta = dto.PrecioVenta,
             StockMinimo = dto.StockMinimo,
             Sku = dto.Sku,
+            TipoProducto = dto.TipoProducto,
+            ControlStock = dto.ControlStock,
+            CostoBase = dto.CostoBase,
             EmpresaId = empresaId.Value
         };
 
@@ -138,6 +141,9 @@ public class ProductoService : IProductoService
         entity.PrecioVenta = dto.PrecioVenta;
         entity.StockMinimo = dto.StockMinimo;
         entity.Sku = dto.Sku;
+        entity.TipoProducto = dto.TipoProducto;
+        entity.ControlStock = dto.ControlStock;
+        entity.CostoBase = dto.CostoBase;
         entity.Activo = dto.Activo;
 
         await _repository.UpdateAsync(entity, ct);
@@ -177,6 +183,9 @@ public class ProductoService : IProductoService
         PrecioVenta = p.PrecioVenta,
         StockMinimo = p.StockMinimo,
         Sku = p.Sku,
+        TipoProducto = p.TipoProducto,
+        ControlStock = p.ControlStock,
+        CostoBase = p.CostoBase,
         Activo = p.Activo,
         FechaCreacion = p.FechaCreacion
     };

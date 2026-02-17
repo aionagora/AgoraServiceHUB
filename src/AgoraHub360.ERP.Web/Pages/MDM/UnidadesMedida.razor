@@ -19,7 +19,11 @@
 
 <div class="card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center py-3">
-        <span>Unidades de Medida (@_items.Count)</span>
+        <div class="d-flex align-items-center gap-3">
+            <span>Unidades de Medida (@ItemsFiltrados.Count)</span>
+            <input type="text" class="form-control form-control-sm" placeholder="Buscar..."
+                   style="width: 220px;" @bind="_search" @bind:event="oninput" />
+        </div>
         <button class="btn btn-primary btn-sm" @onclick="ShowCrear">
             <i class="bi bi-plus-circle me-1"></i> Nueva Unidad
         </button>
@@ -51,7 +55,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var item in _items)
+                    @foreach (var item in ItemsPaginados)
                     {
                         <tr>
                             <td class="fw-semibold">@item.Nombre</td>
@@ -76,6 +80,30 @@
                 </tbody>
             </table>
         </div>
+
+        @if (TotalPaginas > 1)
+        {
+            <div class="card-footer d-flex justify-content-between align-items-center py-2">
+                <small class="text-muted">Mostrando @ItemsPaginados.Count de @ItemsFiltrados.Count</small>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item @(_currentPage <= 1 ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => _currentPage--">&laquo;</button>
+                        </li>
+                        @for (var p = 1; p <= TotalPaginas; p++)
+                        {
+                            var page = p;
+                            <li class="page-item @(page == _currentPage ? "active" : "")">
+                                <button class="page-link" @onclick="() => _currentPage = page">@page</button>
+                            </li>
+                        }
+                        <li class="page-item @(_currentPage >= TotalPaginas ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => _currentPage++">&raquo;</button>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        }
     }
 </div>
 
@@ -157,6 +185,23 @@
     private bool _formActivo = true;
     private UnidadMedidaDto? _deleteTarget;
 
+    private string _search = string.Empty;
+    private int _currentPage = 1;
+    private int _pageSize = 15;
+
+    private List<UnidadMedidaDto> ItemsFiltrados => _items
+        .Where(i => string.IsNullOrEmpty(_search)
+            || i.Nombre.Contains(_search, StringComparison.OrdinalIgnoreCase)
+            || i.Abreviatura.Contains(_search, StringComparison.OrdinalIgnoreCase))
+        .ToList();
+
+    private List<UnidadMedidaDto> ItemsPaginados => ItemsFiltrados
+        .Skip((_currentPage - 1) * _pageSize)
+        .Take(_pageSize)
+        .ToList();
+
+    private int TotalPaginas => (int)Math.Ceiling(ItemsFiltrados.Count / (double)_pageSize);
+
     protected override async Task OnInitializedAsync()
     {
         await LoadDataAsync();
@@ -218,7 +263,7 @@
             CloseForm();
             await LoadDataAsync();
         }
-        catch { _mensaje = "Error de comunicación."; _esError = true; }
+        catch { _mensaje = "Error de comunicacion."; _esError = true; }
         _saving = false;
     }
 
@@ -236,7 +281,7 @@
             _deleteTarget = null;
             await LoadDataAsync();
         }
-        catch { _mensaje = "Error de comunicación."; _esError = true; }
+        catch { _mensaje = "Error de comunicacion."; _esError = true; }
         _saving = false;
     }
 }

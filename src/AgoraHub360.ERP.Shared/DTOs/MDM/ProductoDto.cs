@@ -14,6 +14,9 @@ public class ProductoDto
     public decimal PrecioVenta { get; set; }
     public decimal StockMinimo { get; set; }
     public string? Sku { get; set; }
+    public string TipoProducto { get; set; } = "ProductoTerminado";
+    public bool ControlStock { get; set; }
+    public decimal CostoBase { get; set; }
     public bool Activo { get; set; }
     public DateTime FechaCreacion { get; set; }
 }

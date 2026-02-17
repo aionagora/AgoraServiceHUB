@@ -35,5 +35,14 @@ public class UpdateProductoDto
     [MaxLength(50, ErrorMessage = "Máximo 50 caracteres.")]
     public string? Sku { get; set; }
 
+    [Required(ErrorMessage = "El tipo de producto es obligatorio.")]
+    [MaxLength(50)]
+    public string TipoProducto { get; set; } = "ProductoTerminado";
+
+    public bool ControlStock { get; set; } = true;
+
+    [Range(0, double.MaxValue, ErrorMessage = "El costo base no puede ser negativo.")]
+    public decimal CostoBase { get; set; }
+
     public bool Activo { get; set; } = true;
 }

@@ -28,5 +28,15 @@ public class UpdateProveedorDto
     [MaxLength(200, ErrorMessage = "Máximo 200 caracteres.")]
     public string? NombreContacto { get; set; }
 
+    [Required(ErrorMessage = "El tipo de proveedor es obligatorio.")]
+    [MaxLength(50)]
+    public string TipoProveedor { get; set; } = "Local";
+
+    [MaxLength(100, ErrorMessage = "Máximo 100 caracteres.")]
+    public string? Pais { get; set; }
+
+    [MaxLength(100, ErrorMessage = "Máximo 100 caracteres.")]
+    public string? CondicionPago { get; set; }
+
     public bool Activo { get; set; } = true;
 }

@@ -35,6 +35,13 @@ public class ProductoConfiguration : IEntityTypeConfiguration<Producto>
         builder.Property(p => p.Sku)
             .HasMaxLength(50);
 
+        builder.Property(p => p.TipoProducto)
+            .IsRequired()
+            .HasMaxLength(50);
+
+        builder.Property(p => p.CostoBase)
+            .HasPrecision(18, 4);
+
         builder.Property(p => p.CreadoPor).HasMaxLength(100);
         builder.Property(p => p.ModificadoPor).HasMaxLength(100);
 
