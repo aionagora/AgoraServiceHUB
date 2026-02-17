@@ -12,4 +12,5 @@ public interface IUsuarioService
     Task<Result<bool>> DeleteAsync(int id, CancellationToken ct = default);
     Task<Result<bool>> AsignarRolAsync(int usuarioId, AsignarRolDto dto, CancellationToken ct = default);
     Task<Result<bool>> RemoverDeEmpresaAsync(int usuarioId, int empresaId, CancellationToken ct = default);
+    Task<Result<IReadOnlyList<UsuarioEmpresaRolDto>>> GetEmpresasAsignadasAsync(int usuarioId, CancellationToken ct = default);
 }

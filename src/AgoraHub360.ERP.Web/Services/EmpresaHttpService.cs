@@ -20,6 +20,16 @@ public class EmpresaHttpService
         return response?.Data ?? new List<EmpresaDto>();
     }
 
+    /// <summary>
+    /// Obtiene solo las empresas asignadas al usuario autenticado.
+    /// Admins ven todas las empresas.
+    /// </summary>
+    public async Task<List<EmpresaDto>> GetMisEmpresasAsync()
+    {
+        var response = await _http.GetFromJsonAsync<ApiResponse<List<EmpresaDto>>>("api/v1/auth/mis-empresas");
+        return response?.Data ?? new List<EmpresaDto>();
+    }
+
     public async Task<EmpresaDto?> GetByIdAsync(int id)
     {
         var response = await _http.GetFromJsonAsync<ApiResponse<EmpresaDto>>($"{BaseUrl}/{id}");
@@ -29,6 +39,11 @@ public class EmpresaHttpService
     public async Task<ApiResponse<EmpresaDto>> CreateAsync(CreateEmpresaDto dto)
     {
         var response = await _http.PostAsJsonAsync(BaseUrl, dto);
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            return ApiResponse<EmpresaDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
+        }
         return await response.Content.ReadFromJsonAsync<ApiResponse<EmpresaDto>>()
             ?? ApiResponse<EmpresaDto>.Fail("Error de comunicacion con el servidor.");
     }
@@ -36,6 +51,11 @@ public class EmpresaHttpService
     public async Task<ApiResponse<EmpresaDto>> UpdateAsync(int id, UpdateEmpresaDto dto)
     {
         var response = await _http.PutAsJsonAsync($"{BaseUrl}/{id}", dto);
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            return ApiResponse<EmpresaDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
+        }
         return await response.Content.ReadFromJsonAsync<ApiResponse<EmpresaDto>>()
             ?? ApiResponse<EmpresaDto>.Fail("Error de comunicacion con el servidor.");
     }
@@ -43,6 +63,11 @@ public class EmpresaHttpService
     public async Task<ApiResponse<bool>> DeleteAsync(int id)
     {
         var response = await _http.DeleteAsync($"{BaseUrl}/{id}");
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            return ApiResponse<bool>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
+        }
         return await response.Content.ReadFromJsonAsync<ApiResponse<bool>>()
             ?? ApiResponse<bool>.Fail("Error de comunicacion con el servidor.");
     }
