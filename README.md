@@ -40,7 +40,7 @@ Roadmap gobernado por arquitectura (MAPE)
 
 Stack Tecnológico
 
-.NET 10
+.NET 8
 
 Blazor WebAssembly
 
@@ -165,28 +165,116 @@ Contexto activo por sesión
 Datos aislados por tenant
 
 🛠 Configuración Inicial
-Requisitos
 
-.NET 10 SDK
+## Requisitos
+
+.NET 8 SDK
 
 SQL Server 2019+
 
 Visual Studio 2022/2026
 
-Pasos
+## Pasos
 
-Clonar repositorio
+1. **Clonar repositorio**
 
-Configurar cadena de conexión en appsettings.json
+2. **Configurar cadena de conexión** en `src/AgoraHub360.ERP.Api/appsettings.json`:
 
-Ejecutar migraciones:
+```json
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=TU_SERVIDOR,PUERTO;Database=TU_BD;User Id=TU_USUARIO;Password=TU_PASSWORD;TrustServerCertificate=true;MultipleActiveResultSets=true;Encrypt=false"
+  }
+}
+```
 
-dotnet ef database update
+**Nota importante:** La cadena de conexión en `appsettings.json` es leída automáticamente por el `AgoraDbContextFactory` para las migraciones. No es necesario configurar nada adicional.
 
+3. **Ejecutar migraciones:**
 
-Ejecutar API
+```bash
+dotnet ef database update --project src/AgoraHub360.ERP.Persistence --startup-project src/AgoraHub360.ERP.Api
+```
 
-Ejecutar proyecto Web (Blazor)
+4. **Iniciar el sistema:**
+
+### Opción A: Script Automatizado (Recomendado) 🚀
+
+```powershell
+.\start-system.ps1
+```
+
+El script automáticamente:
+- ✅ Detiene procesos previos
+- ✅ Inicia la API (puerto 7001)
+- ✅ Inicia la Web (puerto 5002)
+- ✅ Abre el navegador en el login
+- ✅ Muestra las credenciales
+
+### Opción B: Inicio Manual
+
+**Terminal 1 - API:**
+```bash
+cd src\AgoraHub360.ERP.Api
+dotnet run --launch-profile https
+```
+
+**Terminal 2 - Web:**
+```bash
+cd src\AgoraHub360.ERP.Web
+dotnet run --launch-profile https
+```
+
+5. **Acceder al sistema:**
+   - Aplicación Web: `https://localhost:5002`
+   - Login: `https://localhost:5002/login`
+   - API: `https://localhost:7001`
+   - Swagger: `https://localhost:7001/swagger`
+
+## 🔐 Credenciales de Acceso
+
+El sistema crea automáticamente un usuario administrador:
+
+| Campo | Valor |
+|-------|-------|
+| **Email** | `admin@agorahub360.com` |
+| **Contraseña** | `Admin123` |
+| **Rol** | Admin |
+
+📚 **Documentación Completa:** [CREDENCIALES-DEFAULT.md](CREDENCIALES-DEFAULT.md)
+
+⚠️ **Importante:** Cambia estas credenciales antes de pasar a producción.
+
+🔍 Test de Conexión a Base de Datos
+
+### Test Rápido (sin iniciar la API)
+```powershell
+.\quick-db-test.ps1
+```
+
+### Test Completo (con API corriendo)
+```powershell
+# Terminal 1: Inicia la API
+cd src\AgoraHub360.ERP.Api
+dotnet run
+
+# Terminal 2: Ejecuta el test
+.\test-database-connection.ps1
+```
+
+### Endpoints de Diagnóstico
+- **GET** `/api/v1/diagnostics/ping` - Verifica que la API esté activa
+- **GET** `/api/v1/diagnostics/database-test` - Test completo de BD
+- **GET** `/health` - Health check general
+
+📚 **Documentación Completa:**
+- [Script de Inicio](start-system.ps1) - Inicio automatizado
+- [Credenciales por Defecto](CREDENCIALES-DEFAULT.md) - Usuario y contraseña
+- [Solución Error de Login](LOGIN-ERROR-FIX.md) - Troubleshooting de conexión
+- [Guía de Testing](DATABASE-TEST-GUIDE.md) - Guía detallada
+- [Resumen Ejecutivo](DATABASE-TEST-SUMMARY.md) - Resumen rápido
+- [Reporte Técnico](DATABASE-TEST-REPORT.md) - Detalles técnicos
+- [Solución de Problemas de Conexión](DATABASE-CONNECTION-FIX.md) - Troubleshooting BD
 
 📈 Roadmap
 
@@ -207,6 +295,8 @@ Unit Tests en Domain y Application
 Integration Tests en Persistence
 
 Pruebas funcionales previas a release
+
+Database Testing con scripts automatizados
 
 📜 Metodología
 
