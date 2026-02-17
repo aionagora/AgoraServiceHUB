@@ -1,0 +1,35 @@
+# Build Folders
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio
+.vs/
+*.sln.docstates
+
+# Rider
+.idea/
+
+# User-specific files
+*.suo
+*.user
+*.userprefs
+
+# Debug
+*.pdb
+*.mdb
+
+# Publish
+publish/
+
+# NuGet Packages
+*.nupkg
+**/packages/*
+
+# Visual Studio Code
+.vscode/
+
+# Visual Studio 2022/2019
+.vs/    
+.DS_Store
+**/*.sln
+**/*.sln.docstates
