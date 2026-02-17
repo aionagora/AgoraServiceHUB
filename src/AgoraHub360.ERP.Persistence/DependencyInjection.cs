@@ -3,6 +3,7 @@ namespace AgoraHub360.ERP.Persistence;
 using AgoraHub360.ERP.Domain.Interfaces;
 using AgoraHub360.ERP.Persistence.Context;
 using AgoraHub360.ERP.Persistence.Interceptors;
+using AgoraHub360.ERP.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -30,6 +31,8 @@ public static class DependencyInjection
 
         services.AddScoped<IUnitOfWork>(provider =>
             provider.GetRequiredService<AgoraDbContext>());
+
+        services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
         return services;
     }

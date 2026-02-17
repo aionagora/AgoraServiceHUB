@@ -39,6 +39,7 @@ public class AuditableEntityInterceptor : SaveChangesInterceptor
 
         var now = DateTime.UtcNow;
         var user = _currentUserService.UserName ?? "system";
+        var empresaId = _currentUserService.EmpresaId;
 
         foreach (var entry in context.ChangeTracker.Entries<AuditableEntity>())
         {
@@ -47,6 +48,14 @@ public class AuditableEntityInterceptor : SaveChangesInterceptor
                 case EntityState.Added:
                     entry.Entity.FechaCreacion = now;
                     entry.Entity.CreadoPor = user;
+
+                    // Auto-set EmpresaId en entidades tenant-aware nuevas
+                    if (entry.Entity is TenantEntity tenantEntity
+                        && tenantEntity.EmpresaId == 0
+                        && empresaId.HasValue)
+                    {
+                        tenantEntity.EmpresaId = empresaId.Value;
+                    }
                     break;
 
                 case EntityState.Modified:

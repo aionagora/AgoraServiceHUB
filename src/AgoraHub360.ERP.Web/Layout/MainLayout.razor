@@ -1,4 +1,7 @@
 @inherits LayoutComponentBase
+@inject EmpresaHttpService EmpresaSvc
+@inject EmpresaStateService EmpresaState
+@implements IDisposable
 
 <div class="app-layout @(SidebarCollapsed ? "sidebar-collapsed" : "")">
     <aside class="sidebar">
@@ -14,10 +17,25 @@
                 <span class="breadcrumb-text">AgoraHub360 ERP</span>
             </div>
             <div class="topbar-right">
-                <span class="empresa-badge">
+                <!-- Selector de Empresa -->
+                <div class="empresa-selector">
                     <i class="bi bi-building"></i>
-                    Empresa Demo
-                </span>
+                    <select class="empresa-select" @onchange="OnEmpresaChanged">
+                        @if (EmpresaState.Empresas.Count == 0)
+                        {
+                            <option>Sin empresas</option>
+                        }
+                        else
+                        {
+                            @foreach (var emp in EmpresaState.Empresas.Where(e => e.Activo))
+                            {
+                                <option value="@emp.Id" selected="@(emp.Id == EmpresaState.EmpresaActivaId)">
+                                    @emp.Nombre
+                                </option>
+                            }
+                        }
+                    </select>
+                </div>
                 <span class="user-info">
                     <i class="bi bi-person-circle"></i>
                     Admin
@@ -34,8 +52,53 @@
 @code {
     private bool SidebarCollapsed { get; set; }
 
+    protected override async Task OnInitializedAsync()
+    {
+        EmpresaState.OnChange += StateHasChanged;
+        await LoadEmpresasAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await EmpresaState.LoadFromStorageAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadEmpresasAsync()
+    {
+        try
+        {
+            var empresas = await EmpresaSvc.GetAllAsync();
+            EmpresaState.SetEmpresas(empresas);
+        }
+        catch
+        {
+            // API no disponible - se mostrara "Sin empresas"
+        }
+    }
+
+    private async Task OnEmpresaChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var id))
+        {
+            var empresa = EmpresaState.Empresas.FirstOrDefault(emp => emp.Id == id);
+            if (empresa is not null)
+            {
+                await EmpresaState.SetEmpresaActivaAsync(empresa);
+            }
+        }
+    }
+
     private void ToggleSidebar()
     {
         SidebarCollapsed = !SidebarCollapsed;
+    }
+
+    public void Dispose()
+    {
+        EmpresaState.OnChange -= StateHasChanged;
     }
 }
