@@ -1,0 +1,103 @@
+@page "/"
+
+<PageTitle>Dashboard - AgoraHub360 ERP</PageTitle>
+
+<div class="page-header">
+    <h1>Dashboard</h1>
+    <p class="text-muted mb-0">Resumen general del sistema</p>
+</div>
+
+<!-- KPI Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">Ventas del Mes</div>
+                    <div class="stat-value">Bs 0</div>
+                </div>
+                <div class="stat-icon" style="background: rgba(34,197,94,0.1); color: var(--agora-success);">
+                    <i class="bi bi-graph-up-arrow"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">Compras del Mes</div>
+                    <div class="stat-value">Bs 0</div>
+                </div>
+                <div class="stat-icon" style="background: rgba(59,130,246,0.1); color: var(--agora-info);">
+                    <i class="bi bi-cart-check-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">Productos Activos</div>
+                    <div class="stat-value">0</div>
+                </div>
+                <div class="stat-icon" style="background: rgba(245,158,11,0.1); color: var(--agora-warning);">
+                    <i class="bi bi-box-seam-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="stat-label">Clientes</div>
+                    <div class="stat-value">0</div>
+                </div>
+                <div class="stat-icon" style="background: rgba(14,165,233,0.1); color: var(--agora-accent);">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions + Recent Activity -->
+<div class="row g-3">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center py-3">
+                <span>Actividad Reciente</span>
+            </div>
+            <div class="card-body text-center py-5">
+                <i class="bi bi-clock-history" style="font-size: 2.5rem; color: var(--agora-text-light);"></i>
+                <p class="text-muted mt-3 mb-0">No hay actividad registrada todavia.</p>
+                <p class="text-muted small">Las transacciones apareceran aqui.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header py-3">
+                <span>Acciones Rapidas</span>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="ventas/pedidos" class="btn btn-outline-primary btn-sm text-start">
+                        <i class="bi bi-plus-circle me-2"></i>Nuevo Pedido
+                    </a>
+                    <a href="compras/ordenes" class="btn btn-outline-primary btn-sm text-start">
+                        <i class="bi bi-plus-circle me-2"></i>Nueva Orden de Compra
+                    </a>
+                    <a href="mdm/clientes" class="btn btn-outline-primary btn-sm text-start">
+                        <i class="bi bi-plus-circle me-2"></i>Nuevo Cliente
+                    </a>
+                    <a href="mdm/productos" class="btn btn-outline-primary btn-sm text-start">
+                        <i class="bi bi-plus-circle me-2"></i>Nuevo Producto
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

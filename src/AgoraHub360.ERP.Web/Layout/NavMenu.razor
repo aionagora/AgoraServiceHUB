@@ -1,39 +1,98 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">AgoraHub360.ERP.Web</a>
-        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-    </div>
+<!-- Logo / Brand -->
+<div class="sidebar-brand">
+    <a href="">
+        <span class="brand-icon">A</span>
+        <span class="brand-text">AgoraHub360</span>
+    </a>
 </div>
 
-<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
-    <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="bi bi-house-door-fill-nav-menu" aria-hidden="true"></span> Home
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="bi bi-plus-square-fill-nav-menu" aria-hidden="true"></span> Counter
-            </NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="weather">
-                <span class="bi bi-list-nested-nav-menu" aria-hidden="true"></span> Weather
-            </NavLink>
-        </div>
-    </nav>
-</div>
+<!-- Navigation -->
+<nav class="sidebar-nav">
+    <!-- Dashboard -->
+    <div class="nav-item">
+        <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+            <i class="bi bi-grid-1x2-fill"></i>
+            <span>Dashboard</span>
+        </NavLink>
+    </div>
+
+    <!-- MDM -->
+    <div class="nav-section">Datos Maestros</div>
+    <div class="nav-item">
+        <NavLink class="nav-link" href="mdm/clientes">
+            <i class="bi bi-people-fill"></i>
+            <span>Clientes</span>
+        </NavLink>
+    </div>
+    <div class="nav-item">
+        <NavLink class="nav-link" href="mdm/proveedores">
+            <i class="bi bi-truck"></i>
+            <span>Proveedores</span>
+        </NavLink>
+    </div>
+    <div class="nav-item">
+        <NavLink class="nav-link" href="mdm/productos">
+            <i class="bi bi-box-seam-fill"></i>
+            <span>Productos</span>
+        </NavLink>
+    </div>
+
+    <!-- Inventario -->
+    <div class="nav-section">Inventario</div>
+    <div class="nav-item">
+        <NavLink class="nav-link" href="inventario/almacenes">
+            <i class="bi bi-house-gear-fill"></i>
+            <span>Almacenes</span>
+        </NavLink>
+    </div>
+    <div class="nav-item">
+        <NavLink class="nav-link" href="inventario/movimientos">
+            <i class="bi bi-arrow-left-right"></i>
+            <span>Movimientos</span>
+        </NavLink>
+    </div>
+
+    <!-- Compras -->
+    <div class="nav-section">Compras</div>
+    <div class="nav-item">
+        <NavLink class="nav-link" href="compras/ordenes">
+            <i class="bi bi-cart-fill"></i>
+            <span>Ordenes de Compra</span>
+        </NavLink>
+    </div>
+
+    <!-- Ventas -->
+    <div class="nav-section">Ventas</div>
+    <div class="nav-item">
+        <NavLink class="nav-link" href="ventas/pedidos">
+            <i class="bi bi-receipt"></i>
+            <span>Pedidos</span>
+        </NavLink>
+    </div>
+    <div class="nav-item">
+        <NavLink class="nav-link" href="ventas/facturas">
+            <i class="bi bi-file-earmark-text-fill"></i>
+            <span>Facturas</span>
+        </NavLink>
+    </div>
+
+    <!-- Configuración -->
+    <div class="nav-section">Sistema</div>
+    <div class="nav-item">
+        <NavLink class="nav-link" href="config/empresas">
+            <i class="bi bi-building-gear"></i>
+            <span>Empresas</span>
+        </NavLink>
+    </div>
+    <div class="nav-item">
+        <NavLink class="nav-link" href="config/usuarios">
+            <i class="bi bi-person-gear"></i>
+            <span>Usuarios</span>
+        </NavLink>
+    </div>
+</nav>
 
 @code {
-    private bool collapseNavMenu = true;
-
-    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
-
-    private void ToggleNavMenu()
-    {
-        collapseNavMenu = !collapseNavMenu;
-    }
+    [Parameter]
+    public EventCallback OnToggle { get; set; }
 }
