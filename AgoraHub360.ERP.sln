@@ -1,0 +1,12 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version
+VisualStudioVersion = 17.0.31919.168
+MinimumVisualStudioVersion = 10.0.40219.1
+"Project" = "{d213d6a7-23ba-4070-871d-d967745b7490}", "AgoraHub360.ERP.Domain\AgoraHub360.ERP.Domain.csproj", "{Guid}"
+"Project" = "{e4628052-d2a5-4bc6-aa1b-3ed5aeaa343c}", "AgoraHub360.ERP.Application\AgoraHub360.ERP.Application.csproj", "{Guid}"
+"Project" = "{c58eedd9-e8c3-47ce-8e63-ed57c0543bb6}", "AgoraHub360.ERP.Persistence\AgoraHub360.ERP.Persistence.csproj", "{Guid}"
+"Project" = "{0e561c64-39f8-4b68-b9d1-37114a8f2c43}", "AgoraHub360.ERP.Infrastructure\AgoraHub360.ERP.Infrastructure.csproj", "{Guid}"
+"Project" = "{5a772514-4bb6-4c08-8a93-1ac89469d34d}", "AgoraHub360.ERP.Api\AgoraHub360.ERP.Api.csproj", "{Guid}"
+"Project" = "{4154f736-ef6d-4eac-b2f6-b6f1e6c2e41a}", "AgoraHub360.ERP.Web\AgoraHub360.ERP.Web.csproj", "{Guid}"
+"Project" = "{bc0caaed-207d-4c2b-8fa2-c3c3157e1d07}", "AgoraHub360.ERP.Shared\AgoraHub360.ERP.Shared.csproj", "{Guid}"
+"Project" = "{d8ef73e9-0287-49c2-9c46-418513c21da0}", "AgoraHub360.ERP.Tests\AgoraHub360.ERP.Tests.csproj", "{Guid}"
