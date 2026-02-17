@@ -1,5 +1,7 @@
 namespace AgoraHub360.ERP.Application;
 
+using AgoraHub360.ERP.Application.Interfaces;
+using AgoraHub360.ERP.Application.Services;
 using Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
@@ -9,7 +11,8 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
-        // Registrar servicios de aplicación aquí
+        services.AddScoped<IEmpresaService, EmpresaService>();
+
         return services;
     }
 }

@@ -1,4 +1,6 @@
 @page "/config/empresas"
+@inject EmpresaHttpService EmpresaSvc
+@inject EmpresaStateService EmpresaState
 
 <PageTitle>Empresas - AgoraHub360 ERP</PageTitle>
 
@@ -7,15 +9,350 @@
     <p class="text-muted mb-0">Sistema &rsaquo; Empresas</p>
 </div>
 
+@if (!string.IsNullOrEmpty(_mensaje))
+{
+    <div class="alert @(_esError ? "alert-danger" : "alert-success") alert-dismissible fade show" role="alert">
+        @_mensaje
+        <button type="button" class="btn-close" @onclick="() => _mensaje = null"></button>
+    </div>
+}
+
+<!-- Listado -->
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center py-3">
-        <span>Listado de Empresas</span>
-        <button class="btn btn-primary btn-sm" disabled>
+        <span>Listado de Empresas (@_empresas.Count)</span>
+        <button class="btn btn-primary btn-sm" @onclick="ShowCrear">
             <i class="bi bi-plus-circle me-1"></i> Nueva Empresa
         </button>
     </div>
-    <div class="card-body text-center py-5">
-        <i class="bi bi-building" style="font-size: 3rem; color: var(--agora-text-light);"></i>
-        <p class="text-muted mt-3">Modulo en construccion.</p>
-    </div>
+
+    @if (_loading)
+    {
+        <div class="card-body text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="text-muted mt-2">Cargando empresas...</p>
+        </div>
+    }
+    else if (_empresas.Count == 0)
+    {
+        <div class="card-body text-center py-5">
+            <i class="bi bi-building" style="font-size: 3rem; color: var(--agora-text-light);"></i>
+            <p class="text-muted mt-3">No hay empresas registradas.</p>
+            <button class="btn btn-primary btn-sm" @onclick="ShowCrear">
+                <i class="bi bi-plus-circle me-1"></i> Crear primera empresa
+            </button>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>NIT</th>
+                        <th>Email</th>
+                        <th>Telefono</th>
+                        <th>Moneda</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var emp in _empresas)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@emp.Nombre</td>
+                            <td>@(emp.NIT ?? "—")</td>
+                            <td>@(emp.Email ?? "—")</td>
+                            <td>@(emp.Telefono ?? "—")</td>
+                            <td>@(emp.MonedaBaseId ?? "—")</td>
+                            <td class="text-center">
+                                @if (emp.Activo)
+                                {
+                                    <span class="badge bg-success">Activa</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Inactiva</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-outline-primary btn-sm me-1"
+                                        @onclick="() => ShowEditar(emp)" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm"
+                                        @onclick="() => ConfirmDelete(emp)" title="Eliminar">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
 </div>
+
+<!-- Modal Crear/Editar -->
+@if (_showForm)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(_editId.HasValue ? "Editar Empresa" : "Nueva Empresa")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseForm"></button>
+                </div>
+                <EditForm Model="_formModel" OnValidSubmit="SaveAsync">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Nombre *</label>
+                            <InputText class="form-control" @bind-Value="_formModel.Nombre" />
+                            <ValidationMessage For="() => _formModel.Nombre" />
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">NIT</label>
+                                <InputText class="form-control" @bind-Value="_formModel.NIT" />
+                                <ValidationMessage For="() => _formModel.NIT" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Moneda Base</label>
+                                <InputSelect class="form-select" @bind-Value="_formModel.MonedaBaseId">
+                                    <option value="">— Seleccionar —</option>
+                                    <option value="BOB">BOB - Boliviano</option>
+                                    <option value="USD">USD - Dolar</option>
+                                    <option value="EUR">EUR - Euro</option>
+                                </InputSelect>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Direccion</label>
+                            <InputText class="form-control" @bind-Value="_formModel.Direccion" />
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Telefono</label>
+                                <InputText class="form-control" @bind-Value="_formModel.Telefono" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Email</label>
+                                <InputText class="form-control" @bind-Value="_formModel.Email" />
+                                <ValidationMessage For="() => _formModel.Email" />
+                            </div>
+                        </div>
+                        @if (_editId.HasValue)
+                        {
+                            <div class="form-check">
+                                <InputCheckbox class="form-check-input" @bind-Value="_formActivo" />
+                                <label class="form-check-label">Activa</label>
+                            </div>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseForm">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" disabled="@_saving">
+                            @if (_saving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            @(_editId.HasValue ? "Guardar Cambios" : "Crear Empresa")
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal Confirmar Eliminacion -->
+@if (_deleteTarget is not null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar Eliminacion</h5>
+                    <button type="button" class="btn-close" @onclick="() => _deleteTarget = null"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Eliminar la empresa <strong>@_deleteTarget.Nombre</strong>?</p>
+                    <p class="text-muted small">Esta accion no se puede deshacer.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary btn-sm" @onclick="() => _deleteTarget = null">Cancelar</button>
+                    <button class="btn btn-danger btn-sm" @onclick="DeleteAsync" disabled="@_saving">
+                        @if (_saving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<EmpresaDto> _empresas = new();
+    private bool _loading = true;
+    private bool _saving;
+    private string? _mensaje;
+    private bool _esError;
+
+    // Form
+    private bool _showForm;
+    private int? _editId;
+    private CreateEmpresaDto _formModel = new();
+    private bool _formActivo = true;
+
+    // Delete
+    private EmpresaDto? _deleteTarget;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEmpresasAsync();
+    }
+
+    private async Task LoadEmpresasAsync()
+    {
+        _loading = true;
+        try
+        {
+            _empresas = await EmpresaSvc.GetAllAsync();
+            EmpresaState.SetEmpresas(_empresas);
+        }
+        catch
+        {
+            _mensaje = "Error al cargar empresas. Verifique la conexion con la API.";
+            _esError = true;
+        }
+        _loading = false;
+    }
+
+    private void ShowCrear()
+    {
+        _editId = null;
+        _formModel = new CreateEmpresaDto { MonedaBaseId = "BOB" };
+        _formActivo = true;
+        _showForm = true;
+    }
+
+    private void ShowEditar(EmpresaDto emp)
+    {
+        _editId = emp.Id;
+        _formModel = new CreateEmpresaDto
+        {
+            Nombre = emp.Nombre,
+            NIT = emp.NIT,
+            Direccion = emp.Direccion,
+            Telefono = emp.Telefono,
+            Email = emp.Email,
+            MonedaBaseId = emp.MonedaBaseId
+        };
+        _formActivo = emp.Activo;
+        _showForm = true;
+    }
+
+    private void CloseForm()
+    {
+        _showForm = false;
+        _editId = null;
+    }
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+        try
+        {
+            if (_editId.HasValue)
+            {
+                var updateDto = new UpdateEmpresaDto
+                {
+                    Nombre = _formModel.Nombre,
+                    NIT = _formModel.NIT,
+                    Direccion = _formModel.Direccion,
+                    Telefono = _formModel.Telefono,
+                    Email = _formModel.Email,
+                    MonedaBaseId = _formModel.MonedaBaseId,
+                    Activo = _formActivo
+                };
+                var result = await EmpresaSvc.UpdateAsync(_editId.Value, updateDto);
+                if (result.Success)
+                {
+                    _mensaje = "Empresa actualizada exitosamente.";
+                    _esError = false;
+                }
+                else
+                {
+                    _mensaje = result.Message;
+                    _esError = true;
+                    _saving = false;
+                    return;
+                }
+            }
+            else
+            {
+                var result = await EmpresaSvc.CreateAsync(_formModel);
+                if (result.Success)
+                {
+                    _mensaje = "Empresa creada exitosamente.";
+                    _esError = false;
+                }
+                else
+                {
+                    _mensaje = result.Message;
+                    _esError = true;
+                    _saving = false;
+                    return;
+                }
+            }
+
+            CloseForm();
+            await LoadEmpresasAsync();
+        }
+        catch
+        {
+            _mensaje = "Error de comunicacion con el servidor.";
+            _esError = true;
+        }
+        _saving = false;
+    }
+
+    private void ConfirmDelete(EmpresaDto emp)
+    {
+        _deleteTarget = emp;
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (_deleteTarget is null) return;
+        _saving = true;
+        try
+        {
+            var result = await EmpresaSvc.DeleteAsync(_deleteTarget.Id);
+            if (result.Success)
+            {
+                _mensaje = "Empresa eliminada exitosamente.";
+                _esError = false;
+            }
+            else
+            {
+                _mensaje = result.Message;
+                _esError = true;
+            }
+            _deleteTarget = null;
+            await LoadEmpresasAsync();
+        }
+        catch
+        {
+            _mensaje = "Error de comunicacion con el servidor.";
+            _esError = true;
+        }
+        _saving = false;
+    }
+}

@@ -94,6 +94,18 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+// ──── CORS (Blazor WASM) ────
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("BlazorWasm", policy =>
+    {
+        policy.WithOrigins(
+                builder.Configuration.GetValue<string>("BlazorBaseUrl") ?? "https://localhost:5002")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
 // ──── Health Checks ────
 builder.Services
     .AddHealthChecks()
@@ -117,8 +129,12 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors("BlazorWasm");
 app.UseAuthentication();
 app.UseAuthorization();
+
+// Validacion tenant: operaciones de escritura requieren EmpresaId
+app.UseMiddleware<TenantRequiredMiddleware>();
 
 app.MapControllers();
 app.MapHealthChecks("/health");
