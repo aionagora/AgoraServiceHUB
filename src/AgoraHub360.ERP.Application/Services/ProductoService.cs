@@ -1,0 +1,183 @@
+namespace AgoraHub360.ERP.Application.Services;
+
+using AgoraHub360.ERP.Application.Common;
+using AgoraHub360.ERP.Application.Interfaces;
+using AgoraHub360.ERP.Domain.Entities.MDM;
+using AgoraHub360.ERP.Domain.Interfaces;
+using AgoraHub360.ERP.Shared.DTOs.MDM;
+
+public class ProductoService : IProductoService
+{
+    private readonly IRepository<Producto> _repository;
+    private readonly IRepository<CategoriaProducto> _categoriaRepo;
+    private readonly IRepository<UnidadMedida> _unidadRepo;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly ICurrentUserService _currentUser;
+
+    public ProductoService(
+        IRepository<Producto> repository,
+        IRepository<CategoriaProducto> categoriaRepo,
+        IRepository<UnidadMedida> unidadRepo,
+        IUnitOfWork unitOfWork,
+        ICurrentUserService currentUser)
+    {
+        _repository = repository;
+        _categoriaRepo = categoriaRepo;
+        _unidadRepo = unidadRepo;
+        _unitOfWork = unitOfWork;
+        _currentUser = currentUser;
+    }
+
+    public async Task<Result<IReadOnlyList<ProductoDto>>> GetAllAsync(CancellationToken ct = default)
+    {
+        var items = await _repository.GetAllAsync(ct);
+        var categorias = await _categoriaRepo.GetAllAsync(ct);
+        var unidades = await _unidadRepo.GetAllAsync(ct);
+        var catMap = categorias.ToDictionary(c => c.Id, c => c.Nombre);
+        var uniMap = unidades.ToDictionary(u => u.Id, u => u.Nombre);
+
+        return Result<IReadOnlyList<ProductoDto>>.Success(
+            items.Select(p => MapToDto(p, catMap, uniMap)).ToList().AsReadOnly());
+    }
+
+    public async Task<Result<ProductoDto>> GetByIdAsync(int id, CancellationToken ct = default)
+    {
+        var entity = await _repository.GetByIdAsync(id, ct);
+        if (entity is null)
+            return Result<ProductoDto>.Failure($"Producto con Id {id} no encontrado.");
+
+        var categorias = await _categoriaRepo.GetAllAsync(ct);
+        var unidades = await _unidadRepo.GetAllAsync(ct);
+        var catMap = categorias.ToDictionary(c => c.Id, c => c.Nombre);
+        var uniMap = unidades.ToDictionary(u => u.Id, u => u.Nombre);
+
+        return Result<ProductoDto>.Success(MapToDto(entity, catMap, uniMap));
+    }
+
+    public async Task<Result<ProductoDto>> CreateAsync(CreateProductoDto dto, CancellationToken ct = default)
+    {
+        var empresaId = _currentUser.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<ProductoDto>.Failure("No se pudo determinar la empresa activa.");
+
+        // Validar código único
+        var byCodigo = await _repository.FindAsync(
+            p => p.EmpresaId == empresaId.Value && p.Codigo == dto.Codigo, ct);
+        if (byCodigo.Count > 0)
+            return Result<ProductoDto>.Failure($"Ya existe un producto con código '{dto.Codigo}'.");
+
+        // Validar que la categoría existe y pertenece a la empresa
+        var categoria = await _categoriaRepo.GetByIdAsync(dto.CategoriaProductoId, ct);
+        if (categoria is null)
+            return Result<ProductoDto>.Failure($"Categoría con Id {dto.CategoriaProductoId} no encontrada.");
+
+        // Validar que la unidad de medida existe y pertenece a la empresa
+        var unidad = await _unidadRepo.GetByIdAsync(dto.UnidadMedidaId, ct);
+        if (unidad is null)
+            return Result<ProductoDto>.Failure($"Unidad de medida con Id {dto.UnidadMedidaId} no encontrada.");
+
+        // Validar precios
+        if (dto.PrecioVenta < dto.PrecioCompra)
+            return Result<ProductoDto>.Failure("El precio de venta no puede ser menor al precio de compra.");
+
+        var entity = new Producto
+        {
+            Codigo = dto.Codigo,
+            Nombre = dto.Nombre,
+            Descripcion = dto.Descripcion,
+            CategoriaProductoId = dto.CategoriaProductoId,
+            UnidadMedidaId = dto.UnidadMedidaId,
+            PrecioCompra = dto.PrecioCompra,
+            PrecioVenta = dto.PrecioVenta,
+            StockMinimo = dto.StockMinimo,
+            Sku = dto.Sku,
+            EmpresaId = empresaId.Value
+        };
+
+        await _repository.AddAsync(entity, ct);
+        await _unitOfWork.SaveChangesAsync(ct);
+
+        var catMap = new Dictionary<int, string> { { categoria.Id, categoria.Nombre } };
+        var uniMap = new Dictionary<int, string> { { unidad.Id, unidad.Nombre } };
+
+        return Result<ProductoDto>.Success(MapToDto(entity, catMap, uniMap));
+    }
+
+    public async Task<Result<ProductoDto>> UpdateAsync(int id, UpdateProductoDto dto, CancellationToken ct = default)
+    {
+        var entity = await _repository.GetByIdAsync(id, ct);
+        if (entity is null)
+            return Result<ProductoDto>.Failure($"Producto con Id {id} no encontrado.");
+
+        // Validar código único (excluyendo el actual)
+        var byCodigo = await _repository.FindAsync(
+            p => p.EmpresaId == entity.EmpresaId && p.Codigo == dto.Codigo && p.Id != id, ct);
+        if (byCodigo.Count > 0)
+            return Result<ProductoDto>.Failure($"Ya existe otro producto con código '{dto.Codigo}'.");
+
+        // Validar categoría
+        var categoria = await _categoriaRepo.GetByIdAsync(dto.CategoriaProductoId, ct);
+        if (categoria is null)
+            return Result<ProductoDto>.Failure($"Categoría con Id {dto.CategoriaProductoId} no encontrada.");
+
+        // Validar unidad de medida
+        var unidad = await _unidadRepo.GetByIdAsync(dto.UnidadMedidaId, ct);
+        if (unidad is null)
+            return Result<ProductoDto>.Failure($"Unidad de medida con Id {dto.UnidadMedidaId} no encontrada.");
+
+        // Validar precios
+        if (dto.PrecioVenta < dto.PrecioCompra)
+            return Result<ProductoDto>.Failure("El precio de venta no puede ser menor al precio de compra.");
+
+        entity.Codigo = dto.Codigo;
+        entity.Nombre = dto.Nombre;
+        entity.Descripcion = dto.Descripcion;
+        entity.CategoriaProductoId = dto.CategoriaProductoId;
+        entity.UnidadMedidaId = dto.UnidadMedidaId;
+        entity.PrecioCompra = dto.PrecioCompra;
+        entity.PrecioVenta = dto.PrecioVenta;
+        entity.StockMinimo = dto.StockMinimo;
+        entity.Sku = dto.Sku;
+        entity.Activo = dto.Activo;
+
+        await _repository.UpdateAsync(entity, ct);
+        await _unitOfWork.SaveChangesAsync(ct);
+
+        var catMap = new Dictionary<int, string> { { categoria.Id, categoria.Nombre } };
+        var uniMap = new Dictionary<int, string> { { unidad.Id, unidad.Nombre } };
+
+        return Result<ProductoDto>.Success(MapToDto(entity, catMap, uniMap));
+    }
+
+    public async Task<Result<bool>> DeleteAsync(int id, CancellationToken ct = default)
+    {
+        var entity = await _repository.GetByIdAsync(id, ct);
+        if (entity is null)
+            return Result<bool>.Failure($"Producto con Id {id} no encontrado.");
+
+        await _repository.DeleteAsync(entity, ct);
+        await _unitOfWork.SaveChangesAsync(ct);
+        return Result<bool>.Success(true);
+    }
+
+    private static ProductoDto MapToDto(
+        Producto p,
+        Dictionary<int, string> catMap,
+        Dictionary<int, string> uniMap) => new()
+    {
+        Id = p.Id,
+        Codigo = p.Codigo,
+        Nombre = p.Nombre,
+        Descripcion = p.Descripcion,
+        CategoriaProductoId = p.CategoriaProductoId,
+        CategoriaNombre = catMap.TryGetValue(p.CategoriaProductoId, out var cn) ? cn : $"Cat #{p.CategoriaProductoId}",
+        UnidadMedidaId = p.UnidadMedidaId,
+        UnidadMedidaNombre = uniMap.TryGetValue(p.UnidadMedidaId, out var un) ? un : $"UM #{p.UnidadMedidaId}",
+        PrecioCompra = p.PrecioCompra,
+        PrecioVenta = p.PrecioVenta,
+        StockMinimo = p.StockMinimo,
+        Sku = p.Sku,
+        Activo = p.Activo,
+        FechaCreacion = p.FechaCreacion
+    };
+}

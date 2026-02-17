@@ -1,4 +1,6 @@
 @page "/mdm/proveedores"
+@attribute [Authorize]
+@inject ProveedorHttpService ProveedorSvc
 
 <PageTitle>Proveedores - AgoraHub360 ERP</PageTitle>
 
@@ -7,15 +9,279 @@
     <p class="text-muted mb-0">Datos Maestros &rsaquo; Proveedores</p>
 </div>
 
-<div class="card">
+@if (!string.IsNullOrEmpty(_mensaje))
+{
+    <div class="alert @(_esError ? "alert-danger" : "alert-success") alert-dismissible fade show">
+        @_mensaje
+        <button type="button" class="btn-close" @onclick="() => _mensaje = null"></button>
+    </div>
+}
+
+<div class="card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center py-3">
-        <span>Listado de Proveedores</span>
-        <button class="btn btn-primary btn-sm" disabled>
+        <span>Proveedores (@_items.Count)</span>
+        <button class="btn btn-primary btn-sm" @onclick="ShowCrear">
             <i class="bi bi-plus-circle me-1"></i> Nuevo Proveedor
         </button>
     </div>
-    <div class="card-body text-center py-5">
-        <i class="bi bi-truck" style="font-size: 3rem; color: var(--agora-text-light);"></i>
-        <p class="text-muted mt-3">Modulo en construccion.</p>
-    </div>
+
+    @if (_loading)
+    {
+        <div class="card-body text-center py-5">
+            <div class="spinner-border text-primary"></div>
+        </div>
+    }
+    else if (_items.Count == 0)
+    {
+        <div class="card-body text-center py-5">
+            <i class="bi bi-truck" style="font-size: 3rem; color: var(--agora-text-light);"></i>
+            <p class="text-muted mt-3">No hay proveedores registrados.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Razón Social</th>
+                        <th>NIT</th>
+                        <th>Teléfono</th>
+                        <th>Email</th>
+                        <th>Contacto</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in _items)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@item.Codigo</td>
+                            <td>@item.RazonSocial</td>
+                            <td>@(item.NIT ?? "—")</td>
+                            <td>@(item.Telefono ?? "—")</td>
+                            <td>@(item.Email ?? "—")</td>
+                            <td>@(item.NombreContacto ?? "—")</td>
+                            <td class="text-center">
+                                <span class="badge @(item.Activo ? "bg-success" : "bg-secondary")">
+                                    @(item.Activo ? "Activo" : "Inactivo")
+                                </span>
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-outline-primary btn-sm me-1"
+                                        @onclick="() => ShowEditar(item)" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm"
+                                        @onclick="() => ConfirmDelete(item)" title="Eliminar">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
 </div>
+
+<!-- Modal Crear/Editar -->
+@if (_showForm)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(_editId.HasValue ? "Editar Proveedor" : "Nuevo Proveedor")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseForm"></button>
+                </div>
+                <EditForm Model="_formModel" OnValidSubmit="SaveAsync">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body">
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Código *</label>
+                                <InputText class="form-control" @bind-Value="_formModel.Codigo" />
+                                <ValidationMessage For="() => _formModel.Codigo" />
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label">Razón Social *</label>
+                                <InputText class="form-control" @bind-Value="_formModel.RazonSocial" />
+                                <ValidationMessage For="() => _formModel.RazonSocial" />
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">NIT</label>
+                                <InputText class="form-control" @bind-Value="_formModel.NIT" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Teléfono</label>
+                                <InputText class="form-control" @bind-Value="_formModel.Telefono" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Email</label>
+                                <InputText class="form-control" @bind-Value="_formModel.Email" />
+                                <ValidationMessage For="() => _formModel.Email" />
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Dirección</label>
+                                <InputText class="form-control" @bind-Value="_formModel.Direccion" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Nombre Contacto</label>
+                                <InputText class="form-control" @bind-Value="_formModel.NombreContacto" />
+                            </div>
+                        </div>
+                        @if (_editId.HasValue)
+                        {
+                            <div class="form-check">
+                                <InputCheckbox class="form-check-input" @bind-Value="_formActivo" />
+                                <label class="form-check-label">Activo</label>
+                            </div>
+                        }
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseForm">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" disabled="@_saving">
+                            @if (_saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                            @(_editId.HasValue ? "Guardar" : "Crear Proveedor")
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal Eliminar -->
+@if (_deleteTarget is not null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar</h5>
+                    <button type="button" class="btn-close" @onclick="() => _deleteTarget = null"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Eliminar al proveedor <strong>@_deleteTarget.RazonSocial</strong>?</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary btn-sm" @onclick="() => _deleteTarget = null">Cancelar</button>
+                    <button class="btn btn-danger btn-sm" @onclick="DeleteAsync" disabled="@_saving">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<ProveedorDto> _items = new();
+    private bool _loading = true, _saving;
+    private string? _mensaje;
+    private bool _esError;
+
+    private bool _showForm;
+    private int? _editId;
+    private CreateProveedorDto _formModel = new();
+    private bool _formActivo = true;
+    private ProveedorDto? _deleteTarget;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        try { _items = await ProveedorSvc.GetAllAsync(); }
+        catch { _mensaje = "Error al cargar proveedores."; _esError = true; }
+        _loading = false;
+    }
+
+    private void ShowCrear()
+    {
+        _editId = null;
+        _formModel = new CreateProveedorDto();
+        _formActivo = true;
+        _showForm = true;
+    }
+
+    private void ShowEditar(ProveedorDto item)
+    {
+        _editId = item.Id;
+        _formModel = new CreateProveedorDto
+        {
+            Codigo = item.Codigo,
+            RazonSocial = item.RazonSocial,
+            NIT = item.NIT,
+            Direccion = item.Direccion,
+            Telefono = item.Telefono,
+            Email = item.Email,
+            NombreContacto = item.NombreContacto
+        };
+        _formActivo = item.Activo;
+        _showForm = true;
+    }
+
+    private void CloseForm() { _showForm = false; _editId = null; }
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+        try
+        {
+            if (_editId.HasValue)
+            {
+                var dto = new UpdateProveedorDto
+                {
+                    Codigo = _formModel.Codigo,
+                    RazonSocial = _formModel.RazonSocial,
+                    NIT = _formModel.NIT,
+                    Direccion = _formModel.Direccion,
+                    Telefono = _formModel.Telefono,
+                    Email = _formModel.Email,
+                    NombreContacto = _formModel.NombreContacto,
+                    Activo = _formActivo
+                };
+                var r = await ProveedorSvc.UpdateAsync(_editId.Value, dto);
+                if (!r.Success) { _mensaje = r.Message; _esError = true; _saving = false; return; }
+                _mensaje = "Proveedor actualizado."; _esError = false;
+            }
+            else
+            {
+                var r = await ProveedorSvc.CreateAsync(_formModel);
+                if (!r.Success) { _mensaje = r.Message; _esError = true; _saving = false; return; }
+                _mensaje = "Proveedor creado."; _esError = false;
+            }
+            CloseForm();
+            await LoadDataAsync();
+        }
+        catch { _mensaje = "Error de comunicación."; _esError = true; }
+        _saving = false;
+    }
+
+    private void ConfirmDelete(ProveedorDto item) => _deleteTarget = item;
+
+    private async Task DeleteAsync()
+    {
+        if (_deleteTarget is null) return;
+        _saving = true;
+        try
+        {
+            var r = await ProveedorSvc.DeleteAsync(_deleteTarget.Id);
+            _mensaje = r.Success ? "Proveedor eliminado." : r.Message;
+            _esError = !r.Success;
+            _deleteTarget = null;
+            await LoadDataAsync();
+        }
+        catch { _mensaje = "Error de comunicación."; _esError = true; }
+        _saving = false;
+    }
+}
