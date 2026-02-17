@@ -1,6 +1,8 @@
 @inherits LayoutComponentBase
 @inject EmpresaHttpService EmpresaSvc
 @inject EmpresaStateService EmpresaState
+@inject JwtAuthStateProvider AuthState
+@inject NavigationManager Nav
 @implements IDisposable
 
 <div class="app-layout @(SidebarCollapsed ? "sidebar-collapsed" : "")">
@@ -36,10 +38,17 @@
                         }
                     </select>
                 </div>
-                <span class="user-info">
-                    <i class="bi bi-person-circle"></i>
-                    Admin
-                </span>
+                <AuthorizeView>
+                    <Authorized>
+                        <span class="user-info">
+                            <i class="bi bi-person-circle"></i>
+                            @context.User.Identity?.Name
+                        </span>
+                        <button class="btn btn-outline-light btn-sm ms-2" @onclick="LogoutAsync" title="Cerrar sesión">
+                            <i class="bi bi-box-arrow-right"></i>
+                        </button>
+                    </Authorized>
+                </AuthorizeView>
             </div>
         </header>
 
@@ -95,6 +104,12 @@
     private void ToggleSidebar()
     {
         SidebarCollapsed = !SidebarCollapsed;
+    }
+
+    private async Task LogoutAsync()
+    {
+        await AuthState.LogoutAsync();
+        Nav.NavigateTo("/login", forceLoad: false);
     }
 
     public void Dispose()

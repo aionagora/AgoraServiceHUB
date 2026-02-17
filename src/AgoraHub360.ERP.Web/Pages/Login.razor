@@ -1,0 +1,111 @@
+@page "/login"
+@attribute [AllowAnonymous]
+@layout LoginLayout
+@inject AuthHttpService AuthSvc
+@inject JwtAuthStateProvider AuthState
+@inject NavigationManager Nav
+
+<PageTitle>Iniciar Sesión - AgoraHub360 ERP</PageTitle>
+
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-header">
+            <span class="login-brand">A</span>
+            <h2>AgoraHub360 ERP</h2>
+            <p class="text-muted">Inicie sesión para continuar</p>
+        </div>
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-triangle me-1"></i> @_error
+                <button type="button" class="btn-close" @onclick="() => _error = null"></button>
+            </div>
+        }
+
+        <EditForm Model="_model" OnValidSubmit="HandleLogin">
+            <DataAnnotationsValidator />
+
+            <div class="mb-3">
+                <label class="form-label">Correo electrónico</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                    <InputText class="form-control" @bind-Value="_model.Email"
+                               placeholder="usuario@empresa.com" />
+                </div>
+                <ValidationMessage For="() => _model.Email" />
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label">Contraseña</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                    <InputText type="password" class="form-control" @bind-Value="_model.Password"
+                               placeholder="••••••" />
+                </div>
+                <ValidationMessage For="() => _model.Password" />
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100" disabled="@_loading">
+                @if (_loading)
+                {
+                    <span class="spinner-border spinner-border-sm me-2"></span>
+                }
+                Iniciar Sesión
+            </button>
+        </EditForm>
+
+        <div class="login-footer">
+            <small class="text-muted">AgoraHub360 ERP &copy; 2024</small>
+        </div>
+    </div>
+</div>
+
+@code {
+    private LoginModel _model = new();
+    private bool _loading;
+    private string? _error;
+
+    private async Task HandleLogin()
+    {
+        _loading = true;
+        _error = null;
+
+        try
+        {
+            var request = new LoginRequestDto
+            {
+                Email = _model.Email,
+                Password = _model.Password
+            };
+
+            var result = await AuthSvc.LoginAsync(request);
+
+            if (result.Success && result.Data is not null)
+            {
+                await AuthState.LoginAsync(result.Data.Token);
+                Nav.NavigateTo("/", forceLoad: false);
+            }
+            else
+            {
+                _error = result.Message ?? "Credenciales inválidas.";
+            }
+        }
+        catch
+        {
+            _error = "Error de conexión con el servidor.";
+        }
+
+        _loading = false;
+    }
+
+    private class LoginModel
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "El email es requerido.")]
+        [System.ComponentModel.DataAnnotations.EmailAddress(ErrorMessage = "Email no válido.")]
+        public string Email { get; set; } = "";
+
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "La contraseña es requerida.")]
+        public string Password { get; set; } = "";
+    }
+}
