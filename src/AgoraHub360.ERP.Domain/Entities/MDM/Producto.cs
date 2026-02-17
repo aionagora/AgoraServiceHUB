@@ -17,4 +17,13 @@ public class Producto : TenantEntity
     public decimal PrecioVenta { get; set; }
     public decimal StockMinimo { get; set; }
     public string? Sku { get; set; }
+
+    /// <summary>MateriaPrima / ProductoTerminado / Servicio</summary>
+    public string TipoProducto { get; set; } = "ProductoTerminado";
+
+    /// <summary>Si false, no se lleva control de stock (ej: Servicios).</summary>
+    public bool ControlStock { get; set; } = true;
+
+    /// <summary>Costo base/referencial del producto.</summary>
+    public decimal CostoBase { get; set; }
 }

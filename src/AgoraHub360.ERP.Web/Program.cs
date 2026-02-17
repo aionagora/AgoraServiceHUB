@@ -38,5 +38,6 @@ builder.Services.AddScoped<UnidadMedidaHttpService>();
 builder.Services.AddScoped<ProductoHttpService>();
 builder.Services.AddScoped<ClienteHttpService>();
 builder.Services.AddScoped<ProveedorHttpService>();
+builder.Services.AddScoped<AlmacenHttpService>();
 
 await builder.Build().RunAsync();

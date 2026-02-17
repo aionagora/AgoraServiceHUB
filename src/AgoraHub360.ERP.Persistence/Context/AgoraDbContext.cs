@@ -46,6 +46,8 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     public DbSet<Producto> Productos => Set<Producto>();
     public DbSet<Cliente> Clientes => Set<Cliente>();
     public DbSet<Proveedor> Proveedores => Set<Proveedor>();
+    public DbSet<Almacen> Almacenes => Set<Almacen>();
+    public DbSet<UbicacionAlmacen> UbicacionesAlmacen => Set<UbicacionAlmacen>();
 
     // Auditoría
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();

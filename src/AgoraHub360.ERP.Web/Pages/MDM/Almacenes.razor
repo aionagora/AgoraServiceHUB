@@ -1,12 +1,12 @@
-@page "/mdm/categorias"
+@page "/mdm/almacenes"
 @attribute [Authorize]
-@inject CategoriaProductoHttpService CategoriaSvc
+@inject AlmacenHttpService AlmacenSvc
 
-<PageTitle>Categorias - AgoraHub360 ERP</PageTitle>
+<PageTitle>Almacenes - AgoraHub360 ERP</PageTitle>
 
 <div class="page-header">
-    <h1>Categorias de Producto</h1>
-    <p class="text-muted mb-0">Datos Maestros &rsaquo; Categorias</p>
+    <h1>Almacenes</h1>
+    <p class="text-muted mb-0">Datos Maestros &rsaquo; Almacenes</p>
 </div>
 
 @if (!string.IsNullOrEmpty(_mensaje))
@@ -20,12 +20,12 @@
 <div class="card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center py-3">
         <div class="d-flex align-items-center gap-3">
-            <span>Categorias (@ItemsFiltrados.Count)</span>
+            <span>Almacenes (@ItemsFiltrados.Count)</span>
             <input type="text" class="form-control form-control-sm" placeholder="Buscar..."
                    style="width: 220px;" @bind="_search" @bind:event="oninput" />
         </div>
         <button class="btn btn-primary btn-sm" @onclick="ShowCrear">
-            <i class="bi bi-plus-circle me-1"></i> Nueva Categoria
+            <i class="bi bi-plus-circle me-1"></i> Nuevo Almacen
         </button>
     </div>
 
@@ -38,8 +38,8 @@
     else if (_items.Count == 0)
     {
         <div class="card-body text-center py-5">
-            <i class="bi bi-tags" style="font-size: 3rem; color: var(--agora-text-light);"></i>
-            <p class="text-muted mt-3">No hay categorias registradas.</p>
+            <i class="bi bi-house-gear" style="font-size: 3rem; color: var(--agora-text-light);"></i>
+            <p class="text-muted mt-3">No hay almacenes registrados.</p>
         </div>
     }
     else
@@ -48,8 +48,11 @@
             <table class="table table-hover mb-0">
                 <thead>
                     <tr>
+                        <th>Codigo</th>
                         <th>Nombre</th>
-                        <th>Descripcion</th>
+                        <th>Direccion</th>
+                        <th>Responsable</th>
+                        <th>Telefono</th>
                         <th class="text-center">Estado</th>
                         <th class="text-end">Acciones</th>
                     </tr>
@@ -58,8 +61,11 @@
                     @foreach (var item in ItemsPaginados)
                     {
                         <tr>
-                            <td class="fw-semibold">@item.Nombre</td>
-                            <td>@(item.Descripcion ?? "—")</td>
+                            <td class="fw-semibold">@item.Codigo</td>
+                            <td>@item.Nombre</td>
+                            <td>@(item.Direccion ?? "—")</td>
+                            <td>@(item.Responsable ?? "—")</td>
+                            <td>@(item.Telefono ?? "—")</td>
                             <td class="text-center">
                                 <span class="badge @(item.Activo ? "bg-success" : "bg-secondary")">
                                     @(item.Activo ? "Activo" : "Inactivo")
@@ -111,23 +117,40 @@
 @if (_showForm)
 {
     <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">@(_editId.HasValue ? "Editar Categoria" : "Nueva Categoria")</h5>
+                    <h5 class="modal-title">@(_editId.HasValue ? "Editar Almacen" : "Nuevo Almacen")</h5>
                     <button type="button" class="btn-close" @onclick="CloseForm"></button>
                 </div>
                 <EditForm Model="_formModel" OnValidSubmit="SaveAsync">
                     <DataAnnotationsValidator />
                     <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Nombre *</label>
-                            <InputText class="form-control" @bind-Value="_formModel.Nombre" />
-                            <ValidationMessage For="() => _formModel.Nombre" />
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Codigo *</label>
+                                <InputText class="form-control" @bind-Value="_formModel.Codigo" />
+                                <ValidationMessage For="() => _formModel.Codigo" />
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label">Nombre *</label>
+                                <InputText class="form-control" @bind-Value="_formModel.Nombre" />
+                                <ValidationMessage For="() => _formModel.Nombre" />
+                            </div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Descripcion</label>
-                            <InputTextArea class="form-control" @bind-Value="_formModel.Descripcion" rows="3" />
+                            <label class="form-label">Direccion</label>
+                            <InputText class="form-control" @bind-Value="_formModel.Direccion" />
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Responsable</label>
+                                <InputText class="form-control" @bind-Value="_formModel.Responsable" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Telefono</label>
+                                <InputText class="form-control" @bind-Value="_formModel.Telefono" />
+                            </div>
                         </div>
                         @if (_editId.HasValue)
                         {
@@ -141,7 +164,7 @@
                         <button type="button" class="btn btn-secondary" @onclick="CloseForm">Cancelar</button>
                         <button type="submit" class="btn btn-primary" disabled="@_saving">
                             @if (_saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                            @(_editId.HasValue ? "Guardar" : "Crear Categoria")
+                            @(_editId.HasValue ? "Guardar" : "Crear Almacen")
                         </button>
                     </div>
                 </EditForm>
@@ -161,7 +184,7 @@
                     <button type="button" class="btn-close" @onclick="() => _deleteTarget = null"></button>
                 </div>
                 <div class="modal-body">
-                    <p>Eliminar la categoria <strong>@_deleteTarget.Nombre</strong>?</p>
+                    <p>Eliminar el almacen <strong>@_deleteTarget.Nombre</strong>?</p>
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary btn-sm" @onclick="() => _deleteTarget = null">Cancelar</button>
@@ -173,27 +196,28 @@
 }
 
 @code {
-    private List<CategoriaProductoDto> _items = new();
+    private List<AlmacenDto> _items = new();
     private bool _loading = true, _saving;
     private string? _mensaje;
     private bool _esError;
 
     private bool _showForm;
     private int? _editId;
-    private CreateCategoriaProductoDto _formModel = new();
+    private CreateAlmacenDto _formModel = new();
     private bool _formActivo = true;
-    private CategoriaProductoDto? _deleteTarget;
+    private AlmacenDto? _deleteTarget;
 
     private string _search = string.Empty;
     private int _currentPage = 1;
     private int _pageSize = 15;
 
-    private List<CategoriaProductoDto> ItemsFiltrados => _items
+    private List<AlmacenDto> ItemsFiltrados => _items
         .Where(i => string.IsNullOrEmpty(_search)
+            || i.Codigo.Contains(_search, StringComparison.OrdinalIgnoreCase)
             || i.Nombre.Contains(_search, StringComparison.OrdinalIgnoreCase))
         .ToList();
 
-    private List<CategoriaProductoDto> ItemsPaginados => ItemsFiltrados
+    private List<AlmacenDto> ItemsPaginados => ItemsFiltrados
         .Skip((_currentPage - 1) * _pageSize)
         .Take(_pageSize)
         .ToList();
@@ -208,26 +232,29 @@
     private async Task LoadDataAsync()
     {
         _loading = true;
-        try { _items = await CategoriaSvc.GetAllAsync(); }
-        catch { _mensaje = "Error al cargar categorias."; _esError = true; }
+        try { _items = await AlmacenSvc.GetAllAsync(); }
+        catch { _mensaje = "Error al cargar almacenes."; _esError = true; }
         _loading = false;
     }
 
     private void ShowCrear()
     {
         _editId = null;
-        _formModel = new CreateCategoriaProductoDto();
+        _formModel = new CreateAlmacenDto();
         _formActivo = true;
         _showForm = true;
     }
 
-    private void ShowEditar(CategoriaProductoDto item)
+    private void ShowEditar(AlmacenDto item)
     {
         _editId = item.Id;
-        _formModel = new CreateCategoriaProductoDto
+        _formModel = new CreateAlmacenDto
         {
+            Codigo = item.Codigo,
             Nombre = item.Nombre,
-            Descripcion = item.Descripcion
+            Direccion = item.Direccion,
+            Responsable = item.Responsable,
+            Telefono = item.Telefono
         };
         _formActivo = item.Activo;
         _showForm = true;
@@ -242,21 +269,24 @@
         {
             if (_editId.HasValue)
             {
-                var dto = new UpdateCategoriaProductoDto
+                var dto = new UpdateAlmacenDto
                 {
+                    Codigo = _formModel.Codigo,
                     Nombre = _formModel.Nombre,
-                    Descripcion = _formModel.Descripcion,
+                    Direccion = _formModel.Direccion,
+                    Responsable = _formModel.Responsable,
+                    Telefono = _formModel.Telefono,
                     Activo = _formActivo
                 };
-                var r = await CategoriaSvc.UpdateAsync(_editId.Value, dto);
+                var r = await AlmacenSvc.UpdateAsync(_editId.Value, dto);
                 if (!r.Success) { _mensaje = r.Message; _esError = true; _saving = false; return; }
-                _mensaje = "Categoria actualizada."; _esError = false;
+                _mensaje = "Almacen actualizado."; _esError = false;
             }
             else
             {
-                var r = await CategoriaSvc.CreateAsync(_formModel);
+                var r = await AlmacenSvc.CreateAsync(_formModel);
                 if (!r.Success) { _mensaje = r.Message; _esError = true; _saving = false; return; }
-                _mensaje = "Categoria creada."; _esError = false;
+                _mensaje = "Almacen creado."; _esError = false;
             }
             CloseForm();
             await LoadDataAsync();
@@ -265,7 +295,7 @@
         _saving = false;
     }
 
-    private void ConfirmDelete(CategoriaProductoDto item) => _deleteTarget = item;
+    private void ConfirmDelete(AlmacenDto item) => _deleteTarget = item;
 
     private async Task DeleteAsync()
     {
@@ -273,8 +303,8 @@
         _saving = true;
         try
         {
-            var r = await CategoriaSvc.DeleteAsync(_deleteTarget.Id);
-            _mensaje = r.Success ? "Categoria eliminada." : r.Message;
+            var r = await AlmacenSvc.DeleteAsync(_deleteTarget.Id);
+            _mensaje = r.Success ? "Almacen eliminado." : r.Message;
             _esError = !r.Success;
             _deleteTarget = null;
             await LoadDataAsync();

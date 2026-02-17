@@ -35,6 +35,16 @@ public class ProveedorConfiguration : IEntityTypeConfiguration<Proveedor>
         builder.Property(p => p.NombreContacto)
             .HasMaxLength(200);
 
+        builder.Property(p => p.TipoProveedor)
+            .IsRequired()
+            .HasMaxLength(50);
+
+        builder.Property(p => p.Pais)
+            .HasMaxLength(100);
+
+        builder.Property(p => p.CondicionPago)
+            .HasMaxLength(100);
+
         builder.Property(p => p.CreadoPor).HasMaxLength(100);
         builder.Property(p => p.ModificadoPor).HasMaxLength(100);
 

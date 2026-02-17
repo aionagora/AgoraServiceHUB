@@ -21,7 +21,11 @@
 
 <div class="card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center py-3">
-        <span>Productos (@_items.Count)</span>
+        <div class="d-flex align-items-center gap-3">
+            <span>Productos (@ItemsFiltrados.Count)</span>
+            <input type="text" class="form-control form-control-sm" placeholder="Buscar..."
+                   style="width: 220px;" @bind="_search" @bind:event="oninput" />
+        </div>
         <button class="btn btn-primary btn-sm" @onclick="ShowCrear">
             <i class="bi bi-plus-circle me-1"></i> Nuevo Producto
         </button>
@@ -46,23 +50,36 @@
             <table class="table table-hover mb-0">
                 <thead>
                     <tr>
-                        <th>Código</th>
+                        <th>Codigo</th>
                         <th>Nombre</th>
-                        <th>Categoría</th>
+                        <th>Tipo</th>
+                        <th>Categoria</th>
                         <th>U.M.</th>
                         <th class="text-end">P. Compra</th>
                         <th class="text-end">P. Venta</th>
-                        <th class="text-end">Stock Mín.</th>
+                        <th class="text-end">Stock Min.</th>
                         <th class="text-center">Estado</th>
                         <th class="text-end">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var item in _items)
+                    @foreach (var item in ItemsPaginados)
                     {
                         <tr>
                             <td class="fw-semibold">@item.Codigo</td>
                             <td>@item.Nombre</td>
+                            <td>
+                                @{
+                                    var tipoBadge = item.TipoProducto switch
+                                    {
+                                        "MateriaPrima" => "bg-warning",
+                                        "ProductoTerminado" => "bg-success",
+                                        "Servicio" => "bg-info",
+                                        _ => "bg-secondary"
+                                    };
+                                }
+                                <span class="badge @tipoBadge">@item.TipoProducto</span>
+                            </td>
                             <td><span class="badge bg-primary">@item.CategoriaNombre</span></td>
                             <td>@item.UnidadMedidaNombre</td>
                             <td class="text-end">@item.PrecioCompra.ToString("N2")</td>
@@ -88,6 +105,30 @@
                 </tbody>
             </table>
         </div>
+
+        @if (TotalPaginas > 1)
+        {
+            <div class="card-footer d-flex justify-content-between align-items-center py-2">
+                <small class="text-muted">Mostrando @ItemsPaginados.Count de @ItemsFiltrados.Count</small>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item @(_currentPage <= 1 ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => _currentPage--">&laquo;</button>
+                        </li>
+                        @for (var p = 1; p <= TotalPaginas; p++)
+                        {
+                            var page = p;
+                            <li class="page-item @(page == _currentPage ? "active" : "")">
+                                <button class="page-link" @onclick="() => _currentPage = page">@page</button>
+                            </li>
+                        }
+                        <li class="page-item @(_currentPage >= TotalPaginas ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => _currentPage++">&raquo;</button>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        }
     }
 </div>
 
@@ -106,7 +147,7 @@
                     <div class="modal-body">
                         <div class="row mb-3">
                             <div class="col-md-4">
-                                <label class="form-label">Código *</label>
+                                <label class="form-label">Codigo *</label>
                                 <InputText class="form-control" @bind-Value="_formModel.Codigo" />
                                 <ValidationMessage For="() => _formModel.Codigo" />
                             </div>
@@ -117,12 +158,20 @@
                             </div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Descripción</label>
+                            <label class="form-label">Descripcion</label>
                             <InputText class="form-control" @bind-Value="_formModel.Descripcion" />
                         </div>
                         <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Categoría *</label>
+                            <div class="col-md-4">
+                                <label class="form-label">Tipo Producto *</label>
+                                <InputSelect class="form-select" @bind-Value="_formModel.TipoProducto">
+                                    <option value="MateriaPrima">Materia Prima</option>
+                                    <option value="ProductoTerminado">Producto Terminado</option>
+                                    <option value="Servicio">Servicio</option>
+                                </InputSelect>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Categoria *</label>
                                 <InputSelect class="form-select" @bind-Value="_formModel.CategoriaProductoId">
                                     <option value="0">— Seleccionar —</option>
                                     @foreach (var c in _categorias.Where(c => c.Activo))
@@ -132,7 +181,7 @@
                                 </InputSelect>
                                 <ValidationMessage For="() => _formModel.CategoriaProductoId" />
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label">Unidad de Medida *</label>
                                 <InputSelect class="form-select" @bind-Value="_formModel.UnidadMedidaId">
                                     <option value="0">— Seleccionar —</option>
@@ -145,25 +194,38 @@
                             </div>
                         </div>
                         <div class="row mb-3">
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="form-label">Precio Compra</label>
                                 <InputNumber class="form-control" @bind-Value="_formModel.PrecioCompra" />
                                 <ValidationMessage For="() => _formModel.PrecioCompra" />
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <label class="form-label">Precio Venta</label>
                                 <InputNumber class="form-control" @bind-Value="_formModel.PrecioVenta" />
                                 <ValidationMessage For="() => _formModel.PrecioVenta" />
                             </div>
-                            <div class="col-md-4">
-                                <label class="form-label">Stock Mínimo</label>
+                            <div class="col-md-3">
+                                <label class="form-label">Stock Minimo</label>
                                 <InputNumber class="form-control" @bind-Value="_formModel.StockMinimo" />
                                 <ValidationMessage For="() => _formModel.StockMinimo" />
                             </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Costo Base</label>
+                                <InputNumber class="form-control" @bind-Value="_formModel.CostoBase" />
+                                <ValidationMessage For="() => _formModel.CostoBase" />
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">SKU</label>
-                            <InputText class="form-control" @bind-Value="_formModel.Sku" />
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">SKU</label>
+                                <InputText class="form-control" @bind-Value="_formModel.Sku" />
+                            </div>
+                            <div class="col-md-6 d-flex align-items-end">
+                                <div class="form-check">
+                                    <InputCheckbox class="form-check-input" @bind-Value="_formModel.ControlStock" />
+                                    <label class="form-check-label">Control de Stock</label>
+                                </div>
+                            </div>
                         </div>
                         @if (_editId.HasValue)
                         {
@@ -222,6 +284,24 @@
     private bool _formActivo = true;
     private ProductoDto? _deleteTarget;
 
+    private string _search = string.Empty;
+    private int _currentPage = 1;
+    private int _pageSize = 15;
+
+    private List<ProductoDto> ItemsFiltrados => _items
+        .Where(i => string.IsNullOrEmpty(_search)
+            || i.Codigo.Contains(_search, StringComparison.OrdinalIgnoreCase)
+            || i.Nombre.Contains(_search, StringComparison.OrdinalIgnoreCase)
+            || (i.Sku ?? "").Contains(_search, StringComparison.OrdinalIgnoreCase))
+        .ToList();
+
+    private List<ProductoDto> ItemsPaginados => ItemsFiltrados
+        .Skip((_currentPage - 1) * _pageSize)
+        .Take(_pageSize)
+        .ToList();
+
+    private int TotalPaginas => (int)Math.Ceiling(ItemsFiltrados.Count / (double)_pageSize);
+
     protected override async Task OnInitializedAsync()
     {
         await Task.WhenAll(LoadDataAsync(), LoadCatalogosAsync());
@@ -242,7 +322,7 @@
             _categorias = await CategoriaSvc.GetAllAsync();
             _unidades = await UnidadSvc.GetAllAsync();
         }
-        catch { /* catálogos opcionales en carga inicial */ }
+        catch { /* catalogos opcionales en carga inicial */ }
     }
 
     private void ShowCrear()
@@ -266,7 +346,10 @@
             PrecioCompra = item.PrecioCompra,
             PrecioVenta = item.PrecioVenta,
             StockMinimo = item.StockMinimo,
-            Sku = item.Sku
+            Sku = item.Sku,
+            TipoProducto = item.TipoProducto,
+            ControlStock = item.ControlStock,
+            CostoBase = item.CostoBase
         };
         _formActivo = item.Activo;
         _showForm = true;
@@ -292,6 +375,9 @@
                     PrecioVenta = _formModel.PrecioVenta,
                     StockMinimo = _formModel.StockMinimo,
                     Sku = _formModel.Sku,
+                    TipoProducto = _formModel.TipoProducto,
+                    ControlStock = _formModel.ControlStock,
+                    CostoBase = _formModel.CostoBase,
                     Activo = _formActivo
                 };
                 var r = await ProductoSvc.UpdateAsync(_editId.Value, dto);
@@ -307,7 +393,7 @@
             CloseForm();
             await LoadDataAsync();
         }
-        catch { _mensaje = "Error de comunicación."; _esError = true; }
+        catch { _mensaje = "Error de comunicacion."; _esError = true; }
         _saving = false;
     }
 
@@ -325,7 +411,7 @@
             _deleteTarget = null;
             await LoadDataAsync();
         }
-        catch { _mensaje = "Error de comunicación."; _esError = true; }
+        catch { _mensaje = "Error de comunicacion."; _esError = true; }
         _saving = false;
     }
 }

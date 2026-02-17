@@ -19,7 +19,11 @@
 
 <div class="card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center py-3">
-        <span>Clientes (@_items.Count)</span>
+        <div class="d-flex align-items-center gap-3">
+            <span>Clientes (@ItemsFiltrados.Count)</span>
+            <input type="text" class="form-control form-control-sm" placeholder="Buscar..."
+                   style="width: 220px;" @bind="_search" @bind:event="oninput" />
+        </div>
         <button class="btn btn-primary btn-sm" @onclick="ShowCrear">
             <i class="bi bi-plus-circle me-1"></i> Nuevo Cliente
         </button>
@@ -44,10 +48,10 @@
             <table class="table table-hover mb-0">
                 <thead>
                     <tr>
-                        <th>Código</th>
-                        <th>Razón Social</th>
+                        <th>Codigo</th>
+                        <th>Razon Social</th>
                         <th>NIT</th>
-                        <th>Teléfono</th>
+                        <th>Telefono</th>
                         <th>Email</th>
                         <th>Tipo</th>
                         <th class="text-center">Estado</th>
@@ -55,7 +59,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var item in _items)
+                    @foreach (var item in ItemsPaginados)
                     {
                         <tr>
                             <td class="fw-semibold">@item.Codigo</td>
@@ -84,6 +88,30 @@
                 </tbody>
             </table>
         </div>
+
+        @if (TotalPaginas > 1)
+        {
+            <div class="card-footer d-flex justify-content-between align-items-center py-2">
+                <small class="text-muted">Mostrando @ItemsPaginados.Count de @ItemsFiltrados.Count</small>
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item @(_currentPage <= 1 ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => _currentPage--">&laquo;</button>
+                        </li>
+                        @for (var p = 1; p <= TotalPaginas; p++)
+                        {
+                            var page = p;
+                            <li class="page-item @(page == _currentPage ? "active" : "")">
+                                <button class="page-link" @onclick="() => _currentPage = page">@page</button>
+                            </li>
+                        }
+                        <li class="page-item @(_currentPage >= TotalPaginas ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => _currentPage++">&raquo;</button>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        }
     }
 </div>
 
@@ -102,12 +130,12 @@
                     <div class="modal-body">
                         <div class="row mb-3">
                             <div class="col-md-4">
-                                <label class="form-label">Código *</label>
+                                <label class="form-label">Codigo *</label>
                                 <InputText class="form-control" @bind-Value="_formModel.Codigo" />
                                 <ValidationMessage For="() => _formModel.Codigo" />
                             </div>
                             <div class="col-md-8">
-                                <label class="form-label">Razón Social *</label>
+                                <label class="form-label">Razon Social *</label>
                                 <InputText class="form-control" @bind-Value="_formModel.RazonSocial" />
                                 <ValidationMessage For="() => _formModel.RazonSocial" />
                             </div>
@@ -118,7 +146,7 @@
                                 <InputText class="form-control" @bind-Value="_formModel.NIT" />
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Teléfono</label>
+                                <label class="form-label">Telefono</label>
                                 <InputText class="form-control" @bind-Value="_formModel.Telefono" />
                             </div>
                             <div class="col-md-4">
@@ -129,7 +157,7 @@
                         </div>
                         <div class="row mb-3">
                             <div class="col-md-8">
-                                <label class="form-label">Dirección</label>
+                                <label class="form-label">Direccion</label>
                                 <InputText class="form-control" @bind-Value="_formModel.Direccion" />
                             </div>
                             <div class="col-md-4">
@@ -200,6 +228,24 @@
     private CreateClienteDto _formModel = new();
     private bool _formActivo = true;
     private ClienteDto? _deleteTarget;
+
+    private string _search = string.Empty;
+    private int _currentPage = 1;
+    private int _pageSize = 15;
+
+    private List<ClienteDto> ItemsFiltrados => _items
+        .Where(i => string.IsNullOrEmpty(_search)
+            || i.Codigo.Contains(_search, StringComparison.OrdinalIgnoreCase)
+            || i.RazonSocial.Contains(_search, StringComparison.OrdinalIgnoreCase)
+            || (i.NIT ?? "").Contains(_search, StringComparison.OrdinalIgnoreCase))
+        .ToList();
+
+    private List<ClienteDto> ItemsPaginados => ItemsFiltrados
+        .Skip((_currentPage - 1) * _pageSize)
+        .Take(_pageSize)
+        .ToList();
+
+    private int TotalPaginas => (int)Math.Ceiling(ItemsFiltrados.Count / (double)_pageSize);
 
     protected override async Task OnInitializedAsync()
     {
@@ -274,7 +320,7 @@
             CloseForm();
             await LoadDataAsync();
         }
-        catch { _mensaje = "Error de comunicación."; _esError = true; }
+        catch { _mensaje = "Error de comunicacion."; _esError = true; }
         _saving = false;
     }
 
@@ -292,7 +338,7 @@
             _deleteTarget = null;
             await LoadDataAsync();
         }
-        catch { _mensaje = "Error de comunicación."; _esError = true; }
+        catch { _mensaje = "Error de comunicacion."; _esError = true; }
         _saving = false;
     }
 }

@@ -10,6 +10,9 @@ public class ProveedorDto
     public string? Telefono { get; set; }
     public string? Email { get; set; }
     public string? NombreContacto { get; set; }
+    public string TipoProveedor { get; set; } = "Local";
+    public string? Pais { get; set; }
+    public string? CondicionPago { get; set; }
     public bool Activo { get; set; }
     public DateTime FechaCreacion { get; set; }
 }
