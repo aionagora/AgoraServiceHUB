@@ -20,4 +20,15 @@ public class CreateUsuarioDto
     [Required(ErrorMessage = "El nombre completo es obligatorio.")]
     [MaxLength(300)]
     public string NombreCompleto { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Empresa a la que se asigna el usuario al crearlo (opcional).
+    /// </summary>
+    public int? EmpresaId { get; set; }
+
+    /// <summary>
+    /// Rol del usuario en la empresa (por defecto "Viewer").
+    /// </summary>
+    [MaxLength(50)]
+    public string? Rol { get; set; }
 }
