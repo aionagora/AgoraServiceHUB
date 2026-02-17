@@ -1,15 +1,30 @@
 namespace AgoraHub360.ERP.Persistence.Context;
 
+using AgoraHub360.ERP.Application.Interfaces;
+using AgoraHub360.ERP.Domain.Common;
 using AgoraHub360.ERP.Domain.Entities.Core;
 using AgoraHub360.ERP.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 /// <summary>
-/// DbContext principal del ERP con soporte multi-tenant y auditoría.
+/// DbContext principal del ERP con soporte multi-tenant y auditoría automática.
+/// Los filtros globales de tenant garantizan aislamiento de datos por empresa.
 /// </summary>
 public class AgoraDbContext : DbContext, IUnitOfWork
 {
-    public AgoraDbContext(DbContextOptions<AgoraDbContext> options) : base(options)
+    private readonly int? _empresaId;
+
+    public AgoraDbContext(
+        DbContextOptions<AgoraDbContext> options,
+        ICurrentUserService currentUserService)
+        : base(options)
+    {
+        _empresaId = currentUserService.EmpresaId;
+    }
+
+    // Constructor para migraciones y design-time (sin tenant)
+    public AgoraDbContext(DbContextOptions<AgoraDbContext> options)
+        : base(options)
     {
     }
 
@@ -23,20 +38,33 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     {
         base.OnModelCreating(modelBuilder);
 
-        // Configuración de UsuarioEmpresa (clave compuesta)
-        modelBuilder.Entity<UsuarioEmpresa>()
-            .HasKey(ue => new { ue.UsuarioId, ue.EmpresaId });
-
-        // Moneda usa Codigo como PK
-        modelBuilder.Entity<Moneda>()
-            .HasKey(m => m.Codigo);
-
-        // Aplicar configuraciones desde el assembly
+        // Aplicar configuraciones Fluent API desde el assembly
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AgoraDbContext).Assembly);
+
+        // Filtro global multi-tenant: todas las entidades que heredan de TenantEntity
+        // se filtran automáticamente por EmpresaId del usuario actual
+        ApplyTenantQueryFilters(modelBuilder);
     }
 
-    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    private void ApplyTenantQueryFilters(ModelBuilder modelBuilder)
     {
-        return await base.SaveChangesAsync(cancellationToken);
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            if (!typeof(TenantEntity).IsAssignableFrom(entityType.ClrType))
+                continue;
+
+            var method = typeof(AgoraDbContext)
+                .GetMethod(nameof(ApplyTenantFilter),
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!
+                .MakeGenericMethod(entityType.ClrType);
+
+            method.Invoke(this, new object[] { modelBuilder });
+        }
+    }
+
+    private void ApplyTenantFilter<T>(ModelBuilder modelBuilder) where T : TenantEntity
+    {
+        modelBuilder.Entity<T>().HasQueryFilter(e => _empresaId == null || e.EmpresaId == _empresaId);
+        modelBuilder.Entity<T>().HasIndex(e => e.EmpresaId);
     }
 }
