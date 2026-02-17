@@ -1,9 +1,11 @@
 namespace AgoraHub360.ERP.Persistence;
 
+using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Domain.Interfaces;
 using AgoraHub360.ERP.Persistence.Context;
 using AgoraHub360.ERP.Persistence.Interceptors;
 using AgoraHub360.ERP.Persistence.Repositories;
+using AgoraHub360.ERP.Persistence.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -33,6 +35,9 @@ public static class DependencyInjection
             provider.GetRequiredService<AgoraDbContext>());
 
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+
+        // Servicio de consulta de AuditLog (implementación en Persistence por acceso IQueryable)
+        services.AddScoped<IAuditLogService, AuditLogService>();
 
         return services;
     }

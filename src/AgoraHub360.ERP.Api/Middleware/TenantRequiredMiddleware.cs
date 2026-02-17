@@ -17,6 +17,7 @@ public class TenantRequiredMiddleware
         "/api/v1/empresas",
         "/api/v1/roles",
         "/api/v1/usuarios",
+        "/api/v1/audit-logs",
         "/api/v1/diagnostics",
         "/health",
         "/swagger"

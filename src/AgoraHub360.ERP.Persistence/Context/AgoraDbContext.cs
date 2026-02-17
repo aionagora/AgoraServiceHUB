@@ -35,6 +35,9 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     public DbSet<Moneda> Monedas => Set<Moneda>();
     public DbSet<Rol> Roles => Set<Rol>();
 
+    // Auditoría
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

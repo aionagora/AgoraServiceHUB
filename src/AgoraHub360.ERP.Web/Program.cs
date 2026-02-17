@@ -25,5 +25,6 @@ builder.Services.AddScoped<EmpresaHttpService>();
 builder.Services.AddScoped<EmpresaStateService>();
 builder.Services.AddScoped<RolHttpService>();
 builder.Services.AddScoped<UsuarioHttpService>();
+builder.Services.AddScoped<AuditLogHttpService>();
 
 await builder.Build().RunAsync();
