@@ -1,0 +1,825 @@
+@page "/config/parametros-numeracion"
+@page "/config/parametros"
+@page "/config/numeraciones"
+@inject ParametroHttpService ParamSvc
+@inject NumeracionHttpService NumSvc
+@inject EmpresaHttpService EmpresaSvc
+@inject EmpresaStateService EmpresaState
+
+<PageTitle>Parámetros y Numeración - AgoraHub360 ERP</PageTitle>
+
+<div class="page-header">
+    <h1>Parámetros Generales y Numeración</h1>
+    <p class="text-muted mb-0">Sistema &rsaquo; Configuración de la Empresa</p>
+</div>
+
+@if (!string.IsNullOrEmpty(_mensaje))
+{
+    <div class="alert @(_esError ? "alert-danger" : "alert-success") alert-dismissible fade show" role="alert">
+        @_mensaje
+        <button type="button" class="btn-close" @onclick="() => _mensaje = null"></button>
+    </div>
+}
+
+@if (_loading)
+{
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="text-muted mt-2">Cargando configuración...</p>
+        </div>
+    </div>
+}
+else
+{
+    <!-- ═══════ Moneda Base ═══════ -->
+    <div class="card mb-4">
+        <div class="card-header py-2">
+            <i class="bi bi-currency-exchange me-1"></i> Moneda Base de la Empresa
+        </div>
+        <div class="card-body">
+            @if (_empresa is null)
+            {
+                <p class="text-muted mb-0">No se pudo cargar la empresa activa. Configure una empresa primero.</p>
+            }
+            else
+            {
+                <div class="row align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Empresa</label>
+                        <input class="form-control" value="@_empresa.Nombre" disabled />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Moneda Base *</label>
+                        <select class="form-select" @bind="_monedaSeleccionada">
+                            <option value="">— Seleccionar —</option>
+                            <option value="BOB">BOB - Boliviano</option>
+                            <option value="USD">USD - Dólar</option>
+                            <option value="EUR">EUR - Euro</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">Estado actual</label>
+                        <div class="form-control-plaintext">
+                            @if (!string.IsNullOrEmpty(_empresa.MonedaBaseId))
+                            {
+                                <span class="badge bg-primary fs-6">@_empresa.MonedaBaseId</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark">Sin configurar</span>
+                            }
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-primary w-100" @onclick="GuardarMonedaAsync"
+                                disabled="@(_savingMoneda || _monedaSeleccionada == _empresa.MonedaBaseId)">
+                            @if (_savingMoneda)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            <i class="bi bi-check-lg me-1"></i> Guardar
+                        </button>
+                    </div>
+                </div>
+                <div class="form-text mt-2">
+                    <i class="bi bi-info-circle me-1"></i>
+                    La moneda base se utiliza para todos los documentos contables y financieros de la empresa.
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- ═══════ Tabs: Parámetros / Numeración ═══════ -->
+    <ul class="nav nav-tabs mb-0" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(_tabActiva == "parametros" ? "active" : "")"
+                    @onclick='() => _tabActiva = "parametros"' type="button">
+                <i class="bi bi-sliders me-1"></i> Parámetros del Sistema
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link @(_tabActiva == "numeracion" ? "active" : "")"
+                    @onclick='() => _tabActiva = "numeracion"' type="button">
+                <i class="bi bi-hash me-1"></i> Numeración de Documentos
+            </button>
+        </li>
+    </ul>
+
+    <div class="card border-top-0 rounded-top-0">
+        @if (_tabActiva == "parametros")
+        {
+            <!-- ═══════ TAB: Parámetros del Sistema ═══════ -->
+            <div class="card-header d-flex justify-content-between align-items-center py-2 border-top-0">
+                <span class="small text-muted">Configuración clave-valor por empresa (@_parametros.Count)</span>
+                <button class="btn btn-primary btn-sm" @onclick="ShowCrearParametro">
+                    <i class="bi bi-plus-circle me-1"></i> Nuevo Parámetro
+                </button>
+            </div>
+
+            @if (_parametros.Count == 0)
+            {
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-gear" style="font-size: 3rem; color: var(--agora-text-light);"></i>
+                    <p class="text-muted mt-3">No hay parámetros configurados.</p>
+                    <button class="btn btn-primary btn-sm" @onclick="ShowCrearParametro">
+                        <i class="bi bi-plus-circle me-1"></i> Crear primer parámetro
+                    </button>
+                </div>
+            }
+            else
+            {
+                @foreach (var grupo in _parametros.GroupBy(p => p.Categoria).OrderBy(g => g.Key))
+                {
+                    <div class="border-bottom">
+                        <div class="px-3 py-2 bg-light border-bottom">
+                            <i class="bi bi-tag-fill me-1 text-muted"></i>
+                            <span class="fw-semibold small">@grupo.Key</span>
+                            <span class="badge bg-secondary ms-1">@grupo.Count()</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm mb-0">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 200px;">Clave</th>
+                                        <th>Valor</th>
+                                        <th style="width: 250px;">Descripción</th>
+                                        <th style="width: 100px;">Tipo</th>
+                                        <th class="text-end" style="width: 100px;">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var p in grupo.OrderBy(x => x.Clave))
+                                    {
+                                        <tr>
+                                            <td class="fw-semibold">@p.Clave</td>
+                                            <td>
+                                                @if (_editingInline == p.Id)
+                                                {
+                                                    <div class="input-group input-group-sm">
+                                                        <input type="text" class="form-control" @bind="_editingValue" />
+                                                        <button class="btn btn-outline-success" @onclick="() => SaveInlineAsync(p)">
+                                                            <i class="bi bi-check"></i>
+                                                        </button>
+                                                        <button class="btn btn-outline-secondary" @onclick="CancelInline">
+                                                            <i class="bi bi-x"></i>
+                                                        </button>
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <span class="cursor-pointer" @onclick="() => StartInlineEdit(p)"
+                                                          title="Clic para editar">
+                                                        @p.Valor
+                                                        <i class="bi bi-pencil-fill text-muted ms-1" style="font-size: 0.7rem;"></i>
+                                                    </span>
+                                                }
+                                            </td>
+                                            <td class="small text-muted">@(p.Descripcion ?? "—")</td>
+                                            <td><span class="badge bg-light text-dark">@p.TipoDato</span></td>
+                                            <td class="text-end">
+                                                <button class="btn btn-outline-primary btn-sm me-1"
+                                                        @onclick="() => ShowEditarParametro(p)" title="Editar completo">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button class="btn btn-outline-danger btn-sm"
+                                                        @onclick="() => ConfirmDeleteParametro(p)" title="Eliminar">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+            }
+        }
+        else
+        {
+            <!-- ═══════ TAB: Numeración de Documentos ═══════ -->
+            <div class="card-header d-flex justify-content-between align-items-center py-2 border-top-0">
+                <span class="small text-muted">Series de numeración (@_numeraciones.Count)</span>
+                <div>
+                    @if (_numeraciones.Count == 0)
+                    {
+                        <button class="btn btn-outline-success btn-sm me-1" @onclick="InicializarSeriesBase"
+                                disabled="@_saving">
+                            <i class="bi bi-magic me-1"></i> Inicializar series base
+                        </button>
+                    }
+                    <button class="btn btn-primary btn-sm" @onclick="ShowCrearNumeracion">
+                        <i class="bi bi-plus-circle me-1"></i> Nueva Serie
+                    </button>
+                </div>
+            </div>
+
+            @if (_numeraciones.Count == 0)
+            {
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-hash" style="font-size: 3rem; color: var(--agora-text-light);"></i>
+                    <p class="text-muted mt-3">No hay series de numeración configuradas.</p>
+                    <button class="btn btn-primary btn-sm" @onclick="InicializarSeriesBase" disabled="@_saving">
+                        <i class="bi bi-magic me-1"></i> Inicializar series base
+                    </button>
+                    <p class="text-muted small mt-2">
+                        Se crearán las series: OC, REC, FAC, PED, NC, ND, MOV
+                    </p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>Tipo</th>
+                                <th>Descripción</th>
+                                <th>Prefijo</th>
+                                <th>Siguiente #</th>
+                                <th>Dígitos</th>
+                                <th>Preview</th>
+                                <th class="text-center">Estado</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var num in _numeraciones.OrderBy(n => n.TipoDocumento))
+                            {
+                                <tr>
+                                    <td><span class="badge bg-primary">@num.TipoDocumento</span></td>
+                                    <td class="fw-semibold">@num.Descripcion</td>
+                                    <td><code>@num.Prefijo</code></td>
+                                    <td>@num.SiguienteNumero</td>
+                                    <td>@num.Digitos</td>
+                                    <td><code class="text-success">@num.PreviewSiguiente</code></td>
+                                    <td class="text-center">
+                                        @if (num.Activo)
+                                        {
+                                            <span class="badge bg-success">Activa</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Inactiva</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        <button class="btn btn-outline-primary btn-sm me-1"
+                                                @onclick="() => ShowEditarNumeracion(num)" title="Editar">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger btn-sm"
+                                                @onclick="() => ConfirmDeleteNumeracion(num)" title="Eliminar">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        }
+    </div>
+}
+
+<!-- ═══════ Modal Crear/Editar Parámetro ═══════ -->
+@if (_showParamForm)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(_editParamId.HasValue ? "Editar Parámetro" : "Nuevo Parámetro")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseParamForm"></button>
+                </div>
+                <EditForm Model="_paramModel" OnValidSubmit="SaveParametroAsync">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Clave *</label>
+                            <InputText class="form-control" @bind-Value="_paramModel.Clave"
+                                       disabled="@_editParamId.HasValue" />
+                            <ValidationMessage For="() => _paramModel.Clave" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Valor *</label>
+                            <InputText class="form-control" @bind-Value="_paramModel.Valor" />
+                            <ValidationMessage For="() => _paramModel.Valor" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Descripción</label>
+                            <InputText class="form-control" @bind-Value="_paramModel.Descripcion" />
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Categoría</label>
+                                <InputSelect class="form-select" @bind-Value="_paramModel.Categoria">
+                                    <option value="General">General</option>
+                                    <option value="Facturación">Facturación</option>
+                                    <option value="Inventario">Inventario</option>
+                                    <option value="Compras">Compras</option>
+                                    <option value="Ventas">Ventas</option>
+                                </InputSelect>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Tipo de Dato</label>
+                                <InputSelect class="form-select" @bind-Value="_paramModel.TipoDato">
+                                    <option value="String">String</option>
+                                    <option value="Integer">Integer</option>
+                                    <option value="Decimal">Decimal</option>
+                                    <option value="Boolean">Boolean</option>
+                                    <option value="Select">Select</option>
+                                </InputSelect>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseParamForm">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" disabled="@_saving">
+                            @if (_saving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            Guardar
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- ═══════ Modal Crear/Editar Numeración ═══════ -->
+@if (_showNumForm)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(_editNumId.HasValue ? "Editar Serie" : "Nueva Serie")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseNumForm"></button>
+                </div>
+                @if (!_editNumId.HasValue)
+                {
+                    <EditForm Model="_createNumModel" OnValidSubmit="SaveCreateNumeracionAsync">
+                        <DataAnnotationsValidator />
+                        <div class="modal-body">
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Tipo Doc. *</label>
+                                    <InputText class="form-control" @bind-Value="_createNumModel.TipoDocumento"
+                                               placeholder="OC" />
+                                    <ValidationMessage For="() => _createNumModel.TipoDocumento" />
+                                </div>
+                                <div class="col-md-8">
+                                    <label class="form-label">Descripción *</label>
+                                    <InputText class="form-control" @bind-Value="_createNumModel.Descripcion"
+                                               placeholder="Orden de Compra" />
+                                    <ValidationMessage For="() => _createNumModel.Descripcion" />
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Prefijo *</label>
+                                    <InputText class="form-control" @bind-Value="_createNumModel.Prefijo"
+                                               placeholder="OC-" />
+                                    <ValidationMessage For="() => _createNumModel.Prefijo" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Siguiente #</label>
+                                    <InputNumber class="form-control" @bind-Value="_createNumModel.SiguienteNumero" />
+                                    <ValidationMessage For="() => _createNumModel.SiguienteNumero" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Dígitos</label>
+                                    <InputNumber class="form-control" @bind-Value="_createNumModel.Digitos" />
+                                    <ValidationMessage For="() => _createNumModel.Digitos" />
+                                </div>
+                            </div>
+                            <div class="alert alert-info small mb-0">
+                                <i class="bi bi-eye me-1"></i>
+                                Preview: <code>@(_createNumModel.Prefijo)@(_createNumModel.SiguienteNumero.ToString().PadLeft(_createNumModel.Digitos, '0'))</code>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseNumForm">Cancelar</button>
+                            <button type="submit" class="btn btn-primary" disabled="@_saving">
+                                @if (_saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                Crear Serie
+                            </button>
+                        </div>
+                    </EditForm>
+                }
+                else
+                {
+                    <EditForm Model="_updateNumModel" OnValidSubmit="SaveUpdateNumeracionAsync">
+                        <DataAnnotationsValidator />
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">Tipo Documento</label>
+                                <input class="form-control" value="@_editNumTipo" disabled />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Descripción *</label>
+                                <InputText class="form-control" @bind-Value="_updateNumModel.Descripcion" />
+                                <ValidationMessage For="() => _updateNumModel.Descripcion" />
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Prefijo *</label>
+                                    <InputText class="form-control" @bind-Value="_updateNumModel.Prefijo" />
+                                    <ValidationMessage For="() => _updateNumModel.Prefijo" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Siguiente #</label>
+                                    <InputNumber class="form-control" @bind-Value="_updateNumModel.SiguienteNumero" />
+                                    <ValidationMessage For="() => _updateNumModel.SiguienteNumero" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Dígitos</label>
+                                    <InputNumber class="form-control" @bind-Value="_updateNumModel.Digitos" />
+                                    <ValidationMessage For="() => _updateNumModel.Digitos" />
+                                </div>
+                            </div>
+                            <div class="form-check mb-3">
+                                <InputCheckbox class="form-check-input" @bind-Value="_updateNumModel.Activo" />
+                                <label class="form-check-label">Activa</label>
+                            </div>
+                            <div class="alert alert-info small mb-0">
+                                <i class="bi bi-eye me-1"></i>
+                                Preview: <code>@(_updateNumModel.Prefijo)@(_updateNumModel.SiguienteNumero.ToString().PadLeft(_updateNumModel.Digitos, '0'))</code>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseNumForm">Cancelar</button>
+                            <button type="submit" class="btn btn-primary" disabled="@_saving">
+                                @if (_saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                Guardar Cambios
+                            </button>
+                        </div>
+                    </EditForm>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+<!-- ═══════ Modal Confirmar Eliminación (Parámetro) ═══════ -->
+@if (_deleteParamTarget is not null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar Eliminación</h5>
+                    <button type="button" class="btn-close" @onclick="() => _deleteParamTarget = null"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Eliminar el parámetro <strong>@_deleteParamTarget.Clave</strong>?</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary btn-sm" @onclick="() => _deleteParamTarget = null">Cancelar</button>
+                    <button class="btn btn-danger btn-sm" @onclick="DeleteParametroAsync" disabled="@_saving">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- ═══════ Modal Confirmar Eliminación (Numeración) ═══════ -->
+@if (_deleteNumTarget is not null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar Eliminación</h5>
+                    <button type="button" class="btn-close" @onclick="() => _deleteNumTarget = null"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Eliminar la serie <strong>@_deleteNumTarget.TipoDocumento</strong> (@_deleteNumTarget.Descripcion)?</p>
+                    <p class="text-muted small">Los documentos ya emitidos no se verán afectados.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary btn-sm" @onclick="() => _deleteNumTarget = null">Cancelar</button>
+                    <button class="btn btn-danger btn-sm" @onclick="DeleteNumeracionAsync" disabled="@_saving">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    // ── Estado general ──
+    private bool _loading = true;
+    private bool _saving;
+    private bool _savingMoneda;
+    private string? _mensaje;
+    private bool _esError;
+    private string _tabActiva = "parametros";
+
+    // ── Moneda Base ──
+    private EmpresaDto? _empresa;
+    private string? _monedaSeleccionada;
+
+    // ── Parámetros ──
+    private List<ParametroSistemaDto> _parametros = new();
+    private bool _showParamForm;
+    private int? _editParamId;
+    private UpsertParametroDto _paramModel = new();
+    private int? _editingInline;
+    private string _editingValue = "";
+    private ParametroSistemaDto? _deleteParamTarget;
+
+    // ── Numeración ──
+    private List<NumeracionDocumentoDto> _numeraciones = new();
+    private bool _showNumForm;
+    private int? _editNumId;
+    private string _editNumTipo = "";
+    private CreateNumeracionDto _createNumModel = new();
+    private UpdateNumeracionDto _updateNumModel = new();
+    private NumeracionDocumentoDto? _deleteNumTarget;
+
+    // ══════════════════════════════════════════════════
+    // Lifecycle
+    // ══════════════════════════════════════════════════
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAllAsync();
+    }
+
+    private async Task LoadAllAsync()
+    {
+        _loading = true;
+        try
+        {
+            // Cargar empresa activa (primera activa disponible)
+            var empresas = await EmpresaSvc.GetAllAsync();
+            EmpresaState.SetEmpresas(empresas);
+            _empresa = EmpresaState.EmpresaActiva ?? empresas.FirstOrDefault(e => e.Activo);
+            _monedaSeleccionada = _empresa?.MonedaBaseId;
+
+            // Cargar parámetros y numeraciones en paralelo
+            var paramTask = ParamSvc.GetAllAsync();
+            var numTask = NumSvc.GetAllAsync();
+            _parametros = await paramTask;
+            _numeraciones = await numTask;
+        }
+        catch
+        {
+            _mensaje = "Error al cargar la configuración. Verifique la conexión con la API.";
+            _esError = true;
+        }
+        _loading = false;
+    }
+
+    // ══════════════════════════════════════════════════
+    // Moneda Base
+    // ══════════════════════════════════════════════════
+
+    private async Task GuardarMonedaAsync()
+    {
+        if (_empresa is null || _monedaSeleccionada == _empresa.MonedaBaseId) return;
+        _savingMoneda = true;
+        try
+        {
+            var updateDto = new UpdateEmpresaDto
+            {
+                Nombre = _empresa.Nombre,
+                NIT = _empresa.NIT,
+                Direccion = _empresa.Direccion,
+                Telefono = _empresa.Telefono,
+                Email = _empresa.Email,
+                MonedaBaseId = _monedaSeleccionada,
+                Activo = _empresa.Activo
+            };
+            var result = await EmpresaSvc.UpdateAsync(_empresa.Id, updateDto);
+            if (result.Success)
+            {
+                _empresa.MonedaBaseId = _monedaSeleccionada;
+                _mensaje = $"Moneda base actualizada a {_monedaSeleccionada}.";
+                _esError = false;
+            }
+            else { _mensaje = result.Message; _esError = true; }
+        }
+        catch { _mensaje = "Error al actualizar la moneda base."; _esError = true; }
+        _savingMoneda = false;
+    }
+
+    // ══════════════════════════════════════════════════
+    // Parámetros del Sistema
+    // ══════════════════════════════════════════════════
+
+    private void ShowCrearParametro()
+    {
+        _editParamId = null;
+        _paramModel = new UpsertParametroDto { Categoria = "General", TipoDato = "String" };
+        _showParamForm = true;
+    }
+
+    private void ShowEditarParametro(ParametroSistemaDto p)
+    {
+        _editParamId = p.Id;
+        _paramModel = new UpsertParametroDto
+        {
+            Clave = p.Clave,
+            Valor = p.Valor,
+            Descripcion = p.Descripcion,
+            Categoria = p.Categoria,
+            TipoDato = p.TipoDato
+        };
+        _showParamForm = true;
+    }
+
+    private void CloseParamForm() { _showParamForm = false; _editParamId = null; }
+
+    private async Task SaveParametroAsync()
+    {
+        _saving = true;
+        try
+        {
+            var result = await ParamSvc.UpsertAsync(_paramModel);
+            if (result.Success)
+            {
+                _mensaje = "Parámetro guardado exitosamente.";
+                _esError = false;
+                CloseParamForm();
+                _parametros = await ParamSvc.GetAllAsync();
+            }
+            else { _mensaje = result.Message; _esError = true; }
+        }
+        catch { _mensaje = "Error de comunicación."; _esError = true; }
+        _saving = false;
+    }
+
+    // Inline edit
+    private void StartInlineEdit(ParametroSistemaDto p)
+    {
+        _editingInline = p.Id;
+        _editingValue = p.Valor;
+    }
+
+    private void CancelInline() { _editingInline = null; }
+
+    private async Task SaveInlineAsync(ParametroSistemaDto p)
+    {
+        var dto = new UpsertParametroDto
+        {
+            Clave = p.Clave,
+            Valor = _editingValue,
+            Descripcion = p.Descripcion,
+            Categoria = p.Categoria,
+            TipoDato = p.TipoDato
+        };
+        var result = await ParamSvc.UpsertAsync(dto);
+        if (result.Success)
+        {
+            p.Valor = _editingValue;
+            _editingInline = null;
+            _mensaje = $"Parámetro '{p.Clave}' actualizado.";
+            _esError = false;
+        }
+        else { _mensaje = result.Message; _esError = true; }
+    }
+
+    private void ConfirmDeleteParametro(ParametroSistemaDto p) => _deleteParamTarget = p;
+
+    private async Task DeleteParametroAsync()
+    {
+        if (_deleteParamTarget is null) return;
+        _saving = true;
+        try
+        {
+            var result = await ParamSvc.DeleteAsync(_deleteParamTarget.Id);
+            _mensaje = result.Success ? "Parámetro eliminado." : result.Message;
+            _esError = !result.Success;
+            _deleteParamTarget = null;
+            _parametros = await ParamSvc.GetAllAsync();
+        }
+        catch { _mensaje = "Error de comunicación."; _esError = true; }
+        _saving = false;
+    }
+
+    // ══════════════════════════════════════════════════
+    // Numeración de Documentos
+    // ══════════════════════════════════════════════════
+
+    private void ShowCrearNumeracion()
+    {
+        _editNumId = null;
+        _createNumModel = new CreateNumeracionDto { SiguienteNumero = 1, Digitos = 6 };
+        _showNumForm = true;
+    }
+
+    private void ShowEditarNumeracion(NumeracionDocumentoDto num)
+    {
+        _editNumId = num.Id;
+        _editNumTipo = num.TipoDocumento;
+        _updateNumModel = new UpdateNumeracionDto
+        {
+            Descripcion = num.Descripcion,
+            Prefijo = num.Prefijo,
+            SiguienteNumero = num.SiguienteNumero,
+            Digitos = num.Digitos,
+            Activo = num.Activo
+        };
+        _showNumForm = true;
+    }
+
+    private void CloseNumForm() { _showNumForm = false; _editNumId = null; }
+
+    private async Task SaveCreateNumeracionAsync()
+    {
+        _saving = true;
+        try
+        {
+            var result = await NumSvc.CreateAsync(_createNumModel);
+            if (result.Success)
+            {
+                _mensaje = "Serie creada exitosamente.";
+                _esError = false;
+                CloseNumForm();
+                _numeraciones = await NumSvc.GetAllAsync();
+            }
+            else { _mensaje = result.Message; _esError = true; }
+        }
+        catch { _mensaje = "Error de comunicación."; _esError = true; }
+        _saving = false;
+    }
+
+    private async Task SaveUpdateNumeracionAsync()
+    {
+        if (!_editNumId.HasValue) return;
+        _saving = true;
+        try
+        {
+            var result = await NumSvc.UpdateAsync(_editNumId.Value, _updateNumModel);
+            if (result.Success)
+            {
+                _mensaje = "Serie actualizada exitosamente.";
+                _esError = false;
+                CloseNumForm();
+                _numeraciones = await NumSvc.GetAllAsync();
+            }
+            else { _mensaje = result.Message; _esError = true; }
+        }
+        catch { _mensaje = "Error de comunicación."; _esError = true; }
+        _saving = false;
+    }
+
+    /// <summary>Inicializa las series base comunes de un ERP.</summary>
+    private async Task InicializarSeriesBase()
+    {
+        _saving = true;
+        var series = new[]
+        {
+            new CreateNumeracionDto { TipoDocumento = "OC",  Descripcion = "Orden de Compra",          Prefijo = "OC-",  SiguienteNumero = 1, Digitos = 6 },
+            new CreateNumeracionDto { TipoDocumento = "REC", Descripcion = "Recepción de Mercadería",  Prefijo = "REC-", SiguienteNumero = 1, Digitos = 6 },
+            new CreateNumeracionDto { TipoDocumento = "FAC", Descripcion = "Factura de Venta",         Prefijo = "FAC-", SiguienteNumero = 1, Digitos = 6 },
+            new CreateNumeracionDto { TipoDocumento = "PED", Descripcion = "Pedido de Venta",          Prefijo = "PED-", SiguienteNumero = 1, Digitos = 6 },
+            new CreateNumeracionDto { TipoDocumento = "NC",  Descripcion = "Nota de Crédito",          Prefijo = "NC-",  SiguienteNumero = 1, Digitos = 6 },
+            new CreateNumeracionDto { TipoDocumento = "ND",  Descripcion = "Nota de Débito",           Prefijo = "ND-",  SiguienteNumero = 1, Digitos = 6 },
+            new CreateNumeracionDto { TipoDocumento = "MOV", Descripcion = "Movimiento de Inventario", Prefijo = "MOV-", SiguienteNumero = 1, Digitos = 6 },
+        };
+
+        var errores = 0;
+        foreach (var serie in series)
+        {
+            try
+            {
+                var result = await NumSvc.CreateAsync(serie);
+                if (!result.Success) errores++;
+            }
+            catch { errores++; }
+        }
+
+        _mensaje = errores == 0
+            ? $"{series.Length} series base inicializadas exitosamente."
+            : $"Se crearon {series.Length - errores} series, {errores} ya existían o fallaron.";
+        _esError = errores > 0;
+
+        _numeraciones = await NumSvc.GetAllAsync();
+        _saving = false;
+    }
+
+    private void ConfirmDeleteNumeracion(NumeracionDocumentoDto num) => _deleteNumTarget = num;
+
+    private async Task DeleteNumeracionAsync()
+    {
+        if (_deleteNumTarget is null) return;
+        _saving = true;
+        try
+        {
+            var result = await NumSvc.DeleteAsync(_deleteNumTarget.Id);
+            _mensaje = result.Success ? "Serie eliminada." : result.Message;
+            _esError = !result.Success;
+            _deleteNumTarget = null;
+            _numeraciones = await NumSvc.GetAllAsync();
+        }
+        catch { _mensaje = "Error de comunicación."; _esError = true; }
+        _saving = false;
+    }
+}
