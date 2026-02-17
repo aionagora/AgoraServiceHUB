@@ -14,10 +14,12 @@ using Microsoft.AspNetCore.Mvc;
 public class ParametrosController : ControllerBase
 {
     private readonly IParametroSistemaService _service;
+    private readonly ILogger<ParametrosController> _logger;
 
-    public ParametrosController(IParametroSistemaService service)
+    public ParametrosController(IParametroSistemaService service, ILogger<ParametrosController> logger)
     {
         _service = service;
+        _logger = logger;
     }
 
     [HttpGet]
@@ -47,11 +49,26 @@ public class ParametrosController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Upsert([FromBody] UpsertParametroDto dto, CancellationToken ct)
     {
-        var result = await _service.UpsertAsync(dto, ct);
-        if (!result.IsSuccess)
-            return BadRequest(ApiResponse<ParametroSistemaDto>.Fail(result.Error!));
+        _logger.LogInformation("Upsert parámetro: Clave={Clave}, Valor={Valor}", dto.Clave, dto.Valor);
 
-        return Ok(ApiResponse<ParametroSistemaDto>.Ok(result.Value!, "Parámetro guardado exitosamente."));
+        try
+        {
+            var result = await _service.UpsertAsync(dto, ct);
+
+            if (!result.IsSuccess)
+            {
+                _logger.LogWarning("Error al guardar parámetro: {Error}", result.Error);
+                return BadRequest(ApiResponse<ParametroSistemaDto>.Fail(result.Error!));
+            }
+
+            _logger.LogInformation("Parámetro guardado exitosamente: Id={Id}", result.Value!.Id);
+            return Ok(ApiResponse<ParametroSistemaDto>.Ok(result.Value!, "Parámetro guardado exitosamente."));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Excepción al guardar parámetro");
+            return StatusCode(500, ApiResponse<ParametroSistemaDto>.Fail($"Error interno: {ex.Message}"));
+        }
     }
 
     [HttpDelete("{id:int}")]

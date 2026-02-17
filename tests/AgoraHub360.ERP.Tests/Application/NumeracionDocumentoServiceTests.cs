@@ -1,6 +1,7 @@
 namespace AgoraHub360.ERP.Tests.Application;
 
 using System.Linq.Expressions;
+using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Application.Services;
 using AgoraHub360.ERP.Domain.Entities.Core;
 using AgoraHub360.ERP.Domain.Interfaces;
@@ -11,19 +12,21 @@ public class NumeracionDocumentoServiceTests
     private readonly NumeracionDocumentoService _sut;
     private readonly FakeNumRepo _repo;
     private readonly FakeUow _uow;
+    private readonly FakeCurrentUserService _currentUserService;
 
     public NumeracionDocumentoServiceTests()
     {
         _repo = new FakeNumRepo();
         _uow = new FakeUow();
-        _sut = new NumeracionDocumentoService(_repo, _uow);
+        _currentUserService = new FakeCurrentUserService { EmpresaId = 1 };
+        _sut = new NumeracionDocumentoService(_repo, _uow, _currentUserService);
     }
 
     [Fact]
     public async Task GetAllAsync_ReturnsAll()
     {
-        _repo.Seed(new NumeracionDocumento { Id = 1, TipoDocumento = "OC", Prefijo = "OC-" });
-        _repo.Seed(new NumeracionDocumento { Id = 2, TipoDocumento = "FAC", Prefijo = "FAC-" });
+        _repo.Seed(new NumeracionDocumento { Id = 1, TipoDocumento = "OC", Prefijo = "OC-", EmpresaId = 1 });
+        _repo.Seed(new NumeracionDocumento { Id = 2, TipoDocumento = "FAC", Prefijo = "FAC-", EmpresaId = 1 });
 
         var result = await _sut.GetAllAsync();
 
@@ -48,13 +51,14 @@ public class NumeracionDocumentoServiceTests
         Assert.True(result.IsSuccess);
         Assert.Equal("OC", result.Value!.TipoDocumento);
         Assert.Equal("OC-000001", result.Value!.PreviewSiguiente);
+        Assert.Equal(1, result.Value!.EmpresaId);
         Assert.True(_uow.SaveCalled);
     }
 
     [Fact]
     public async Task CreateAsync_DuplicateTipo_Fails()
     {
-        _repo.Seed(new NumeracionDocumento { Id = 1, TipoDocumento = "OC", Prefijo = "OC-" });
+        _repo.Seed(new NumeracionDocumento { Id = 1, TipoDocumento = "OC", Prefijo = "OC-", EmpresaId = 1 });
 
         var dto = new CreateNumeracionDto
         {
@@ -120,5 +124,12 @@ public class NumeracionDocumentoServiceTests
         public bool SaveCalled { get; private set; }
         public Task<int> SaveChangesAsync(CancellationToken ct = default) { SaveCalled = true; return Task.FromResult(1); }
         public void Dispose() { }
+    }
+
+    private class FakeCurrentUserService : ICurrentUserService
+    {
+        public string? UserId { get; set; }
+        public string? UserName { get; set; }
+        public int? EmpresaId { get; set; }
     }
 }

@@ -24,21 +24,33 @@ public class ParametroSistemaService : IParametroSistemaService
 
     public async Task<Result<IReadOnlyList<ParametroSistemaDto>>> GetAllAsync(CancellationToken ct = default)
     {
-        var items = await _repository.GetAllAsync(ct);
+        var empresaId = _currentUserService.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<IReadOnlyList<ParametroSistemaDto>>.Failure("No se pudo determinar la empresa activa del usuario.");
+
+        var items = await _repository.FindAsync(p => p.EmpresaId == empresaId.Value, ct);
         return Result<IReadOnlyList<ParametroSistemaDto>>.Success(
             items.Select(MapToDto).ToList().AsReadOnly());
     }
 
     public async Task<Result<IReadOnlyList<ParametroSistemaDto>>> GetByCategoriaAsync(string categoria, CancellationToken ct = default)
     {
-        var items = await _repository.FindAsync(p => p.Categoria == categoria, ct);
+        var empresaId = _currentUserService.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<IReadOnlyList<ParametroSistemaDto>>.Failure("No se pudo determinar la empresa activa del usuario.");
+
+        var items = await _repository.FindAsync(p => p.EmpresaId == empresaId.Value && p.Categoria == categoria, ct);
         return Result<IReadOnlyList<ParametroSistemaDto>>.Success(
             items.Select(MapToDto).ToList().AsReadOnly());
     }
 
     public async Task<Result<ParametroSistemaDto>> GetByClaveAsync(string clave, CancellationToken ct = default)
     {
-        var items = await _repository.FindAsync(p => p.Clave == clave, ct);
+        var empresaId = _currentUserService.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<ParametroSistemaDto>.Failure("No se pudo determinar la empresa activa del usuario.");
+
+        var items = await _repository.FindAsync(p => p.EmpresaId == empresaId.Value && p.Clave == clave, ct);
         var entity = items.FirstOrDefault();
         if (entity is null)
             return Result<ParametroSistemaDto>.Failure($"Parámetro '{clave}' no encontrado.");
@@ -48,10 +60,16 @@ public class ParametroSistemaService : IParametroSistemaService
 
     public async Task<Result<ParametroSistemaDto>> UpsertAsync(UpsertParametroDto dto, CancellationToken ct = default)
     {
-        var existing = (await _repository.FindAsync(p => p.Clave == dto.Clave, ct)).FirstOrDefault();
+        var empresaId = _currentUserService.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<ParametroSistemaDto>.Failure("No se pudo determinar la empresa activa del usuario.");
+
+        var existing = (await _repository.FindAsync(
+            p => p.EmpresaId == empresaId.Value && p.Clave == dto.Clave, ct)).FirstOrDefault();
 
         if (existing is not null)
         {
+            // Actualizar existente
             existing.Valor = dto.Valor;
             existing.Descripcion = dto.Descripcion;
             existing.Categoria = dto.Categoria;
@@ -60,6 +78,7 @@ public class ParametroSistemaService : IParametroSistemaService
         }
         else
         {
+            // Crear nuevo
             existing = new ParametroSistema
             {
                 Clave = dto.Clave,
@@ -78,9 +97,17 @@ public class ParametroSistemaService : IParametroSistemaService
 
     public async Task<Result<bool>> DeleteAsync(int id, CancellationToken ct = default)
     {
+        var empresaId = _currentUserService.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<bool>.Failure("No se pudo determinar la empresa activa del usuario.");
+
         var entity = await _repository.GetByIdAsync(id, ct);
         if (entity is null)
             return Result<bool>.Failure("Parámetro no encontrado.");
+
+        // Verificar que el parámetro pertenece a la empresa del usuario
+        if (entity.EmpresaId != empresaId.Value)
+            return Result<bool>.Failure("No tiene permisos para eliminar este parámetro.");
 
         await _repository.DeleteAsync(entity, ct);
         await _unitOfWork.SaveChangesAsync(ct);
