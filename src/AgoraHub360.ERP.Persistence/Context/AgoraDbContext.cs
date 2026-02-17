@@ -35,6 +35,10 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     public DbSet<Moneda> Monedas => Set<Moneda>();
     public DbSet<Rol> Roles => Set<Rol>();
 
+    // Configuración
+    public DbSet<ParametroSistema> ParametrosSistema => Set<ParametroSistema>();
+    public DbSet<NumeracionDocumento> NumeracionesDocumento => Set<NumeracionDocumento>();
+
     // Auditoría
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 

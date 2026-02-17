@@ -1,0 +1,136 @@
+namespace AgoraHub360.ERP.Tests.Application;
+
+using System.Linq.Expressions;
+using AgoraHub360.ERP.Application.Services;
+using AgoraHub360.ERP.Domain.Entities.Core;
+using AgoraHub360.ERP.Domain.Interfaces;
+using AgoraHub360.ERP.Shared.DTOs.Parametro;
+
+public class ParametroSistemaServiceTests
+{
+    private readonly ParametroSistemaService _sut;
+    private readonly FakeParamRepo _repo;
+    private readonly FakeUow _uow;
+
+    public ParametroSistemaServiceTests()
+    {
+        _repo = new FakeParamRepo();
+        _uow = new FakeUow();
+        _sut = new ParametroSistemaService(_repo, _uow);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_ReturnsAll()
+    {
+        _repo.Seed(new ParametroSistema { Id = 1, Clave = "MonedaBase", Valor = "BOB" });
+        _repo.Seed(new ParametroSistema { Id = 2, Clave = "IVA", Valor = "13" });
+
+        var result = await _sut.GetAllAsync();
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(2, result.Value!.Count);
+    }
+
+    [Fact]
+    public async Task GetByClaveAsync_Found_ReturnsDto()
+    {
+        _repo.Seed(new ParametroSistema { Id = 1, Clave = "MonedaBase", Valor = "BOB" });
+
+        var result = await _sut.GetByClaveAsync("MonedaBase");
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("BOB", result.Value!.Valor);
+    }
+
+    [Fact]
+    public async Task GetByClaveAsync_NotFound_Fails()
+    {
+        var result = await _sut.GetByClaveAsync("NoExiste");
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("no encontrado", result.Error);
+    }
+
+    [Fact]
+    public async Task UpsertAsync_NewKey_Creates()
+    {
+        var dto = new UpsertParametroDto
+        {
+            Clave = "MonedaBase",
+            Valor = "BOB",
+            Categoria = "General",
+            TipoDato = "Select"
+        };
+
+        var result = await _sut.UpsertAsync(dto);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("BOB", result.Value!.Valor);
+        Assert.True(_uow.SaveCalled);
+    }
+
+    [Fact]
+    public async Task UpsertAsync_ExistingKey_Updates()
+    {
+        _repo.Seed(new ParametroSistema { Id = 1, Clave = "MonedaBase", Valor = "BOB" });
+
+        var dto = new UpsertParametroDto
+        {
+            Clave = "MonedaBase",
+            Valor = "USD",
+            Categoria = "General",
+            TipoDato = "Select"
+        };
+
+        var result = await _sut.UpsertAsync(dto);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal("USD", result.Value!.Valor);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_NotFound_Fails()
+    {
+        var result = await _sut.DeleteAsync(999);
+        Assert.False(result.IsSuccess);
+    }
+
+    // ── Fakes ──
+
+    private class FakeParamRepo : IRepository<ParametroSistema>
+    {
+        private readonly List<ParametroSistema> _store = new();
+
+        public void Seed(ParametroSistema p) => _store.Add(p);
+
+        public Task<ParametroSistema?> GetByIdAsync(int id, CancellationToken ct = default)
+            => Task.FromResult(_store.FirstOrDefault(p => p.Id == id));
+
+        public Task<IReadOnlyList<ParametroSistema>> GetAllAsync(CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<ParametroSistema>>(_store.AsReadOnly());
+
+        public Task<IReadOnlyList<ParametroSistema>> FindAsync(Expression<Func<ParametroSistema, bool>> predicate, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<ParametroSistema>>(_store.Where(predicate.Compile()).ToList().AsReadOnly());
+
+        public Task<ParametroSistema> AddAsync(ParametroSistema entity, CancellationToken ct = default)
+        {
+            _store.Add(entity);
+            return Task.FromResult(entity);
+        }
+
+        public Task UpdateAsync(ParametroSistema entity, CancellationToken ct = default) => Task.CompletedTask;
+
+        public Task DeleteAsync(ParametroSistema entity, CancellationToken ct = default)
+        {
+            _store.Remove(entity);
+            return Task.CompletedTask;
+        }
+    }
+
+    private class FakeUow : IUnitOfWork
+    {
+        public bool SaveCalled { get; private set; }
+        public Task<int> SaveChangesAsync(CancellationToken ct = default) { SaveCalled = true; return Task.FromResult(1); }
+        public void Dispose() { }
+    }
+}
