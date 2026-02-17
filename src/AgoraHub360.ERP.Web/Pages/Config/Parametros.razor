@@ -1,0 +1,327 @@
+@page "/config/parametros"
+@inject ParametroHttpService ParamSvc
+
+<PageTitle>Parámetros del Sistema - AgoraHub360 ERP</PageTitle>
+
+<div class="page-header">
+    <h1>Parámetros del Sistema</h1>
+    <p class="text-muted mb-0">Sistema &rsaquo; Parámetros</p>
+</div>
+
+@if (!string.IsNullOrEmpty(_mensaje))
+{
+    <div class="alert @(_esError ? "alert-danger" : "alert-success") alert-dismissible fade show" role="alert">
+        @_mensaje
+        <button type="button" class="btn-close" @onclick="() => _mensaje = null"></button>
+    </div>
+}
+
+<!-- Agrupados por Categoría -->
+@if (_loading)
+{
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="text-muted mt-2">Cargando parámetros...</p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="d-flex justify-content-end mb-3">
+        <button class="btn btn-primary btn-sm" @onclick="ShowCrear">
+            <i class="bi bi-plus-circle me-1"></i> Nuevo Parámetro
+        </button>
+    </div>
+
+    @if (_parametros.Count == 0)
+    {
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-gear" style="font-size: 3rem; color: var(--agora-text-light);"></i>
+                <p class="text-muted mt-3">No hay parámetros configurados.</p>
+                <button class="btn btn-primary btn-sm" @onclick="ShowCrear">
+                    <i class="bi bi-plus-circle me-1"></i> Crear primer parámetro
+                </button>
+            </div>
+        </div>
+    }
+    else
+    {
+        @foreach (var grupo in _parametros.GroupBy(p => p.Categoria).OrderBy(g => g.Key))
+        {
+            <div class="card mb-3">
+                <div class="card-header py-2">
+                    <i class="bi bi-tag-fill me-1"></i> @grupo.Key
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th style="width: 200px;">Clave</th>
+                                <th>Valor</th>
+                                <th style="width: 250px;">Descripción</th>
+                                <th style="width: 100px;">Tipo</th>
+                                <th class="text-end" style="width: 100px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in grupo.OrderBy(x => x.Clave))
+                            {
+                                <tr>
+                                    <td class="fw-semibold">@p.Clave</td>
+                                    <td>
+                                        @if (_editingInline == p.Id)
+                                        {
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" class="form-control" @bind="_editingValue" />
+                                                <button class="btn btn-outline-success" @onclick="() => SaveInlineAsync(p)">
+                                                    <i class="bi bi-check"></i>
+                                                </button>
+                                                <button class="btn btn-outline-secondary" @onclick="CancelInline">
+                                                    <i class="bi bi-x"></i>
+                                                </button>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span class="cursor-pointer" @onclick="() => StartInlineEdit(p)"
+                                                  title="Clic para editar">
+                                                @p.Valor
+                                                <i class="bi bi-pencil-fill text-muted ms-1" style="font-size: 0.7rem;"></i>
+                                            </span>
+                                        }
+                                    </td>
+                                    <td class="small text-muted">@(p.Descripcion ?? "—")</td>
+                                    <td><span class="badge bg-light text-dark">@p.TipoDato</span></td>
+                                    <td class="text-end">
+                                        <button class="btn btn-outline-primary btn-sm me-1"
+                                                @onclick="() => ShowEditar(p)" title="Editar completo">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger btn-sm"
+                                                @onclick="() => ConfirmDelete(p)" title="Eliminar">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    }
+}
+
+<!-- Modal Crear/Editar -->
+@if (_showForm)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(_editId.HasValue ? "Editar Parámetro" : "Nuevo Parámetro")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseForm"></button>
+                </div>
+                <EditForm Model="_formModel" OnValidSubmit="SaveAsync">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Clave *</label>
+                            <InputText class="form-control" @bind-Value="_formModel.Clave"
+                                       disabled="@_editId.HasValue" />
+                            <ValidationMessage For="() => _formModel.Clave" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Valor *</label>
+                            <InputText class="form-control" @bind-Value="_formModel.Valor" />
+                            <ValidationMessage For="() => _formModel.Valor" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Descripción</label>
+                            <InputText class="form-control" @bind-Value="_formModel.Descripcion" />
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Categoría</label>
+                                <InputSelect class="form-select" @bind-Value="_formModel.Categoria">
+                                    <option value="General">General</option>
+                                    <option value="Facturación">Facturación</option>
+                                    <option value="Inventario">Inventario</option>
+                                    <option value="Compras">Compras</option>
+                                    <option value="Ventas">Ventas</option>
+                                </InputSelect>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Tipo de Dato</label>
+                                <InputSelect class="form-select" @bind-Value="_formModel.TipoDato">
+                                    <option value="String">String</option>
+                                    <option value="Integer">Integer</option>
+                                    <option value="Decimal">Decimal</option>
+                                    <option value="Boolean">Boolean</option>
+                                    <option value="Select">Select</option>
+                                </InputSelect>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseForm">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" disabled="@_saving">
+                            @if (_saving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            Guardar
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal Confirmar Eliminación -->
+@if (_deleteTarget is not null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar Eliminación</h5>
+                    <button type="button" class="btn-close" @onclick="() => _deleteTarget = null"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Eliminar el parámetro <strong>@_deleteTarget.Clave</strong>?</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary btn-sm" @onclick="() => _deleteTarget = null">Cancelar</button>
+                    <button class="btn btn-danger btn-sm" @onclick="DeleteAsync" disabled="@_saving">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<ParametroSistemaDto> _parametros = new();
+    private bool _loading = true;
+    private bool _saving;
+    private string? _mensaje;
+    private bool _esError;
+
+    // Form
+    private bool _showForm;
+    private int? _editId;
+    private UpsertParametroDto _formModel = new();
+
+    // Inline edit
+    private int? _editingInline;
+    private string _editingValue = "";
+
+    // Delete
+    private ParametroSistemaDto? _deleteTarget;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try { _parametros = await ParamSvc.GetAllAsync(); }
+        catch { _mensaje = "Error al cargar parámetros."; _esError = true; }
+        _loading = false;
+    }
+
+    private void ShowCrear()
+    {
+        _editId = null;
+        _formModel = new UpsertParametroDto { Categoria = "General", TipoDato = "String" };
+        _showForm = true;
+    }
+
+    private void ShowEditar(ParametroSistemaDto p)
+    {
+        _editId = p.Id;
+        _formModel = new UpsertParametroDto
+        {
+            Clave = p.Clave,
+            Valor = p.Valor,
+            Descripcion = p.Descripcion,
+            Categoria = p.Categoria,
+            TipoDato = p.TipoDato
+        };
+        _showForm = true;
+    }
+
+    private void CloseForm() { _showForm = false; _editId = null; }
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+        try
+        {
+            var result = await ParamSvc.UpsertAsync(_formModel);
+            if (result.Success)
+            {
+                _mensaje = "Parámetro guardado exitosamente.";
+                _esError = false;
+                CloseForm();
+                await LoadAsync();
+            }
+            else { _mensaje = result.Message; _esError = true; }
+        }
+        catch { _mensaje = "Error de comunicación."; _esError = true; }
+        _saving = false;
+    }
+
+    // Inline edit
+    private void StartInlineEdit(ParametroSistemaDto p)
+    {
+        _editingInline = p.Id;
+        _editingValue = p.Valor;
+    }
+
+    private void CancelInline() { _editingInline = null; }
+
+    private async Task SaveInlineAsync(ParametroSistemaDto p)
+    {
+        var dto = new UpsertParametroDto
+        {
+            Clave = p.Clave,
+            Valor = _editingValue,
+            Descripcion = p.Descripcion,
+            Categoria = p.Categoria,
+            TipoDato = p.TipoDato
+        };
+        var result = await ParamSvc.UpsertAsync(dto);
+        if (result.Success)
+        {
+            p.Valor = _editingValue;
+            _editingInline = null;
+            _mensaje = $"Parámetro '{p.Clave}' actualizado.";
+            _esError = false;
+        }
+        else { _mensaje = result.Message; _esError = true; }
+    }
+
+    private void ConfirmDelete(ParametroSistemaDto p) => _deleteTarget = p;
+
+    private async Task DeleteAsync()
+    {
+        if (_deleteTarget is null) return;
+        _saving = true;
+        try
+        {
+            var result = await ParamSvc.DeleteAsync(_deleteTarget.Id);
+            _mensaje = result.Success ? "Parámetro eliminado." : result.Message;
+            _esError = !result.Success;
+            _deleteTarget = null;
+            await LoadAsync();
+        }
+        catch { _mensaje = "Error de comunicación."; _esError = true; }
+        _saving = false;
+    }
+}

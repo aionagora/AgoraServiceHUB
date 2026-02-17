@@ -1,0 +1,369 @@
+@page "/config/numeraciones"
+@inject NumeracionHttpService NumSvc
+
+<PageTitle>Numeración de Documentos - AgoraHub360 ERP</PageTitle>
+
+<div class="page-header">
+    <h1>Numeración de Documentos</h1>
+    <p class="text-muted mb-0">Sistema &rsaquo; Numeración</p>
+</div>
+
+@if (!string.IsNullOrEmpty(_mensaje))
+{
+    <div class="alert @(_esError ? "alert-danger" : "alert-success") alert-dismissible fade show" role="alert">
+        @_mensaje
+        <button type="button" class="btn-close" @onclick="() => _mensaje = null"></button>
+    </div>
+}
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center py-3">
+        <span>Series de numeración (@_numeraciones.Count)</span>
+        <button class="btn btn-primary btn-sm" @onclick="ShowCrear">
+            <i class="bi bi-plus-circle me-1"></i> Nueva Serie
+        </button>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="card-body text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="text-muted mt-2">Cargando numeraciones...</p>
+        </div>
+    }
+    else if (_numeraciones.Count == 0)
+    {
+        <div class="card-body text-center py-5">
+            <i class="bi bi-hash" style="font-size: 3rem; color: var(--agora-text-light);"></i>
+            <p class="text-muted mt-3">No hay series de numeración configuradas.</p>
+            <button class="btn btn-primary btn-sm" @onclick="InicializarSeriesBase">
+                <i class="bi bi-magic me-1"></i> Inicializar series base
+            </button>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Descripción</th>
+                        <th>Prefijo</th>
+                        <th>Siguiente #</th>
+                        <th>Dígitos</th>
+                        <th>Preview</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var num in _numeraciones.OrderBy(n => n.TipoDocumento))
+                    {
+                        <tr>
+                            <td><span class="badge bg-primary">@num.TipoDocumento</span></td>
+                            <td class="fw-semibold">@num.Descripcion</td>
+                            <td><code>@num.Prefijo</code></td>
+                            <td>@num.SiguienteNumero</td>
+                            <td>@num.Digitos</td>
+                            <td><code class="text-success">@num.PreviewSiguiente</code></td>
+                            <td class="text-center">
+                                @if (num.Activo)
+                                {
+                                    <span class="badge bg-success">Activa</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Inactiva</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <button class="btn btn-outline-primary btn-sm me-1"
+                                        @onclick="() => ShowEditar(num)" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button class="btn btn-outline-danger btn-sm"
+                                        @onclick="() => ConfirmDelete(num)" title="Eliminar">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<!-- Modal Crear/Editar -->
+@if (_showForm)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(_editId.HasValue ? "Editar Serie" : "Nueva Serie")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseForm"></button>
+                </div>
+                @if (!_editId.HasValue)
+                {
+                    <EditForm Model="_createModel" OnValidSubmit="SaveCreateAsync">
+                        <DataAnnotationsValidator />
+                        <div class="modal-body">
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Tipo Doc. *</label>
+                                    <InputText class="form-control" @bind-Value="_createModel.TipoDocumento"
+                                               placeholder="OC" />
+                                    <ValidationMessage For="() => _createModel.TipoDocumento" />
+                                </div>
+                                <div class="col-md-8">
+                                    <label class="form-label">Descripción *</label>
+                                    <InputText class="form-control" @bind-Value="_createModel.Descripcion"
+                                               placeholder="Orden de Compra" />
+                                    <ValidationMessage For="() => _createModel.Descripcion" />
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Prefijo *</label>
+                                    <InputText class="form-control" @bind-Value="_createModel.Prefijo"
+                                               placeholder="OC-" />
+                                    <ValidationMessage For="() => _createModel.Prefijo" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Siguiente #</label>
+                                    <InputNumber class="form-control" @bind-Value="_createModel.SiguienteNumero" />
+                                    <ValidationMessage For="() => _createModel.SiguienteNumero" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Dígitos</label>
+                                    <InputNumber class="form-control" @bind-Value="_createModel.Digitos" />
+                                    <ValidationMessage For="() => _createModel.Digitos" />
+                                </div>
+                            </div>
+                            <div class="alert alert-info small mb-0">
+                                <i class="bi bi-eye me-1"></i>
+                                Preview: <code>@(_createModel.Prefijo)@(_createModel.SiguienteNumero.ToString().PadLeft(_createModel.Digitos, '0'))</code>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseForm">Cancelar</button>
+                            <button type="submit" class="btn btn-primary" disabled="@_saving">
+                                @if (_saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                Crear Serie
+                            </button>
+                        </div>
+                    </EditForm>
+                }
+                else
+                {
+                    <EditForm Model="_updateModel" OnValidSubmit="SaveUpdateAsync">
+                        <DataAnnotationsValidator />
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label">Tipo Documento</label>
+                                <input class="form-control" value="@_editTipo" disabled />
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Descripción *</label>
+                                <InputText class="form-control" @bind-Value="_updateModel.Descripcion" />
+                                <ValidationMessage For="() => _updateModel.Descripcion" />
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Prefijo *</label>
+                                    <InputText class="form-control" @bind-Value="_updateModel.Prefijo" />
+                                    <ValidationMessage For="() => _updateModel.Prefijo" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Siguiente #</label>
+                                    <InputNumber class="form-control" @bind-Value="_updateModel.SiguienteNumero" />
+                                    <ValidationMessage For="() => _updateModel.SiguienteNumero" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Dígitos</label>
+                                    <InputNumber class="form-control" @bind-Value="_updateModel.Digitos" />
+                                    <ValidationMessage For="() => _updateModel.Digitos" />
+                                </div>
+                            </div>
+                            <div class="form-check mb-3">
+                                <InputCheckbox class="form-check-input" @bind-Value="_updateModel.Activo" />
+                                <label class="form-check-label">Activa</label>
+                            </div>
+                            <div class="alert alert-info small mb-0">
+                                <i class="bi bi-eye me-1"></i>
+                                Preview: <code>@(_updateModel.Prefijo)@(_updateModel.SiguienteNumero.ToString().PadLeft(_updateModel.Digitos, '0'))</code>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseForm">Cancelar</button>
+                            <button type="submit" class="btn btn-primary" disabled="@_saving">
+                                @if (_saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                Guardar Cambios
+                            </button>
+                        </div>
+                    </EditForm>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal Confirmar Eliminación -->
+@if (_deleteTarget is not null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar Eliminación</h5>
+                    <button type="button" class="btn-close" @onclick="() => _deleteTarget = null"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Eliminar la serie <strong>@_deleteTarget.TipoDocumento</strong> (@_deleteTarget.Descripcion)?</p>
+                    <p class="text-muted small">Los documentos ya emitidos no se verán afectados.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary btn-sm" @onclick="() => _deleteTarget = null">Cancelar</button>
+                    <button class="btn btn-danger btn-sm" @onclick="DeleteAsync" disabled="@_saving">Eliminar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<NumeracionDocumentoDto> _numeraciones = new();
+    private bool _loading = true;
+    private bool _saving;
+    private string? _mensaje;
+    private bool _esError;
+
+    // Create form
+    private bool _showForm;
+    private int? _editId;
+    private string _editTipo = "";
+    private CreateNumeracionDto _createModel = new();
+    private UpdateNumeracionDto _updateModel = new();
+
+    // Delete
+    private NumeracionDocumentoDto? _deleteTarget;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        try { _numeraciones = await NumSvc.GetAllAsync(); }
+        catch { _mensaje = "Error al cargar numeraciones."; _esError = true; }
+        _loading = false;
+    }
+
+    private void ShowCrear()
+    {
+        _editId = null;
+        _createModel = new CreateNumeracionDto { SiguienteNumero = 1, Digitos = 6 };
+        _showForm = true;
+    }
+
+    private void ShowEditar(NumeracionDocumentoDto num)
+    {
+        _editId = num.Id;
+        _editTipo = num.TipoDocumento;
+        _updateModel = new UpdateNumeracionDto
+        {
+            Descripcion = num.Descripcion,
+            Prefijo = num.Prefijo,
+            SiguienteNumero = num.SiguienteNumero,
+            Digitos = num.Digitos,
+            Activo = num.Activo
+        };
+        _showForm = true;
+    }
+
+    private void CloseForm() { _showForm = false; _editId = null; }
+
+    private async Task SaveCreateAsync()
+    {
+        _saving = true;
+        try
+        {
+            var result = await NumSvc.CreateAsync(_createModel);
+            if (result.Success) { _mensaje = "Serie creada exitosamente."; _esError = false; CloseForm(); await LoadAsync(); }
+            else { _mensaje = result.Message; _esError = true; }
+        }
+        catch { _mensaje = "Error de comunicación."; _esError = true; }
+        _saving = false;
+    }
+
+    private async Task SaveUpdateAsync()
+    {
+        if (!_editId.HasValue) return;
+        _saving = true;
+        try
+        {
+            var result = await NumSvc.UpdateAsync(_editId.Value, _updateModel);
+            if (result.Success) { _mensaje = "Serie actualizada exitosamente."; _esError = false; CloseForm(); await LoadAsync(); }
+            else { _mensaje = result.Message; _esError = true; }
+        }
+        catch { _mensaje = "Error de comunicación."; _esError = true; }
+        _saving = false;
+    }
+
+    /// <summary>Inicializa las series base comunes de un ERP.</summary>
+    private async Task InicializarSeriesBase()
+    {
+        _saving = true;
+        var series = new[]
+        {
+            new CreateNumeracionDto { TipoDocumento = "OC", Descripcion = "Orden de Compra", Prefijo = "OC-", SiguienteNumero = 1, Digitos = 6 },
+            new CreateNumeracionDto { TipoDocumento = "REC", Descripcion = "Recepción de Mercadería", Prefijo = "REC-", SiguienteNumero = 1, Digitos = 6 },
+            new CreateNumeracionDto { TipoDocumento = "FAC", Descripcion = "Factura de Venta", Prefijo = "FAC-", SiguienteNumero = 1, Digitos = 6 },
+            new CreateNumeracionDto { TipoDocumento = "PED", Descripcion = "Pedido de Venta", Prefijo = "PED-", SiguienteNumero = 1, Digitos = 6 },
+            new CreateNumeracionDto { TipoDocumento = "NC", Descripcion = "Nota de Crédito", Prefijo = "NC-", SiguienteNumero = 1, Digitos = 6 },
+            new CreateNumeracionDto { TipoDocumento = "ND", Descripcion = "Nota de Débito", Prefijo = "ND-", SiguienteNumero = 1, Digitos = 6 },
+            new CreateNumeracionDto { TipoDocumento = "MOV", Descripcion = "Movimiento de Inventario", Prefijo = "MOV-", SiguienteNumero = 1, Digitos = 6 },
+        };
+
+        var errores = 0;
+        foreach (var serie in series)
+        {
+            try
+            {
+                var result = await NumSvc.CreateAsync(serie);
+                if (!result.Success) errores++;
+            }
+            catch { errores++; }
+        }
+
+        _mensaje = errores == 0
+            ? $"{series.Length} series base inicializadas exitosamente."
+            : $"Se crearon {series.Length - errores} series, {errores} ya existían o fallaron.";
+        _esError = errores > 0;
+
+        await LoadAsync();
+        _saving = false;
+    }
+
+    private void ConfirmDelete(NumeracionDocumentoDto num) => _deleteTarget = num;
+
+    private async Task DeleteAsync()
+    {
+        if (_deleteTarget is null) return;
+        _saving = true;
+        try
+        {
+            var result = await NumSvc.DeleteAsync(_deleteTarget.Id);
+            _mensaje = result.Success ? "Serie eliminada." : result.Message;
+            _esError = !result.Success;
+            _deleteTarget = null;
+            await LoadAsync();
+        }
+        catch { _mensaje = "Error de comunicación."; _esError = true; }
+        _saving = false;
+    }
+}
