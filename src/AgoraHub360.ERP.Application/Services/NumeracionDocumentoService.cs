@@ -10,11 +10,16 @@ public class NumeracionDocumentoService : INumeracionDocumentoService
 {
     private readonly IRepository<NumeracionDocumento> _repository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ICurrentUserService _currentUser;
 
-    public NumeracionDocumentoService(IRepository<NumeracionDocumento> repository, IUnitOfWork unitOfWork)
+    public NumeracionDocumentoService(
+        IRepository<NumeracionDocumento> repository,
+        IUnitOfWork unitOfWork,
+        ICurrentUserService currentUser)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
+        _currentUser = currentUser;
     }
 
     public async Task<Result<IReadOnlyList<NumeracionDocumentoDto>>> GetAllAsync(CancellationToken ct = default)
@@ -47,7 +52,8 @@ public class NumeracionDocumentoService : INumeracionDocumentoService
             Descripcion = dto.Descripcion,
             Prefijo = dto.Prefijo,
             SiguienteNumero = dto.SiguienteNumero,
-            Digitos = dto.Digitos
+            Digitos = dto.Digitos,
+            EmpresaId = _currentUser.EmpresaId ?? 0
         };
 
         await _repository.AddAsync(entity, ct);

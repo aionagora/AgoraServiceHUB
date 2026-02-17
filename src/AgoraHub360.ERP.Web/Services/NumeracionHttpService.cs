@@ -23,6 +23,11 @@ public class NumeracionHttpService
     public async Task<ApiResponse<NumeracionDocumentoDto>> CreateAsync(CreateNumeracionDto dto)
     {
         var response = await _http.PostAsJsonAsync(BaseUrl, dto);
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            return ApiResponse<NumeracionDocumentoDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
+        }
         return await response.Content.ReadFromJsonAsync<ApiResponse<NumeracionDocumentoDto>>()
             ?? ApiResponse<NumeracionDocumentoDto>.Fail("Error de comunicación.");
     }
@@ -30,6 +35,11 @@ public class NumeracionHttpService
     public async Task<ApiResponse<NumeracionDocumentoDto>> UpdateAsync(int id, UpdateNumeracionDto dto)
     {
         var response = await _http.PutAsJsonAsync($"{BaseUrl}/{id}", dto);
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            return ApiResponse<NumeracionDocumentoDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
+        }
         return await response.Content.ReadFromJsonAsync<ApiResponse<NumeracionDocumentoDto>>()
             ?? ApiResponse<NumeracionDocumentoDto>.Fail("Error de comunicación.");
     }
@@ -37,6 +47,11 @@ public class NumeracionHttpService
     public async Task<ApiResponse<bool>> DeleteAsync(int id)
     {
         var response = await _http.DeleteAsync($"{BaseUrl}/{id}");
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            return ApiResponse<bool>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
+        }
         return await response.Content.ReadFromJsonAsync<ApiResponse<bool>>()
             ?? ApiResponse<bool>.Fail("Error de comunicación.");
     }
