@@ -1,0 +1,324 @@
+@page "/config/auditoria"
+@inject AuditLogHttpService AuditSvc
+
+<PageTitle>Auditoría - AgoraHub360 ERP</PageTitle>
+
+<div class="page-header">
+    <h1>Registro de Auditoría</h1>
+    <p class="text-muted mb-0">Sistema &rsaquo; Auditoría</p>
+</div>
+
+<!-- Filtros -->
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label small">Entidad</label>
+                <select class="form-select form-select-sm" @bind="_filter.Entidad">
+                    <option value="">— Todas —</option>
+                    @foreach (var ent in _entidades)
+                    {
+                        <option value="@ent">@ent</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">Acción</label>
+                <select class="form-select form-select-sm" @bind="_filter.Accion">
+                    <option value="">— Todas —</option>
+                    <option value="Insert">Insert</option>
+                    <option value="Update">Update</option>
+                    <option value="Delete">Delete</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">Usuario</label>
+                <input type="text" class="form-control form-control-sm"
+                       placeholder="Buscar..."
+                       @bind="_filter.Usuario" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">Desde</label>
+                <input type="date" class="form-control form-control-sm"
+                       @bind="_fechaDesde" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">Hasta</label>
+                <input type="date" class="form-control form-control-sm"
+                       @bind="_fechaHasta" />
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+                <button class="btn btn-primary btn-sm flex-fill" @onclick="BuscarAsync">
+                    <i class="bi bi-search me-1"></i> Buscar
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" @onclick="LimpiarFiltros" title="Limpiar">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla de resultados -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center py-3">
+        <span>
+            Registros de auditoría
+            @if (_result.TotalItems > 0)
+            {
+                <span class="text-muted">(@_result.TotalItems total, página @_result.Pagina de @_result.TotalPaginas)</span>
+            }
+        </span>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="card-body text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="text-muted mt-2">Cargando registros...</p>
+        </div>
+    }
+    else if (_result.Items.Count == 0)
+    {
+        <div class="card-body text-center py-5">
+            <i class="bi bi-shield-check" style="font-size: 3rem; color: var(--agora-text-light);"></i>
+            <p class="text-muted mt-3">No se encontraron registros de auditoría.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover table-sm mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 150px;">Fecha/Hora</th>
+                        <th>Entidad</th>
+                        <th>ID</th>
+                        <th>Acción</th>
+                        <th>Campos Modificados</th>
+                        <th>Usuario</th>
+                        <th class="text-end">Detalle</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var log in _result.Items)
+                    {
+                        <tr>
+                            <td class="small">@log.FechaHora.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</td>
+                            <td class="fw-semibold">@log.Entidad</td>
+                            <td class="small text-muted">@TruncateId(log.EntidadId)</td>
+                            <td>
+                                <span class="badge @GetAccionBadgeClass(log.Accion)">@log.Accion</span>
+                            </td>
+                            <td class="small text-muted">@(log.CamposModificados ?? "—")</td>
+                            <td class="small">@(log.Usuario ?? "—")</td>
+                            <td class="text-end">
+                                <button class="btn btn-outline-primary btn-sm"
+                                        @onclick="() => ShowDetalle(log)" title="Ver detalle">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Paginación -->
+        @if (_result.TotalPaginas > 1)
+        {
+            <div class="card-footer d-flex justify-content-center py-2">
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item @(_result.Pagina <= 1 ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => IrAPagina(_result.Pagina - 1)">
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+                        </li>
+                        @for (int i = PaginaInicio; i <= PaginaFin; i++)
+                        {
+                            var pagina = i;
+                            <li class="page-item @(pagina == _result.Pagina ? "active" : "")">
+                                <button class="page-link" @onclick="() => IrAPagina(pagina)">@pagina</button>
+                            </li>
+                        }
+                        <li class="page-item @(_result.Pagina >= _result.TotalPaginas ? "disabled" : "")">
+                            <button class="page-link" @onclick="() => IrAPagina(_result.Pagina + 1)">
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        }
+    }
+</div>
+
+<!-- Modal Detalle -->
+@if (_detalleLog is not null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        Detalle de Auditoría
+                        <span class="badge @GetAccionBadgeClass(_detalleLog.Accion) ms-2">@_detalleLog.Accion</span>
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="() => _detalleLog = null"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label small text-muted">Entidad</label>
+                            <p class="fw-semibold mb-0">@_detalleLog.Entidad</p>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small text-muted">ID Entidad</label>
+                            <p class="fw-semibold mb-0">@_detalleLog.EntidadId</p>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small text-muted">Fecha / Hora</label>
+                            <p class="fw-semibold mb-0">@_detalleLog.FechaHora.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss")</p>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label small text-muted">Usuario</label>
+                            <p class="mb-0">@(_detalleLog.Usuario ?? "—")</p>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small text-muted">Empresa ID</label>
+                            <p class="mb-0">@(_detalleLog.EmpresaId?.ToString() ?? "—")</p>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small text-muted">Campos Modificados</label>
+                            <p class="mb-0">@(_detalleLog.CamposModificados ?? "—")</p>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(_detalleLog.ValoresAnteriores))
+                    {
+                        <div class="mb-3">
+                            <label class="form-label small text-muted">Valores Anteriores</label>
+                            <pre class="bg-light p-3 rounded small" style="max-height: 300px; overflow-y: auto;">@FormatJson(_detalleLog.ValoresAnteriores)</pre>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(_detalleLog.ValoresNuevos))
+                    {
+                        <div class="mb-3">
+                            <label class="form-label small text-muted">Valores Nuevos</label>
+                            <pre class="bg-light p-3 rounded small" style="max-height: 300px; overflow-y: auto;">@FormatJson(_detalleLog.ValoresNuevos)</pre>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="() => _detalleLog = null">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private PaginatedResultDto<AuditLogDto> _result = new();
+    private AuditLogFilterDto _filter = new() { TamanoPagina = 50 };
+    private List<string> _entidades = new();
+    private bool _loading = true;
+
+    private DateTime? _fechaDesde;
+    private DateTime? _fechaHasta;
+
+    private AuditLogDto? _detalleLog;
+
+    // Paginación: mostrar máximo 5 páginas alrededor de la actual
+    private int PaginaInicio => Math.Max(1, _result.Pagina - 2);
+    private int PaginaFin => Math.Min(_result.TotalPaginas, _result.Pagina + 2);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEntidadesAsync();
+        await BuscarAsync();
+    }
+
+    private async Task LoadEntidadesAsync()
+    {
+        try
+        {
+            _entidades = await AuditSvc.GetEntidadesDistintasAsync();
+        }
+        catch { /* silenciar en carga inicial */ }
+    }
+
+    private async Task BuscarAsync()
+    {
+        _loading = true;
+        _filter.FechaDesde = _fechaDesde;
+        _filter.FechaHasta = _fechaHasta?.AddDays(1).AddSeconds(-1); // fin de día
+        _filter.Pagina = 1;
+
+        try
+        {
+            _result = await AuditSvc.GetLogsAsync(_filter);
+        }
+        catch
+        {
+            _result = new PaginatedResultDto<AuditLogDto>();
+        }
+        _loading = false;
+    }
+
+    private void LimpiarFiltros()
+    {
+        _filter = new AuditLogFilterDto { TamanoPagina = 50 };
+        _fechaDesde = null;
+        _fechaHasta = null;
+    }
+
+    private async Task IrAPagina(int pagina)
+    {
+        if (pagina < 1 || pagina > _result.TotalPaginas) return;
+        _loading = true;
+        _filter.Pagina = pagina;
+        try
+        {
+            _result = await AuditSvc.GetLogsAsync(_filter);
+        }
+        catch
+        {
+            _result = new PaginatedResultDto<AuditLogDto>();
+        }
+        _loading = false;
+    }
+
+    private void ShowDetalle(AuditLogDto log)
+    {
+        _detalleLog = log;
+    }
+
+    private static string GetAccionBadgeClass(string accion) => accion switch
+    {
+        "Insert" => "bg-success",
+        "Update" => "bg-warning text-dark",
+        "Delete" => "bg-danger",
+        _ => "bg-secondary"
+    };
+
+    private static string TruncateId(string id)
+        => id.Length > 20 ? id[..20] + "..." : id;
+
+    private static string FormatJson(string json)
+    {
+        try
+        {
+            var doc = System.Text.Json.JsonDocument.Parse(json);
+            return System.Text.Json.JsonSerializer.Serialize(
+                doc, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+        }
+        catch
+        {
+            return json;
+        }
+    }
+}
