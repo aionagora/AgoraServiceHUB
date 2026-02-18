@@ -90,7 +90,7 @@ public class IndustryService : IIndustryService
 
     public async Task<Result<bool>> DeleteRuleAsync(long ruleId, CancellationToken ct = default)
     {
-        var rule = await _ruleRepo.GetByIdAsync(ruleId, ct);
+        var rule = await _ruleRepo.GetByIdAsync((int)ruleId, ct);
         if (rule is null) return Result<bool>.Failure($"Regla {ruleId} no encontrada.");
         await _ruleRepo.DeleteAsync(rule, ct);
         await _uow.SaveChangesAsync(ct);

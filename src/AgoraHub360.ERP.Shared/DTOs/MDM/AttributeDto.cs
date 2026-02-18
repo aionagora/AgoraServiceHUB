@@ -41,6 +41,10 @@ public record CreateAttributeOptionDto(
     string Value,
     int SortOrder = 0);
 
+public record UpdateAttributeOptionDto(
+    string Value,
+    int SortOrder);
+
 public record ProductAttributeDto(
     long ProductAttributeId,
     long ProductId,

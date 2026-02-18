@@ -48,7 +48,7 @@ public class ProductCodeService : IProductCodeService
 
     public async Task<Result<ProductCodeDto>> UpdateAsync(long id, UpdateProductCodeDto dto, CancellationToken ct = default)
     {
-        var entity = await _repo.GetByIdAsync(id, ct);
+        var entity = await _repo.GetByIdAsync((int)id, ct);
         if (entity is null) return Result<ProductCodeDto>.Failure($"Código {id} no encontrado.");
 
         entity.CodeType = dto.CodeType;
@@ -65,7 +65,7 @@ public class ProductCodeService : IProductCodeService
 
     public async Task<Result<bool>> DeleteAsync(long id, CancellationToken ct = default)
     {
-        var entity = await _repo.GetByIdAsync(id, ct);
+        var entity = await _repo.GetByIdAsync((int)id, ct);
         if (entity is null) return Result<bool>.Failure($"Código {id} no encontrado.");
         await _repo.DeleteAsync(entity, ct);
         await _uow.SaveChangesAsync(ct);

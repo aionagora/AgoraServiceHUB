@@ -50,11 +50,11 @@ public class CompanyProductService : ICompanyProductService
 
     public async Task<Result<CompanyProductDto>> GetByIdAsync(long id, CancellationToken ct = default)
     {
-        var entity = await _repo.GetByIdAsync(id, ct);
+        var entity = await _repo.GetByIdAsync((int)id, ct);
         if (entity is null) return Result<CompanyProductDto>.Failure($"CompanyProduct {id} no encontrado.");
         if (!CanAccess(entity)) return Result<CompanyProductDto>.Failure("Sin acceso.");
 
-        var product = await _productRepo.GetByIdAsync(entity.ProductId, ct);
+        var product = await _productRepo.GetByIdAsync((int)entity.ProductId, ct);
         return Result<CompanyProductDto>.Success(Map(entity,
             new Dictionary<long, string> { { entity.ProductId, product?.NombreComercial ?? "" } }));
     }
@@ -65,7 +65,7 @@ public class CompanyProductService : ICompanyProductService
         if (!empresaId.HasValue)
             return Result<CompanyProductDto>.Failure("No se pudo determinar la empresa activa.");
 
-        var product = await _productRepo.GetByIdAsync(dto.ProductId, ct);
+        var product = await _productRepo.GetByIdAsync((int)dto.ProductId, ct);
         if (product is null) return Result<CompanyProductDto>.Failure("Producto global no encontrado.");
 
         var dup = await _repo.FindAsync(
@@ -104,7 +104,7 @@ public class CompanyProductService : ICompanyProductService
 
     public async Task<Result<CompanyProductDto>> UpdateAsync(long id, UpdateCompanyProductDto dto, CancellationToken ct = default)
     {
-        var entity = await _repo.GetByIdAsync(id, ct);
+        var entity = await _repo.GetByIdAsync((int)id, ct);
         if (entity is null) return Result<CompanyProductDto>.Failure($"CompanyProduct {id} no encontrado.");
         if (!CanAccess(entity)) return Result<CompanyProductDto>.Failure("Sin acceso.");
 
@@ -130,14 +130,14 @@ public class CompanyProductService : ICompanyProductService
         await _repo.UpdateAsync(entity, ct);
         await _uow.SaveChangesAsync(ct);
 
-        var product = await _productRepo.GetByIdAsync(entity.ProductId, ct);
+        var product = await _productRepo.GetByIdAsync((int)entity.ProductId, ct);
         return Result<CompanyProductDto>.Success(Map(entity,
             new Dictionary<long, string> { { entity.ProductId, product?.NombreComercial ?? "" } }));
     }
 
     public async Task<Result<bool>> DeleteAsync(long id, CancellationToken ct = default)
     {
-        var entity = await _repo.GetByIdAsync(id, ct);
+        var entity = await _repo.GetByIdAsync((int)id, ct);
         if (entity is null) return Result<bool>.Failure($"CompanyProduct {id} no encontrado.");
         if (!CanAccess(entity)) return Result<bool>.Failure("Sin acceso.");
         await _repo.DeleteAsync(entity, ct);
@@ -148,7 +148,7 @@ public class CompanyProductService : ICompanyProductService
     public async Task<Result<IReadOnlyList<CompanyProductFeatureDto>>> GetFeaturesAsync(
         long companyProductId, CancellationToken ct = default)
     {
-        var cp = await _repo.GetByIdAsync(companyProductId, ct);
+        var cp = await _repo.GetByIdAsync((int)companyProductId, ct);
         if (cp is null || !CanAccess(cp)) return Result<IReadOnlyList<CompanyProductFeatureDto>>.Failure("Sin acceso.");
 
         var features = await _featureRepo.FindAsync(f => f.CompanyProductId == companyProductId, ct);
@@ -160,7 +160,7 @@ public class CompanyProductService : ICompanyProductService
     public async Task<Result<CompanyProductFeatureDto>> SetFeatureAsync(
         long companyProductId, SetFeatureDto dto, CancellationToken ct = default)
     {
-        var cp = await _repo.GetByIdAsync(companyProductId, ct);
+        var cp = await _repo.GetByIdAsync((int)companyProductId, ct);
         if (cp is null || !CanAccess(cp)) return Result<CompanyProductFeatureDto>.Failure("Sin acceso.");
 
         var existing = (await _featureRepo.FindAsync(
@@ -191,10 +191,10 @@ public class CompanyProductService : ICompanyProductService
     public async Task<Result<bool>> ApplyIndustryRulesAsync(
         long companyProductId, int industryId, CancellationToken ct = default)
     {
-        var cp = await _repo.GetByIdAsync(companyProductId, ct);
+        var cp = await _repo.GetByIdAsync((int)companyProductId, ct);
         if (cp is null || !CanAccess(cp)) return Result<bool>.Failure("Sin acceso.");
 
-        var product = await _productRepo.GetByIdAsync(cp.ProductId, ct);
+        var product = await _productRepo.GetByIdAsync((int)cp.ProductId, ct);
         if (product is null) return Result<bool>.Failure("Producto base no encontrado.");
 
         var rules = (await _ruleRepo.FindAsync(r => r.IndustryId == industryId && r.Activo, ct))
@@ -248,25 +248,30 @@ public class CompanyProductService : ICompanyProductService
 
     private static IEnumerable<(string FeatureCode, bool IsEnabled)> ParseActions(string actionsJson)
     {
+        Dictionary<string, JsonElement>? actions = null;
         try
         {
-            var actions = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(actionsJson);
-            if (actions is null) yield break;
+            actions = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(actionsJson);
+        }
+        catch
+        {
+            yield break;
+        }
 
-            foreach (var (key, value) in actions)
+        if (actions is null) yield break;
+
+        foreach (var (key, value) in actions)
+        {
+            if (key.StartsWith("Enable") && value.ValueKind == JsonValueKind.True)
             {
-                if (key.StartsWith("Enable") && value.ValueKind == JsonValueKind.True)
-                {
-                    var featureCode = key.Replace("Enable", "").ToUpperInvariant();
-                    yield return (featureCode, true);
-                }
-                else if (key == "Policy" && value.ValueKind == JsonValueKind.String)
-                {
-                    yield return (value.GetString()!, true);
-                }
+                var featureCode = key.Replace("Enable", "").ToUpperInvariant();
+                yield return (featureCode, true);
+            }
+            else if (key == "Policy" && value.ValueKind == JsonValueKind.String)
+            {
+                yield return (value.GetString()!, true);
             }
         }
-        catch { }
     }
 
     private static CompanyProductDto Map(CompanyProduct cp, Dictionary<long, string> productMap) => new(

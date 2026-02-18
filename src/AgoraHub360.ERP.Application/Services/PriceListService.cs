@@ -36,7 +36,7 @@ public class PriceListService : IPriceListService
 
     public async Task<Result<PriceListDto>> GetByIdAsync(long id, CancellationToken ct = default)
     {
-        var entity = await _repo.GetByIdAsync(id, ct);
+        var entity = await _repo.GetByIdAsync((int)id, ct);
         if (entity is null) return Result<PriceListDto>.Failure($"Lista de precios {id} no encontrada.");
         if (!CanAccess(entity)) return Result<PriceListDto>.Failure("Sin acceso.");
         return Result<PriceListDto>.Success(Map(entity));
@@ -69,7 +69,7 @@ public class PriceListService : IPriceListService
 
     public async Task<Result<PriceListDto>> UpdateAsync(long id, UpdatePriceListDto dto, CancellationToken ct = default)
     {
-        var entity = await _repo.GetByIdAsync(id, ct);
+        var entity = await _repo.GetByIdAsync((int)id, ct);
         if (entity is null) return Result<PriceListDto>.Failure($"Lista de precios {id} no encontrada.");
         if (!CanAccess(entity)) return Result<PriceListDto>.Failure("Sin acceso.");
 
@@ -89,7 +89,7 @@ public class PriceListService : IPriceListService
 
     public async Task<Result<bool>> DeleteAsync(long id, CancellationToken ct = default)
     {
-        var entity = await _repo.GetByIdAsync(id, ct);
+        var entity = await _repo.GetByIdAsync((int)id, ct);
         if (entity is null) return Result<bool>.Failure($"Lista de precios {id} no encontrada.");
         if (!CanAccess(entity)) return Result<bool>.Failure("Sin acceso.");
         await _repo.DeleteAsync(entity, ct);
@@ -100,7 +100,7 @@ public class PriceListService : IPriceListService
     public async Task<Result<IReadOnlyList<PriceListItemDto>>> GetItemsAsync(
         long priceListId, CancellationToken ct = default)
     {
-        var pl = await _repo.GetByIdAsync(priceListId, ct);
+        var pl = await _repo.GetByIdAsync((int)priceListId, ct);
         if (pl is null || !CanAccess(pl)) return Result<IReadOnlyList<PriceListItemDto>>.Failure("Sin acceso.");
 
         var items = await _itemRepo.FindAsync(i => i.PriceListId == priceListId, ct);
@@ -109,7 +109,7 @@ public class PriceListService : IPriceListService
 
     public async Task<Result<PriceListItemDto>> AddItemAsync(CreatePriceListItemDto dto, CancellationToken ct = default)
     {
-        var pl = await _repo.GetByIdAsync(dto.PriceListId, ct);
+        var pl = await _repo.GetByIdAsync((int)dto.PriceListId, ct);
         if (pl is null || !CanAccess(pl)) return Result<PriceListItemDto>.Failure("Lista de precios no encontrada o sin acceso.");
 
         var item = new PriceListItem
@@ -131,7 +131,7 @@ public class PriceListService : IPriceListService
 
     public async Task<Result<bool>> DeleteItemAsync(long itemId, CancellationToken ct = default)
     {
-        var item = await _itemRepo.GetByIdAsync(itemId, ct);
+        var item = await _itemRepo.GetByIdAsync((int)itemId, ct);
         if (item is null) return Result<bool>.Failure($"Item {itemId} no encontrado.");
         await _itemRepo.DeleteAsync(item, ct);
         await _uow.SaveChangesAsync(ct);

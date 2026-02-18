@@ -40,7 +40,7 @@ public class AttributeDefinitionService : IAttributeDefinitionService
 
     public async Task<Result<AttributeDefinitionDto>> GetByIdAsync(long id, CancellationToken ct = default)
     {
-        var entity = await _repo.GetByIdAsync(id, ct);
+        var entity = await _repo.GetByIdAsync((int)id, ct);
         if (entity is null) return Result<AttributeDefinitionDto>.Failure($"Atributo {id} no encontrado.");
         var options = await _optionRepo.FindAsync(o => o.AttributeId == id, ct);
         return Result<AttributeDefinitionDto>.Success(Map(entity, options.ToList()));
@@ -75,7 +75,7 @@ public class AttributeDefinitionService : IAttributeDefinitionService
 
     public async Task<Result<bool>> DeleteAsync(long id, CancellationToken ct = default)
     {
-        var entity = await _repo.GetByIdAsync(id, ct);
+        var entity = await _repo.GetByIdAsync((int)id, ct);
         if (entity is null) return Result<bool>.Failure($"Atributo {id} no encontrado.");
         await _repo.DeleteAsync(entity, ct);
         await _uow.SaveChangesAsync(ct);
@@ -85,7 +85,7 @@ public class AttributeDefinitionService : IAttributeDefinitionService
     public async Task<Result<AttributeOptionDto>> AddOptionAsync(
         CreateAttributeOptionDto dto, CancellationToken ct = default)
     {
-        var attr = await _repo.GetByIdAsync(dto.AttributeId, ct);
+        var attr = await _repo.GetByIdAsync((int)dto.AttributeId, ct);
         if (attr is null) return Result<AttributeOptionDto>.Failure("Atributo no encontrado.");
 
         var option = new AttributeOption
@@ -100,9 +100,21 @@ public class AttributeDefinitionService : IAttributeDefinitionService
         return Result<AttributeOptionDto>.Success(MapOption(option));
     }
 
+    public async Task<Result<AttributeOptionDto>> UpdateOptionAsync(long optionId, UpdateAttributeOptionDto dto, CancellationToken ct = default)
+    {
+        var option = await _optionRepo.GetByIdAsync((int)optionId, ct);
+        if (option is null) return Result<AttributeOptionDto>.Failure($"Opción {optionId} no encontrada.");
+
+        option.Value = dto.Value;
+        option.SortOrder = dto.SortOrder;
+        await _optionRepo.UpdateAsync(option, ct);
+        await _uow.SaveChangesAsync(ct);
+        return Result<AttributeOptionDto>.Success(MapOption(option));
+    }
+
     public async Task<Result<bool>> DeleteOptionAsync(long optionId, CancellationToken ct = default)
     {
-        var option = await _optionRepo.GetByIdAsync(optionId, ct);
+        var option = await _optionRepo.GetByIdAsync((int)optionId, ct);
         if (option is null) return Result<bool>.Failure($"Opción {optionId} no encontrada.");
         await _optionRepo.DeleteAsync(option, ct);
         await _uow.SaveChangesAsync(ct);
@@ -135,7 +147,7 @@ public class AttributeDefinitionService : IAttributeDefinitionService
     public async Task<Result<ProductAttributeDto>> UpsertProductAttributeAsync(
         UpsertProductAttributeDto dto, CancellationToken ct = default)
     {
-        var attr = await _repo.GetByIdAsync(dto.AttributeId, ct);
+        var attr = await _repo.GetByIdAsync((int)dto.AttributeId, ct);
         if (attr is null) return Result<ProductAttributeDto>.Failure("Atributo no encontrado.");
 
         var existing = (await _paRepo.FindAsync(
@@ -145,7 +157,7 @@ public class AttributeDefinitionService : IAttributeDefinitionService
         string? optValue = null;
         if (dto.OptionId.HasValue)
         {
-            var opt = await _optionRepo.GetByIdAsync(dto.OptionId.Value, ct);
+            var opt = await _optionRepo.GetByIdAsync((int)dto.OptionId.Value, ct);
             optValue = opt?.Value;
         }
 

@@ -60,14 +60,14 @@ public class ProductService : IProductService
 
     public async Task<Result<ProductDto2>> GetByIdAsync(long id, CancellationToken ct = default)
     {
-        var entity = await _repo.GetByIdAsync(id, ct);
+        var entity = await _repo.GetByIdAsync((int)id, ct);
         if (entity is null) return Result<ProductDto2>.Failure($"Producto {id} no encontrado.");
         return Result<ProductDto2>.Success(await MapSingleAsync(entity, ct));
     }
 
     public async Task<Result<ProductDto2>> CreateAsync(CreateProductDto2 dto, CancellationToken ct = default)
     {
-        var catalog = await _catalogRepo.GetByIdAsync(dto.CatalogId, ct);
+        var catalog = await _catalogRepo.GetByIdAsync((int)dto.CatalogId, ct);
         if (catalog is null) return Result<ProductDto2>.Failure("Catálogo no encontrado.");
 
         var uom = await _uomRepo.GetByIdAsync(dto.DefaultUomId, ct);
@@ -106,7 +106,7 @@ public class ProductService : IProductService
 
     public async Task<Result<ProductDto2>> UpdateAsync(long id, UpdateProductDto2 dto, CancellationToken ct = default)
     {
-        var entity = await _repo.GetByIdAsync(id, ct);
+        var entity = await _repo.GetByIdAsync((int)id, ct);
         if (entity is null) return Result<ProductDto2>.Failure($"Producto {id} no encontrado.");
 
         entity.ProductKind = dto.ProductKind;
@@ -130,7 +130,7 @@ public class ProductService : IProductService
 
     public async Task<Result<bool>> DeleteAsync(long id, CancellationToken ct = default)
     {
-        var entity = await _repo.GetByIdAsync(id, ct);
+        var entity = await _repo.GetByIdAsync((int)id, ct);
         if (entity is null) return Result<bool>.Failure($"Producto {id} no encontrado.");
         await _repo.DeleteAsync(entity, ct);
         await _uow.SaveChangesAsync(ct);
@@ -140,14 +140,14 @@ public class ProductService : IProductService
     private async Task<ProductDto2> MapSingleAsync(Product p, CancellationToken ct)
     {
         var brandName = p.BrandId.HasValue
-            ? (await _brandRepo.GetByIdAsync(p.BrandId.Value, ct))?.Nombre
+            ? (await _brandRepo.GetByIdAsync((int)p.BrandId.Value, ct))?.Nombre
             : null;
         var mfgName = p.ManufacturerId.HasValue
-            ? (await _manufacturerRepo.GetByIdAsync(p.ManufacturerId.Value, ct))?.Nombre
+            ? (await _manufacturerRepo.GetByIdAsync((int)p.ManufacturerId.Value, ct))?.Nombre
             : null;
         var uomCode = (await _uomRepo.GetByIdAsync(p.DefaultUomId, ct))?.Code ?? "";
         var statusCode = (await _statusRepo.GetByIdAsync(p.LifecycleStatusId, ct))?.Code ?? "";
-        var catalogName = (await _catalogRepo.GetByIdAsync(p.CatalogId, ct))?.Nombre ?? "";
+        var catalogName = (await _catalogRepo.GetByIdAsync((int)p.CatalogId, ct))?.Nombre ?? "";
 
         return Map(p,
             p.BrandId.HasValue ? new() { { p.BrandId.Value, brandName ?? "" } } : new(),
