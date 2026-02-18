@@ -1,0 +1,399 @@
+@page "/mdm/almacenes"
+@attribute [Authorize]
+@inject AlmacenHttpService AlmacenService
+@inject IJSRuntime JS
+@using AgoraHub360.ERP.Shared.DTOs.MDM
+
+<PageTitle>Almacenes</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3>?? Almacenes</h3>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="ShowCreateModal">
+                <i class="bi bi-plus-circle"></i> Nuevo Almacén
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (loading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-2">Cargando almacenes...</p>
+        </div>
+    }
+    else if (almacenes.Count == 0)
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> No hay almacenes registrados. Crea el primer almacén usando el botón "Nuevo Almacén".
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Código</th>
+                                <th>Nombre</th>
+                                <th>Dirección</th>
+                                <th>Responsable</th>
+                                <th>Teléfono</th>
+                                <th>Estado</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var almacen in almacenes)
+                            {
+                                <tr>
+                                    <td>@almacen.Id</td>
+                                    <td><code>@almacen.Codigo</code></td>
+                                    <td><strong>@almacen.Nombre</strong></td>
+                                    <td>@(almacen.Direccion ?? "-")</td>
+                                    <td>@(almacen.Responsable ?? "-")</td>
+                                    <td>@(almacen.Telefono ?? "-")</td>
+                                    <td>
+                                        @if (almacen.Activo)
+                                        {
+                                            <span class="badge bg-success">Activo</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Inactivo</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditModal(almacen)">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger ms-1" @onclick="() => DeleteAlmacen(almacen)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@* Modal Crear *@
+@if (showCreateModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nuevo Almacén</h5>
+                    <button type="button" class="btn-close" @onclick="CloseCreateModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="createDto" OnValidSubmit="CreateAlmacen">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="text-danger" />
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Código *</label>
+                                <InputText class="form-control" @bind-Value="createDto.Codigo" placeholder="ALM-001" />
+                                <ValidationMessage For="@(() => createDto.Codigo)" />
+                            </div>
+
+                            <div class="col-md-8 mb-3">
+                                <label class="form-label">Nombre *</label>
+                                <InputText class="form-control" @bind-Value="createDto.Nombre" placeholder="Nombre del almacén" />
+                                <ValidationMessage For="@(() => createDto.Nombre)" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Dirección</label>
+                            <InputTextArea class="form-control" @bind-Value="createDto.Direccion" rows="2" placeholder="Dirección del almacén" />
+                            <ValidationMessage For="@(() => createDto.Direccion)" />
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Responsable</label>
+                                <InputText class="form-control" @bind-Value="createDto.Responsable" placeholder="Nombre del responsable" />
+                                <ValidationMessage For="@(() => createDto.Responsable)" />
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Teléfono</label>
+                                <InputText class="form-control" @bind-Value="createDto.Telefono" placeholder="77123456" />
+                                <ValidationMessage For="@(() => createDto.Telefono)" />
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseCreateModal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary" disabled="@saving">
+                                @if (saving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                Guardar
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Modal Editar *@
+@if (showEditModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Almacén</h5>
+                    <button type="button" class="btn-close" @onclick="CloseEditModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="updateDto" OnValidSubmit="UpdateAlmacen">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="text-danger" />
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Código *</label>
+                                <InputText class="form-control" @bind-Value="updateDto.Codigo" placeholder="ALM-001" />
+                                <ValidationMessage For="@(() => updateDto.Codigo)" />
+                            </div>
+
+                            <div class="col-md-8 mb-3">
+                                <label class="form-label">Nombre *</label>
+                                <InputText class="form-control" @bind-Value="updateDto.Nombre" placeholder="Nombre del almacén" />
+                                <ValidationMessage For="@(() => updateDto.Nombre)" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Dirección</label>
+                            <InputTextArea class="form-control" @bind-Value="updateDto.Direccion" rows="2" placeholder="Dirección del almacén" />
+                            <ValidationMessage For="@(() => updateDto.Direccion)" />
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Responsable</label>
+                                <InputText class="form-control" @bind-Value="updateDto.Responsable" placeholder="Nombre del responsable" />
+                                <ValidationMessage For="@(() => updateDto.Responsable)" />
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Teléfono</label>
+                                <InputText class="form-control" @bind-Value="updateDto.Telefono" placeholder="77123456" />
+                                <ValidationMessage For="@(() => updateDto.Telefono)" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <InputCheckbox class="form-check-input" id="activoCheck" @bind-Value="updateDto.Activo" />
+                            <label class="form-check-label" for="activoCheck">Activo</label>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseEditModal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary" disabled="@saving">
+                                @if (saving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                Actualizar
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<AlmacenDto> almacenes = new();
+    private bool loading = true;
+    private bool saving = false;
+    private bool showCreateModal = false;
+    private bool showEditModal = false;
+    private string? errorMessage;
+    private string? successMessage;
+    private CreateAlmacenDto createDto = new();
+    private UpdateAlmacenDto updateDto = new();
+    private int editingId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAlmacenes();
+    }
+
+    private async Task LoadAlmacenes()
+    {
+        try
+        {
+            loading = true;
+            errorMessage = null;
+            almacenes = await AlmacenService.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar almacenes: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private void ShowCreateModal()
+    {
+        createDto = new CreateAlmacenDto();
+        showCreateModal = true;
+    }
+
+    private void CloseCreateModal()
+    {
+        showCreateModal = false;
+    }
+
+    private void ShowEditModal(AlmacenDto almacen)
+    {
+        updateDto = new UpdateAlmacenDto
+        {
+            Codigo = almacen.Codigo,
+            Nombre = almacen.Nombre,
+            Direccion = almacen.Direccion,
+            Responsable = almacen.Responsable,
+            Telefono = almacen.Telefono,
+            Activo = almacen.Activo
+        };
+        editingId = almacen.Id;
+        showEditModal = true;
+    }
+
+    private void CloseEditModal()
+    {
+        showEditModal = false;
+    }
+
+    private async Task CreateAlmacen()
+    {
+        try
+        {
+            saving = true;
+            errorMessage = null;
+            successMessage = null;
+
+            var response = await AlmacenService.CreateAsync(createDto);
+
+            if (response.Success)
+            {
+                successMessage = "Almacén creado exitosamente";
+                CloseCreateModal();
+                await LoadAlmacenes();
+            }
+            else
+            {
+                errorMessage = response.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private async Task UpdateAlmacen()
+    {
+        try
+        {
+            saving = true;
+            errorMessage = null;
+            successMessage = null;
+
+            var response = await AlmacenService.UpdateAsync(editingId, updateDto);
+
+            if (response.Success)
+            {
+                successMessage = "Almacén actualizado exitosamente";
+                CloseEditModal();
+                await LoadAlmacenes();
+            }
+            else
+            {
+                errorMessage = response.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private async Task DeleteAlmacen(AlmacenDto almacen)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"¿Eliminar el almacén '{almacen.Nombre}'?"))
+            return;
+
+        try
+        {
+            errorMessage = null;
+            successMessage = null;
+
+            var response = await AlmacenService.DeleteAsync(almacen.Id);
+            if (response.Success)
+            {
+                successMessage = "Almacén eliminado exitosamente";
+                await LoadAlmacenes();
+            }
+            else
+            {
+                errorMessage = response.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al eliminar: {ex.Message}";
+        }
+    }
+}

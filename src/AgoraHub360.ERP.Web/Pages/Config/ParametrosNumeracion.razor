@@ -640,20 +640,43 @@ else
     private async Task SaveParametroAsync()
     {
         _saving = true;
+        _mensaje = null; // Limpiar mensaje anterior
+        _esError = false;
+        
         try
         {
+            Console.WriteLine($"[DEBUG] Guardando parámetro: Clave={_paramModel.Clave}, Valor={_paramModel.Valor}");
+            
             var result = await ParamSvc.UpsertAsync(_paramModel);
+            
+            Console.WriteLine($"[DEBUG] Resultado: Success={result.Success}, Message={result.Message}");
+            
             if (result.Success)
             {
                 _mensaje = "Parámetro guardado exitosamente.";
                 _esError = false;
                 CloseParamForm();
                 _parametros = await ParamSvc.GetAllAsync();
+                
+                Console.WriteLine($"[DEBUG] Parámetros recargados: Count={_parametros.Count}");
             }
-            else { _mensaje = result.Message; _esError = true; }
+            else 
+            { 
+                _mensaje = $"Error al guardar: {result.Message}";
+                _esError = true;
+                Console.WriteLine($"[ERROR] {_mensaje}");
+            }
         }
-        catch { _mensaje = "Error de comunicación."; _esError = true; }
-        _saving = false;
+        catch (Exception ex)
+        { 
+            _mensaje = $"Error de comunicación: {ex.Message}";
+            _esError = true;
+            Console.WriteLine($"[EXCEPTION] {ex}");
+        }
+        finally
+        {
+            _saving = false;
+        }
     }
 
     // Inline edit

@@ -18,15 +18,18 @@ public class AuthService : IAuthService
 {
     private readonly IRepository<Usuario> _userRepo;
     private readonly IRepository<UsuarioEmpresa> _ueRepo;
+    private readonly IRepository<Empresa> _empresaRepo;
     private readonly IConfiguration _config;
 
     public AuthService(
         IRepository<Usuario> userRepo,
         IRepository<UsuarioEmpresa> ueRepo,
+        IRepository<Empresa> empresaRepo,
         IConfiguration config)
     {
         _userRepo = userRepo;
         _ueRepo = ueRepo;
+        _empresaRepo = empresaRepo;
         _config = config;
     }
 
@@ -47,6 +50,13 @@ public class AuthService : IAuthService
         var primeraEmpresa = empresas.FirstOrDefault();
         var empresaId = user.EmpresaActivaId ?? primeraEmpresa?.EmpresaId;
         var rol = primeraEmpresa?.Rol ?? "Viewer";
+
+        // Fallback: si el usuario no tiene empresas asignadas, usar la primera empresa activa del sistema
+        if (!empresaId.HasValue)
+        {
+            var todasEmpresas = await _empresaRepo.FindAsync(e => e.Activo, ct);
+            empresaId = todasEmpresas.FirstOrDefault()?.Id;
+        }
 
         // Generar JWT
         var token = GenerateJwtToken(user, empresaId, rol);

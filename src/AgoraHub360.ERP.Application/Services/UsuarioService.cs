@@ -31,12 +31,14 @@ public class UsuarioService : IUsuarioService
     public async Task<Result<IReadOnlyList<UsuarioDto>>> GetAllAsync(CancellationToken ct = default)
     {
         var usuarios = await _repository.GetAllAsync(ct);
+        var empresas = await _empresaRepository.GetAllAsync(ct);
+        var empresaMap = empresas.ToDictionary(e => e.Id, e => e.Nombre);
         var dtos = new List<UsuarioDto>();
 
         foreach (var u in usuarios)
         {
             var ues = await _ueRepository.FindAsync(ue => ue.UsuarioId == u.Id, ct);
-            dtos.Add(MapToDto(u, ues));
+            dtos.Add(MapToDto(u, ues, empresaMap));
         }
 
         return Result<IReadOnlyList<UsuarioDto>>.Success(dtos.AsReadOnly());
@@ -49,7 +51,9 @@ public class UsuarioService : IUsuarioService
             return Result<UsuarioDto>.Failure($"Usuario con Id {id} no encontrado.");
 
         var ues = await _ueRepository.FindAsync(ue => ue.UsuarioId == id, ct);
-        return Result<UsuarioDto>.Success(MapToDto(usuario, ues));
+        var empresas = await _empresaRepository.GetAllAsync(ct);
+        var empresaMap = empresas.ToDictionary(e => e.Id, e => e.Nombre);
+        return Result<UsuarioDto>.Success(MapToDto(usuario, ues, empresaMap));
     }
 
     public async Task<Result<UsuarioDto>> CreateAsync(CreateUsuarioDto dto, CancellationToken ct = default)
@@ -74,7 +78,28 @@ public class UsuarioService : IUsuarioService
         await _repository.AddAsync(usuario, ct);
         await _unitOfWork.SaveChangesAsync(ct);
 
-        return Result<UsuarioDto>.Success(MapToDto(usuario, Array.Empty<UsuarioEmpresa>()));
+        // Asignar a empresa si se especifico
+        var ueList = new List<UsuarioEmpresa>();
+        if (dto.EmpresaId.HasValue && dto.EmpresaId.Value > 0)
+        {
+            var empresa = await _empresaRepository.GetByIdAsync(dto.EmpresaId.Value, ct);
+            if (empresa is not null)
+            {
+                var ue = new UsuarioEmpresa
+                {
+                    UsuarioId = usuario.Id,
+                    EmpresaId = dto.EmpresaId.Value,
+                    Rol = string.IsNullOrEmpty(dto.Rol) ? "Viewer" : dto.Rol
+                };
+                await _ueRepository.AddAsync(ue, ct);
+                await _unitOfWork.SaveChangesAsync(ct);
+                ueList.Add(ue);
+            }
+        }
+
+        var empresas = await _empresaRepository.GetAllAsync(ct);
+        var empresaMap = empresas.ToDictionary(e => e.Id, e => e.Nombre);
+        return Result<UsuarioDto>.Success(MapToDto(usuario, ueList, empresaMap));
     }
 
     public async Task<Result<UsuarioDto>> UpdateAsync(int id, UpdateUsuarioDto dto, CancellationToken ct = default)
@@ -100,7 +125,9 @@ public class UsuarioService : IUsuarioService
         await _unitOfWork.SaveChangesAsync(ct);
 
         var ues = await _ueRepository.FindAsync(ue => ue.UsuarioId == id, ct);
-        return Result<UsuarioDto>.Success(MapToDto(usuario, ues));
+        var allEmpresas = await _empresaRepository.GetAllAsync(ct);
+        var empresaMap = allEmpresas.ToDictionary(e => e.Id, e => e.Nombre);
+        return Result<UsuarioDto>.Success(MapToDto(usuario, ues, empresaMap));
     }
 
     public async Task<Result<bool>> DeleteAsync(int id, CancellationToken ct = default)
@@ -170,7 +197,28 @@ public class UsuarioService : IUsuarioService
         return Result<bool>.Success(true);
     }
 
-    private static UsuarioDto MapToDto(Usuario u, IEnumerable<UsuarioEmpresa> empresas) => new()
+    public async Task<Result<IReadOnlyList<UsuarioEmpresaRolDto>>> GetEmpresasAsignadasAsync(int usuarioId, CancellationToken ct = default)
+    {
+        var usuario = await _repository.GetByIdAsync(usuarioId, ct);
+        if (usuario is null)
+            return Result<IReadOnlyList<UsuarioEmpresaRolDto>>.Failure($"Usuario con Id {usuarioId} no encontrado.");
+
+        var ues = await _ueRepository.FindAsync(ue => ue.UsuarioId == usuarioId, ct);
+        var empresaIds = ues.Select(ue => ue.EmpresaId).ToList();
+        var empresas = await _empresaRepository.GetAllAsync(ct);
+        var empresaMap = empresas.ToDictionary(e => e.Id, e => e.Nombre);
+
+        var result = ues.Select(ue => new UsuarioEmpresaRolDto
+        {
+            EmpresaId = ue.EmpresaId,
+            EmpresaNombre = empresaMap.TryGetValue(ue.EmpresaId, out var nombre) ? nombre : $"Empresa #{ue.EmpresaId}",
+            Rol = ue.Rol
+        }).ToList();
+
+        return Result<IReadOnlyList<UsuarioEmpresaRolDto>>.Success(result.AsReadOnly());
+    }
+
+    private static UsuarioDto MapToDto(Usuario u, IEnumerable<UsuarioEmpresa> ues, Dictionary<int, string> empresaMap) => new()
     {
         Id = u.Id,
         NombreUsuario = u.NombreUsuario,
@@ -179,10 +227,10 @@ public class UsuarioService : IUsuarioService
         Activo = u.Activo,
         EmpresaActivaId = u.EmpresaActivaId,
         FechaCreacion = u.FechaCreacion,
-        EmpresasAsignadas = empresas.Select(ue => new UsuarioEmpresaRolDto
+        EmpresasAsignadas = ues.Select(ue => new UsuarioEmpresaRolDto
         {
             EmpresaId = ue.EmpresaId,
-            EmpresaNombre = ue.Empresa?.Nombre ?? $"Empresa #{ue.EmpresaId}",
+            EmpresaNombre = empresaMap.TryGetValue(ue.EmpresaId, out var nombre) ? nombre : $"Empresa #{ue.EmpresaId}",
             Rol = ue.Rol
         }).ToList()
     };

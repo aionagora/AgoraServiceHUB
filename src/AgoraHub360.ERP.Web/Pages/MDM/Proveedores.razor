@@ -1,21 +1,419 @@
 @page "/mdm/proveedores"
+@attribute [Authorize]
+@inject ProveedorHttpService ProveedorService
+@inject IJSRuntime JS
 
-<PageTitle>Proveedores - AgoraHub360 ERP</PageTitle>
+<PageTitle>Proveedores</PageTitle>
 
-<div class="page-header">
-    <h1>Proveedores</h1>
-    <p class="text-muted mb-0">Datos Maestros &rsaquo; Proveedores</p>
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3>?? Proveedores</h3>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="ShowCreateModal">
+                <i class="bi bi-plus-circle"></i> Nuevo Proveedor
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (loading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-2">Cargando proveedores...</p>
+        </div>
+    }
+    else if (proveedores.Count == 0)
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> No hay proveedores registrados. Crea el primer proveedor usando el botón "Nuevo Proveedor".
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Razón Social</th>
+                                <th>NIT</th>
+                                <th>Tipo</th>
+                                <th>Teléfono</th>
+                                <th>Email</th>
+                                <th>Estado</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var proveedor in proveedores)
+                            {
+                                <tr>
+                                    <td>@proveedor.Id</td>
+                                    <td><strong>@proveedor.RazonSocial</strong></td>
+                                    <td>@proveedor.NIT</td>
+                                    <td>
+                                        <span class="badge bg-info">@proveedor.TipoProveedor</span>
+                                    </td>
+                                    <td>@(proveedor.Telefono ?? "-")</td>
+                                    <td>@(proveedor.Email ?? "-")</td>
+                                    <td>
+                                        @if (proveedor.Activo)
+                                        {
+                                            <span class="badge bg-success">Activo</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Inactivo</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditModal(proveedor)">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger ms-1" @onclick="() => DeleteProveedor(proveedor)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
 </div>
 
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center py-3">
-        <span>Listado de Proveedores</span>
-        <button class="btn btn-primary btn-sm" disabled>
-            <i class="bi bi-plus-circle me-1"></i> Nuevo Proveedor
-        </button>
+@* Modal Crear *@
+@if (showCreateModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nuevo Proveedor</h5>
+                    <button type="button" class="btn-close" @onclick="CloseCreateModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="createDto" OnValidSubmit="CreateProveedor">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="text-danger" />
+
+                        <div class="row">
+                            <div class="col-md-8 mb-3">
+                                <label class="form-label">Razón Social *</label>
+                                <InputText class="form-control" @bind-Value="createDto.RazonSocial" placeholder="Nombre o razón social" />
+                                <ValidationMessage For="@(() => createDto.RazonSocial)" />
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">NIT *</label>
+                                <InputText class="form-control" @bind-Value="createDto.NIT" placeholder="NIT" />
+                                <ValidationMessage For="@(() => createDto.NIT)" />
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Tipo de Proveedor *</label>
+                                <InputSelect class="form-select" @bind-Value="createDto.TipoProveedor">
+                                    <option value="Local">Local</option>
+                                    <option value="Internacional">Internacional</option>
+                                </InputSelect>
+                                <ValidationMessage For="@(() => createDto.TipoProveedor)" />
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Teléfono</label>
+                                <InputText class="form-control" @bind-Value="createDto.Telefono" placeholder="77123456" />
+                                <ValidationMessage For="@(() => createDto.Telefono)" />
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Email</label>
+                                <InputText class="form-control" type="email" @bind-Value="createDto.Email" placeholder="proveedor@ejemplo.com" />
+                                <ValidationMessage For="@(() => createDto.Email)" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Dirección</label>
+                            <InputTextArea class="form-control" @bind-Value="createDto.Direccion" rows="2" placeholder="Dirección completa" />
+                            <ValidationMessage For="@(() => createDto.Direccion)" />
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseCreateModal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary" disabled="@saving">
+                                @if (saving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                Guardar
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="card-body text-center py-5">
-        <i class="bi bi-truck" style="font-size: 3rem; color: var(--agora-text-light);"></i>
-        <p class="text-muted mt-3">Modulo en construccion.</p>
+}
+
+@* Modal Editar *@
+@if (showEditModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Proveedor</h5>
+                    <button type="button" class="btn-close" @onclick="CloseEditModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="updateDto" OnValidSubmit="UpdateProveedor">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="text-danger" />
+
+                        <div class="row">
+                            <div class="col-md-8 mb-3">
+                                <label class="form-label">Razón Social *</label>
+                                <InputText class="form-control" @bind-Value="updateDto.RazonSocial" placeholder="Nombre o razón social" />
+                                <ValidationMessage For="@(() => updateDto.RazonSocial)" />
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">NIT *</label>
+                                <InputText class="form-control" @bind-Value="updateDto.NIT" placeholder="NIT" />
+                                <ValidationMessage For="@(() => updateDto.NIT)" />
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Tipo de Proveedor *</label>
+                                <InputSelect class="form-select" @bind-Value="updateDto.TipoProveedor">
+                                    <option value="Local">Local</option>
+                                    <option value="Internacional">Internacional</option>
+                                </InputSelect>
+                                <ValidationMessage For="@(() => updateDto.TipoProveedor)" />
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Teléfono</label>
+                                <InputText class="form-control" @bind-Value="updateDto.Telefono" placeholder="77123456" />
+                                <ValidationMessage For="@(() => updateDto.Telefono)" />
+                            </div>
+
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Email</label>
+                                <InputText class="form-control" type="email" @bind-Value="updateDto.Email" placeholder="proveedor@ejemplo.com" />
+                                <ValidationMessage For="@(() => updateDto.Email)" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Dirección</label>
+                            <InputTextArea class="form-control" @bind-Value="updateDto.Direccion" rows="2" placeholder="Dirección completa" />
+                            <ValidationMessage For="@(() => updateDto.Direccion)" />
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <InputCheckbox class="form-check-input" id="activoCheck" @bind-Value="updateDto.Activo" />
+                            <label class="form-check-label" for="activoCheck">Activo</label>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseEditModal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary" disabled="@saving">
+                                @if (saving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                Actualizar
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
+}
+
+@code {
+    private List<ProveedorDto> proveedores = new();
+    private bool loading = true;
+    private bool saving = false;
+    private bool showCreateModal = false;
+    private bool showEditModal = false;
+    private string? errorMessage;
+    private string? successMessage;
+    private CreateProveedorDto createDto = new();
+    private UpdateProveedorDto updateDto = new();
+    private int editingId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProveedores();
+    }
+
+    private async Task LoadProveedores()
+    {
+        try
+        {
+            loading = true;
+            errorMessage = null;
+            proveedores = await ProveedorService.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar proveedores: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private void ShowCreateModal()
+    {
+        createDto = new CreateProveedorDto();
+        showCreateModal = true;
+    }
+
+    private void CloseCreateModal()
+    {
+        showCreateModal = false;
+    }
+
+    private void ShowEditModal(ProveedorDto proveedor)
+    {
+        updateDto = new UpdateProveedorDto
+        {
+            RazonSocial = proveedor.RazonSocial,
+            NIT = proveedor.NIT,
+            Telefono = proveedor.Telefono,
+            Email = proveedor.Email,
+            Direccion = proveedor.Direccion,
+            TipoProveedor = proveedor.TipoProveedor,
+            Activo = proveedor.Activo
+        };
+        editingId = proveedor.Id;
+        showEditModal = true;
+    }
+
+    private void CloseEditModal()
+    {
+        showEditModal = false;
+    }
+
+    private async Task CreateProveedor()
+    {
+        try
+        {
+            saving = true;
+            errorMessage = null;
+            successMessage = null;
+
+            var response = await ProveedorService.CreateAsync(createDto);
+
+            if (response.Success)
+            {
+                successMessage = "Proveedor creado exitosamente";
+                CloseCreateModal();
+                await LoadProveedores();
+            }
+            else
+            {
+                errorMessage = response.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private async Task UpdateProveedor()
+    {
+        try
+        {
+            saving = true;
+            errorMessage = null;
+            successMessage = null;
+
+            var response = await ProveedorService.UpdateAsync(editingId, updateDto);
+
+            if (response.Success)
+            {
+                successMessage = "Proveedor actualizado exitosamente";
+                CloseEditModal();
+                await LoadProveedores();
+            }
+            else
+            {
+                errorMessage = response.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private async Task DeleteProveedor(ProveedorDto proveedor)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"¿Eliminar el proveedor '{proveedor.RazonSocial}'?"))
+            return;
+
+        try
+        {
+            errorMessage = null;
+            successMessage = null;
+
+            var response = await ProveedorService.DeleteAsync(proveedor.Id);
+            if (response.Success)
+            {
+                successMessage = "Proveedor eliminado exitosamente";
+                await LoadProveedores();
+            }
+            else
+            {
+                errorMessage = response.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al eliminar: {ex.Message}";
+        }
+    }
+}

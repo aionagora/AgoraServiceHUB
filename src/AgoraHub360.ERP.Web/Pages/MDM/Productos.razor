@@ -1,21 +1,558 @@
 @page "/mdm/productos"
+@attribute [Authorize]
+@inject ProductoHttpService ProductoService
+@inject CategoriaProductoHttpService CategoriaService
+@inject UnidadMedidaHttpService UnidadMedidaService
+@inject IJSRuntime JS
 
-<PageTitle>Productos - AgoraHub360 ERP</PageTitle>
+<PageTitle>Productos</PageTitle>
 
-<div class="page-header">
-    <h1>Productos</h1>
-    <p class="text-muted mb-0">Datos Maestros &rsaquo; Productos</p>
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3>?? Catálogo de Productos</h3>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="ShowCreateModal">
+                <i class="bi bi-plus-circle"></i> Nuevo Producto
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (loading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+            <p class="mt-2">Cargando productos...</p>
+        </div>
+    }
+    else if (productos.Count == 0)
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> No hay productos registrados. Crea el primer producto usando el botón "Nuevo Producto".
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Nombre</th>
+                                <th>Categoría</th>
+                                <th>UM</th>
+                                <th>Tipo</th>
+                                <th class="text-end">P. Compra</th>
+                                <th class="text-end">P. Venta</th>
+                                <th class="text-end">Stock Mín</th>
+                                <th>Estado</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var producto in productos)
+                            {
+                                <tr>
+                                    <td><code>@producto.Codigo</code></td>
+                                    <td><strong>@producto.Nombre</strong></td>
+                                    <td><span class="badge bg-secondary">@producto.CategoriaNombre</span></td>
+                                    <td><span class="badge bg-info">@producto.UnidadMedidaNombre</span></td>
+                                    <td><small>@producto.TipoProducto</small></td>
+                                    <td class="text-end">@producto.PrecioCompra.ToString("N2")</td>
+                                    <td class="text-end"><strong>@producto.PrecioVenta.ToString("N2")</strong></td>
+                                    <td class="text-end">@producto.StockMinimo.ToString("N2")</td>
+                                    <td>
+                                        @if (producto.Activo)
+                                        {
+                                            <span class="badge bg-success">Activo</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Inactivo</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditModal(producto)">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger ms-1" @onclick="() => DeleteProducto(producto)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
 </div>
 
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center py-3">
-        <span>Listado de Productos</span>
-        <button class="btn btn-primary btn-sm" disabled>
-            <i class="bi bi-plus-circle me-1"></i> Nuevo Producto
-        </button>
+@* Modal Crear *@
+@if (showCreateModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nuevo Producto</h5>
+                    <button type="button" class="btn-close" @onclick="CloseCreateModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="createDto" OnValidSubmit="CreateProducto">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="text-danger" />
+
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Código *</label>
+                                <InputText class="form-control" @bind-Value="createDto.Codigo" placeholder="PROD-001" />
+                                <ValidationMessage For="@(() => createDto.Codigo)" />
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Nombre *</label>
+                                <InputText class="form-control" @bind-Value="createDto.Nombre" placeholder="Nombre del producto" />
+                                <ValidationMessage For="@(() => createDto.Nombre)" />
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">SKU</label>
+                                <InputText class="form-control" @bind-Value="createDto.Sku" placeholder="SKU opcional" />
+                                <ValidationMessage For="@(() => createDto.Sku)" />
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Categoría *</label>
+                                <InputSelect class="form-select" @bind-Value="createDto.CategoriaProductoId">
+                                    <option value="0">-- Seleccione categoría --</option>
+                                    @foreach (var cat in categorias)
+                                    {
+                                        <option value="@cat.Id">@cat.Nombre</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="@(() => createDto.CategoriaProductoId)" />
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Unidad de Medida *</label>
+                                <InputSelect class="form-select" @bind-Value="createDto.UnidadMedidaId">
+                                    <option value="0">-- Seleccione UM --</option>
+                                    @foreach (var um in unidadesMedida)
+                                    {
+                                        <option value="@um.Id">@um.Nombre (@um.Abreviatura)</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="@(() => createDto.UnidadMedidaId)" />
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Tipo de Producto *</label>
+                                <InputSelect class="form-select" @bind-Value="createDto.TipoProducto">
+                                    <option value="MateriaPrima">Materia Prima</option>
+                                    <option value="ProductoTerminado">Producto Terminado</option>
+                                    <option value="Servicio">Servicio</option>
+                                </InputSelect>
+                                <ValidationMessage For="@(() => createDto.TipoProducto)" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Descripción</label>
+                            <InputTextArea class="form-control" @bind-Value="createDto.Descripcion" rows="2" placeholder="Descripción del producto" />
+                            <ValidationMessage For="@(() => createDto.Descripcion)" />
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Precio Compra</label>
+                                <InputNumber class="form-control" @bind-Value="createDto.PrecioCompra" />
+                                <ValidationMessage For="@(() => createDto.PrecioCompra)" />
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Precio Venta</label>
+                                <InputNumber class="form-control" @bind-Value="createDto.PrecioVenta" />
+                                <ValidationMessage For="@(() => createDto.PrecioVenta)" />
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Costo Base</label>
+                                <InputNumber class="form-control" @bind-Value="createDto.CostoBase" />
+                                <ValidationMessage For="@(() => createDto.CostoBase)" />
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Stock Mínimo</label>
+                                <InputNumber class="form-control" @bind-Value="createDto.StockMinimo" />
+                                <ValidationMessage For="@(() => createDto.StockMinimo)" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <InputCheckbox class="form-check-input" id="controlStockCheck" @bind-Value="createDto.ControlStock" />
+                            <label class="form-check-label" for="controlStockCheck">Controlar Stock</label>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseCreateModal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary" disabled="@saving">
+                                @if (saving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                Guardar
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="card-body text-center py-5">
-        <i class="bi bi-box-seam" style="font-size: 3rem; color: var(--agora-text-light);"></i>
-        <p class="text-muted mt-3">Modulo en construccion.</p>
+}
+
+@* Modal Editar (similar estructura) *@
+@if (showEditModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Producto</h5>
+                    <button type="button" class="btn-close" @onclick="CloseEditModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="updateDto" OnValidSubmit="UpdateProducto">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="text-danger" />
+
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Código *</label>
+                                <InputText class="form-control" @bind-Value="updateDto.Codigo" placeholder="PROD-001" />
+                                <ValidationMessage For="@(() => updateDto.Codigo)" />
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Nombre *</label>
+                                <InputText class="form-control" @bind-Value="updateDto.Nombre" placeholder="Nombre del producto" />
+                                <ValidationMessage For="@(() => updateDto.Nombre)" />
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">SKU</label>
+                                <InputText class="form-control" @bind-Value="updateDto.Sku" placeholder="SKU opcional" />
+                                <ValidationMessage For="@(() => updateDto.Sku)" />
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Categoría *</label>
+                                <InputSelect class="form-select" @bind-Value="updateDto.CategoriaProductoId">
+                                    <option value="0">-- Seleccione categoría --</option>
+                                    @foreach (var cat in categorias)
+                                    {
+                                        <option value="@cat.Id">@cat.Nombre</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="@(() => updateDto.CategoriaProductoId)" />
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Unidad de Medida *</label>
+                                <InputSelect class="form-select" @bind-Value="updateDto.UnidadMedidaId">
+                                    <option value="0">-- Seleccione UM --</option>
+                                    @foreach (var um in unidadesMedida)
+                                    {
+                                        <option value="@um.Id">@um.Nombre (@um.Abreviatura)</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="@(() => updateDto.UnidadMedidaId)" />
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Tipo de Producto *</label>
+                                <InputSelect class="form-select" @bind-Value="updateDto.TipoProducto">
+                                    <option value="MateriaPrima">Materia Prima</option>
+                                    <option value="ProductoTerminado">Producto Terminado</option>
+                                    <option value="Servicio">Servicio</option>
+                                </InputSelect>
+                                <ValidationMessage For="@(() => updateDto.TipoProducto)" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Descripción</label>
+                            <InputTextArea class="form-control" @bind-Value="updateDto.Descripcion" rows="2" placeholder="Descripción del producto" />
+                            <ValidationMessage For="@(() => updateDto.Descripcion)" />
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Precio Compra</label>
+                                <InputNumber class="form-control" @bind-Value="updateDto.PrecioCompra" />
+                                <ValidationMessage For="@(() => updateDto.PrecioCompra)" />
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Precio Venta</label>
+                                <InputNumber class="form-control" @bind-Value="updateDto.PrecioVenta" />
+                                <ValidationMessage For="@(() => updateDto.PrecioVenta)" />
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Costo Base</label>
+                                <InputNumber class="form-control" @bind-Value="updateDto.CostoBase" />
+                                <ValidationMessage For="@(() => updateDto.CostoBase)" />
+                            </div>
+
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Stock Mínimo</label>
+                                <InputNumber class="form-control" @bind-Value="updateDto.StockMinimo" />
+                                <ValidationMessage For="@(() => updateDto.StockMinimo)" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <InputCheckbox class="form-check-input" id="controlStockEditCheck" @bind-Value="updateDto.ControlStock" />
+                            <label class="form-check-label" for="controlStockEditCheck">Controlar Stock</label>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <InputCheckbox class="form-check-input" id="activoCheck" @bind-Value="updateDto.Activo" />
+                            <label class="form-check-label" for="activoCheck">Activo</label>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseEditModal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary" disabled="@saving">
+                                @if (saving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                }
+                                Actualizar
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
+}
+
+@code {
+    private List<ProductoDto> productos = new();
+    private List<CategoriaProductoDto> categorias = new();
+    private List<UnidadMedidaDto> unidadesMedida = new();
+    
+    private bool loading = true;
+    private bool saving = false;
+    private bool showCreateModal = false;
+    private bool showEditModal = false;
+    private string? errorMessage;
+    private string? successMessage;
+    
+    private CreateProductoDto createDto = new();
+    private UpdateProductoDto updateDto = new();
+    private int editingId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            loading = true;
+            errorMessage = null;
+            
+            var productosTask = ProductoService.GetAllAsync();
+            var categoriasTask = CategoriaService.GetAllAsync();
+            var unidadesTask = UnidadMedidaService.GetAllAsync();
+            
+            await Task.WhenAll(productosTask, categoriasTask, unidadesTask);
+            
+            productos = await productosTask;
+            categorias = await categoriasTask;
+            unidadesMedida = await unidadesTask;
+
+            if (categorias.Count == 0)
+            {
+                errorMessage = "Debe crear al menos una categoría antes de agregar productos.";
+            }
+
+            if (unidadesMedida.Count == 0)
+            {
+                errorMessage = "Debe crear al menos una unidad de medida antes de agregar productos.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar datos: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private void ShowCreateModal()
+    {
+        if (categorias.Count == 0 || unidadesMedida.Count == 0)
+        {
+            errorMessage = "Debe crear categorías y unidades de medida antes de crear productos.";
+            return;
+        }
+
+        createDto = new CreateProductoDto();
+        showCreateModal = true;
+    }
+
+    private void CloseCreateModal()
+    {
+        showCreateModal = false;
+    }
+
+    private void ShowEditModal(ProductoDto producto)
+    {
+        updateDto = new UpdateProductoDto
+        {
+            Codigo = producto.Codigo,
+            Nombre = producto.Nombre,
+            Descripcion = producto.Descripcion,
+            CategoriaProductoId = producto.CategoriaProductoId,
+            UnidadMedidaId = producto.UnidadMedidaId,
+            PrecioCompra = producto.PrecioCompra,
+            PrecioVenta = producto.PrecioVenta,
+            StockMinimo = producto.StockMinimo,
+            Sku = producto.Sku,
+            TipoProducto = producto.TipoProducto,
+            ControlStock = producto.ControlStock,
+            CostoBase = producto.CostoBase,
+            Activo = producto.Activo
+        };
+        editingId = producto.Id;
+        showEditModal = true;
+    }
+
+    private void CloseEditModal()
+    {
+        showEditModal = false;
+    }
+
+    private async Task CreateProducto()
+    {
+        try
+        {
+            saving = true;
+            errorMessage = null;
+            successMessage = null;
+
+            var response = await ProductoService.CreateAsync(createDto);
+
+            if (response.Success)
+            {
+                successMessage = "Producto creado exitosamente";
+                CloseCreateModal();
+                await LoadData();
+            }
+            else
+            {
+                errorMessage = response.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private async Task UpdateProducto()
+    {
+        try
+        {
+            saving = true;
+            errorMessage = null;
+            successMessage = null;
+
+            var response = await ProductoService.UpdateAsync(editingId, updateDto);
+
+            if (response.Success)
+            {
+                successMessage = "Producto actualizado exitosamente";
+                CloseEditModal();
+                await LoadData();
+            }
+            else
+            {
+                errorMessage = response.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private async Task DeleteProducto(ProductoDto producto)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"¿Eliminar el producto '{producto.Nombre}'?"))
+            return;
+
+        try
+        {
+            errorMessage = null;
+            successMessage = null;
+
+            var response = await ProductoService.DeleteAsync(producto.Id);
+            if (response.Success)
+            {
+                successMessage = "Producto eliminado exitosamente";
+                await LoadData();
+            }
+            else
+            {
+                errorMessage = response.Message;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al eliminar: {ex.Message}";
+        }
+    }
+}

@@ -241,7 +241,24 @@ El sistema crea automáticamente un usuario administrador:
 | **Contraseña** | `Admin123` |
 | **Rol** | Admin |
 
-📚 **Documentación Completa:** [CREDENCIALES-DEFAULT.md](CREDENCIALES-DEFAULT.md)
+### 🔄 Resetear Usuario Administrador
+
+Si olvidaste la contraseña o necesitas restaurar el usuario admin:
+
+**Método Rápido:**
+```powershell
+.\reset-admin-user.ps1
+```
+
+**Método Alternativo (Genera SQL):**
+```powershell
+.\reset-admin-simple.ps1
+```
+
+📚 **Documentación Completa:**
+- [RESET-ADMIN-QUICKSTART.md](RESET-ADMIN-QUICKSTART.md) - Guía rápida de reseteo
+- [RESET-ADMIN-GUIDE.md](RESET-ADMIN-GUIDE.md) - Guía completa y troubleshooting
+- [CREDENCIALES-DEFAULT.md](CREDENCIALES-DEFAULT.md) - Usuario y contraseña por defecto
 
 ⚠️ **Importante:** Cambia estas credenciales antes de pasar a producción.
 

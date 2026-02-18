@@ -30,6 +30,11 @@ public class ParametroHttpService
     public async Task<ApiResponse<ParametroSistemaDto>> UpsertAsync(UpsertParametroDto dto)
     {
         var response = await _http.PostAsJsonAsync(BaseUrl, dto);
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            return ApiResponse<ParametroSistemaDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
+        }
         return await response.Content.ReadFromJsonAsync<ApiResponse<ParametroSistemaDto>>()
             ?? ApiResponse<ParametroSistemaDto>.Fail("Error de comunicación.");
     }
@@ -37,6 +42,11 @@ public class ParametroHttpService
     public async Task<ApiResponse<bool>> DeleteAsync(int id)
     {
         var response = await _http.DeleteAsync($"{BaseUrl}/{id}");
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            return ApiResponse<bool>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
+        }
         return await response.Content.ReadFromJsonAsync<ApiResponse<bool>>()
             ?? ApiResponse<bool>.Fail("Error de comunicación.");
     }
