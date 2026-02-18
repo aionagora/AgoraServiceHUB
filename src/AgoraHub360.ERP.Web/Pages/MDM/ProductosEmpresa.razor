@@ -1,0 +1,407 @@
+@page "/mdm/productos-empresa"
+@attribute [Authorize]
+@inject MdmCompanyProductHttpService CompanyProductService
+@inject MdmProductoGlobalHttpService ProductoGlobalService
+@inject IJSRuntime JS
+
+<PageTitle>Productos de Empresa (MDM)</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3><i class="bi bi-box-seam"></i> Productos de Empresa</h3>
+            <p class="text-muted mb-0">Activacion y configuracion de productos globales para esta empresa</p>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="ShowCreateModal">
+                <i class="bi bi-plus-circle"></i> Activar Producto
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle-fill"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (loading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2">Cargando...</p>
+        </div>
+    }
+    else if (companyProducts.Count == 0)
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> No hay productos activados para esta empresa. Use "Activar Producto" para agregar.
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>SKU</th>
+                                <th>Producto</th>
+                                <th>Cod. Interno</th>
+                                <th class="text-center">POS</th>
+                                <th class="text-center">Ecommerce</th>
+                                <th class="text-center">B2B</th>
+                                <th class="text-end">Stock Min</th>
+                                <th class="text-end">Stock Max</th>
+                                <th>Estado</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var cp in companyProducts)
+                            {
+                                <tr>
+                                    <td><code>@cp.Sku</code></td>
+                                    <td><strong>@cp.NombreComercial</strong></td>
+                                    <td><small class="text-muted">@(cp.CodigoInterno ?? "-")</small></td>
+                                    <td class="text-center">
+                                        <i class="bi @(cp.IsVisiblePOS ? "bi-check-circle-fill text-success" : "bi-x-circle text-secondary")"></i>
+                                    </td>
+                                    <td class="text-center">
+                                        <i class="bi @(cp.IsVisibleEcommerce ? "bi-check-circle-fill text-success" : "bi-x-circle text-secondary")"></i>
+                                    </td>
+                                    <td class="text-center">
+                                        <i class="bi @(cp.IsVisibleB2B ? "bi-check-circle-fill text-success" : "bi-x-circle text-secondary")"></i>
+                                    </td>
+                                    <td class="text-end">@(cp.MinStock?.ToString("N2") ?? "-")</td>
+                                    <td class="text-end">@(cp.MaxStock?.ToString("N2") ?? "-")</td>
+                                    <td>
+                                        @if (cp.Activo)
+                                        { <span class="badge bg-success">Activo</span> }
+                                        else
+                                        { <span class="badge bg-secondary">Inactivo</span> }
+                                    </td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditModal(cp)" title="Editar">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger ms-1" @onclick="() => DeleteCompanyProduct(cp)" title="Eliminar">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer text-muted small">@companyProducts.Count producto(s) activado(s)</div>
+        </div>
+    }
+</div>
+
+@* Modal Activar (Crear) *@
+@if (showCreateModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-plus-circle"></i> Activar Producto Global</h5>
+                    <button type="button" class="btn-close" @onclick="CloseCreateModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Producto Global *</label>
+                            <select class="form-select" @bind="createForm.ProductId">
+                                <option value="0">-- Seleccione producto --</option>
+                                @foreach (var p in productosGlobales)
+                                {
+                                    <option value="@p.ProductId">@p.NombreComercial</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">SKU de Empresa *</label>
+                            <input class="form-control" @bind="createForm.Sku" placeholder="Ej: EMP-PROD-001" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Codigo Interno</label>
+                            <input class="form-control" @bind="createForm.CodigoInterno" placeholder="Opcional" />
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Stock Minimo</label>
+                            <input type="number" step="0.01" class="form-control" @bind="createForm.MinStock" />
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Stock Maximo</label>
+                            <input type="number" step="0.01" class="form-control" @bind="createForm.MaxStock" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-auto">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="createForm.IsVisiblePOS" id="cPOS" />
+                                <label class="form-check-label" for="cPOS">Visible POS</label>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="createForm.IsVisibleEcommerce" id="cEco" />
+                                <label class="form-check-label" for="cEco">Visible Ecommerce</label>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="createForm.IsVisibleB2B" id="cB2B" />
+                                <label class="form-check-label" for="cB2B">Visible B2B</label>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="createForm.AllowReturns" id="cReturns" />
+                                <label class="form-check-label" for="cReturns">Permite Devoluciones</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseCreateModal">Cancelar</button>
+                    <button class="btn btn-primary" @onclick="CreateCompanyProduct" disabled="@saving">
+                        @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        Activar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Modal Editar *@
+@if (showEditModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-pencil"></i> Editar Producto de Empresa</h5>
+                    <button type="button" class="btn-close" @onclick="CloseEditModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">SKU *</label>
+                            <input class="form-control" @bind="editForm.Sku" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Codigo Interno</label>
+                            <input class="form-control" @bind="editForm.CodigoInterno" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Stock Minimo</label>
+                            <input type="number" step="0.01" class="form-control" @bind="editForm.MinStock" />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Stock Maximo</label>
+                            <input type="number" step="0.01" class="form-control" @bind="editForm.MaxStock" />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Punto de Reorden</label>
+                            <input type="number" step="0.01" class="form-control" @bind="editForm.ReorderPoint" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-auto">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="editForm.IsVisiblePOS" id="ePOS" />
+                                <label class="form-check-label" for="ePOS">Visible POS</label>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="editForm.IsVisibleEcommerce" id="eEco" />
+                                <label class="form-check-label" for="eEco">Visible Ecommerce</label>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="editForm.IsVisibleB2B" id="eB2B" />
+                                <label class="form-check-label" for="eB2B">Visible B2B</label>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="editForm.AllowReturns" id="eReturns" />
+                                <label class="form-check-label" for="eReturns">Permite Devoluciones</label>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="editForm.Activo" id="eActivo" />
+                                <label class="form-check-label" for="eActivo">Activo</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseEditModal">Cancelar</button>
+                    <button class="btn btn-primary" @onclick="UpdateCompanyProduct" disabled="@saving">
+                        @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        Actualizar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private class CreateForm
+    {
+        public long ProductId { get; set; }
+        public string Sku { get; set; } = "";
+        public string? CodigoInterno { get; set; }
+        public bool IsVisiblePOS { get; set; } = true;
+        public bool IsVisibleEcommerce { get; set; } = false;
+        public bool IsVisibleB2B { get; set; } = false;
+        public bool AllowReturns { get; set; } = true;
+        public decimal? MinStock { get; set; }
+        public decimal? MaxStock { get; set; }
+    }
+
+    private class EditForm
+    {
+        public string Sku { get; set; } = "";
+        public string? CodigoInterno { get; set; }
+        public bool IsVisiblePOS { get; set; }
+        public bool IsVisibleEcommerce { get; set; }
+        public bool IsVisibleB2B { get; set; }
+        public bool AllowReturns { get; set; }
+        public decimal? MinStock { get; set; }
+        public decimal? MaxStock { get; set; }
+        public decimal? ReorderPoint { get; set; }
+        public bool Activo { get; set; }
+    }
+
+    private List<AgoraHub360.ERP.Shared.DTOs.MDM.CompanyProductDto> companyProducts = new();
+    private List<AgoraHub360.ERP.Shared.DTOs.MDM.ProductDto2> productosGlobales = new();
+    private bool loading = true;
+    private bool saving = false;
+    private bool showCreateModal = false;
+    private bool showEditModal = false;
+    private string? errorMessage;
+    private string? successMessage;
+    private long editingId;
+    private CreateForm createForm = new();
+    private EditForm editForm = new();
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    private async Task LoadData()
+    {
+        try
+        {
+            loading = true;
+            errorMessage = null;
+            var t1 = CompanyProductService.GetAllAsync();
+            var t2 = ProductoGlobalService.GetAllAsync();
+            await Task.WhenAll(t1, t2);
+            companyProducts = await t1;
+            productosGlobales = await t2;
+        }
+        catch (Exception ex) { errorMessage = $"Error al cargar datos: {ex.Message}"; }
+        finally { loading = false; }
+    }
+
+    private void ShowCreateModal() { createForm = new(); showCreateModal = true; }
+    private void CloseCreateModal() => showCreateModal = false;
+
+    private void ShowEditModal(AgoraHub360.ERP.Shared.DTOs.MDM.CompanyProductDto cp)
+    {
+        editForm = new EditForm
+        {
+            Sku = cp.Sku,
+            CodigoInterno = cp.CodigoInterno,
+            IsVisiblePOS = cp.IsVisiblePOS,
+            IsVisibleEcommerce = cp.IsVisibleEcommerce,
+            IsVisibleB2B = cp.IsVisibleB2B,
+            AllowReturns = cp.AllowReturns,
+            MinStock = cp.MinStock,
+            MaxStock = cp.MaxStock,
+            ReorderPoint = cp.ReorderPoint,
+            Activo = cp.Activo
+        };
+        editingId = cp.CompanyProductId;
+        showEditModal = true;
+    }
+
+    private void CloseEditModal() => showEditModal = false;
+
+    private async Task CreateCompanyProduct()
+    {
+        if (createForm.ProductId == 0 || string.IsNullOrWhiteSpace(createForm.Sku))
+        {
+            errorMessage = "Producto y SKU son obligatorios.";
+            return;
+        }
+        try
+        {
+            saving = true; errorMessage = null;
+            var dto = new AgoraHub360.ERP.Shared.DTOs.MDM.CreateCompanyProductDto(
+                createForm.ProductId, createForm.Sku, createForm.CodigoInterno,
+                createForm.IsVisiblePOS, createForm.IsVisibleEcommerce, createForm.IsVisibleB2B,
+                createForm.AllowReturns, null, createForm.MinStock, createForm.MaxStock, null, null);
+            var result = await CompanyProductService.CreateAsync(dto);
+            if (result.Success) { successMessage = "Producto activado para la empresa."; CloseCreateModal(); await LoadData(); }
+            else errorMessage = result.Message;
+        }
+        catch (Exception ex) { errorMessage = $"Error: {ex.Message}"; }
+        finally { saving = false; }
+    }
+
+    private async Task UpdateCompanyProduct()
+    {
+        if (string.IsNullOrWhiteSpace(editForm.Sku)) { errorMessage = "El SKU es obligatorio."; return; }
+        try
+        {
+            saving = true; errorMessage = null;
+            var dto = new AgoraHub360.ERP.Shared.DTOs.MDM.UpdateCompanyProductDto(
+                editForm.Sku, editForm.CodigoInterno,
+                editForm.IsVisiblePOS, editForm.IsVisibleEcommerce, editForm.IsVisibleB2B,
+                editForm.AllowReturns, null, editForm.MinStock, editForm.MaxStock,
+                editForm.ReorderPoint, null, editForm.Activo);
+            var result = await CompanyProductService.UpdateAsync(editingId, dto);
+            if (result.Success) { successMessage = "Producto actualizado."; CloseEditModal(); await LoadData(); }
+            else errorMessage = result.Message;
+        }
+        catch (Exception ex) { errorMessage = $"Error: {ex.Message}"; }
+        finally { saving = false; }
+    }
+
+    private async Task DeleteCompanyProduct(AgoraHub360.ERP.Shared.DTOs.MDM.CompanyProductDto cp)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"Desactivar el producto '{cp.NombreComercial}' (SKU: {cp.Sku})?")) return;
+        try
+        {
+            var result = await CompanyProductService.DeleteAsync(cp.CompanyProductId);
+            if (result.Success) { successMessage = "Producto desactivado."; await LoadData(); }
+            else errorMessage = result.Message;
+        }
+        catch (Exception ex) { errorMessage = $"Error: {ex.Message}"; }
+    }
+}

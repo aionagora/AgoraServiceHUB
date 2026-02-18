@@ -949,6 +949,1320 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.ToTable("UnidadesMedida", "mdm");
                 });
 
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.RUL.Industry", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("Industries", "rul");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.RUL.ProductIndustryRule", b =>
+                {
+                    b.Property<long>("RuleId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("RuleId"));
+
+                    b.Property<string>("ActionsJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ConditionJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("IndustryId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RuleName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("RuleId");
+
+                    b.HasIndex("IndustryId");
+
+                    b.ToTable("ProductIndustryRules", "rul");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.VER.EntityVersion", b =>
+                {
+                    b.Property<long>("VersionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("VersionId"));
+
+                    b.Property<DateTime>("ChangedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ChangedBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<byte>("ChangeType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("EntityId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("EntityName")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<int?>("EmpresaId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SnapshotJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("VersionNo")
+                        .HasColumnType("int");
+
+                    b.HasKey("VersionId");
+
+                    b.HasIndex("EntityName", "EntityId");
+
+                    b.HasIndex("EmpresaId");
+
+                    b.ToTable("EntityVersions", "ver");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.Brand", b =>
+                {
+                    b.Property<long>("BrandId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("BrandId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("CodigoExterno")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("BrandId");
+
+                    b.HasIndex("Nombre")
+                        .IsUnique();
+
+                    b.ToTable("Brands", "mdm");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.Manufacturer", b =>
+                {
+                    b.Property<long>("ManufacturerId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("ManufacturerId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("CodigoExterno")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("ManufacturerId");
+
+                    b.HasIndex("Nombre")
+                        .IsUnique();
+
+                    b.ToTable("Manufacturers", "mdm");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.ProductStatus", b =>
+                {
+                    b.Property<int>("StatusId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("StatusId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("StatusId");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("ProductStatuses", "mdm");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.Uom", b =>
+                {
+                    b.Property<int>("UomId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UomId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Simbolo")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("UomId");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("Uoms", "mdm");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.Catalog", b =>
+                {
+                    b.Property<long>("CatalogId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("CatalogId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("EmpresaId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<byte>("Scope")
+                        .HasColumnType("tinyint");
+
+                    b.HasKey("CatalogId");
+
+                    b.HasIndex("Scope", "EmpresaId", "Nombre")
+                        .IsUnique();
+
+                    b.ToTable("Catalogs", "mdm");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.Product", b =>
+                {
+                    b.Property<long>("ProductId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("ProductId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<long?>("BrandId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("CatalogId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("DefaultUomId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("DescripcionCorta")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("DescripcionLarga")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsStockable")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSellable")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsPurchasable")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("LifecycleStatusId")
+                        .HasColumnType("int");
+
+                    b.Property<long?>("ManufacturerId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NombreComercial")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("NombreGenerico")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<byte>("ProductKind")
+                        .HasColumnType("tinyint");
+
+                    b.HasKey("ProductId");
+
+                    b.HasIndex("BrandId");
+
+                    b.HasIndex("CatalogId");
+
+                    b.HasIndex("DefaultUomId");
+
+                    b.HasIndex("LifecycleStatusId");
+
+                    b.HasIndex("ManufacturerId");
+
+                    b.ToTable("Products", "mdm");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.CompanyProduct", b =>
+                {
+                    b.Property<long>("CompanyProductId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("CompanyProductId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("AllowReturns")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("CodigoInterno")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<byte?>("CostingMethod")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("EmpresaId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsVisibleB2B")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsVisibleEcommerce")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsVisiblePOS")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("MaxStock")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal?>("MinStock")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<long>("ProductId")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal?>("ReorderPoint")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("Sku")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("WarrantyDays")
+                        .HasColumnType("int");
+
+                    b.HasKey("CompanyProductId");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("EmpresaId", "Sku")
+                        .IsUnique();
+
+                    b.ToTable("CompanyProducts", "mdm");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.ProductCode", b =>
+                {
+                    b.Property<long>("CodeId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("CodeId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("CodeValue")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<byte>("CodeType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("EmpresaId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<long>("ProductId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateOnly?>("ValidFrom")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("ValidTo")
+                        .HasColumnType("date");
+
+                    b.HasKey("CodeId");
+
+                    b.HasIndex("ProductId", "CodeType", "CodeValue")
+                        .IsUnique();
+
+                    b.ToTable("ProductCodes", "mdm");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.Category", b =>
+                {
+                    b.Property<long>("CategoryId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("CategoryId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<long>("CatalogId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Nivel")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<long?>("ParentCategoryId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Path")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.HasKey("CategoryId");
+
+                    b.HasIndex("CatalogId");
+
+                    b.HasIndex("ParentCategoryId");
+
+                    b.ToTable("Categories", "mdm");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.ProductCategory", b =>
+                {
+                    b.Property<long>("ProductId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("CategoryId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("ProductId", "CategoryId");
+
+                    b.HasIndex("CategoryId");
+
+                    b.ToTable("ProductCategories", "mdm");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.ProductClassification", b =>
+                {
+                    b.Property<long>("ClassificationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("ClassificationId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<long>("CatalogId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<byte>("Type")
+                        .HasColumnType("tinyint");
+
+                    b.HasKey("ClassificationId");
+
+                    b.HasIndex("CatalogId", "Codigo")
+                        .IsUnique();
+
+                    b.ToTable("ProductClassifications", "mdm");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.ProductClassificationLink", b =>
+                {
+                    b.Property<long>("ProductId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("ClassificationId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("ProductId", "ClassificationId");
+
+                    b.HasIndex("ClassificationId");
+
+                    b.ToTable("ProductClassificationLinks", "mdm");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.AttributeDefinition", b =>
+                {
+                    b.Property<long>("AttributeId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("AttributeId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<byte>("DataType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("IndustryId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsRequired")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsSearchable")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsVariantAxis")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("MaxValue")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal?>("MinValue")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("UnitHint")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("ValidationRegex")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("AttributeId");
+
+                    b.HasIndex("IndustryId", "Code")
+                        .IsUnique();
+
+                    b.ToTable("AttributeDefinitions", "mdm");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.AttributeOption", b =>
+                {
+                    b.Property<long>("OptionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("OptionId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<long>("AttributeId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("OptionId");
+
+                    b.HasIndex("AttributeId");
+
+                    b.ToTable("AttributeOptions", "mdm");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.ProductAttribute", b =>
+                {
+                    b.Property<long>("ProductAttributeId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("ProductAttributeId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<long>("AttributeId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<long?>("OptionId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("ProductId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateOnly?>("ValidFrom")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("ValidTo")
+                        .HasColumnType("date");
+
+                    b.Property<bool?>("ValueBool")
+                        .HasColumnType("bit");
+
+                    b.Property<DateOnly?>("ValueDate")
+                        .HasColumnType("date");
+
+                    b.Property<decimal?>("ValueDecimal")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<int?>("ValueInt")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ValueJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ValueString")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.HasKey("ProductAttributeId");
+
+                    b.HasIndex("AttributeId");
+
+                    b.HasIndex("ProductId", "AttributeId");
+
+                    b.ToTable("ProductAttributes", "mdm");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.ProductVariant", b =>
+                {
+                    b.Property<long>("VariantId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("VariantId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Barcode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("EmpresaId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<long>("ParentProductId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Sku")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("VariantName")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.HasKey("VariantId");
+
+                    b.HasIndex("ParentProductId");
+
+                    b.HasIndex("EmpresaId", "Sku")
+                        .IsUnique();
+
+                    b.ToTable("ProductVariants", "mdm");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.VariantAttributeValue", b =>
+                {
+                    b.Property<long>("VariantId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("AttributeId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long?>("OptionId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ValueString")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("VariantId", "AttributeId");
+
+                    b.HasIndex("AttributeId");
+
+                    b.ToTable("VariantAttributeValues", "mdm");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.ProductUom", b =>
+                {
+                    b.Property<long>("ProductUomId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("ProductUomId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("FactorToBase")
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsBase")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<long>("ProductId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("UomId")
+                        .HasColumnType("int");
+
+                    b.HasKey("ProductUomId");
+
+                    b.HasIndex("ProductId", "UomId")
+                        .IsUnique();
+
+                    b.ToTable("ProductUoms", "mdm");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.CompanyProductFeature", b =>
+                {
+                    b.Property<int>("EmpresaId")
+                        .HasColumnType("int");
+
+                    b.Property<long>("CompanyProductId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("FeatureCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Settings")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("EmpresaId", "CompanyProductId", "FeatureCode");
+
+                    b.HasIndex("CompanyProductId");
+
+                    b.ToTable("CompanyProductFeatures", "mdm");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.PRC.PriceList", b =>
+                {
+                    b.Property<long>("PriceListId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("PriceListId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("CurrencyId")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<int>("EmpresaId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateOnly?>("ValidFrom")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("ValidTo")
+                        .HasColumnType("date");
+
+                    b.HasKey("PriceListId");
+
+                    b.HasIndex("EmpresaId", "Code")
+                        .IsUnique();
+
+                    b.ToTable("PriceLists", "prc");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.PRC.PriceListItem", b =>
+                {
+                    b.Property<long>("ItemId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("ItemId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<long?>("CompanyProductId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal?>("MinQty")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<long>("PriceListId")
+                        .HasColumnType("bigint");
+
+                    b.Property<decimal>("UnitPrice")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<long?>("VariantId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("ItemId");
+
+                    b.HasIndex("PriceListId");
+
+                    b.HasIndex("CompanyProductId");
+
+                    b.ToTable("PriceListItems", "prc");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CST.CostingRule", b =>
+                {
+                    b.Property<int>("EmpresaId")
+                        .HasColumnType("int");
+
+                    b.Property<byte>("ProductKind")
+                        .HasColumnType("tinyint");
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<byte>("DefaultMethod")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("EmpresaId", "ProductKind");
+
+                    b.ToTable("CostingRules", "cst");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CST.LandedCostProfile", b =>
+                {
+                    b.Property<long>("ProfileId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("ProfileId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<byte>("AllocationMethod")
+                        .HasColumnType("tinyint");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("EmpresaId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("ProfileId");
+
+                    b.HasIndex("EmpresaId");
+
+                    b.ToTable("LandedCostProfiles", "cst");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.DOC.Document", b =>
+                {
+                    b.Property<long>("DocumentId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("DocumentId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("EmpresaId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long?>("FileSizeBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("MimeType")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("StoragePath")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<byte>("StorageProvider")
+                        .HasColumnType("tinyint");
+
+                    b.HasKey("DocumentId");
+
+                    b.HasIndex("EmpresaId");
+
+                    b.ToTable("Documents", "doc");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.DOC.ProductDocument", b =>
+                {
+                    b.Property<long>("ProductId")
+                        .HasColumnType("bigint");
+
+                    b.Property<long>("DocumentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<byte>("DocType")
+                        .HasColumnType("tinyint");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.HasKey("ProductId", "DocumentId");
+
+                    b.HasIndex("DocumentId");
+
+                    b.ToTable("ProductDocuments", "doc");
+                });
+
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Core.Empresa", b =>
                 {
                     b.HasOne("AgoraHub360.ERP.Domain.Entities.Core.Moneda", "MonedaBase")
@@ -992,6 +2306,267 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                 {
                     b.Navigation("Empresas");
                 });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.RUL.ProductIndustryRule", b =>
+                {
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.RUL.Industry", "Industry")
+                        .WithMany("Rules")
+                        .HasForeignKey("IndustryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Industry");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.Product", b =>
+                {
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.Brand", "Brand")
+                        .WithMany()
+                        .HasForeignKey("BrandId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.Catalog", "Catalog")
+                        .WithMany("Products")
+                        .HasForeignKey("CatalogId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.Uom", "DefaultUom")
+                        .WithMany()
+                        .HasForeignKey("DefaultUomId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.ProductStatus", "LifecycleStatus")
+                        .WithMany()
+                        .HasForeignKey("LifecycleStatusId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.Manufacturer", "Manufacturer")
+                        .WithMany()
+                        .HasForeignKey("ManufacturerId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Brand");
+                    b.Navigation("Catalog");
+                    b.Navigation("DefaultUom");
+                    b.Navigation("LifecycleStatus");
+                    b.Navigation("Manufacturer");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.CompanyProduct", b =>
+                {
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.Product", "Product")
+                        .WithMany("CompanyProducts")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.ProductCode", b =>
+                {
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.Product", "Product")
+                        .WithMany("Codes")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.Category", b =>
+                {
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.Catalog", "Catalog")
+                        .WithMany("Categories")
+                        .HasForeignKey("CatalogId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.Category", "Parent")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Catalog");
+                    b.Navigation("Parent");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.ProductCategory", b =>
+                {
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.Category", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.Product", "Product")
+                        .WithMany("ProductCategories")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.ProductClassification", b =>
+                {
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.Catalog", "Catalog")
+                        .WithMany()
+                        .HasForeignKey("CatalogId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Catalog");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.ProductClassificationLink", b =>
+                {
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.ProductClassification", "Classification")
+                        .WithMany()
+                        .HasForeignKey("ClassificationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Classification");
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.AttributeDefinition", b =>
+                {
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.RUL.Industry", "Industry")
+                        .WithMany()
+                        .HasForeignKey("IndustryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Industry");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.AttributeOption", b =>
+                {
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.AttributeDefinition", "Attribute")
+                        .WithMany("Options")
+                        .HasForeignKey("AttributeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Attribute");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.ProductAttribute", b =>
+                {
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.AttributeDefinition", "Attribute")
+                        .WithMany()
+                        .HasForeignKey("AttributeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.Product", "Product")
+                        .WithMany("Attributes")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Attribute");
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.ProductVariant", b =>
+                {
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.Product", "ParentProduct")
+                        .WithMany("Variants")
+                        .HasForeignKey("ParentProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ParentProduct");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.VariantAttributeValue", b =>
+                {
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.AttributeDefinition", "Attribute")
+                        .WithMany()
+                        .HasForeignKey("AttributeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.ProductVariant", "Variant")
+                        .WithMany("AxisValues")
+                        .HasForeignKey("VariantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Attribute");
+                    b.Navigation("Variant");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.ProductUom", b =>
+                {
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.Product", "Product")
+                        .WithMany("UomConversions")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.CompanyProductFeature", b =>
+                {
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.CompanyProduct", "CompanyProduct")
+                        .WithMany("Features")
+                        .HasForeignKey("CompanyProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CompanyProduct");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.PRC.PriceListItem", b =>
+                {
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.CompanyProduct", "CompanyProduct")
+                        .WithMany()
+                        .HasForeignKey("CompanyProductId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.PRC.PriceList", "PriceList")
+                        .WithMany("Items")
+                        .HasForeignKey("PriceListId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CompanyProduct");
+                    b.Navigation("PriceList");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.DOC.ProductDocument", b =>
+                {
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.DOC.Document", "Document")
+                        .WithMany()
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Document");
+                    b.Navigation("Product");
+                });
+
 #pragma warning restore 612, 618
         }
     }

@@ -1,0 +1,68 @@
+namespace AgoraHub360.ERP.Web.Services;
+
+using System.Net.Http.Json;
+using AgoraHub360.ERP.Shared.DTOs;
+using AgoraHub360.ERP.Shared.DTOs.MDM;
+
+public class MdmVariantHttpService
+{
+    private readonly HttpClient _http;
+    private const string BaseUrl = "api/v1/mdm/variants";
+
+    public MdmVariantHttpService(HttpClient http) => _http = http;
+
+    public async Task<List<ProductVariantDto>> GetByParentAsync(long parentProductId)
+    {
+        var url = $"{BaseUrl}?parentProductId={parentProductId}";
+        var response = await _http.GetFromJsonAsync<ApiResponse<List<ProductVariantDto>>>(url);
+        return response?.Data ?? new();
+    }
+
+    public async Task<List<ProductVariantDto>> GetAllAsync()
+    {
+        var response = await _http.GetFromJsonAsync<ApiResponse<List<ProductVariantDto>>>(BaseUrl);
+        return response?.Data ?? new();
+    }
+
+    public async Task<ProductVariantDto?> GetByIdAsync(long id)
+    {
+        var response = await _http.GetFromJsonAsync<ApiResponse<ProductVariantDto>>($"{BaseUrl}/{id}");
+        return response?.Data;
+    }
+
+    public async Task<ApiResponse<ProductVariantDto>> CreateAsync(CreateProductVariantDto dto)
+    {
+        var response = await _http.PostAsJsonAsync(BaseUrl, dto);
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            return ApiResponse<ProductVariantDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
+        }
+        return await response.Content.ReadFromJsonAsync<ApiResponse<ProductVariantDto>>()
+            ?? ApiResponse<ProductVariantDto>.Fail("Error de comunicación con el servidor.");
+    }
+
+    public async Task<ApiResponse<ProductVariantDto>> UpdateAsync(long id, UpdateProductVariantDto dto)
+    {
+        var response = await _http.PutAsJsonAsync($"{BaseUrl}/{id}", dto);
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            return ApiResponse<ProductVariantDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
+        }
+        return await response.Content.ReadFromJsonAsync<ApiResponse<ProductVariantDto>>()
+            ?? ApiResponse<ProductVariantDto>.Fail("Error de comunicación con el servidor.");
+    }
+
+    public async Task<ApiResponse<bool>> DeleteAsync(long id)
+    {
+        var response = await _http.DeleteAsync($"{BaseUrl}/{id}");
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            return ApiResponse<bool>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
+        }
+        return await response.Content.ReadFromJsonAsync<ApiResponse<bool>>()
+            ?? ApiResponse<bool>.Fail("Error de comunicación con el servidor.");
+    }
+}

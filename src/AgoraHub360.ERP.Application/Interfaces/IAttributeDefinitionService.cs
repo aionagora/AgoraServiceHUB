@@ -11,6 +11,7 @@ public interface IAttributeDefinitionService
     Task<Result<bool>> DeleteAsync(long id, CancellationToken ct = default);
 
     Task<Result<AttributeOptionDto>> AddOptionAsync(CreateAttributeOptionDto dto, CancellationToken ct = default);
+    Task<Result<AttributeOptionDto>> UpdateOptionAsync(long optionId, UpdateAttributeOptionDto dto, CancellationToken ct = default);
     Task<Result<bool>> DeleteOptionAsync(long optionId, CancellationToken ct = default);
 
     Task<Result<IReadOnlyList<ProductAttributeDto>>> GetProductAttributesAsync(long productId, CancellationToken ct = default);
