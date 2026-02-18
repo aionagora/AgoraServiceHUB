@@ -17,13 +17,31 @@ public static class DependencyInjection
         services.AddScoped<IParametroSistemaService, ParametroSistemaService>();
         services.AddScoped<INumeracionDocumentoService, NumeracionDocumentoService>();
 
-        // MDM (Datos Maestros)
+        // MDM legacy
         services.AddScoped<ICategoriaProductoService, CategoriaProductoService>();
         services.AddScoped<IUnidadMedidaService, UnidadMedidaService>();
         services.AddScoped<IProductoService, ProductoService>();
         services.AddScoped<IClienteService, ClienteService>();
         services.AddScoped<IProveedorService, ProveedorService>();
         services.AddScoped<IAlmacenService, AlmacenService>();
+
+        // MDM nuevo modelo
+        services.AddScoped<ICatalogService, CatalogService>();
+        services.AddScoped<IProductService, ProductService>();
+        services.AddScoped<ICompanyProductService, CompanyProductService>();
+        services.AddScoped<IProductCodeService, ProductCodeService>();
+        services.AddScoped<ICategoryService, CategoryService>();
+        services.AddScoped<IAttributeDefinitionService, AttributeDefinitionService>();
+        services.AddScoped<IProductVariantService, ProductVariantService>();
+
+        // RUL
+        services.AddScoped<IIndustryService, IndustryService>();
+
+        // VER
+        services.AddScoped<IVersioningService, VersioningService>();
+
+        // PRC
+        services.AddScoped<IPriceListService, PriceListService>();
 
         return services;
     }

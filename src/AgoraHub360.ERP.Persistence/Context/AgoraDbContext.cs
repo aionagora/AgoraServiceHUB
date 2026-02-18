@@ -3,7 +3,12 @@ namespace AgoraHub360.ERP.Persistence.Context;
 using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Domain.Common;
 using AgoraHub360.ERP.Domain.Entities.Core;
+using AgoraHub360.ERP.Domain.Entities.CST;
+using AgoraHub360.ERP.Domain.Entities.DOC;
 using AgoraHub360.ERP.Domain.Entities.MDM;
+using AgoraHub360.ERP.Domain.Entities.PRC;
+using AgoraHub360.ERP.Domain.Entities.RUL;
+using AgoraHub360.ERP.Domain.Entities.VER;
 using AgoraHub360.ERP.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,7 +34,7 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     {
     }
 
-    // Core
+    // ── Core ──────────────────────────────────────────────────────────────────
     public DbSet<Empresa> Empresas => Set<Empresa>();
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<UsuarioEmpresa> UsuarioEmpresas => Set<UsuarioEmpresa>();
@@ -40,7 +45,7 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     public DbSet<ParametroSistema> ParametrosSistema => Set<ParametroSistema>();
     public DbSet<NumeracionDocumento> NumeracionesDocumento => Set<NumeracionDocumento>();
 
-    // MDM (Datos Maestros)
+    // ── MDM Legacy (mantener compatibilidad) ─────────────────────────────────
     public DbSet<CategoriaProducto> CategoriasProducto => Set<CategoriaProducto>();
     public DbSet<UnidadMedida> UnidadesMedida => Set<UnidadMedida>();
     public DbSet<Producto> Productos => Set<Producto>();
@@ -49,7 +54,55 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     public DbSet<Almacen> Almacenes => Set<Almacen>();
     public DbSet<UbicacionAlmacen> UbicacionesAlmacen => Set<UbicacionAlmacen>();
 
-    // Auditoría
+    // ── MDM: Catálogo y producto base (nuevo modelo) ──────────────────────────
+    public DbSet<Catalog> Catalogs => Set<Catalog>();
+    public DbSet<Brand> Brands => Set<Brand>();
+    public DbSet<Manufacturer> Manufacturers => Set<Manufacturer>();
+    public DbSet<ProductStatus> ProductStatuses => Set<ProductStatus>();
+    public DbSet<Uom> Uoms => Set<Uom>();
+    public DbSet<Product> Products => Set<Product>();
+    public DbSet<CompanyProduct> CompanyProducts => Set<CompanyProduct>();
+    public DbSet<ProductCode> ProductCodes => Set<ProductCode>();
+
+    // ── MDM: Clasificación ────────────────────────────────────────────────────
+    public DbSet<Category> Categories => Set<Category>();
+    public DbSet<ProductCategory> ProductCategories => Set<ProductCategory>();
+    public DbSet<ProductClassification> ProductClassifications => Set<ProductClassification>();
+    public DbSet<ProductClassificationLink> ProductClassificationLinks => Set<ProductClassificationLink>();
+
+    // ── MDM: Atributos dinámicos ──────────────────────────────────────────────
+    public DbSet<AttributeDefinition> AttributeDefinitions => Set<AttributeDefinition>();
+    public DbSet<AttributeOption> AttributeOptions => Set<AttributeOption>();
+    public DbSet<ProductAttribute> ProductAttributes => Set<ProductAttribute>();
+
+    // ── MDM: Variantes y presentaciones ──────────────────────────────────────
+    public DbSet<ProductVariant> ProductVariants => Set<ProductVariant>();
+    public DbSet<VariantAttributeValue> VariantAttributeValues => Set<VariantAttributeValue>();
+    public DbSet<ProductUom> ProductUoms => Set<ProductUom>();
+
+    // ── MDM: Features activables ──────────────────────────────────────────────
+    public DbSet<CompanyProductFeature> CompanyProductFeatures => Set<CompanyProductFeature>();
+
+    // ── RUL: Reglas por industria ─────────────────────────────────────────────
+    public DbSet<Industry> Industries => Set<Industry>();
+    public DbSet<ProductIndustryRule> ProductIndustryRules => Set<ProductIndustryRule>();
+
+    // ── VER: Versionado ───────────────────────────────────────────────────────
+    public DbSet<EntityVersion> EntityVersions => Set<EntityVersion>();
+
+    // ── PRC: Precios ──────────────────────────────────────────────────────────
+    public DbSet<PriceList> PriceLists => Set<PriceList>();
+    public DbSet<PriceListItem> PriceListItems => Set<PriceListItem>();
+
+    // ── CST: Costos ───────────────────────────────────────────────────────────
+    public DbSet<CostingRule> CostingRules => Set<CostingRule>();
+    public DbSet<LandedCostProfile> LandedCostProfiles => Set<LandedCostProfile>();
+
+    // ── DOC: Documentos multimedia ────────────────────────────────────────────
+    public DbSet<Document> Documents => Set<Document>();
+    public DbSet<ProductDocument> ProductDocuments => Set<ProductDocument>();
+
+    // ── Auditoría ─────────────────────────────────────────────────────────────
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
