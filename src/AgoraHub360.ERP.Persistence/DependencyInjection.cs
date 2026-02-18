@@ -17,10 +17,12 @@ public static class DependencyInjection
     public static IServiceCollection AddPersistence(this IServiceCollection services, string connectionString)
     {
         services.AddScoped<AuditableEntityInterceptor>();
+        services.AddScoped<EntityVersioningInterceptor>();
 
         services.AddDbContext<AgoraDbContext>((sp, options) =>
         {
             var auditInterceptor = sp.GetRequiredService<AuditableEntityInterceptor>();
+            var versionInterceptor = sp.GetRequiredService<EntityVersioningInterceptor>();
 
             options.UseSqlServer(connectionString, sqlOptions =>
             {
@@ -28,7 +30,7 @@ public static class DependencyInjection
                 sqlOptions.EnableRetryOnFailure(maxRetryCount: 3);
             });
 
-            options.AddInterceptors(auditInterceptor);
+            options.AddInterceptors(auditInterceptor, versionInterceptor);
         });
 
         services.AddScoped<IUnitOfWork>(provider =>

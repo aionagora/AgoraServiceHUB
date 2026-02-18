@@ -1,0 +1,337 @@
+@page "/mdm/variantes"
+@attribute [Authorize]
+@inject MdmVariantHttpService VariantService
+@inject MdmProductoGlobalHttpService ProductoGlobalService
+@inject IJSRuntime JS
+
+<PageTitle>Variantes de Producto</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3><i class="bi bi-intersect"></i> Variantes de Producto</h3>
+            <p class="text-muted mb-0">Gestiona las variantes (talla, color, etc.) de los productos</p>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="ShowCreateModal">
+                <i class="bi bi-plus-circle"></i> Nueva Variante
+            </button>
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <label class="form-label">Filtrar por Producto</label>
+            <select class="form-select" @bind="filterProductId" @bind:after="FilterVariants">
+                <option value="0">-- Todos los productos --</option>
+                @foreach (var p in productosGlobales)
+                {
+                    <option value="@p.ProductId">@p.NombreComercial</option>
+                }
+            </select>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle-fill"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (loading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2">Cargando variantes...</p>
+        </div>
+    }
+    else if (variantesFiltradas.Count == 0)
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> No hay variantes registradas.
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>SKU Variante</th>
+                                <th>Producto Padre</th>
+                                <th>Nombre Variante</th>
+                                <th>Barcode</th>
+                                <th>Ejes de Variacion</th>
+                                <th>Estado</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var v in variantesFiltradas)
+                            {
+                                <tr>
+                                    <td><code>@v.Sku</code></td>
+                                    <td><strong>@v.ParentNombreComercial</strong></td>
+                                    <td><small>@(v.VariantName ?? "-")</small></td>
+                                    <td><small class="text-muted">@(v.Barcode ?? "-")</small></td>
+                                    <td>
+                                        @if (v.AxisValues.Any())
+                                        {
+                                            @foreach (var ax in v.AxisValues)
+                                            {
+                                                <span class="badge bg-light text-dark border me-1">
+                                                    @ax.AttributeName: @(ax.OptionValue ?? ax.ValueString ?? "?")
+                                                </span>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">-</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (v.Activo) { <span class="badge bg-success">Activo</span> }
+                                        else { <span class="badge bg-secondary">Inactivo</span> }
+                                    </td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditModal(v)" title="Editar">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger ms-1" @onclick="() => DeleteVariant(v)" title="Eliminar">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer text-muted small">@variantesFiltradas.Count variante(s)</div>
+        </div>
+    }
+</div>
+
+@* Modal Crear *@
+@if (showCreateModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-plus-circle"></i> Nueva Variante</h5>
+                    <button type="button" class="btn-close" @onclick="CloseCreateModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Producto Padre *</label>
+                        <select class="form-select" @bind="createForm.ParentProductId">
+                            <option value="0">-- Seleccione producto --</option>
+                            @foreach (var p in productosGlobales)
+                            {
+                                <option value="@p.ProductId">@p.NombreComercial</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">SKU de la Variante *</label>
+                        <input class="form-control" @bind="createForm.Sku" placeholder="Ej: PROD-001-AZUL-M" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Barcode (opcional)</label>
+                        <input class="form-control" @bind="createForm.Barcode" placeholder="Codigo de barras" />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseCreateModal">Cancelar</button>
+                    <button class="btn btn-primary" @onclick="CreateVariant" disabled="@saving">
+                        @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        Guardar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Modal Editar *@
+@if (showEditModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-pencil"></i> Editar Variante</h5>
+                    <button type="button" class="btn-close" @onclick="CloseEditModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">SKU *</label>
+                        <input class="form-control" @bind="editForm.Sku" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Barcode</label>
+                        <input class="form-control" @bind="editForm.Barcode" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Nombre Variante</label>
+                        <input class="form-control" @bind="editForm.VariantName" placeholder="Ej: Azul Talla M" />
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" @bind="editForm.Activo" id="vActivo" />
+                        <label class="form-check-label" for="vActivo">Activo</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseEditModal">Cancelar</button>
+                    <button class="btn btn-primary" @onclick="UpdateVariant" disabled="@saving">
+                        @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        Actualizar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private class CreateForm
+    {
+        public long ParentProductId { get; set; }
+        public string Sku { get; set; } = "";
+        public string? Barcode { get; set; }
+    }
+
+    private class EditForm
+    {
+        public string Sku { get; set; } = "";
+        public string? Barcode { get; set; }
+        public string? VariantName { get; set; }
+        public bool Activo { get; set; }
+    }
+
+    private List<AgoraHub360.ERP.Shared.DTOs.MDM.ProductVariantDto> variantes = new();
+    private List<AgoraHub360.ERP.Shared.DTOs.MDM.ProductVariantDto> variantesFiltradas = new();
+    private List<AgoraHub360.ERP.Shared.DTOs.MDM.ProductDto2> productosGlobales = new();
+    private long filterProductId;
+    private bool loading = true;
+    private bool saving = false;
+    private bool showCreateModal = false;
+    private bool showEditModal = false;
+    private string? errorMessage;
+    private string? successMessage;
+    private long editingId;
+    private CreateForm createForm = new();
+    private EditForm editForm = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            loading = true;
+            var t1 = VariantService.GetAllAsync();
+            var t2 = ProductoGlobalService.GetAllAsync();
+            await Task.WhenAll(t1, t2);
+            variantes = await t1;
+            productosGlobales = await t2;
+            variantesFiltradas = variantes;
+        }
+        catch (Exception ex) { errorMessage = $"Error al cargar: {ex.Message}"; }
+        finally { loading = false; }
+    }
+
+    private void FilterVariants()
+    {
+        variantesFiltradas = filterProductId == 0
+            ? variantes
+            : variantes.Where(v => v.ParentProductId == filterProductId).ToList();
+    }
+
+    private void ShowCreateModal() { createForm = new(); showCreateModal = true; }
+    private void CloseCreateModal() => showCreateModal = false;
+
+    private void ShowEditModal(AgoraHub360.ERP.Shared.DTOs.MDM.ProductVariantDto v)
+    {
+        editForm = new EditForm { Sku = v.Sku, Barcode = v.Barcode, VariantName = v.VariantName, Activo = v.Activo };
+        editingId = v.VariantId;
+        showEditModal = true;
+    }
+
+    private void CloseEditModal() => showEditModal = false;
+
+    private async Task CreateVariant()
+    {
+        if (createForm.ParentProductId == 0 || string.IsNullOrWhiteSpace(createForm.Sku))
+        {
+            errorMessage = "Producto padre y SKU son obligatorios.";
+            return;
+        }
+        try
+        {
+            saving = true; errorMessage = null;
+            var dto = new AgoraHub360.ERP.Shared.DTOs.MDM.CreateProductVariantDto(
+                createForm.ParentProductId, createForm.Sku, createForm.Barcode);
+            var result = await VariantService.CreateAsync(dto);
+            if (result.Success)
+            {
+                successMessage = "Variante creada.";
+                CloseCreateModal();
+                variantes = await VariantService.GetAllAsync();
+                FilterVariants();
+            }
+            else errorMessage = result.Message;
+        }
+        catch (Exception ex) { errorMessage = $"Error: {ex.Message}"; }
+        finally { saving = false; }
+    }
+
+    private async Task UpdateVariant()
+    {
+        if (string.IsNullOrWhiteSpace(editForm.Sku)) { errorMessage = "El SKU es obligatorio."; return; }
+        try
+        {
+            saving = true; errorMessage = null;
+            var dto = new AgoraHub360.ERP.Shared.DTOs.MDM.UpdateProductVariantDto(
+                editForm.Sku, editForm.Barcode, editForm.VariantName, editForm.Activo);
+            var result = await VariantService.UpdateAsync(editingId, dto);
+            if (result.Success)
+            {
+                successMessage = "Variante actualizada.";
+                CloseEditModal();
+                variantes = await VariantService.GetAllAsync();
+                FilterVariants();
+            }
+            else errorMessage = result.Message;
+        }
+        catch (Exception ex) { errorMessage = $"Error: {ex.Message}"; }
+        finally { saving = false; }
+    }
+
+    private async Task DeleteVariant(AgoraHub360.ERP.Shared.DTOs.MDM.ProductVariantDto v)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"Eliminar la variante '{v.Sku}'?")) return;
+        try
+        {
+            var result = await VariantService.DeleteAsync(v.VariantId);
+            if (result.Success)
+            {
+                successMessage = "Variante eliminada.";
+                variantes = await VariantService.GetAllAsync();
+                FilterVariants();
+            }
+            else errorMessage = result.Message;
+        }
+        catch (Exception ex) { errorMessage = $"Error: {ex.Message}"; }
+    }
+}

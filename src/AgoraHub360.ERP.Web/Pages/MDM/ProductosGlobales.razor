@@ -1,0 +1,454 @@
+@page "/mdm/productos-globales"
+@attribute [Authorize]
+@inject MdmProductoGlobalHttpService ProductoService
+@inject IJSRuntime JS
+
+<PageTitle>Catalogo Global de Productos</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3><i class="bi bi-database"></i> Catalogo Global de Productos</h3>
+            <p class="text-muted mb-0">Plantillas globales de productos (independientes de empresa)</p>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="ShowCreateModal">
+                <i class="bi bi-plus-circle"></i> Nuevo Producto
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (loading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2">Cargando productos...</p>
+        </div>
+    }
+    else if (productos.Count == 0)
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> No hay productos en el catalogo global.
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nombre Comercial</th>
+                                <th>Nombre Generico</th>
+                                <th>Tipo</th>
+                                <th>Estado</th>
+                                <th class="text-center">Stockable</th>
+                                <th class="text-center">Vendible</th>
+                                <th>Catalogo</th>
+                                <th>UoM</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in productos)
+                            {
+                                <tr>
+                                    <td><strong>@p.NombreComercial</strong></td>
+                                    <td><small class="text-muted">@p.NombreGenerico</small></td>
+                                    <td><span class="badge bg-secondary">@KindLabel(p.ProductKind)</span></td>
+                                    <td>
+                                        @if (p.Activo)
+                                        {
+                                            <span class="badge bg-success">@p.LifecycleStatusCode</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Inactivo</span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        <i class="bi @(p.IsStockable ? "bi-check-circle-fill text-success" : "bi-dash-circle text-secondary")"></i>
+                                    </td>
+                                    <td class="text-center">
+                                        <i class="bi @(p.IsSellable ? "bi-check-circle-fill text-success" : "bi-dash-circle text-secondary")"></i>
+                                    </td>
+                                    <td><small>@p.CatalogNombre</small></td>
+                                    <td><span class="badge bg-info text-dark">@p.DefaultUomCode</span></td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditModal(p)" title="Editar">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger ms-1" @onclick="() => DeleteProducto(p)" title="Eliminar">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer text-muted small">
+                @productos.Count producto(s) en el catalogo global
+            </div>
+        </div>
+    }
+</div>
+
+@* Modal Crear *@
+@if (showCreateModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-plus-circle"></i> Nuevo Producto Global</h5>
+                    <button type="button" class="btn-close" @onclick="CloseCreateModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Nombre Comercial *</label>
+                            <input class="form-control" @bind="createForm.NombreComercial" placeholder="Nombre comercial" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Nombre Generico *</label>
+                            <input class="form-control" @bind="createForm.NombreGenerico" placeholder="Nombre generico" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Tipo de Producto *</label>
+                            <select class="form-select" @bind="createForm.ProductKind">
+                                <option value="1">Bien</option>
+                                <option value="2">Servicio</option>
+                                <option value="3">Kit / Bundle</option>
+                                <option value="4">BOM / Fabricado</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">ID Catalogo *</label>
+                            <input type="number" class="form-control" @bind="createForm.CatalogId" placeholder="1" />
+                            <small class="text-muted">ID del catalogo MDM</small>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">ID Unidad Medida Base *</label>
+                            <input type="number" class="form-control" @bind="createForm.DefaultUomId" placeholder="1" />
+                            <small class="text-muted">ID de la UoM base</small>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripcion Corta</label>
+                        <input class="form-control" @bind="createForm.DescripcionCorta" placeholder="Descripcion breve" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripcion Larga</label>
+                        <textarea class="form-control" @bind="createForm.DescripcionLarga" rows="2"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-auto">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="createForm.IsStockable" id="cStockable" />
+                                <label class="form-check-label" for="cStockable">Stockable</label>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="createForm.IsSellable" id="cSellable" />
+                                <label class="form-check-label" for="cSellable">Vendible</label>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="createForm.IsPurchasable" id="cPurchasable" />
+                                <label class="form-check-label" for="cPurchasable">Comprable</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseCreateModal">Cancelar</button>
+                    <button class="btn btn-primary" @onclick="CreateProducto" disabled="@saving">
+                        @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        Guardar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* Modal Editar *@
+@if (showEditModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-pencil"></i> Editar Producto</h5>
+                    <button type="button" class="btn-close" @onclick="CloseEditModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Nombre Comercial *</label>
+                            <input class="form-control" @bind="editForm.NombreComercial" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Nombre Generico *</label>
+                            <input class="form-control" @bind="editForm.NombreGenerico" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Tipo</label>
+                            <select class="form-select" @bind="editForm.ProductKind">
+                                <option value="1">Bien</option>
+                                <option value="2">Servicio</option>
+                                <option value="3">Kit / Bundle</option>
+                                <option value="4">BOM / Fabricado</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">ID Unidad Medida Base</label>
+                            <input type="number" class="form-control" @bind="editForm.DefaultUomId" />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Estado Ciclo de Vida (ID)</label>
+                            <select class="form-select" @bind="editForm.LifecycleStatusId">
+                                <option value="1">Borrador</option>
+                                <option value="2">Activo</option>
+                                <option value="3">Bloqueado</option>
+                                <option value="4">Descontinuado</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripcion Corta</label>
+                        <input class="form-control" @bind="editForm.DescripcionCorta" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripcion Larga</label>
+                        <textarea class="form-control" @bind="editForm.DescripcionLarga" rows="2"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-auto">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="editForm.IsStockable" id="eStockable" />
+                                <label class="form-check-label" for="eStockable">Stockable</label>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="editForm.IsSellable" id="eSellable" />
+                                <label class="form-check-label" for="eSellable">Vendible</label>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="editForm.IsPurchasable" id="ePurchasable" />
+                                <label class="form-check-label" for="ePurchasable">Comprable</label>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="editForm.Activo" id="eActivo" />
+                                <label class="form-check-label" for="eActivo">Activo</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseEditModal">Cancelar</button>
+                    <button class="btn btn-primary" @onclick="UpdateProducto" disabled="@saving">
+                        @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        Actualizar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    // ── Form models (mutable, para Blazor binding) ─────────────────────────────
+    private class CreateForm
+    {
+        public long CatalogId { get; set; } = 1;
+        public byte ProductKind { get; set; } = 1;
+        public string NombreGenerico { get; set; } = "";
+        public string NombreComercial { get; set; } = "";
+        public string? DescripcionCorta { get; set; }
+        public string? DescripcionLarga { get; set; }
+        public int DefaultUomId { get; set; } = 1;
+        public bool IsStockable { get; set; } = true;
+        public bool IsSellable { get; set; } = true;
+        public bool IsPurchasable { get; set; } = true;
+    }
+
+    private class EditForm
+    {
+        public byte ProductKind { get; set; }
+        public string NombreGenerico { get; set; } = "";
+        public string NombreComercial { get; set; } = "";
+        public string? DescripcionCorta { get; set; }
+        public string? DescripcionLarga { get; set; }
+        public int DefaultUomId { get; set; }
+        public bool IsStockable { get; set; }
+        public bool IsSellable { get; set; }
+        public bool IsPurchasable { get; set; }
+        public int LifecycleStatusId { get; set; }
+        public bool Activo { get; set; }
+    }
+
+    // ── State ───────────────────────────────────────────────────────────────────
+    private List<AgoraHub360.ERP.Shared.DTOs.MDM.ProductDto2> productos = new();
+    private bool loading = true;
+    private bool saving = false;
+    private bool showCreateModal = false;
+    private bool showEditModal = false;
+    private string? errorMessage;
+    private string? successMessage;
+    private long editingId;
+    private CreateForm createForm = new();
+    private EditForm editForm = new();
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    private async Task LoadData()
+    {
+        try
+        {
+            loading = true;
+            errorMessage = null;
+            productos = await ProductoService.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar datos: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private void ShowCreateModal()
+    {
+        createForm = new CreateForm();
+        showCreateModal = true;
+    }
+
+    private void CloseCreateModal() => showCreateModal = false;
+
+    private void ShowEditModal(AgoraHub360.ERP.Shared.DTOs.MDM.ProductDto2 p)
+    {
+        editForm = new EditForm
+        {
+            ProductKind = p.ProductKind,
+            NombreGenerico = p.NombreGenerico,
+            NombreComercial = p.NombreComercial,
+            DescripcionCorta = p.DescripcionCorta,
+            DescripcionLarga = p.DescripcionLarga,
+            DefaultUomId = p.DefaultUomId,
+            IsStockable = p.IsStockable,
+            IsSellable = p.IsSellable,
+            IsPurchasable = p.IsPurchasable,
+            LifecycleStatusId = p.LifecycleStatusId,
+            Activo = p.Activo
+        };
+        editingId = p.ProductId;
+        showEditModal = true;
+    }
+
+    private void CloseEditModal() => showEditModal = false;
+
+    private async Task CreateProducto()
+    {
+        if (string.IsNullOrWhiteSpace(createForm.NombreComercial) || createForm.CatalogId == 0 || createForm.DefaultUomId == 0)
+        {
+            errorMessage = "Nombre Comercial, Catalogo y Unidad de Medida son obligatorios.";
+            return;
+        }
+        try
+        {
+            saving = true;
+            errorMessage = null;
+            var dto = new AgoraHub360.ERP.Shared.DTOs.MDM.CreateProductDto2(
+                createForm.CatalogId, createForm.ProductKind,
+                createForm.NombreGenerico, createForm.NombreComercial,
+                createForm.DescripcionCorta, createForm.DescripcionLarga,
+                null, null, createForm.DefaultUomId,
+                createForm.IsStockable, createForm.IsSellable, createForm.IsPurchasable);
+            var result = await ProductoService.CreateAsync(dto);
+            if (result.Success) { successMessage = "Producto creado exitosamente."; CloseCreateModal(); await LoadData(); }
+            else errorMessage = result.Message;
+        }
+        catch (Exception ex) { errorMessage = $"Error: {ex.Message}"; }
+        finally { saving = false; }
+    }
+
+    private async Task UpdateProducto()
+    {
+        if (string.IsNullOrWhiteSpace(editForm.NombreComercial))
+        {
+            errorMessage = "El nombre comercial es obligatorio.";
+            return;
+        }
+        try
+        {
+            saving = true;
+            errorMessage = null;
+            var dto = new AgoraHub360.ERP.Shared.DTOs.MDM.UpdateProductDto2(
+                editForm.ProductKind, editForm.NombreGenerico, editForm.NombreComercial,
+                editForm.DescripcionCorta, editForm.DescripcionLarga,
+                null, null, editForm.DefaultUomId,
+                editForm.IsStockable, editForm.IsSellable, editForm.IsPurchasable,
+                editForm.LifecycleStatusId, editForm.Activo);
+            var result = await ProductoService.UpdateAsync(editingId, dto);
+            if (result.Success) { successMessage = "Producto actualizado."; CloseEditModal(); await LoadData(); }
+            else errorMessage = result.Message;
+        }
+        catch (Exception ex) { errorMessage = $"Error: {ex.Message}"; }
+        finally { saving = false; }
+    }
+
+    private async Task DeleteProducto(AgoraHub360.ERP.Shared.DTOs.MDM.ProductDto2 p)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"Eliminar el producto '{p.NombreComercial}'?")) return;
+        try
+        {
+            errorMessage = null;
+            var result = await ProductoService.DeleteAsync(p.ProductId);
+            if (result.Success) { successMessage = "Producto eliminado."; await LoadData(); }
+            else errorMessage = result.Message;
+        }
+        catch (Exception ex) { errorMessage = $"Error: {ex.Message}"; }
+    }
+
+    private static string KindLabel(byte kind) => kind switch
+    {
+        1 => "Bien",
+        2 => "Servicio",
+        3 => "Kit",
+        4 => "BOM",
+        _ => kind.ToString()
+    };
+}

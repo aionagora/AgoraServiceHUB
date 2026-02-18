@@ -1,0 +1,392 @@
+@page "/mdm/atributos"
+@attribute [Authorize]
+@inject MdmAttributeHttpService AttributeService
+@inject IJSRuntime JS
+
+<PageTitle>Atributos de Producto</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3><i class="bi bi-list-check"></i> Atributos de Producto</h3>
+            <p class="text-muted mb-0">Definicion de atributos dinamicos por industria (modelo EAV)</p>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="ShowCreateModal">
+                <i class="bi bi-plus-circle"></i> Nuevo Atributo
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle-fill"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (loading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2">Cargando atributos...</p>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <!-- Lista de Atributos -->
+            <div class="col-md-7">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <strong>Atributos (@atributos.Count)</strong>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-sm mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Codigo</th>
+                                        <th>Nombre</th>
+                                        <th>Tipo Dato</th>
+                                        <th>Industria</th>
+                                        <th class="text-center">Eje Variante</th>
+                                        <th>Opciones</th>
+                                        <th class="text-end">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (atributos.Count == 0)
+                                    {
+                                        <tr><td colspan="7" class="text-center text-muted py-3">No hay atributos definidos</td></tr>
+                                    }
+                                    @foreach (var a in atributos)
+                                    {
+                                        <tr class="@(selectedAtributo?.AttributeId == a.AttributeId ? "table-primary" : "")"
+                                            @onclick="() => SelectAtributo(a)" style="cursor:pointer;">
+                                            <td><code>@a.Code</code></td>
+                                            <td><strong>@a.Name</strong></td>
+                                            <td><span class="badge bg-secondary">@DataTypeLabel(a.DataType)</span></td>
+                                            <td><small>@a.IndustryCode</small></td>
+                                            <td class="text-center">
+                                                @if (a.IsVariantAxis)
+                                                {
+                                                    <i class="bi bi-check-circle-fill text-success"></i>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (a.Options.Any())
+                                                {
+                                                    <span class="badge bg-info text-dark">@a.Options.Count opcion(es)</span>
+                                                }
+                                            </td>
+                                            <td class="text-end">
+                                                <button class="btn btn-sm btn-outline-danger"
+                                                        @onclick:stopPropagation="true"
+                                                        @onclick="() => DeleteAtributo(a)" title="Eliminar">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel de Opciones del atributo seleccionado -->
+            <div class="col-md-5">
+                @if (selectedAtributo is not null)
+                {
+                    <div class="card">
+                        <div class="card-header">
+                            <strong>Opciones: @selectedAtributo.Name</strong>
+                            <small class="text-muted ms-2">(@DataTypeLabel(selectedAtributo.DataType))</small>
+                        </div>
+                        <div class="card-body">
+                            @if (selectedAtributo.DataType == 7) // Select
+                            {
+                                <div class="mb-3">
+                                    <div class="input-group">
+                                        <input class="form-control form-control-sm" @bind="newOptionValue"
+                                               placeholder="Valor de la opcion..." />
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="AddOption" disabled="@savingOption">
+                                            @if (savingOption) { <span class="spinner-border spinner-border-sm"></span> }
+                                            else { <i class="bi bi-plus"></i> }
+                                        </button>
+                                    </div>
+                                </div>
+
+                                @if (selectedAtributo.Options.Any())
+                                {
+                                    <ul class="list-group list-group-flush">
+                                        @foreach (var opt in selectedAtributo.Options.OrderBy(o => o.SortOrder))
+                                        {
+                                            <li class="list-group-item d-flex justify-content-between align-items-center py-1">
+                                                <span>@opt.Value</span>
+                                                <button class="btn btn-sm btn-outline-danger"
+                                                        @onclick="() => DeleteOption(opt)" title="Eliminar opcion">
+                                                    <i class="bi bi-x"></i>
+                                                </button>
+                                            </li>
+                                        }
+                                    </ul>
+                                }
+                                else
+                                {
+                                    <p class="text-muted small">Sin opciones. Agrega la primera opcion arriba.</p>
+                                }
+                            }
+                            else
+                            {
+                                <div class="alert alert-light border">
+                                    <i class="bi bi-info-circle"></i>
+                                    Este atributo es de tipo <strong>@DataTypeLabel(selectedAtributo.DataType)</strong>.
+                                    Las opciones solo aplican para atributos de tipo <strong>Select</strong>.
+                                </div>
+                                <dl class="row small">
+                                    <dt class="col-6">Requerido</dt>
+                                    <dd class="col-6">@(selectedAtributo.IsRequired ? "Si" : "No")</dd>
+                                    <dt class="col-6">Buscable</dt>
+                                    <dd class="col-6">@(selectedAtributo.IsSearchable ? "Si" : "No")</dd>
+                                    <dt class="col-6">Eje de Variante</dt>
+                                    <dd class="col-6">@(selectedAtributo.IsVariantAxis ? "Si" : "No")</dd>
+                                    @if (!string.IsNullOrEmpty(selectedAtributo.UnitHint))
+                                    {
+                                        <dt class="col-6">Unidad</dt>
+                                        <dd class="col-6">@selectedAtributo.UnitHint</dd>
+                                    }
+                                </dl>
+                            }
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="card">
+                        <div class="card-body text-center text-muted py-5">
+                            <i class="bi bi-arrow-left-circle" style="font-size:2rem;"></i>
+                            <p class="mt-2">Selecciona un atributo para ver sus opciones</p>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@* Modal Crear Atributo *@
+@if (showCreateModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-plus-circle"></i> Nuevo Atributo</h5>
+                    <button type="button" class="btn-close" @onclick="CloseCreateModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Codigo *</label>
+                            <input class="form-control" @bind="createForm.Code" placeholder="COLOR, TALLA, PESO..." />
+                        </div>
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label">Nombre *</label>
+                            <input class="form-control" @bind="createForm.Name" placeholder="Nombre descriptivo" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Tipo de Dato *</label>
+                            <select class="form-select" @bind="createForm.DataType">
+                                <option value="1">Texto (String)</option>
+                                <option value="2">Entero (Int)</option>
+                                <option value="3">Decimal</option>
+                                <option value="4">Booleano</option>
+                                <option value="5">Fecha</option>
+                                <option value="6">JSON</option>
+                                <option value="7">Select (lista de opciones)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">ID Industria *</label>
+                            <input type="number" class="form-control" @bind="createForm.IndustryId" placeholder="1" />
+                            <small class="text-muted">ID de la industria a la que aplica</small>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Hint de Unidad</label>
+                            <input class="form-control" @bind="createForm.UnitHint" placeholder="kg, cm, L..." />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-auto">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="createForm.IsRequired" id="aRequired" />
+                                <label class="form-check-label" for="aRequired">Requerido</label>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="createForm.IsSearchable" id="aSearchable" />
+                                <label class="form-check-label" for="aSearchable">Buscable</label>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="createForm.IsVariantAxis" id="aVariantAxis" />
+                                <label class="form-check-label" for="aVariantAxis">Eje de Variante</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseCreateModal">Cancelar</button>
+                    <button class="btn btn-primary" @onclick="CreateAtributo" disabled="@saving">
+                        @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        Guardar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private class CreateForm
+    {
+        public int IndustryId { get; set; } = 1;
+        public string Code { get; set; } = "";
+        public string Name { get; set; } = "";
+        public byte DataType { get; set; } = 1;
+        public bool IsRequired { get; set; } = false;
+        public bool IsSearchable { get; set; } = false;
+        public bool IsVariantAxis { get; set; } = false;
+        public string? UnitHint { get; set; }
+    }
+
+    private List<AgoraHub360.ERP.Shared.DTOs.MDM.AttributeDefinitionDto> atributos = new();
+    private AgoraHub360.ERP.Shared.DTOs.MDM.AttributeDefinitionDto? selectedAtributo;
+    private bool loading = true;
+    private bool saving = false;
+    private bool savingOption = false;
+    private bool showCreateModal = false;
+    private string? errorMessage;
+    private string? successMessage;
+    private CreateForm createForm = new();
+    private string newOptionValue = "";
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    private async Task LoadData()
+    {
+        try
+        {
+            loading = true; errorMessage = null;
+            atributos = await AttributeService.GetAllAsync();
+            if (selectedAtributo is not null)
+                selectedAtributo = atributos.FirstOrDefault(a => a.AttributeId == selectedAtributo.AttributeId);
+        }
+        catch (Exception ex) { errorMessage = $"Error al cargar: {ex.Message}"; }
+        finally { loading = false; }
+    }
+
+    private void SelectAtributo(AgoraHub360.ERP.Shared.DTOs.MDM.AttributeDefinitionDto a)
+    {
+        selectedAtributo = selectedAtributo?.AttributeId == a.AttributeId ? null : a;
+        newOptionValue = "";
+    }
+
+    private void ShowCreateModal() { createForm = new(); showCreateModal = true; }
+    private void CloseCreateModal() => showCreateModal = false;
+
+    private async Task CreateAtributo()
+    {
+        if (string.IsNullOrWhiteSpace(createForm.Code) || string.IsNullOrWhiteSpace(createForm.Name) || createForm.IndustryId == 0)
+        {
+            errorMessage = "Codigo, Nombre e Industria son obligatorios.";
+            return;
+        }
+        try
+        {
+            saving = true; errorMessage = null;
+            var dto = new AgoraHub360.ERP.Shared.DTOs.MDM.CreateAttributeDefinitionDto(
+                createForm.IndustryId, createForm.Code, createForm.Name, createForm.DataType,
+                createForm.IsRequired, createForm.IsSearchable, createForm.IsVariantAxis,
+                null, null, null, createForm.UnitHint);
+            var result = await AttributeService.CreateAsync(dto);
+            if (result.Success) { successMessage = "Atributo creado."; CloseCreateModal(); await LoadData(); }
+            else errorMessage = result.Message;
+        }
+        catch (Exception ex) { errorMessage = $"Error: {ex.Message}"; }
+        finally { saving = false; }
+    }
+
+    private async Task DeleteAtributo(AgoraHub360.ERP.Shared.DTOs.MDM.AttributeDefinitionDto a)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"Eliminar el atributo '{a.Name}'?")) return;
+        try
+        {
+            var result = await AttributeService.DeleteAsync(a.AttributeId);
+            if (result.Success)
+            {
+                successMessage = "Atributo eliminado.";
+                if (selectedAtributo?.AttributeId == a.AttributeId) selectedAtributo = null;
+                await LoadData();
+            }
+            else errorMessage = result.Message;
+        }
+        catch (Exception ex) { errorMessage = $"Error: {ex.Message}"; }
+    }
+
+    private async Task AddOption()
+    {
+        if (selectedAtributo is null || string.IsNullOrWhiteSpace(newOptionValue)) return;
+        try
+        {
+            savingOption = true; errorMessage = null;
+            var dto = new AgoraHub360.ERP.Shared.DTOs.MDM.CreateAttributeOptionDto(
+                selectedAtributo.AttributeId, newOptionValue.Trim(),
+                selectedAtributo.Options.Count);
+            var result = await AttributeService.AddOptionAsync(dto);
+            if (result.Success) { newOptionValue = ""; await LoadData(); }
+            else errorMessage = result.Message;
+        }
+        catch (Exception ex) { errorMessage = $"Error: {ex.Message}"; }
+        finally { savingOption = false; }
+    }
+
+    private async Task DeleteOption(AgoraHub360.ERP.Shared.DTOs.MDM.AttributeOptionDto opt)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"Eliminar la opcion '{opt.Value}'?")) return;
+        try
+        {
+            var result = await AttributeService.DeleteOptionAsync(selectedAtributo!.AttributeId, opt.OptionId);
+            if (result.Success) { successMessage = "Opcion eliminada."; await LoadData(); }
+            else errorMessage = result.Message;
+        }
+        catch (Exception ex) { errorMessage = $"Error: {ex.Message}"; }
+    }
+
+    private static string DataTypeLabel(byte dt) => dt switch
+    {
+        1 => "Texto",
+        2 => "Entero",
+        3 => "Decimal",
+        4 => "Booleano",
+        5 => "Fecha",
+        6 => "JSON",
+        7 => "Select",
+        _ => dt.ToString()
+    };
+}
