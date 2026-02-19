@@ -1,0 +1,271 @@
+@page "/inventario/kardex"
+@attribute [Authorize]
+@inject MovimientoInventarioHttpService InvService
+@inject AlmacenHttpService AlmacenService
+@inject ProductoHttpService ProductoService
+
+<PageTitle>Kardex - AgoraHub360 ERP</PageTitle>
+
+<div class="page-header">
+    <h1>Kardex de Inventario</h1>
+    <p class="text-muted mb-0">Inventario &rsaquo; Kardex</p>
+</div>
+
+<!-- Panel de busqueda -->
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label mb-1 small">Producto *</label>
+                <select class="form-select form-select-sm" @bind="selectedProductoId">
+                    <option value="0">-- Seleccione producto --</option>
+                    @foreach (var p in productos)
+                    {
+                        <option value="@p.Id">[@p.Codigo] @p.Nombre</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label mb-1 small">Almacen</label>
+                <select class="form-select form-select-sm" @bind="selectedAlmacenId">
+                    <option value="0">Todos los almacenes</option>
+                    @foreach (var alm in almacenes)
+                    {
+                        <option value="@alm.Id">@alm.Nombre</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label mb-1 small">Desde</label>
+                <input type="date" class="form-control form-control-sm" @bind="filtroDesde" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label mb-1 small">Hasta</label>
+                <input type="date" class="form-control form-control-sm" @bind="filtroHasta" />
+            </div>
+            <div class="col-md-auto">
+                <button class="btn btn-sm btn-primary" @onclick="LoadKardex" disabled="@(selectedProductoId == 0)">
+                    <i class="bi bi-search"></i> Ver Kardex
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">
+        <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+    </div>
+}
+
+@if (loading)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-2 text-muted">Cargando kardex...</p>
+    </div>
+}
+else if (kardex is not null)
+{
+    <!-- Resumen -->
+    <div class="row mb-3">
+        <div class="col-md-3">
+            <div class="card border-primary">
+                <div class="card-body text-center py-2">
+                    <div class="small text-muted">Producto</div>
+                    <div class="fw-bold">@kardex.ProductoCodigo</div>
+                    <div class="small">@kardex.ProductoNombre</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-success">
+                <div class="card-body text-center py-2">
+                    <div class="small text-muted">Stock Actual</div>
+                    <div class="fw-bold fs-4 text-success">@kardex.StockActual.ToString("N4")</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-info">
+                <div class="card-body text-center py-2">
+                    <div class="small text-muted">Costo Promedio</div>
+                    <div class="fw-bold fs-4 text-info">@kardex.CostoPromedio.ToString("N4")</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-warning">
+                <div class="card-body text-center py-2">
+                    <div class="small text-muted">Valor Total</div>
+                    <div class="fw-bold fs-4 text-warning">@((kardex.StockActual * kardex.CostoPromedio).ToString("N2"))</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla Kardex -->
+    <div class="card">
+        <div class="card-header py-3">
+            <span>
+                Kardex: <strong>[@kardex.ProductoCodigo] @kardex.ProductoNombre</strong>
+                @if (!string.IsNullOrEmpty(kardex.AlmacenNombre))
+                {
+                    <span class="text-muted ms-2">| Almacen: @kardex.AlmacenNombre</span>
+                }
+                <span class="badge bg-secondary ms-2">@kardex.Movimientos.Count movimientos</span>
+            </span>
+        </div>
+        <div class="card-body p-0">
+            @if (kardex.Movimientos.Count == 0)
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-clipboard-x" style="font-size:2rem; color:var(--agora-text-light);"></i>
+                    <p class="text-muted mt-2">No hay movimientos en el periodo seleccionado.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Numero</th>
+                                <th>Tipo</th>
+                                <th>Referencia</th>
+                                <th class="text-end text-success">Entrada</th>
+                                <th class="text-end text-danger">Salida</th>
+                                <th class="text-end">Costo Unit.</th>
+                                <th class="text-end">Importe</th>
+                                <th class="text-end fw-bold">Saldo Unid.</th>
+                                <th class="text-end">Costo Prom.</th>
+                                <th class="text-end fw-bold">Saldo Valor</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in kardex.Movimientos)
+                            {
+                                <tr>
+                                    <td class="small">@item.FechaMovimiento.ToString("dd/MM/yyyy")</td>
+                                    <td><code class="small">@item.Numero</code></td>
+                                    <td>
+                                        <span class="badge @GetBadgeClass(item.TipoMovimiento) badge-sm">
+                                            @item.TipoMovimiento
+                                        </span>
+                                    </td>
+                                    <td class="small text-muted">@item.Referencia</td>
+                                    <td class="text-end text-success">
+                                        @(item.Entrada > 0 ? item.Entrada.ToString("N4") : "")
+                                    </td>
+                                    <td class="text-end text-danger">
+                                        @(item.Salida > 0 ? item.Salida.ToString("N4") : "")
+                                    </td>
+                                    <td class="text-end">@item.CostoUnitario.ToString("N4")</td>
+                                    <td class="text-end">@item.CostoTotal.ToString("N2")</td>
+                                    <td class="text-end fw-bold">@item.SaldoUnidades.ToString("N4")</td>
+                                    <td class="text-end">@item.CostoPromedio.ToString("N4")</td>
+                                    <td class="text-end fw-bold text-primary">@item.SaldoValor.ToString("N2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr class="fw-bold">
+                                <td colspan="4" class="text-end">Totales:</td>
+                                <td class="text-end text-success">
+                                    @kardex.Movimientos.Sum(m => m.Entrada).ToString("N4")
+                                </td>
+                                <td class="text-end text-danger">
+                                    @kardex.Movimientos.Sum(m => m.Salida).ToString("N4")
+                                </td>
+                                <td colspan="2"></td>
+                                <td class="text-end">@kardex.StockActual.ToString("N4")</td>
+                                <td class="text-end">@kardex.CostoPromedio.ToString("N4")</td>
+                                <td class="text-end text-primary">
+                                    @((kardex.StockActual * kardex.CostoPromedio).ToString("N2"))
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
+else if (!loading && selectedProductoId > 0)
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> Haga clic en "Ver Kardex" para consultar los movimientos del producto.
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-journal-text" style="font-size:3rem; color:var(--agora-text-light);"></i>
+            <p class="text-muted mt-3">Seleccione un producto y haga clic en "Ver Kardex".</p>
+        </div>
+    </div>
+}
+
+@code {
+    private List<AlmacenDto> almacenes = new();
+    private List<ProductoDto> productos = new();
+    private KardexDto? kardex;
+
+    private bool loading = false;
+    private string? errorMessage;
+
+    private int selectedProductoId = 0;
+    private int selectedAlmacenId = 0;
+    private DateTime? filtroDesde;
+    private DateTime? filtroHasta;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var almTask = AlmacenService.GetAllAsync();
+        var prodTask = ProductoService.GetAllAsync();
+        await Task.WhenAll(almTask, prodTask);
+        almacenes = await almTask;
+        productos = await prodTask;
+    }
+
+    private async Task LoadKardex()
+    {
+        if (selectedProductoId == 0) return;
+
+        loading = true;
+        errorMessage = null;
+        kardex = null;
+
+        try
+        {
+            kardex = await InvService.GetKardexAsync(
+                selectedProductoId,
+                almacenId: selectedAlmacenId > 0 ? selectedAlmacenId : null,
+                desde: filtroDesde,
+                hasta: filtroHasta);
+
+            if (kardex is null)
+                errorMessage = "No se pudo obtener el kardex del producto.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar kardex: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private static string GetBadgeClass(string tipo) => tipo switch
+    {
+        "Entrada"       => "bg-success",
+        "Salida"        => "bg-danger",
+        "Ajuste"        => "bg-warning text-dark",
+        "Transferencia" => "bg-info text-dark",
+        _               => "bg-secondary"
+    };
+}

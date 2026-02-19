@@ -46,4 +46,7 @@ builder.Services.AddScoped<MdmCompanyProductHttpService>();
 builder.Services.AddScoped<MdmVariantHttpService>();
 builder.Services.AddScoped<MdmAttributeHttpService>();
 
+// ──── Servicios HTTP Inventario ────
+builder.Services.AddScoped<MovimientoInventarioHttpService>();
+
 await builder.Build().RunAsync();

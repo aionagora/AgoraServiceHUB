@@ -5,6 +5,7 @@ using AgoraHub360.ERP.Domain.Common;
 using AgoraHub360.ERP.Domain.Entities.Core;
 using AgoraHub360.ERP.Domain.Entities.CST;
 using AgoraHub360.ERP.Domain.Entities.DOC;
+using AgoraHub360.ERP.Domain.Entities.INV;
 using AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Entities.PRC;
 using AgoraHub360.ERP.Domain.Entities.RUL;
@@ -101,6 +102,10 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     // ── DOC: Documentos multimedia ────────────────────────────────────────────
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<ProductDocument> ProductDocuments => Set<ProductDocument>();
+
+    // ── INV: Inventario ───────────────────────────────────────────────────────
+    public DbSet<MovimientoInventario> MovimientosInventario => Set<MovimientoInventario>();
+    public DbSet<StockProducto> StockProductos => Set<StockProducto>();
 
     // ── Auditoría ─────────────────────────────────────────────────────────────
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
