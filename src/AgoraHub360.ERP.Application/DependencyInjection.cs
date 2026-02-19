@@ -43,6 +43,9 @@ public static class DependencyInjection
         // PRC
         services.AddScoped<IPriceListService, PriceListService>();
 
+        // INV
+        services.AddScoped<IMovimientoInventarioService, MovimientoInventarioService>();
+
         return services;
     }
 }
