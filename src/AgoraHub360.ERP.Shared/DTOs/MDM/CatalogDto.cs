@@ -4,17 +4,17 @@ public record CatalogDto(
     long CatalogId,
     byte Scope,
     int? EmpresaId,
-    string Nombre,
+    string Name,
     bool IsDefault,
     bool Activo);
 
 public record CreateCatalogDto(
     byte Scope,
     int? EmpresaId,
-    string Nombre,
+    string Name,
     bool IsDefault = false);
 
 public record UpdateCatalogDto(
-    string Nombre,
+    string Name,
     bool IsDefault,
     bool Activo);

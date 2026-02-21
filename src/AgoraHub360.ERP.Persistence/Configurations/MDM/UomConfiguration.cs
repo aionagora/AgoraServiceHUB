@@ -13,7 +13,7 @@ public class UomConfiguration : IEntityTypeConfiguration<Uom>
         builder.Property(u => u.UomId).UseIdentityColumn();
 
         builder.Property(u => u.Code).IsRequired().HasMaxLength(10);
-        builder.Property(u => u.Nombre).IsRequired().HasMaxLength(40);
+        builder.Property(u => u.Name).IsRequired().HasMaxLength(40);
         builder.Property(u => u.CreadoPor).HasMaxLength(100);
         builder.Property(u => u.ModificadoPor).HasMaxLength(100);
 

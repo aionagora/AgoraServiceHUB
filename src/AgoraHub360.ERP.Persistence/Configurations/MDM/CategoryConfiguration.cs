@@ -12,7 +12,7 @@ public class CategoryConfiguration : IEntityTypeConfiguration<Category>
         builder.HasKey(c => c.CategoryId);
         builder.Property(c => c.CategoryId).UseIdentityColumn();
 
-        builder.Property(c => c.Nombre).IsRequired().HasMaxLength(120);
+        builder.Property(c => c.Name).IsRequired().HasMaxLength(120);
         builder.Property(c => c.Path).HasMaxLength(600);
         builder.Property(c => c.CreadoPor).HasMaxLength(100);
         builder.Property(c => c.ModificadoPor).HasMaxLength(100);
@@ -27,6 +27,6 @@ public class CategoryConfiguration : IEntityTypeConfiguration<Category>
             .HasForeignKey(c => c.ParentCategoryId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasIndex(c => new { c.CatalogId, c.ParentCategoryId, c.Nombre }).IsUnique();
+        builder.HasIndex(c => new { c.CatalogId, c.ParentCategoryId, c.Name }).IsUnique();
     }
 }

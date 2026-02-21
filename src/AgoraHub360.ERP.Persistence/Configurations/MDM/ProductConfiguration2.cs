@@ -4,10 +4,6 @@ using AgoraHub360.ERP.Domain.Entities.MDM;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-/// <summary>
-/// Configuración de la nueva entidad Product (plantilla global).
-/// La entidad Producto (legacy) sigue existiendo en ProductoConfiguration.cs.
-/// </summary>
 public class ProductConfiguration2 : IEntityTypeConfiguration<Product>
 {
     public void Configure(EntityTypeBuilder<Product> builder)
@@ -17,9 +13,9 @@ public class ProductConfiguration2 : IEntityTypeConfiguration<Product>
         builder.Property(p => p.ProductId).UseIdentityColumn();
 
         builder.Property(p => p.ProductKind).IsRequired();
-        builder.Property(p => p.NombreGenerico).IsRequired().HasMaxLength(180);
-        builder.Property(p => p.NombreComercial).IsRequired().HasMaxLength(180);
-        builder.Property(p => p.DescripcionCorta).HasMaxLength(300);
+        builder.Property(p => p.GenericName).IsRequired().HasMaxLength(180);
+        builder.Property(p => p.CommercialName).IsRequired().HasMaxLength(180);
+        builder.Property(p => p.ShortDescription).HasMaxLength(300);
         builder.Property(p => p.CreadoPor).HasMaxLength(100);
         builder.Property(p => p.ModificadoPor).HasMaxLength(100);
 
@@ -49,8 +45,8 @@ public class ProductConfiguration2 : IEntityTypeConfiguration<Product>
             .HasForeignKey(p => p.LifecycleStatusId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Índices
-        builder.HasIndex(p => new { p.CatalogId, p.NombreComercial });
+        // Indexes
+        builder.HasIndex(p => new { p.CatalogId, p.CommercialName });
         builder.HasIndex(p => new { p.CatalogId, p.BrandId });
     }
 }

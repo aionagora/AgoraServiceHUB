@@ -17,6 +17,13 @@ public class CategoryService : ICategoryService
         _uow = uow;
     }
 
+    public async Task<Result<IReadOnlyList<CategoryDto>>> GetAllAsync(long? catalogId = null, CancellationToken ct = default)
+    {
+        var items = await _repo.FindAsync(
+            c => catalogId == null || c.CatalogId == catalogId, ct);
+        return Result<IReadOnlyList<CategoryDto>>.Success(items.Select(Map).ToList().AsReadOnly());
+    }
+
     public async Task<Result<IReadOnlyList<CategoryDto>>> GetByCatalogAsync(long catalogId, CancellationToken ct = default)
     {
         var items = await _repo.FindAsync(c => c.CatalogId == catalogId, ct);
@@ -26,7 +33,7 @@ public class CategoryService : ICategoryService
     public async Task<Result<CategoryDto>> GetByIdAsync(long id, CancellationToken ct = default)
     {
         var entity = await _repo.GetByIdAsync((int)id, ct);
-        if (entity is null) return Result<CategoryDto>.Failure($"Categoría {id} no encontrada.");
+        if (entity is null) return Result<CategoryDto>.Failure($"Category {id} not found.");
         return Result<CategoryDto>.Success(Map(entity));
     }
 
@@ -35,15 +42,15 @@ public class CategoryService : ICategoryService
         var dup = await _repo.FindAsync(
             c => c.CatalogId == dto.CatalogId
               && c.ParentCategoryId == dto.ParentCategoryId
-              && c.Nombre == dto.Nombre, ct);
+              && c.Name == dto.Name, ct);
         if (dup.Any())
-            return Result<CategoryDto>.Failure($"Ya existe una categoría '{dto.Nombre}' en ese nivel.");
+            return Result<CategoryDto>.Failure($"Category '{dto.Name}' already exists at that level.");
 
         var entity = new Category
         {
             CatalogId = dto.CatalogId,
             ParentCategoryId = dto.ParentCategoryId,
-            Nombre = dto.Nombre,
+            Name = dto.Name,
             SortOrder = dto.SortOrder,
             Activo = true
         };
@@ -55,10 +62,10 @@ public class CategoryService : ICategoryService
     public async Task<Result<CategoryDto>> UpdateAsync(long id, UpdateCategoryDto dto, CancellationToken ct = default)
     {
         var entity = await _repo.GetByIdAsync((int)id, ct);
-        if (entity is null) return Result<CategoryDto>.Failure($"Categoría {id} no encontrada.");
+        if (entity is null) return Result<CategoryDto>.Failure($"Category {id} not found.");
 
         entity.ParentCategoryId = dto.ParentCategoryId;
-        entity.Nombre = dto.Nombre;
+        entity.Name = dto.Name;
         entity.SortOrder = dto.SortOrder;
         entity.Activo = dto.Activo;
 
@@ -70,12 +77,12 @@ public class CategoryService : ICategoryService
     public async Task<Result<bool>> DeleteAsync(long id, CancellationToken ct = default)
     {
         var entity = await _repo.GetByIdAsync((int)id, ct);
-        if (entity is null) return Result<bool>.Failure($"Categoría {id} no encontrada.");
+        if (entity is null) return Result<bool>.Failure($"Category {id} not found.");
         await _repo.DeleteAsync(entity, ct);
         await _uow.SaveChangesAsync(ct);
         return Result<bool>.Success(true);
     }
 
     private static CategoryDto Map(Category c) => new(
-        c.CategoryId, c.CatalogId, c.ParentCategoryId, c.Nombre, c.Path, c.SortOrder, c.Activo);
+        c.CategoryId, c.CatalogId, c.ParentCategoryId, c.Name, c.Path, c.SortOrder, c.Activo);
 }

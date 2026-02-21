@@ -4,9 +4,6 @@ using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Application.Services;
 using Microsoft.Extensions.DependencyInjection;
 
-/// <summary>
-/// Registro de servicios de la capa Application.
-/// </summary>
 public static class DependencyInjection
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
@@ -17,22 +14,25 @@ public static class DependencyInjection
         services.AddScoped<IParametroSistemaService, ParametroSistemaService>();
         services.AddScoped<INumeracionDocumentoService, NumeracionDocumentoService>();
 
-        // MDM legacy
-        services.AddScoped<ICategoriaProductoService, CategoriaProductoService>();
-        services.AddScoped<IUnidadMedidaService, UnidadMedidaService>();
-        services.AddScoped<IProductoService, ProductoService>();
+        // MDM: third parties
         services.AddScoped<IClienteService, ClienteService>();
         services.AddScoped<IProveedorService, ProveedorService>();
         services.AddScoped<IAlmacenService, AlmacenService>();
 
-        // MDM nuevo modelo
+        // MDM: unified catalog
         services.AddScoped<ICatalogService, CatalogService>();
+        services.AddScoped<IUomService, UomService>();
         services.AddScoped<IProductService, ProductService>();
         services.AddScoped<ICompanyProductService, CompanyProductService>();
         services.AddScoped<IProductCodeService, ProductCodeService>();
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IAttributeDefinitionService, AttributeDefinitionService>();
         services.AddScoped<IProductVariantService, ProductVariantService>();
+
+        // Legacy adapters (keep controllers/pages compiling)
+        services.AddScoped<IUnidadMedidaService, UnidadMedidaService>();
+        services.AddScoped<ICategoriaProductoService, CategoriaProductoService>();
+        services.AddScoped<IProductoService, ProductoService>();
 
         // RUL
         services.AddScoped<IIndustryService, IndustryService>();

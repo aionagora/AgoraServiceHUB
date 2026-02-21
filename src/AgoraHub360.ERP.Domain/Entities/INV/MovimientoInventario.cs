@@ -4,43 +4,43 @@ using AgoraHub360.ERP.Domain.Common;
 using AgoraHub360.ERP.Domain.Entities.MDM;
 
 /// <summary>
-/// Registro de un movimiento de inventario (entrada, salida, ajuste o transferencia).
-/// Cada movimiento actualiza el stock y el costo promedio del producto en el almacén.
+/// Record of an inventory movement (receipt, issue, adjustment or transfer).
+/// Each movement updates the stock and average cost of the product in the warehouse.
 /// </summary>
 public class MovimientoInventario : TenantEntity
 {
     public int Id { get; set; }
 
-    /// <summary>Número único del movimiento. Ej: MOV-2026-00001</summary>
-    public string Numero { get; set; } = string.Empty;
+    /// <summary>Unique movement number. E.g.: MOV-2026-00001</summary>
+    public string Number { get; set; } = string.Empty;
 
-    /// <summary>Entrada | Salida | Ajuste | Transferencia</summary>
-    public string TipoMovimiento { get; set; } = string.Empty;
+    /// <summary>Receipt | Issue | Adjustment | Transfer</summary>
+    public string MovementType { get; set; } = string.Empty;
 
-    public DateTime FechaMovimiento { get; set; }
+    public DateTime MovementDate { get; set; }
 
-    public int ProductoId { get; set; }
-    public Producto? Producto { get; set; }
+    public long CompanyProductId { get; set; }
+    public CompanyProduct? CompanyProduct { get; set; }
 
-    /// <summary>Almacén origen (o almacén único para entradas/salidas/ajustes).</summary>
-    public int AlmacenId { get; set; }
-    public Almacen? Almacen { get; set; }
+    /// <summary>Source warehouse (or single warehouse for receipts/issues/adjustments).</summary>
+    public int WarehouseId { get; set; }
+    public Almacen? Warehouse { get; set; }
 
-    /// <summary>Almacén destino (solo aplica para Transferencias).</summary>
-    public int? AlmacenDestinoId { get; set; }
-    public Almacen? AlmacenDestino { get; set; }
+    /// <summary>Destination warehouse (only applies to Transfers).</summary>
+    public int? DestinationWarehouseId { get; set; }
+    public Almacen? DestinationWarehouse { get; set; }
 
-    /// <summary>Cantidad del movimiento (siempre positiva; el signo lo determina el TipoMovimiento).</summary>
-    public decimal Cantidad { get; set; }
+    /// <summary>Movement quantity (always positive; sign is determined by MovementType).</summary>
+    public decimal Quantity { get; set; }
 
-    /// <summary>Costo unitario del movimiento (costo promedio al momento de la salida, o precio de compra en entrada).</summary>
-    public decimal CostoUnitario { get; set; }
+    /// <summary>Unit cost of the movement (average cost on issue, or purchase price on receipt).</summary>
+    public decimal UnitCost { get; set; }
 
-    /// <summary>CostoUnitario × Cantidad.</summary>
-    public decimal CostoTotal { get; set; }
+    /// <summary>UnitCost × Quantity.</summary>
+    public decimal TotalCost { get; set; }
 
-    /// <summary>Referencia al documento origen (OC-001, FAC-001, etc.).</summary>
-    public string? Referencia { get; set; }
+    /// <summary>Reference to the source document (PO-001, INV-001, etc.).</summary>
+    public string? Reference { get; set; }
 
-    public string? Observaciones { get; set; }
+    public string? Notes { get; set; }
 }

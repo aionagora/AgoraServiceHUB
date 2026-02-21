@@ -3,16 +3,16 @@ namespace AgoraHub360.ERP.Shared.DTOs.MDM;
 public record ProductDto2(
     long ProductId,
     long CatalogId,
-    string CatalogNombre,
+    string CatalogName,
     byte ProductKind,
-    string NombreGenerico,
-    string NombreComercial,
-    string? DescripcionCorta,
-    string? DescripcionLarga,
+    string GenericName,
+    string CommercialName,
+    string? ShortDescription,
+    string? LongDescription,
     long? BrandId,
-    string? BrandNombre,
+    string? BrandName,
     long? ManufacturerId,
-    string? ManufacturerNombre,
+    string? ManufacturerName,
     int DefaultUomId,
     string DefaultUomCode,
     bool IsStockable,
@@ -22,32 +22,36 @@ public record ProductDto2(
     string LifecycleStatusCode,
     bool Activo);
 
-public record CreateProductDto2(
-    long CatalogId,
-    byte ProductKind,
-    string NombreGenerico,
-    string NombreComercial,
-    string? DescripcionCorta,
-    string? DescripcionLarga,
-    long? BrandId,
-    long? ManufacturerId,
-    int DefaultUomId,
-    bool IsStockable = true,
-    bool IsSellable = true,
-    bool IsPurchasable = true,
-    int LifecycleStatusId = 0);
+public class CreateProductDto2
+{
+    public long CatalogId { get; set; }
+    public byte ProductKind { get; set; } = 1;
+    public string GenericName { get; set; } = string.Empty;
+    public string CommercialName { get; set; } = string.Empty;
+    public string? ShortDescription { get; set; }
+    public string? LongDescription { get; set; }
+    public long? BrandId { get; set; }
+    public long? ManufacturerId { get; set; }
+    public int DefaultUomId { get; set; }
+    public bool IsStockable { get; set; } = true;
+    public bool IsSellable { get; set; } = true;
+    public bool IsPurchasable { get; set; } = true;
+    public int LifecycleStatusId { get; set; }
+}
 
-public record UpdateProductDto2(
-    byte ProductKind,
-    string NombreGenerico,
-    string NombreComercial,
-    string? DescripcionCorta,
-    string? DescripcionLarga,
-    long? BrandId,
-    long? ManufacturerId,
-    int DefaultUomId,
-    bool IsStockable,
-    bool IsSellable,
-    bool IsPurchasable,
-    int LifecycleStatusId,
-    bool Activo);
+public class UpdateProductDto2
+{
+    public byte ProductKind { get; set; } = 1;
+    public string GenericName { get; set; } = string.Empty;
+    public string CommercialName { get; set; } = string.Empty;
+    public string? ShortDescription { get; set; }
+    public string? LongDescription { get; set; }
+    public long? BrandId { get; set; }
+    public long? ManufacturerId { get; set; }
+    public int DefaultUomId { get; set; }
+    public bool IsStockable { get; set; } = true;
+    public bool IsSellable { get; set; } = true;
+    public bool IsPurchasable { get; set; } = true;
+    public int LifecycleStatusId { get; set; }
+    public bool Activo { get; set; } = true;
+}

@@ -14,8 +14,8 @@ using AgoraHub360.ERP.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 /// <summary>
-/// DbContext principal del ERP con soporte multi-tenant y auditoría automática.
-/// Los filtros globales de tenant garantizan aislamiento de datos por empresa.
+/// Main ERP DbContext with multi-tenant support and automatic auditing.
+/// Global tenant filters guarantee data isolation per company.
 /// </summary>
 public class AgoraDbContext : DbContext, IUnitOfWork
 {
@@ -29,7 +29,7 @@ public class AgoraDbContext : DbContext, IUnitOfWork
         _empresaId = currentUserService.EmpresaId;
     }
 
-    // Constructor para migraciones y design-time (sin tenant)
+    // Constructor for migrations and design-time (no tenant)
     public AgoraDbContext(DbContextOptions<AgoraDbContext> options)
         : base(options)
     {
@@ -41,21 +41,16 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     public DbSet<UsuarioEmpresa> UsuarioEmpresas => Set<UsuarioEmpresa>();
     public DbSet<Moneda> Monedas => Set<Moneda>();
     public DbSet<Rol> Roles => Set<Rol>();
-
-    // Configuración
     public DbSet<ParametroSistema> ParametrosSistema => Set<ParametroSistema>();
     public DbSet<NumeracionDocumento> NumeracionesDocumento => Set<NumeracionDocumento>();
 
-    // ── MDM Legacy (mantener compatibilidad) ─────────────────────────────────
-    public DbSet<CategoriaProducto> CategoriasProducto => Set<CategoriaProducto>();
-    public DbSet<UnidadMedida> UnidadesMedida => Set<UnidadMedida>();
-    public DbSet<Producto> Productos => Set<Producto>();
+    // ── MDM: Third parties ────────────────────────────────────────────────────
     public DbSet<Cliente> Clientes => Set<Cliente>();
     public DbSet<Proveedor> Proveedores => Set<Proveedor>();
     public DbSet<Almacen> Almacenes => Set<Almacen>();
     public DbSet<UbicacionAlmacen> UbicacionesAlmacen => Set<UbicacionAlmacen>();
 
-    // ── MDM: Catálogo y producto base (nuevo modelo) ──────────────────────────
+    // ── MDM: Catalog and base product ─────────────────────────────────────────
     public DbSet<Catalog> Catalogs => Set<Catalog>();
     public DbSet<Brand> Brands => Set<Brand>();
     public DbSet<Manufacturer> Manufacturers => Set<Manufacturer>();
@@ -65,60 +60,60 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     public DbSet<CompanyProduct> CompanyProducts => Set<CompanyProduct>();
     public DbSet<ProductCode> ProductCodes => Set<ProductCode>();
 
-    // ── MDM: Clasificación ────────────────────────────────────────────────────
+    // ── MDM: Classification ───────────────────────────────────────────────────
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<ProductCategory> ProductCategories => Set<ProductCategory>();
     public DbSet<ProductClassification> ProductClassifications => Set<ProductClassification>();
     public DbSet<ProductClassificationLink> ProductClassificationLinks => Set<ProductClassificationLink>();
 
-    // ── MDM: Atributos dinámicos ──────────────────────────────────────────────
+    // ── MDM: Dynamic attributes ───────────────────────────────────────────────
     public DbSet<AttributeDefinition> AttributeDefinitions => Set<AttributeDefinition>();
     public DbSet<AttributeOption> AttributeOptions => Set<AttributeOption>();
     public DbSet<ProductAttribute> ProductAttributes => Set<ProductAttribute>();
 
-    // ── MDM: Variantes y presentaciones ──────────────────────────────────────
+    // ── MDM: Variants and presentations ──────────────────────────────────────
     public DbSet<ProductVariant> ProductVariants => Set<ProductVariant>();
     public DbSet<VariantAttributeValue> VariantAttributeValues => Set<VariantAttributeValue>();
     public DbSet<ProductUom> ProductUoms => Set<ProductUom>();
 
-    // ── MDM: Features activables ──────────────────────────────────────────────
+    // ── MDM: Activatable features ─────────────────────────────────────────────
     public DbSet<CompanyProductFeature> CompanyProductFeatures => Set<CompanyProductFeature>();
 
-    // ── RUL: Reglas por industria ─────────────────────────────────────────────
+    // ── RUL: Industry rules ───────────────────────────────────────────────────
     public DbSet<Industry> Industries => Set<Industry>();
     public DbSet<ProductIndustryRule> ProductIndustryRules => Set<ProductIndustryRule>();
 
-    // ── VER: Versionado ───────────────────────────────────────────────────────
+    // ── VER: Versioning ───────────────────────────────────────────────────────
     public DbSet<EntityVersion> EntityVersions => Set<EntityVersion>();
 
-    // ── PRC: Precios ──────────────────────────────────────────────────────────
+    // ── PRC: Pricing ──────────────────────────────────────────────────────────
     public DbSet<PriceList> PriceLists => Set<PriceList>();
     public DbSet<PriceListItem> PriceListItems => Set<PriceListItem>();
 
-    // ── CST: Costos ───────────────────────────────────────────────────────────
+    // ── CST: Costing ──────────────────────────────────────────────────────────
     public DbSet<CostingRule> CostingRules => Set<CostingRule>();
     public DbSet<LandedCostProfile> LandedCostProfiles => Set<LandedCostProfile>();
 
-    // ── DOC: Documentos multimedia ────────────────────────────────────────────
+    // ── DOC: Media documents ──────────────────────────────────────────────────
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<ProductDocument> ProductDocuments => Set<ProductDocument>();
 
-    // ── INV: Inventario ───────────────────────────────────────────────────────
+    // ── INV: Inventory ────────────────────────────────────────────────────────
     public DbSet<MovimientoInventario> MovimientosInventario => Set<MovimientoInventario>();
     public DbSet<StockProducto> StockProductos => Set<StockProducto>();
 
-    // ── Auditoría ─────────────────────────────────────────────────────────────
+    // ── Audit ─────────────────────────────────────────────────────────────────
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        // Aplicar configuraciones Fluent API desde el assembly
+        // Apply Fluent API configurations from the assembly
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AgoraDbContext).Assembly);
 
-        // Filtro global multi-tenant: todas las entidades que heredan de TenantEntity
-        // se filtran automáticamente por EmpresaId del usuario actual
+        // Global multi-tenant filter: all TenantEntity-derived entities
+        // are automatically filtered by the current user's EmpresaId
         ApplyTenantQueryFilters(modelBuilder);
     }
 

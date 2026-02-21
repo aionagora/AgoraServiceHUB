@@ -11,7 +11,7 @@ public class MovimientoInventarioService : IMovimientoInventarioService
 {
     private readonly IRepository<MovimientoInventario> _movimientoRepo;
     private readonly IRepository<StockProducto> _stockRepo;
-    private readonly IRepository<Producto> _productoRepo;
+    private readonly IRepository<CompanyProduct> _companyProductRepo;
     private readonly IRepository<Almacen> _almacenRepo;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
@@ -19,14 +19,14 @@ public class MovimientoInventarioService : IMovimientoInventarioService
     public MovimientoInventarioService(
         IRepository<MovimientoInventario> movimientoRepo,
         IRepository<StockProducto> stockRepo,
-        IRepository<Producto> productoRepo,
+        IRepository<CompanyProduct> companyProductRepo,
         IRepository<Almacen> almacenRepo,
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser)
     {
         _movimientoRepo = movimientoRepo;
         _stockRepo = stockRepo;
-        _productoRepo = productoRepo;
+        _companyProductRepo = companyProductRepo;
         _almacenRepo = almacenRepo;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
@@ -42,27 +42,25 @@ public class MovimientoInventarioService : IMovimientoInventarioService
     {
         var empresaId = _currentUser.EmpresaId;
         if (!empresaId.HasValue)
-            return Result<IReadOnlyList<MovimientoInventarioDto>>.Failure("No se pudo determinar la empresa activa.");
+            return Result<IReadOnlyList<MovimientoInventarioDto>>.Failure("No active company.");
 
         var movimientos = await _movimientoRepo.FindAsync(
             m => m.EmpresaId == empresaId.Value
-                 && (!productoId.HasValue || m.ProductoId == productoId.Value)
-                 && (!almacenId.HasValue || m.AlmacenId == almacenId.Value || m.AlmacenDestinoId == almacenId.Value)
-                 && (tipoMovimiento == null || m.TipoMovimiento == tipoMovimiento)
-                 && (!fechaDesde.HasValue || m.FechaMovimiento >= fechaDesde.Value)
-                 && (!fechaHasta.HasValue || m.FechaMovimiento <= fechaHasta.Value.AddDays(1).AddSeconds(-1)),
+                 && (tipoMovimiento == null || m.MovementType == tipoMovimiento)
+                 && (!fechaDesde.HasValue || m.MovementDate >= fechaDesde.Value)
+                 && (!fechaHasta.HasValue || m.MovementDate <= fechaHasta.Value.AddDays(1).AddSeconds(-1)),
             ct);
 
-        var productos = await _productoRepo.FindAsync(p => p.EmpresaId == empresaId.Value, ct);
+        var companyProducts = await _companyProductRepo.FindAsync(p => p.EmpresaId == empresaId.Value, ct);
         var almacenes = await _almacenRepo.FindAsync(a => a.EmpresaId == empresaId.Value, ct);
 
-        var prodMap = productos.ToDictionary(p => p.Id, p => new { p.Nombre, p.Codigo });
+        var cpMap = companyProducts.ToDictionary(p => p.CompanyProductId, p => p.Sku);
         var almMap = almacenes.ToDictionary(a => a.Id, a => a.Nombre);
 
         var dtos = movimientos
-            .OrderByDescending(m => m.FechaMovimiento)
+            .OrderByDescending(m => m.MovementDate)
             .ThenByDescending(m => m.Id)
-            .Select(m => MapToDto(m, prodMap, almMap))
+            .Select(m => MapToDto(m, cpMap, almMap))
             .ToList()
             .AsReadOnly();
 
@@ -73,20 +71,20 @@ public class MovimientoInventarioService : IMovimientoInventarioService
     {
         var empresaId = _currentUser.EmpresaId;
         if (!empresaId.HasValue)
-            return Result<MovimientoInventarioDto>.Failure("No se pudo determinar la empresa activa.");
+            return Result<MovimientoInventarioDto>.Failure("No active company.");
 
         var movimiento = await _movimientoRepo.GetByIdAsync(id, ct);
         if (movimiento is null)
-            return Result<MovimientoInventarioDto>.Failure($"Movimiento con Id {id} no encontrado.");
+            return Result<MovimientoInventarioDto>.Failure($"Movement {id} not found.");
         if (movimiento.EmpresaId != empresaId.Value)
-            return Result<MovimientoInventarioDto>.Failure("No tiene permisos para acceder a este movimiento.");
+            return Result<MovimientoInventarioDto>.Failure("Access denied.");
 
-        var productos = await _productoRepo.FindAsync(p => p.EmpresaId == empresaId.Value, ct);
+        var companyProducts = await _companyProductRepo.FindAsync(p => p.EmpresaId == empresaId.Value, ct);
         var almacenes = await _almacenRepo.FindAsync(a => a.EmpresaId == empresaId.Value, ct);
 
         return Result<MovimientoInventarioDto>.Success(
             MapToDto(movimiento,
-                productos.ToDictionary(p => p.Id, p => new { p.Nombre, p.Codigo }),
+                companyProducts.ToDictionary(p => p.CompanyProductId, p => p.Sku),
                 almacenes.ToDictionary(a => a.Id, a => a.Nombre)));
     }
 
@@ -94,119 +92,111 @@ public class MovimientoInventarioService : IMovimientoInventarioService
     {
         var empresaId = _currentUser.EmpresaId;
         if (!empresaId.HasValue)
-            return Result<MovimientoInventarioDto>.Failure("No se pudo determinar la empresa activa.");
+            return Result<MovimientoInventarioDto>.Failure("No active company.");
 
-        // ── Validar producto
-        var producto = await _productoRepo.GetByIdAsync(dto.ProductoId, ct);
-        if (producto is null || producto.EmpresaId != empresaId.Value)
-            return Result<MovimientoInventarioDto>.Failure("Producto no encontrado o no pertenece a su empresa.");
+        // Validate CompanyProduct
+        var companyProduct = await _companyProductRepo.GetByIdAsync((int)dto.CompanyProductId, ct);
+        if (companyProduct is null || companyProduct.EmpresaId != empresaId.Value)
+            return Result<MovimientoInventarioDto>.Failure("Company product not found or does not belong to your company.");
 
-        if (!producto.ControlStock && dto.TipoMovimiento != "Ajuste")
-            return Result<MovimientoInventarioDto>.Failure("Este producto no tiene control de stock habilitado.");
-
-        // ── Validar almacén origen
-        var almacen = await _almacenRepo.GetByIdAsync(dto.AlmacenId, ct);
+        // Validate source warehouse
+        var almacen = await _almacenRepo.GetByIdAsync(dto.WarehouseId, ct);
         if (almacen is null || almacen.EmpresaId != empresaId.Value)
-            return Result<MovimientoInventarioDto>.Failure("Almacén no encontrado o no pertenece a su empresa.");
+            return Result<MovimientoInventarioDto>.Failure("Warehouse not found or does not belong to your company.");
 
-        // ── Validar almacén destino (solo Transferencias)
+        // Validate destination warehouse (Transfers only)
         Almacen? almacenDestino = null;
-        if (dto.TipoMovimiento == "Transferencia")
+        if (dto.MovementType == "Transfer")
         {
-            if (!dto.AlmacenDestinoId.HasValue)
-                return Result<MovimientoInventarioDto>.Failure("Para transferencias debe indicar el almacén destino.");
-            if (dto.AlmacenDestinoId == dto.AlmacenId)
-                return Result<MovimientoInventarioDto>.Failure("El almacén destino debe ser diferente al origen.");
-            almacenDestino = await _almacenRepo.GetByIdAsync(dto.AlmacenDestinoId.Value, ct);
+            if (!dto.DestinationWarehouseId.HasValue)
+                return Result<MovimientoInventarioDto>.Failure("Destination warehouse is required for transfers.");
+            if (dto.DestinationWarehouseId == dto.WarehouseId)
+                return Result<MovimientoInventarioDto>.Failure("Destination warehouse must differ from source.");
+            almacenDestino = await _almacenRepo.GetByIdAsync(dto.DestinationWarehouseId.Value, ct);
             if (almacenDestino is null || almacenDestino.EmpresaId != empresaId.Value)
-                return Result<MovimientoInventarioDto>.Failure("Almacén destino no encontrado o no pertenece a su empresa.");
+                return Result<MovimientoInventarioDto>.Failure("Destination warehouse not found or does not belong to your company.");
         }
 
-        // ── Obtener o crear saldo de stock origen
-        var stockOrigen = await GetOrCreateStock(empresaId.Value, dto.ProductoId, dto.AlmacenId, ct);
+        // Get or create source stock
+        var stockOrigen = await GetOrCreateStock(empresaId.Value, dto.CompanyProductId, dto.WarehouseId, ct);
 
-        // ── Validar stock suficiente para Salida / Transferencia
-        if (dto.TipoMovimiento == "Salida" || dto.TipoMovimiento == "Transferencia")
+        // Validate sufficient stock for Issue/Transfer
+        if (dto.MovementType is "Issue" or "Transfer")
         {
-            if (stockOrigen.StockActual < dto.Cantidad)
+            if (stockOrigen.CurrentStock < dto.Quantity)
                 return Result<MovimientoInventarioDto>.Failure(
-                    $"Stock insuficiente. Disponible: {stockOrigen.StockActual:N4} | Solicitado: {dto.Cantidad:N4}");
+                    $"Insufficient stock. Available: {stockOrigen.CurrentStock:N4} | Requested: {dto.Quantity:N4}");
         }
 
-        // ── Calcular costo unitario
-        decimal costoUnitario = dto.TipoMovimiento switch
+        // Calculate unit cost
+        decimal unitCost = dto.MovementType switch
         {
-            "Entrada" => dto.CostoUnitario > 0 ? dto.CostoUnitario : producto.CostoBase,
-            "Salida" => stockOrigen.CostoPromedio > 0 ? stockOrigen.CostoPromedio : producto.CostoBase,
-            "Transferencia" => stockOrigen.CostoPromedio > 0 ? stockOrigen.CostoPromedio : producto.CostoBase,
-            "Ajuste" => dto.CostoUnitario > 0 ? dto.CostoUnitario : stockOrigen.CostoPromedio,
-            _ => dto.CostoUnitario
+            "Receipt" => dto.UnitCost > 0 ? dto.UnitCost : stockOrigen.AverageCost,
+            "Issue" => stockOrigen.AverageCost,
+            "Transfer" => stockOrigen.AverageCost,
+            "Adjustment" => dto.UnitCost > 0 ? dto.UnitCost : stockOrigen.AverageCost,
+            _ => dto.UnitCost
         };
 
-        decimal costoTotal = costoUnitario * dto.Cantidad;
+        decimal totalCost = unitCost * dto.Quantity;
 
-        // ── Generar número de movimiento
+        // Generate movement number
         var totalMovs = await _movimientoRepo.FindAsync(m => m.EmpresaId == empresaId.Value, ct);
-        string numero = $"MOV-{dto.FechaMovimiento.Year}-{(totalMovs.Count + 1):D5}";
+        string number = $"MOV-{dto.MovementDate.Year}-{(totalMovs.Count + 1):D5}";
 
-        // ── Crear registro del movimiento
         var movimiento = new MovimientoInventario
         {
             EmpresaId = empresaId.Value,
-            Numero = numero,
-            TipoMovimiento = dto.TipoMovimiento,
-            FechaMovimiento = dto.FechaMovimiento,
-            ProductoId = dto.ProductoId,
-            AlmacenId = dto.AlmacenId,
-            AlmacenDestinoId = dto.AlmacenDestinoId,
-            Cantidad = dto.Cantidad,
-            CostoUnitario = costoUnitario,
-            CostoTotal = costoTotal,
-            Referencia = dto.Referencia,
-            Observaciones = dto.Observaciones,
+            Number = number,
+            MovementType = dto.MovementType,
+            MovementDate = dto.MovementDate,
+            CompanyProductId = dto.CompanyProductId,
+            WarehouseId = dto.WarehouseId,
+            DestinationWarehouseId = dto.DestinationWarehouseId,
+            Quantity = dto.Quantity,
+            UnitCost = unitCost,
+            TotalCost = totalCost,
+            Reference = dto.Reference,
+            Notes = dto.Notes,
             Activo = true
         };
 
         await _movimientoRepo.AddAsync(movimiento, ct);
 
-        // ── Actualizar stock origen
-        switch (dto.TipoMovimiento)
+        // Update stock
+        switch (dto.MovementType)
         {
-            case "Entrada":
-                ActualizarCostoPromedio(stockOrigen, dto.Cantidad, costoUnitario);
-                stockOrigen.StockActual += dto.Cantidad;
+            case "Receipt":
+                UpdateAverageCost(stockOrigen, dto.Quantity, unitCost);
+                stockOrigen.CurrentStock += dto.Quantity;
                 break;
-            case "Salida":
-                stockOrigen.StockActual -= dto.Cantidad;
+            case "Issue":
+                stockOrigen.CurrentStock -= dto.Quantity;
                 break;
-            case "Transferencia":
-                stockOrigen.StockActual -= dto.Cantidad;
-                // Actualizar stock destino
-                var stockDestino = await GetOrCreateStock(empresaId.Value, dto.ProductoId, dto.AlmacenDestinoId!.Value, ct);
-                ActualizarCostoPromedio(stockDestino, dto.Cantidad, costoUnitario);
-                stockDestino.StockActual += dto.Cantidad;
-                stockDestino.UltimaActualizacion = DateTime.UtcNow;
+            case "Transfer":
+                stockOrigen.CurrentStock -= dto.Quantity;
+                var stockDestino = await GetOrCreateStock(empresaId.Value, dto.CompanyProductId, dto.DestinationWarehouseId!.Value, ct);
+                UpdateAverageCost(stockDestino, dto.Quantity, unitCost);
+                stockDestino.CurrentStock += dto.Quantity;
+                stockDestino.LastUpdated = DateTime.UtcNow;
                 await _stockRepo.UpdateAsync(stockDestino, ct);
                 break;
-            case "Ajuste":
-                // El ajuste puede aumentar o disminuir (la cantidad del DTO siempre es positiva,
-                // pero el costoUnitario indica si es un ajuste positivo)
-                stockOrigen.StockActual += dto.Cantidad; // Ajuste siempre suma; si es negativo el usuario debe usar Salida
-                if (dto.Cantidad > 0 && costoUnitario > 0)
-                    ActualizarCostoPromedio(stockOrigen, dto.Cantidad, costoUnitario);
+            case "Adjustment":
+                stockOrigen.CurrentStock += dto.Quantity;
+                if (dto.Quantity > 0 && unitCost > 0)
+                    UpdateAverageCost(stockOrigen, dto.Quantity, unitCost);
                 break;
         }
 
-        stockOrigen.UltimaActualizacion = DateTime.UtcNow;
+        stockOrigen.LastUpdated = DateTime.UtcNow;
         await _stockRepo.UpdateAsync(stockOrigen, ct);
-
         await _unitOfWork.SaveChangesAsync(ct);
 
-        var prodMap = new Dictionary<int, dynamic> { { producto.Id, new { producto.Nombre, producto.Codigo } } };
+        var cpMap = new Dictionary<long, string> { { companyProduct.CompanyProductId, companyProduct.Sku } };
         var almMap = new Dictionary<int, string> { { almacen.Id, almacen.Nombre } };
         if (almacenDestino is not null) almMap[almacenDestino.Id] = almacenDestino.Nombre;
 
-        return Result<MovimientoInventarioDto>.Success(MapToDto(movimiento, prodMap!, almMap));
+        return Result<MovimientoInventarioDto>.Success(MapToDto(movimiento, cpMap, almMap));
     }
 
     public async Task<Result<KardexDto>> GetKardexAsync(
@@ -218,117 +208,112 @@ public class MovimientoInventarioService : IMovimientoInventarioService
     {
         var empresaId = _currentUser.EmpresaId;
         if (!empresaId.HasValue)
-            return Result<KardexDto>.Failure("No se pudo determinar la empresa activa.");
+            return Result<KardexDto>.Failure("No active company.");
 
-        var producto = await _productoRepo.GetByIdAsync(productoId, ct);
-        if (producto is null || producto.EmpresaId != empresaId.Value)
-            return Result<KardexDto>.Failure("Producto no encontrado.");
+        var companyProduct = await _companyProductRepo.GetByIdAsync(productoId, ct);
+        if (companyProduct is null || companyProduct.EmpresaId != empresaId.Value)
+            return Result<KardexDto>.Failure("Company product not found.");
 
         var movimientos = await _movimientoRepo.FindAsync(
             m => m.EmpresaId == empresaId.Value
-                 && m.ProductoId == productoId
-                 && (!almacenId.HasValue || m.AlmacenId == almacenId.Value || m.AlmacenDestinoId == almacenId.Value)
-                 && (!fechaDesde.HasValue || m.FechaMovimiento >= fechaDesde.Value)
-                 && (!fechaHasta.HasValue || m.FechaMovimiento <= fechaHasta.Value.AddDays(1).AddSeconds(-1)),
+                 && m.CompanyProductId == companyProduct.CompanyProductId
+                 && (!almacenId.HasValue || m.WarehouseId == almacenId.Value || m.DestinationWarehouseId == almacenId.Value)
+                 && (!fechaDesde.HasValue || m.MovementDate >= fechaDesde.Value)
+                 && (!fechaHasta.HasValue || m.MovementDate <= fechaHasta.Value.AddDays(1).AddSeconds(-1)),
             ct);
 
         var almacenes = await _almacenRepo.FindAsync(a => a.EmpresaId == empresaId.Value, ct);
         var almMap = almacenes.ToDictionary(a => a.Id, a => a.Nombre);
 
-        // Calcular kardex con saldo corriente
-        decimal saldoUnidades = 0;
-        decimal costoPromedio = 0;
-        decimal saldoValor = 0;
+        decimal balanceUnits = 0;
+        decimal averageCost = 0;
+        decimal balanceValue = 0;
 
         var items = movimientos
-            .OrderBy(m => m.FechaMovimiento)
+            .OrderBy(m => m.MovementDate)
             .ThenBy(m => m.Id)
             .Select(m =>
             {
-                decimal entrada = 0, salida = 0;
+                decimal inQty = 0, outQty = 0;
 
-                if (m.TipoMovimiento == "Entrada" || m.TipoMovimiento == "Ajuste")
+                if (m.MovementType is "Receipt" or "Adjustment")
                 {
-                    entrada = m.Cantidad;
-                    // Recalcular costo promedio ponderado
-                    if (saldoUnidades + entrada > 0)
-                        costoPromedio = (saldoValor + m.CostoTotal) / (saldoUnidades + entrada);
-                    saldoUnidades += entrada;
+                    inQty = m.Quantity;
+                    if (balanceUnits + inQty > 0)
+                        averageCost = (balanceValue + m.TotalCost) / (balanceUnits + inQty);
+                    balanceUnits += inQty;
                 }
-                else if (m.TipoMovimiento == "Salida")
+                else if (m.MovementType == "Issue")
                 {
-                    salida = m.Cantidad;
-                    saldoUnidades -= salida;
+                    outQty = m.Quantity;
+                    balanceUnits -= outQty;
                 }
-                else if (m.TipoMovimiento == "Transferencia")
+                else if (m.MovementType == "Transfer")
                 {
-                    // Para el kardex filtrado por almacén:
                     if (almacenId.HasValue)
                     {
-                        if (m.AlmacenId == almacenId.Value)
+                        if (m.WarehouseId == almacenId.Value)
                         {
-                            salida = m.Cantidad;
-                            saldoUnidades -= salida;
+                            outQty = m.Quantity;
+                            balanceUnits -= outQty;
                         }
-                        else if (m.AlmacenDestinoId == almacenId.Value)
+                        else if (m.DestinationWarehouseId == almacenId.Value)
                         {
-                            entrada = m.Cantidad;
-                            if (saldoUnidades + entrada > 0)
-                                costoPromedio = (saldoValor + m.CostoTotal) / (saldoUnidades + entrada);
-                            saldoUnidades += entrada;
+                            inQty = m.Quantity;
+                            if (balanceUnits + inQty > 0)
+                                averageCost = (balanceValue + m.TotalCost) / (balanceUnits + inQty);
+                            balanceUnits += inQty;
                         }
                     }
                     else
                     {
-                        // Sin filtro de almacén, no afecta el stock total de la empresa
-                        salida = m.Cantidad;
-                        entrada = m.Cantidad;
+                        outQty = m.Quantity;
+                        inQty = m.Quantity;
                     }
                 }
 
-                saldoValor = saldoUnidades * costoPromedio;
+                balanceValue = balanceUnits * averageCost;
 
                 return new KardexItemDto
                 {
-                    MovimientoId = m.Id,
-                    Numero = m.Numero,
-                    FechaMovimiento = m.FechaMovimiento,
-                    TipoMovimiento = m.TipoMovimiento,
-                    Referencia = m.Referencia,
-                    Entrada = entrada,
-                    Salida = salida,
-                    CostoUnitario = m.CostoUnitario,
-                    CostoTotal = m.CostoTotal,
-                    SaldoUnidades = saldoUnidades,
-                    CostoPromedio = costoPromedio,
-                    SaldoValor = saldoValor,
-                    Observaciones = m.Observaciones
+                    MovementId = m.Id,
+                    Number = m.Number,
+                    MovementDate = m.MovementDate,
+                    MovementType = m.MovementType,
+                    Reference = m.Reference,
+                    In = inQty,
+                    Out = outQty,
+                    UnitCost = m.UnitCost,
+                    TotalCost = m.TotalCost,
+                    BalanceUnits = balanceUnits,
+                    AverageCost = averageCost,
+                    BalanceValue = balanceValue,
+                    Notes = m.Notes
                 };
             })
             .ToList();
 
-        // Obtener stock actual de la tabla StockProducto
         var stocks = await _stockRepo.FindAsync(
             s => s.EmpresaId == empresaId.Value
-                 && s.ProductoId == productoId
+                 && s.CompanyProductId == companyProduct.CompanyProductId
                  && (!almacenId.HasValue || s.AlmacenId == almacenId.Value),
             ct);
 
-        decimal stockActual = stocks.Sum(s => s.StockActual);
-        decimal costoPromActual = stocks.Any() ? stocks.Average(s => s.CostoPromedio) : 0;
+        decimal stockActual = stocks.Sum(s => s.CurrentStock);
+        decimal costoPromActual = stocks.Any() ? stocks.Average(s => s.AverageCost) : 0;
 
         string? almacenNombre = almacenId.HasValue && almMap.TryGetValue(almacenId.Value, out var an) ? an : null;
 
         return Result<KardexDto>.Success(new KardexDto
         {
-            ProductoId = productoId,
-            ProductoCodigo = producto.Codigo,
-            ProductoNombre = producto.Nombre,
-            AlmacenId = almacenId,
-            AlmacenNombre = almacenNombre,
-            StockActual = stockActual,
-            CostoPromedio = costoPromActual,
-            Movimientos = items
+            CompanyProductId = companyProduct.CompanyProductId,
+            ProductSku = companyProduct.Sku,
+            ProductName = companyProduct.Sku,
+            WarehouseId = almacenId,
+            WarehouseName = almacenNombre,
+            CurrentStock = stockActual,
+            AverageCost = costoPromActual,
+            Movements = items
         });
     }
 
@@ -338,30 +323,30 @@ public class MovimientoInventarioService : IMovimientoInventarioService
     {
         var empresaId = _currentUser.EmpresaId;
         if (!empresaId.HasValue)
-            return Result<IReadOnlyList<StockProductoDto>>.Failure("No se pudo determinar la empresa activa.");
+            return Result<IReadOnlyList<StockProductoDto>>.Failure("No active company.");
 
         var stocks = await _stockRepo.FindAsync(
             s => s.EmpresaId == empresaId.Value
                  && (!almacenId.HasValue || s.AlmacenId == almacenId.Value),
             ct);
 
-        var productos = await _productoRepo.FindAsync(p => p.EmpresaId == empresaId.Value, ct);
+        var companyProducts = await _companyProductRepo.FindAsync(p => p.EmpresaId == empresaId.Value, ct);
         var almacenes = await _almacenRepo.FindAsync(a => a.EmpresaId == empresaId.Value, ct);
 
-        var prodMap = productos.ToDictionary(p => p.Id, p => new { p.Nombre, p.Codigo });
+        var cpMap = companyProducts.ToDictionary(p => p.CompanyProductId, p => p.Sku);
         var almMap = almacenes.ToDictionary(a => a.Id, a => a.Nombre);
 
         var dtos = stocks.Select(s => new StockProductoDto
         {
             Id = s.Id,
-            ProductoId = s.ProductoId,
-            ProductoCodigo = prodMap.TryGetValue(s.ProductoId, out var p) ? p.Codigo : $"#{s.ProductoId}",
-            ProductoNombre = prodMap.TryGetValue(s.ProductoId, out var p2) ? p2.Nombre : $"Producto #{s.ProductoId}",
-            AlmacenId = s.AlmacenId,
-            AlmacenNombre = almMap.TryGetValue(s.AlmacenId, out var a) ? a : $"Almacén #{s.AlmacenId}",
-            StockActual = s.StockActual,
-            CostoPromedio = s.CostoPromedio,
-            UltimaActualizacion = s.UltimaActualizacion
+            CompanyProductId = s.CompanyProductId,
+            ProductSku = cpMap.TryGetValue(s.CompanyProductId, out var sku) ? sku : $"#{s.CompanyProductId}",
+            ProductName = cpMap.TryGetValue(s.CompanyProductId, out var name) ? name : $"Product #{s.CompanyProductId}",
+            WarehouseId = s.AlmacenId,
+            WarehouseName = almMap.TryGetValue(s.AlmacenId, out var wn) ? wn : $"Warehouse #{s.AlmacenId}",
+            CurrentStock = s.CurrentStock,
+            AverageCost = s.AverageCost,
+            LastUpdated = s.LastUpdated
         }).ToList().AsReadOnly();
 
         return Result<IReadOnlyList<StockProductoDto>>.Success(dtos);
@@ -370,10 +355,12 @@ public class MovimientoInventarioService : IMovimientoInventarioService
     // ── Helpers ────────────────────────────────────────────────────────────────
 
     private async Task<StockProducto> GetOrCreateStock(
-        int empresaId, int productoId, int almacenId, CancellationToken ct)
+        int empresaId, long companyProductId, int almacenId, CancellationToken ct)
     {
         var stocks = await _stockRepo.FindAsync(
-            s => s.EmpresaId == empresaId && s.ProductoId == productoId && s.AlmacenId == almacenId, ct);
+            s => s.EmpresaId == empresaId
+              && s.CompanyProductId == companyProductId
+              && s.AlmacenId == almacenId, ct);
 
         if (stocks.Any())
             return stocks.First();
@@ -381,51 +368,50 @@ public class MovimientoInventarioService : IMovimientoInventarioService
         var nuevo = new StockProducto
         {
             EmpresaId = empresaId,
-            ProductoId = productoId,
+            CompanyProductId = companyProductId,
             AlmacenId = almacenId,
-            StockActual = 0,
-            CostoPromedio = 0,
-            UltimaActualizacion = DateTime.UtcNow,
+            CurrentStock = 0,
+            AverageCost = 0,
+            LastUpdated = DateTime.UtcNow,
             Activo = true
         };
         await _stockRepo.AddAsync(nuevo, ct);
         return nuevo;
     }
 
-    private static void ActualizarCostoPromedio(StockProducto stock, decimal cantidadEntrada, decimal costoNuevo)
+    private static void UpdateAverageCost(StockProducto stock, decimal inQty, decimal newCost)
     {
-        if (stock.StockActual <= 0)
+        if (stock.CurrentStock <= 0)
         {
-            stock.CostoPromedio = costoNuevo;
+            stock.AverageCost = newCost;
             return;
         }
-        // Costo Promedio Ponderado
-        stock.CostoPromedio =
-            (stock.StockActual * stock.CostoPromedio + cantidadEntrada * costoNuevo)
-            / (stock.StockActual + cantidadEntrada);
+        stock.AverageCost =
+            (stock.CurrentStock * stock.AverageCost + inQty * newCost)
+            / (stock.CurrentStock + inQty);
     }
 
     private static MovimientoInventarioDto MapToDto(
         MovimientoInventario m,
-        Dictionary<int, dynamic> prodMap,
+        Dictionary<long, string> cpMap,
         Dictionary<int, string> almMap) => new()
     {
         Id = m.Id,
-        Numero = m.Numero,
-        TipoMovimiento = m.TipoMovimiento,
-        FechaMovimiento = m.FechaMovimiento,
-        ProductoId = m.ProductoId,
-        ProductoNombre = prodMap.TryGetValue(m.ProductoId, out var p) ? (string)p.Nombre : $"Producto #{m.ProductoId}",
-        ProductoCodigo = prodMap.TryGetValue(m.ProductoId, out var p2) ? (string)p2.Codigo : string.Empty,
-        AlmacenId = m.AlmacenId,
-        AlmacenNombre = almMap.TryGetValue(m.AlmacenId, out var a) ? a : $"Almacén #{m.AlmacenId}",
-        AlmacenDestinoId = m.AlmacenDestinoId,
-        AlmacenDestinoNombre = m.AlmacenDestinoId.HasValue && almMap.TryGetValue(m.AlmacenDestinoId.Value, out var ad) ? ad : null,
-        Cantidad = m.Cantidad,
-        CostoUnitario = m.CostoUnitario,
-        CostoTotal = m.CostoTotal,
-        Referencia = m.Referencia,
-        Observaciones = m.Observaciones,
+        Number = m.Number,
+        MovementType = m.MovementType,
+        MovementDate = m.MovementDate,
+        CompanyProductId = m.CompanyProductId,
+        ProductName = cpMap.TryGetValue(m.CompanyProductId, out var n) ? n : $"#{m.CompanyProductId}",
+        ProductSku = cpMap.TryGetValue(m.CompanyProductId, out var s) ? s : string.Empty,
+        WarehouseId = m.WarehouseId,
+        WarehouseName = almMap.TryGetValue(m.WarehouseId, out var a) ? a : $"Warehouse #{m.WarehouseId}",
+        DestinationWarehouseId = m.DestinationWarehouseId,
+        DestinationWarehouseName = m.DestinationWarehouseId.HasValue && almMap.TryGetValue(m.DestinationWarehouseId.Value, out var da) ? da : null,
+        Quantity = m.Quantity,
+        UnitCost = m.UnitCost,
+        TotalCost = m.TotalCost,
+        Reference = m.Reference,
+        Notes = m.Notes,
         Activo = m.Activo,
         EmpresaId = m.EmpresaId,
         FechaCreacion = m.FechaCreacion,

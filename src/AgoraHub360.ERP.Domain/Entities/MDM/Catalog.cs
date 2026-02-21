@@ -3,23 +3,23 @@ namespace AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Common;
 
 /// <summary>
-/// Catálogo de productos. Puede ser global (Scope=1) o específico de empresa (Scope=2).
-/// Todos los productos pertenecen a un catálogo.
+/// Catalog. Can be global (Scope=1) or company-specific (Scope=2).
+/// All products belong to a catalog.
 /// </summary>
 public class Catalog : AuditableEntity
 {
     public long CatalogId { get; set; }
 
-    /// <summary>1=Global, 2=Empresa</summary>
+    /// <summary>1=Global, 2=Company</summary>
     public byte Scope { get; set; } = 1;
 
-    /// <summary>Solo aplica cuando Scope=Empresa.</summary>
+    /// <summary>Only applies when Scope=Company.</summary>
     public int? EmpresaId { get; set; }
 
-    public string Nombre { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
     public bool IsDefault { get; set; }
 
-    // Navegación
+    // Navigation
     public ICollection<Product> Products { get; set; } = new List<Product>();
     public ICollection<Category> Categories { get; set; } = new List<Category>();
 }

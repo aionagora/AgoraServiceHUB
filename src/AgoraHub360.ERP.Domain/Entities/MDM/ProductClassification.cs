@@ -3,21 +3,21 @@ namespace AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Common;
 
 /// <summary>
-/// Nodo de clasificación: Familia, SubFamilia, Línea, Segmento, etc.
-/// Type: 1=Familia, 2=SubFamilia, 3=Linea, 4=Segmento, 5=Otro
+/// Classification node: Family, SubFamily, Line, Segment, etc.
+/// Type: 1=Family, 2=SubFamily, 3=Line, 4=Segment, 5=Other
 /// </summary>
 public class ProductClassification : AuditableEntity
 {
     public long ClassificationId { get; set; }
     public long CatalogId { get; set; }
 
-    /// <summary>1=Familia, 2=SubFamilia, 3=Linea, 4=Segmento, 5=Otro</summary>
+    /// <summary>1=Family, 2=SubFamily, 3=Line, 4=Segment, 5=Other</summary>
     public byte Type { get; set; }
 
-    public string Nombre { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
     public long? ParentId { get; set; }
 
-    // Navegación
+    // Navigation
     public ProductClassification? Parent { get; set; }
     public ICollection<ProductClassification> Children { get; set; } = new List<ProductClassification>();
     public ICollection<ProductClassificationLink> Links { get; set; } = new List<ProductClassificationLink>();

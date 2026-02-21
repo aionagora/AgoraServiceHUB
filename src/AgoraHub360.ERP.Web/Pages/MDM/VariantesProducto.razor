@@ -26,7 +26,7 @@
                 <option value="0">-- Todos los productos --</option>
                 @foreach (var p in productosGlobales)
                 {
-                    <option value="@p.ProductId">@p.NombreComercial</option>
+                    <option value="@p.ProductId">@p.CommercialName</option>
                 }
             </select>
         </div>
@@ -140,7 +140,7 @@
                             <option value="0">-- Seleccione producto --</option>
                             @foreach (var p in productosGlobales)
                             {
-                                <option value="@p.ProductId">@p.NombreComercial</option>
+                                <option value="@p.ProductId">@p.CommercialName</option>
                             }
                         </select>
                     </div>

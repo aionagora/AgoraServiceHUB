@@ -31,22 +31,22 @@ public class CatalogService : ICatalogService
     public async Task<Result<CatalogDto>> GetByIdAsync(long id, CancellationToken ct = default)
     {
         var entity = await _repo.GetByIdAsync((int)id, ct);
-        if (entity is null) return Result<CatalogDto>.Failure($"Catálogo {id} no encontrado.");
+        if (entity is null) return Result<CatalogDto>.Failure($"Catalog {id} not found.");
         return Result<CatalogDto>.Success(Map(entity));
     }
 
     public async Task<Result<CatalogDto>> CreateAsync(CreateCatalogDto dto, CancellationToken ct = default)
     {
         var dup = await _repo.FindAsync(
-            c => c.Scope == dto.Scope && c.EmpresaId == dto.EmpresaId && c.Nombre == dto.Nombre, ct);
+            c => c.Scope == dto.Scope && c.EmpresaId == dto.EmpresaId && c.Name == dto.Name, ct);
         if (dup.Any())
-            return Result<CatalogDto>.Failure($"Ya existe un catálogo '{dto.Nombre}' con ese scope.");
+            return Result<CatalogDto>.Failure($"A catalog '{dto.Name}' with that scope already exists.");
 
         var entity = new Catalog
         {
             Scope = dto.Scope,
             EmpresaId = dto.EmpresaId,
-            Nombre = dto.Nombre,
+            Name = dto.Name,
             IsDefault = dto.IsDefault,
             Activo = true
         };
@@ -58,9 +58,9 @@ public class CatalogService : ICatalogService
     public async Task<Result<CatalogDto>> UpdateAsync(long id, UpdateCatalogDto dto, CancellationToken ct = default)
     {
         var entity = await _repo.GetByIdAsync((int)id, ct);
-        if (entity is null) return Result<CatalogDto>.Failure($"Catálogo {id} no encontrado.");
+        if (entity is null) return Result<CatalogDto>.Failure($"Catalog {id} not found.");
 
-        entity.Nombre = dto.Nombre;
+        entity.Name = dto.Name;
         entity.IsDefault = dto.IsDefault;
         entity.Activo = dto.Activo;
 
@@ -72,12 +72,12 @@ public class CatalogService : ICatalogService
     public async Task<Result<bool>> DeleteAsync(long id, CancellationToken ct = default)
     {
         var entity = await _repo.GetByIdAsync((int)id, ct);
-        if (entity is null) return Result<bool>.Failure($"Catálogo {id} no encontrado.");
+        if (entity is null) return Result<bool>.Failure($"Catalog {id} not found.");
         await _repo.DeleteAsync(entity, ct);
         await _uow.SaveChangesAsync(ct);
         return Result<bool>.Success(true);
     }
 
     private static CatalogDto Map(Catalog c) => new(
-        c.CatalogId, c.Scope, c.EmpresaId, c.Nombre, c.IsDefault, c.Activo);
+        c.CatalogId, c.Scope, c.EmpresaId, c.Name, c.IsDefault, c.Activo);
 }

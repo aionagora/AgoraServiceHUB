@@ -3,25 +3,25 @@ namespace AgoraHub360.ERP.Shared.DTOs.Inventario;
 public class MovimientoInventarioDto
 {
     public int Id { get; set; }
-    public string Numero { get; set; } = string.Empty;
-    public string TipoMovimiento { get; set; } = string.Empty;
-    public DateTime FechaMovimiento { get; set; }
+    public string Number { get; set; } = string.Empty;
+    public string MovementType { get; set; } = string.Empty;
+    public DateTime MovementDate { get; set; }
 
-    public int ProductoId { get; set; }
-    public string ProductoNombre { get; set; } = string.Empty;
-    public string ProductoCodigo { get; set; } = string.Empty;
+    public long CompanyProductId { get; set; }
+    public string ProductName { get; set; } = string.Empty;
+    public string ProductSku { get; set; } = string.Empty;
 
-    public int AlmacenId { get; set; }
-    public string AlmacenNombre { get; set; } = string.Empty;
+    public int WarehouseId { get; set; }
+    public string WarehouseName { get; set; } = string.Empty;
 
-    public int? AlmacenDestinoId { get; set; }
-    public string? AlmacenDestinoNombre { get; set; }
+    public int? DestinationWarehouseId { get; set; }
+    public string? DestinationWarehouseName { get; set; }
 
-    public decimal Cantidad { get; set; }
-    public decimal CostoUnitario { get; set; }
-    public decimal CostoTotal { get; set; }
-    public string? Referencia { get; set; }
-    public string? Observaciones { get; set; }
+    public decimal Quantity { get; set; }
+    public decimal UnitCost { get; set; }
+    public decimal TotalCost { get; set; }
+    public string? Reference { get; set; }
+    public string? Notes { get; set; }
     public bool Activo { get; set; }
     public int EmpresaId { get; set; }
     public DateTime FechaCreacion { get; set; }

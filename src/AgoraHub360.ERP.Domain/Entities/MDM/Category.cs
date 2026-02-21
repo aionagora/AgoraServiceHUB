@@ -3,8 +3,8 @@ namespace AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Common;
 
 /// <summary>
-/// Categoría del catálogo con soporte jerárquico (árbol N niveles).
-/// Un producto puede pertenecer a múltiples categorías (N:N).
+/// Hierarchical category with N-level tree support.
+/// A product can belong to multiple categories (N:N via ProductCategory).
 /// </summary>
 public class Category : AuditableEntity
 {
@@ -12,14 +12,14 @@ public class Category : AuditableEntity
     public long CatalogId { get; set; }
     public long? ParentCategoryId { get; set; }
 
-    public string Nombre { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
 
-    /// <summary>Path materializado para búsquedas rápidas: "/Electrónica/Celulares".</summary>
+    /// <summary>Materialized path for fast queries: "/Electronics/Phones".</summary>
     public string? Path { get; set; }
 
     public int SortOrder { get; set; }
 
-    // Navegación
+    // Navigation
     public Catalog Catalog { get; set; } = null!;
     public Category? Parent { get; set; }
     public ICollection<Category> Children { get; set; } = new List<Category>();

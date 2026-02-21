@@ -1,45 +1,37 @@
 namespace AgoraHub360.ERP.Shared.DTOs.Inventario;
 
 /// <summary>
-/// Una línea del Kardex de un producto, con saldo acumulado.
+/// A single Kardex line for a product, with running balance.
 /// </summary>
 public class KardexItemDto
 {
-    public int MovimientoId { get; set; }
-    public string Numero { get; set; } = string.Empty;
-    public DateTime FechaMovimiento { get; set; }
-    public string TipoMovimiento { get; set; } = string.Empty;
-    public string? Referencia { get; set; }
+    public int MovementId { get; set; }
+    public string Number { get; set; } = string.Empty;
+    public DateTime MovementDate { get; set; }
+    public string MovementType { get; set; } = string.Empty;
+    public string? Reference { get; set; }
 
-    /// <summary>Cantidad que entra (positiva) para este movimiento.</summary>
-    public decimal Entrada { get; set; }
+    public decimal In { get; set; }
+    public decimal Out { get; set; }
 
-    /// <summary>Cantidad que sale (positiva) para este movimiento.</summary>
-    public decimal Salida { get; set; }
+    public decimal UnitCost { get; set; }
+    public decimal TotalCost { get; set; }
 
-    public decimal CostoUnitario { get; set; }
-    public decimal CostoTotal { get; set; }
+    public decimal BalanceUnits { get; set; }
+    public decimal AverageCost { get; set; }
+    public decimal BalanceValue { get; set; }
 
-    /// <summary>Saldo de unidades acumulado después de este movimiento.</summary>
-    public decimal SaldoUnidades { get; set; }
-
-    /// <summary>Costo promedio vigente después de este movimiento.</summary>
-    public decimal CostoPromedio { get; set; }
-
-    /// <summary>Valor total del inventario (SaldoUnidades × CostoPromedio).</summary>
-    public decimal SaldoValor { get; set; }
-
-    public string? Observaciones { get; set; }
+    public string? Notes { get; set; }
 }
 
 public class KardexDto
 {
-    public int ProductoId { get; set; }
-    public string ProductoCodigo { get; set; } = string.Empty;
-    public string ProductoNombre { get; set; } = string.Empty;
-    public int? AlmacenId { get; set; }
-    public string? AlmacenNombre { get; set; }
-    public decimal StockActual { get; set; }
-    public decimal CostoPromedio { get; set; }
-    public List<KardexItemDto> Movimientos { get; set; } = new();
+    public long CompanyProductId { get; set; }
+    public string ProductSku { get; set; } = string.Empty;
+    public string ProductName { get; set; } = string.Empty;
+    public int? WarehouseId { get; set; }
+    public string? WarehouseName { get; set; }
+    public decimal CurrentStock { get; set; }
+    public decimal AverageCost { get; set; }
+    public List<KardexItemDto> Movements { get; set; } = new();
 }

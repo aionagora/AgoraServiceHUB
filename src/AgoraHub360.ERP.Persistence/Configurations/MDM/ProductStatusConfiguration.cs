@@ -13,7 +13,7 @@ public class ProductStatusConfiguration : IEntityTypeConfiguration<ProductStatus
         builder.Property(s => s.ProductStatusId).UseIdentityColumn();
 
         builder.Property(s => s.Code).IsRequired().HasMaxLength(30);
-        builder.Property(s => s.Nombre).IsRequired().HasMaxLength(80);
+        builder.Property(s => s.Name).IsRequired().HasMaxLength(80);
         builder.Property(s => s.CreadoPor).HasMaxLength(100);
         builder.Property(s => s.ModificadoPor).HasMaxLength(100);
 

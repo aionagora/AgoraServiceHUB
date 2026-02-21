@@ -12,7 +12,7 @@ public class ProductClassificationConfiguration : IEntityTypeConfiguration<Produ
         builder.HasKey(c => c.ClassificationId);
         builder.Property(c => c.ClassificationId).UseIdentityColumn();
 
-        builder.Property(c => c.Nombre).IsRequired().HasMaxLength(120);
+        builder.Property(c => c.Name).IsRequired().HasMaxLength(120);
         builder.Property(c => c.CreadoPor).HasMaxLength(100);
         builder.Property(c => c.ModificadoPor).HasMaxLength(100);
 
@@ -21,6 +21,6 @@ public class ProductClassificationConfiguration : IEntityTypeConfiguration<Produ
             .HasForeignKey(c => c.ParentId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasIndex(c => new { c.CatalogId, c.Type, c.Nombre });
+        builder.HasIndex(c => new { c.CatalogId, c.Type, c.Name });
     }
 }

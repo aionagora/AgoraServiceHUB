@@ -3,16 +3,16 @@
 @inject CategoriaProductoHttpService CategoriaService
 @inject IJSRuntime JS
 
-<PageTitle>Categorías de Producto</PageTitle>
+<PageTitle>Categories</PageTitle>
 
 <div class="container-fluid">
     <div class="row mb-3">
         <div class="col">
-            <h3>?? Categorías de Producto</h3>
+            <h3>?? Categories</h3>
         </div>
         <div class="col-auto">
             <button class="btn btn-primary" @onclick="ShowCreateModal">
-                <i class="bi bi-plus-circle"></i> Nueva Categoría
+                <i class="bi bi-plus-circle"></i> New Category
             </button>
         </div>
     </div>
@@ -20,10 +20,8 @@
     @if (loading)
     {
         <div class="text-center py-5">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Cargando...</span>
-            </div>
-            <p class="mt-2">Cargando categorías...</p>
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2">Loading categories...</p>
         </div>
     }
     else if (!string.IsNullOrEmpty(errorMessage))
@@ -36,7 +34,7 @@
     else if (categorias.Count == 0)
     {
         <div class="alert alert-info">
-            <i class="bi bi-info-circle"></i> No hay categorías registradas. Crea la primera categoría usando el botón "Nueva Categoría".
+            <i class="bi bi-info-circle"></i> No categories registered.
         </div>
     }
     else
@@ -48,28 +46,23 @@
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Nombre</th>
-                                <th>Descripción</th>
-                                <th>Estado</th>
-                                <th class="text-end">Acciones</th>
+                                <th>Name</th>
+                                <th>Path</th>
+                                <th>Status</th>
+                                <th class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var cat in categorias)
                             {
                                 <tr>
-                                    <td>@cat.Id</td>
-                                    <td><strong>@cat.Nombre</strong></td>
-                                    <td>@cat.Descripcion</td>
+                                    <td>@cat.CategoryId</td>
+                                    <td><strong>@cat.Name</strong></td>
+                                    <td><small class="text-muted">@cat.Path</small></td>
                                     <td>
-                                        @if (cat.Activo)
-                                        {
-                                            <span class="badge bg-success">Activo</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-secondary">Inactivo</span>
-                                        }
+                                        <span class="badge @(cat.Activo ? "bg-success" : "bg-secondary")">
+                                            @(cat.Activo ? "Active" : "Inactive")
+                                        </span>
                                     </td>
                                     <td class="text-end">
                                         <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditModal(cat)">
@@ -89,41 +82,29 @@
     }
 </div>
 
-@* Modal Crear *@
 @if (showCreateModal)
 {
     <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Nueva Categoría</h5>
+                    <h5 class="modal-title">New Category</h5>
                     <button type="button" class="btn-close" @onclick="CloseCreateModal"></button>
                 </div>
                 <div class="modal-body">
                     <EditForm Model="createDto" OnValidSubmit="CreateCategoria">
                         <DataAnnotationsValidator />
                         <ValidationSummary class="text-danger" />
-
                         <div class="mb-3">
-                            <label class="form-label">Nombre *</label>
-                            <InputText class="form-control" @bind-Value="createDto.Nombre" placeholder="Ej: Electrónica" />
-                            <ValidationMessage For="@(() => createDto.Nombre)" />
+                            <label class="form-label">Name *</label>
+                            <InputText class="form-control" @bind-Value="createDto.Name" placeholder="E.g.: Electronics" />
+                            <ValidationMessage For="@(() => createDto.Name)" />
                         </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Descripción</label>
-                            <InputTextArea class="form-control" @bind-Value="createDto.Descripcion" rows="3" placeholder="Descripción opcional" />
-                            <ValidationMessage For="@(() => createDto.Descripcion)" />
-                        </div>
-
                         <div class="d-flex justify-content-end gap-2">
-                            <button type="button" class="btn btn-secondary" @onclick="CloseCreateModal">Cancelar</button>
+                            <button type="button" class="btn btn-secondary" @onclick="CloseCreateModal">Cancel</button>
                             <button type="submit" class="btn btn-primary" disabled="@saving">
-                                @if (saving)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-1"></span>
-                                }
-                                Guardar
+                                @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                Save
                             </button>
                         </div>
                     </EditForm>
@@ -133,46 +114,33 @@
     </div>
 }
 
-@* Modal Editar *@
 @if (showEditModal)
 {
     <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Editar Categoría</h5>
+                    <h5 class="modal-title">Edit Category</h5>
                     <button type="button" class="btn-close" @onclick="CloseEditModal"></button>
                 </div>
                 <div class="modal-body">
                     <EditForm Model="updateDto" OnValidSubmit="UpdateCategoria">
                         <DataAnnotationsValidator />
                         <ValidationSummary class="text-danger" />
-
                         <div class="mb-3">
-                            <label class="form-label">Nombre *</label>
-                            <InputText class="form-control" @bind-Value="updateDto.Nombre" placeholder="Ej: Electrónica" />
-                            <ValidationMessage For="@(() => updateDto.Nombre)" />
+                            <label class="form-label">Name *</label>
+                            <InputText class="form-control" @bind-Value="updateDto.Name" placeholder="E.g.: Electronics" />
+                            <ValidationMessage For="@(() => updateDto.Name)" />
                         </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Descripción</label>
-                            <InputTextArea class="form-control" @bind-Value="updateDto.Descripcion" rows="3" placeholder="Descripción opcional" />
-                            <ValidationMessage For="@(() => updateDto.Descripcion)" />
-                        </div>
-
                         <div class="mb-3 form-check">
                             <InputCheckbox class="form-check-input" id="activoCheck" @bind-Value="updateDto.Activo" />
-                            <label class="form-check-label" for="activoCheck">Activo</label>
+                            <label class="form-check-label" for="activoCheck">Active</label>
                         </div>
-
                         <div class="d-flex justify-content-end gap-2">
-                            <button type="button" class="btn btn-secondary" @onclick="CloseEditModal">Cancelar</button>
+                            <button type="button" class="btn btn-secondary" @onclick="CloseEditModal">Cancel</button>
                             <button type="submit" class="btn btn-primary" disabled="@saving">
-                                @if (saving)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-1"></span>
-                                }
-                                Guardar
+                                @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                Save
                             </button>
                         </div>
                     </EditForm>
@@ -183,20 +151,17 @@
 }
 
 @code {
-    private List<CategoriaProductoDto> categorias = new();
+    private List<CategoryDto> categorias = new();
     private bool loading = true;
     private bool saving = false;
     private bool showCreateModal = false;
     private bool showEditModal = false;
     private string? errorMessage;
-    private CreateCategoriaProductoDto createDto = new();
-    private UpdateCategoriaProductoDto updateDto = new();
-    private int editingId;
+    private CreateCategoryDto createDto = new();
+    private UpdateCategoryDto updateDto = new();
+    private long editingId;
 
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadCategorias();
-    }
+    protected override async Task OnInitializedAsync() => await LoadCategorias();
 
     private async Task LoadCategorias()
     {
@@ -206,43 +171,32 @@
             errorMessage = null;
             categorias = await CategoriaService.GetAllAsync();
         }
-        catch (Exception ex)
-        {
-            errorMessage = $"Error al cargar categorías: {ex.Message}";
-        }
-        finally
-        {
-            loading = false;
-        }
+        catch (Exception ex) { errorMessage = $"Error loading categories: {ex.Message}"; }
+        finally { loading = false; }
     }
 
     private void ShowCreateModal()
     {
-        createDto = new CreateCategoriaProductoDto();
+        createDto = new CreateCategoryDto();
         showCreateModal = true;
     }
 
-    private void CloseCreateModal()
-    {
-        showCreateModal = false;
-    }
+    private void CloseCreateModal() => showCreateModal = false;
 
-    private void ShowEditModal(CategoriaProductoDto cat)
+    private void ShowEditModal(CategoryDto cat)
     {
-        updateDto = new UpdateCategoriaProductoDto
+        updateDto = new UpdateCategoryDto
         {
-            Nombre = cat.Nombre,
-            Descripcion = cat.Descripcion,
+            ParentCategoryId = cat.ParentCategoryId,
+            Name = cat.Name,
+            SortOrder = cat.SortOrder,
             Activo = cat.Activo
         };
-        editingId = cat.Id;
+        editingId = cat.CategoryId;
         showEditModal = true;
     }
 
-    private void CloseEditModal()
-    {
-        showEditModal = false;
-    }
+    private void CloseEditModal() => showEditModal = false;
 
     private async Task CreateCategoria()
     {
@@ -250,28 +204,12 @@
         {
             saving = true;
             errorMessage = null;
-
             var response = await CategoriaService.CreateAsync(createDto);
-
-            if (response.Success)
-            {
-                await JS.InvokeVoidAsync("alert", response.Message ?? "Categoría guardada exitosamente");
-                CloseCreateModal();
-                await LoadCategorias();
-            }
-            else
-            {
-                errorMessage = response.Message;
-            }
+            if (response.Success) { CloseCreateModal(); await LoadCategorias(); }
+            else errorMessage = response.Message;
         }
-        catch (Exception ex)
-        {
-            errorMessage = $"Error: {ex.Message}";
-        }
-        finally
-        {
-            saving = false;
-        }
+        catch (Exception ex) { errorMessage = $"Error: {ex.Message}"; }
+        finally { saving = false; }
     }
 
     private async Task UpdateCategoria()
@@ -280,51 +218,23 @@
         {
             saving = true;
             errorMessage = null;
-
             var response = await CategoriaService.UpdateAsync(editingId, updateDto);
-
-            if (response.Success)
-            {
-                await JS.InvokeVoidAsync("alert", response.Message ?? "Categoría actualizada exitosamente");
-                CloseEditModal();
-                await LoadCategorias();
-            }
-            else
-            {
-                errorMessage = response.Message;
-            }
+            if (response.Success) { CloseEditModal(); await LoadCategorias(); }
+            else errorMessage = response.Message;
         }
-        catch (Exception ex)
-        {
-            errorMessage = $"Error: {ex.Message}";
-        }
-        finally
-        {
-            saving = false;
-        }
+        catch (Exception ex) { errorMessage = $"Error: {ex.Message}"; }
+        finally { saving = false; }
     }
 
-    private async Task DeleteCategoria(CategoriaProductoDto cat)
+    private async Task DeleteCategoria(CategoryDto cat)
     {
-        if (!await JS.InvokeAsync<bool>("confirm", $"¿Eliminar la categoría '{cat.Nombre}'?"))
-            return;
-
+        if (!await JS.InvokeAsync<bool>("confirm", $"Delete category '{cat.Name}'?")) return;
         try
         {
-            var response = await CategoriaService.DeleteAsync(cat.Id);
-            if (response.Success)
-            {
-                await JS.InvokeVoidAsync("alert", "Categoría eliminada exitosamente");
-                await LoadCategorias();
-            }
-            else
-            {
-                errorMessage = response.Message;
-            }
+            var response = await CategoriaService.DeleteAsync(cat.CategoryId);
+            if (response.Success) await LoadCategorias();
+            else errorMessage = response.Message;
         }
-        catch (Exception ex)
-        {
-            errorMessage = $"Error al eliminar: {ex.Message}";
-        }
+        catch (Exception ex) { errorMessage = $"Error deleting: {ex.Message}"; }
     }
 }

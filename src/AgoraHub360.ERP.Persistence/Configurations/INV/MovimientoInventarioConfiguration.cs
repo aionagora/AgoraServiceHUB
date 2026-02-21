@@ -12,38 +12,38 @@ public class MovimientoInventarioConfiguration : IEntityTypeConfiguration<Movimi
         builder.HasKey(m => m.Id);
         builder.Property(m => m.Id).UseIdentityColumn();
 
-        builder.Property(m => m.Numero).IsRequired().HasMaxLength(30);
-        builder.Property(m => m.TipoMovimiento).IsRequired().HasMaxLength(20);
-        builder.Property(m => m.FechaMovimiento).IsRequired();
+        builder.Property(m => m.Number).IsRequired().HasMaxLength(30);
+        builder.Property(m => m.MovementType).IsRequired().HasMaxLength(20);
+        builder.Property(m => m.MovementDate).IsRequired();
 
-        builder.Property(m => m.Cantidad).HasColumnType("decimal(18,4)");
-        builder.Property(m => m.CostoUnitario).HasColumnType("decimal(18,4)");
-        builder.Property(m => m.CostoTotal).HasColumnType("decimal(18,4)");
+        builder.Property(m => m.Quantity).HasColumnType("decimal(18,4)");
+        builder.Property(m => m.UnitCost).HasColumnType("decimal(18,4)");
+        builder.Property(m => m.TotalCost).HasColumnType("decimal(18,4)");
 
-        builder.Property(m => m.Referencia).HasMaxLength(50);
-        builder.Property(m => m.Observaciones).HasMaxLength(500);
+        builder.Property(m => m.Reference).HasMaxLength(50);
+        builder.Property(m => m.Notes).HasMaxLength(500);
         builder.Property(m => m.CreadoPor).HasMaxLength(100);
         builder.Property(m => m.ModificadoPor).HasMaxLength(100);
 
-        // Índices
-        builder.HasIndex(m => new { m.EmpresaId, m.Numero }).IsUnique();
-        builder.HasIndex(m => new { m.EmpresaId, m.ProductoId, m.FechaMovimiento });
-        builder.HasIndex(m => new { m.EmpresaId, m.AlmacenId });
+        // Indexes
+        builder.HasIndex(m => new { m.EmpresaId, m.Number }).IsUnique();
+        builder.HasIndex(m => new { m.EmpresaId, m.CompanyProductId, m.MovementDate });
+        builder.HasIndex(m => new { m.EmpresaId, m.WarehouseId });
 
-        // Relaciones (sin cascade delete para preservar historial)
-        builder.HasOne(m => m.Producto)
+        // Relations (no cascade delete to preserve history)
+        builder.HasOne(m => m.CompanyProduct)
             .WithMany()
-            .HasForeignKey(m => m.ProductoId)
+            .HasForeignKey(m => m.CompanyProductId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasOne(m => m.Almacen)
+        builder.HasOne(m => m.Warehouse)
             .WithMany()
-            .HasForeignKey(m => m.AlmacenId)
+            .HasForeignKey(m => m.WarehouseId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasOne(m => m.AlmacenDestino)
+        builder.HasOne(m => m.DestinationWarehouse)
             .WithMany()
-            .HasForeignKey(m => m.AlmacenDestinoId)
+            .HasForeignKey(m => m.DestinationWarehouseId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

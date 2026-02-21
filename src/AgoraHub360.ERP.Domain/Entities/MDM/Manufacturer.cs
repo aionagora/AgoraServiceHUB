@@ -2,12 +2,12 @@ namespace AgoraHub360.ERP.Domain.Entities.MDM;
 
 using AgoraHub360.ERP.Domain.Common;
 
-/// <summary>Fabricante/productor del producto. Entidad global (no tenant).</summary>
+/// <summary>Product manufacturer/producer. Global entity (not tenant-scoped).</summary>
 public class Manufacturer : AuditableEntity
 {
     public long ManufacturerId { get; set; }
-    public string Nombre { get; set; } = string.Empty;
-    public string? Pais { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string? Country { get; set; }
 
     public ICollection<Product> Products { get; set; } = new List<Product>();
 }

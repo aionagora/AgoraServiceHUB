@@ -6,7 +6,6 @@ using AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Interfaces;
 using AgoraHub360.ERP.Shared.DTOs.MDM;
 
-/// <summary>Servicio para el catálogo global de productos (plantillas).</summary>
 public class ProductService : IProductService
 {
     private readonly IRepository<Product> _repo;
@@ -26,13 +25,9 @@ public class ProductService : IProductService
         IRepository<ProductStatus> statusRepo,
         IUnitOfWork uow)
     {
-        _repo = repo;
-        _catalogRepo = catalogRepo;
-        _brandRepo = brandRepo;
-        _manufacturerRepo = manufacturerRepo;
-        _uomRepo = uomRepo;
-        _statusRepo = statusRepo;
-        _uow = uow;
+        _repo = repo; _catalogRepo = catalogRepo; _brandRepo = brandRepo;
+        _manufacturerRepo = manufacturerRepo; _uomRepo = uomRepo;
+        _statusRepo = statusRepo; _uow = uow;
     }
 
     public async Task<Result<IReadOnlyList<ProductDto2>>> GetAllAsync(
@@ -40,44 +35,30 @@ public class ProductService : IProductService
     {
         var items = await _repo.FindAsync(
             p => catalogId == null || p.CatalogId == catalogId, ct);
-
-        var brands = await _brandRepo.FindAsync(_ => true, ct);
-        var manufacturers = await _manufacturerRepo.FindAsync(_ => true, ct);
-        var uoms = await _uomRepo.FindAsync(_ => true, ct);
-        var statuses = await _statusRepo.FindAsync(_ => true, ct);
-        var catalogs = await _catalogRepo.FindAsync(_ => true, ct);
-
-        var brandMap = brands.ToDictionary(b => b.BrandId, b => b.Nombre);
-        var mfgMap = manufacturers.ToDictionary(m => m.ManufacturerId, m => m.Nombre);
-        var uomMap = uoms.ToDictionary(u => u.UomId, u => u.Code);
-        var statusMap = statuses.ToDictionary(s => s.ProductStatusId, s => s.Code);
-        var catalogMap = catalogs.ToDictionary(c => c.CatalogId, c => c.Nombre);
-
         return Result<IReadOnlyList<ProductDto2>>.Success(
-            items.Select(p => Map(p, brandMap, mfgMap, uomMap, statusMap, catalogMap))
-                 .ToList().AsReadOnly());
+            (await BuildMapsAsync(ct, items, fullMaps: true)).AsReadOnly());
     }
 
     public async Task<Result<ProductDto2>> GetByIdAsync(long id, CancellationToken ct = default)
     {
         var entity = await _repo.GetByIdAsync((int)id, ct);
-        if (entity is null) return Result<ProductDto2>.Failure($"Producto {id} no encontrado.");
+        if (entity is null) return Result<ProductDto2>.Failure($"Product {id} not found.");
         return Result<ProductDto2>.Success(await MapSingleAsync(entity, ct));
     }
 
     public async Task<Result<ProductDto2>> CreateAsync(CreateProductDto2 dto, CancellationToken ct = default)
     {
         var catalog = await _catalogRepo.GetByIdAsync((int)dto.CatalogId, ct);
-        if (catalog is null) return Result<ProductDto2>.Failure("Catálogo no encontrado.");
+        if (catalog is null) return Result<ProductDto2>.Failure("Catalog not found.");
 
         var uom = await _uomRepo.GetByIdAsync(dto.DefaultUomId, ct);
-        if (uom is null) return Result<ProductDto2>.Failure("Unidad de medida no encontrada.");
+        if (uom is null) return Result<ProductDto2>.Failure("Unit of measure not found.");
 
         int statusId = dto.LifecycleStatusId;
         if (statusId == 0)
         {
             var defStatus = (await _statusRepo.FindAsync(s => s.IsDefault, ct)).FirstOrDefault();
-            if (defStatus is null) return Result<ProductDto2>.Failure("No hay estado de producto predeterminado.");
+            if (defStatus is null) return Result<ProductDto2>.Failure("No default product status configured.");
             statusId = defStatus.ProductStatusId;
         }
 
@@ -85,10 +66,10 @@ public class ProductService : IProductService
         {
             CatalogId = dto.CatalogId,
             ProductKind = dto.ProductKind,
-            NombreGenerico = dto.NombreGenerico,
-            NombreComercial = dto.NombreComercial,
-            DescripcionCorta = dto.DescripcionCorta,
-            DescripcionLarga = dto.DescripcionLarga,
+            GenericName = dto.GenericName,
+            CommercialName = dto.CommercialName,
+            ShortDescription = dto.ShortDescription,
+            LongDescription = dto.LongDescription,
             BrandId = dto.BrandId,
             ManufacturerId = dto.ManufacturerId,
             DefaultUomId = dto.DefaultUomId,
@@ -107,13 +88,13 @@ public class ProductService : IProductService
     public async Task<Result<ProductDto2>> UpdateAsync(long id, UpdateProductDto2 dto, CancellationToken ct = default)
     {
         var entity = await _repo.GetByIdAsync((int)id, ct);
-        if (entity is null) return Result<ProductDto2>.Failure($"Producto {id} no encontrado.");
+        if (entity is null) return Result<ProductDto2>.Failure($"Product {id} not found.");
 
         entity.ProductKind = dto.ProductKind;
-        entity.NombreGenerico = dto.NombreGenerico;
-        entity.NombreComercial = dto.NombreComercial;
-        entity.DescripcionCorta = dto.DescripcionCorta;
-        entity.DescripcionLarga = dto.DescripcionLarga;
+        entity.GenericName = dto.GenericName;
+        entity.CommercialName = dto.CommercialName;
+        entity.ShortDescription = dto.ShortDescription;
+        entity.LongDescription = dto.LongDescription;
         entity.BrandId = dto.BrandId;
         entity.ManufacturerId = dto.ManufacturerId;
         entity.DefaultUomId = dto.DefaultUomId;
@@ -131,57 +112,57 @@ public class ProductService : IProductService
     public async Task<Result<bool>> DeleteAsync(long id, CancellationToken ct = default)
     {
         var entity = await _repo.GetByIdAsync((int)id, ct);
-        if (entity is null) return Result<bool>.Failure($"Producto {id} no encontrado.");
+        if (entity is null) return Result<bool>.Failure($"Product {id} not found.");
         await _repo.DeleteAsync(entity, ct);
         await _uow.SaveChangesAsync(ct);
         return Result<bool>.Success(true);
     }
 
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
     private async Task<ProductDto2> MapSingleAsync(Product p, CancellationToken ct)
     {
         var brandName = p.BrandId.HasValue
-            ? (await _brandRepo.GetByIdAsync((int)p.BrandId.Value, ct))?.Nombre
-            : null;
+            ? (await _brandRepo.GetByIdAsync((int)p.BrandId.Value, ct))?.Name : null;
         var mfgName = p.ManufacturerId.HasValue
-            ? (await _manufacturerRepo.GetByIdAsync((int)p.ManufacturerId.Value, ct))?.Nombre
-            : null;
+            ? (await _manufacturerRepo.GetByIdAsync((int)p.ManufacturerId.Value, ct))?.Name : null;
         var uomCode = (await _uomRepo.GetByIdAsync(p.DefaultUomId, ct))?.Code ?? "";
         var statusCode = (await _statusRepo.GetByIdAsync(p.LifecycleStatusId, ct))?.Code ?? "";
-        var catalogName = (await _catalogRepo.GetByIdAsync((int)p.CatalogId, ct))?.Nombre ?? "";
-
-        return Map(p,
-            p.BrandId.HasValue ? new() { { p.BrandId.Value, brandName ?? "" } } : new(),
-            p.ManufacturerId.HasValue ? new() { { p.ManufacturerId.Value, mfgName ?? "" } } : new(),
-            new() { { p.DefaultUomId, uomCode } },
-            new() { { p.LifecycleStatusId, statusCode } },
-            new() { { p.CatalogId, catalogName } });
+        var catalogName = (await _catalogRepo.GetByIdAsync((int)p.CatalogId, ct))?.Name ?? "";
+        return Map(p, catalogName, brandName, mfgName, uomCode, statusCode);
     }
 
-    private static ProductDto2 Map(
-        Product p,
-        Dictionary<long, string> brandMap,
-        Dictionary<long, string> mfgMap,
-        Dictionary<int, string> uomMap,
-        Dictionary<int, string> statusMap,
-        Dictionary<long, string> catalogMap) => new(
-            p.ProductId,
-            p.CatalogId,
-            catalogMap.TryGetValue(p.CatalogId, out var cn) ? cn : "",
-            p.ProductKind,
-            p.NombreGenerico,
-            p.NombreComercial,
-            p.DescripcionCorta,
-            p.DescripcionLarga,
-            p.BrandId,
-            p.BrandId.HasValue && brandMap.TryGetValue(p.BrandId.Value, out var bn) ? bn : null,
-            p.ManufacturerId,
-            p.ManufacturerId.HasValue && mfgMap.TryGetValue(p.ManufacturerId.Value, out var mn) ? mn : null,
-            p.DefaultUomId,
-            uomMap.TryGetValue(p.DefaultUomId, out var uc) ? uc : "",
-            p.IsStockable,
-            p.IsSellable,
-            p.IsPurchasable,
-            p.LifecycleStatusId,
-            statusMap.TryGetValue(p.LifecycleStatusId, out var sc) ? sc : "",
-            p.Activo);
+    private async Task<List<ProductDto2>> BuildMapsAsync(
+        CancellationToken ct, IReadOnlyList<Product> items, bool fullMaps)
+    {
+        var brands = await _brandRepo.FindAsync(_ => true, ct);
+        var mfgs = await _manufacturerRepo.FindAsync(_ => true, ct);
+        var uoms = await _uomRepo.FindAsync(_ => true, ct);
+        var statuses = await _statusRepo.FindAsync(_ => true, ct);
+        var catalogs = await _catalogRepo.FindAsync(_ => true, ct);
+
+        var bMap = brands.ToDictionary(b => b.BrandId, b => b.Name);
+        var mMap = mfgs.ToDictionary(m => m.ManufacturerId, m => m.Name);
+        var uMap = uoms.ToDictionary(u => u.UomId, u => u.Code);
+        var sMap = statuses.ToDictionary(s => s.ProductStatusId, s => s.Code);
+        var cMap = catalogs.ToDictionary(c => c.CatalogId, c => c.Name);
+
+        return items.Select(p => Map(p,
+            cMap.TryGetValue(p.CatalogId, out var cn) ? cn : "",
+            p.BrandId.HasValue && bMap.TryGetValue(p.BrandId.Value, out var bn) ? bn : null,
+            p.ManufacturerId.HasValue && mMap.TryGetValue(p.ManufacturerId.Value, out var mn) ? mn : null,
+            uMap.TryGetValue(p.DefaultUomId, out var uc) ? uc : "",
+            sMap.TryGetValue(p.LifecycleStatusId, out var sc) ? sc : "")).ToList();
+    }
+
+    private static ProductDto2 Map(Product p,
+        string catalogName, string? brandName, string? mfgName,
+        string uomCode, string statusCode) => new ProductDto2(
+            p.ProductId, p.CatalogId, catalogName,
+            p.ProductKind, p.GenericName, p.CommercialName,
+            p.ShortDescription, p.LongDescription,
+            p.BrandId, brandName, p.ManufacturerId, mfgName,
+            p.DefaultUomId, uomCode,
+            p.IsStockable, p.IsSellable, p.IsPurchasable,
+            p.LifecycleStatusId, statusCode, p.Activo);
 }

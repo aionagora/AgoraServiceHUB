@@ -2,11 +2,11 @@
 @attribute [Authorize]
 @inject UnidadMedidaHttpService UnidadMedidaSvc
 
-<PageTitle>Unidades de Medida - AgoraHub360 ERP</PageTitle>
+<PageTitle>Units of Measure - AgoraHub360 ERP</PageTitle>
 
 <div class="page-header">
-    <h1>Unidades de Medida</h1>
-    <p class="text-muted mb-0">Datos Maestros &rsaquo; Unidades de Medida</p>
+    <h1>Units of Measure</h1>
+    <p class="text-muted mb-0">Master Data &rsaquo; Units of Measure</p>
 </div>
 
 @if (!string.IsNullOrEmpty(_mensaje))
@@ -20,12 +20,12 @@
 <div class="card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center py-3">
         <div class="d-flex align-items-center gap-3">
-            <span>Unidades de Medida (@ItemsFiltrados.Count)</span>
-            <input type="text" class="form-control form-control-sm" placeholder="Buscar..."
+            <span>Units of Measure (@ItemsFiltrados.Count)</span>
+            <input type="text" class="form-control form-control-sm" placeholder="Search..."
                    style="width: 220px;" @bind="_search" @bind:event="oninput" />
         </div>
         <button class="btn btn-primary btn-sm" @onclick="ShowCrear">
-            <i class="bi bi-plus-circle me-1"></i> Nueva Unidad
+            <i class="bi bi-plus-circle me-1"></i> New Unit
         </button>
     </div>
 
@@ -39,7 +39,7 @@
     {
         <div class="card-body text-center py-5">
             <i class="bi bi-rulers" style="font-size: 3rem; color: var(--agora-text-light);"></i>
-            <p class="text-muted mt-3">No hay unidades de medida registradas.</p>
+            <p class="text-muted mt-3">No units of measure registered.</p>
         </div>
     }
     else
@@ -48,30 +48,30 @@
             <table class="table table-hover mb-0">
                 <thead>
                     <tr>
-                        <th>Nombre</th>
-                        <th>Abreviatura</th>
-                        <th class="text-center">Estado</th>
-                        <th class="text-end">Acciones</th>
+                        <th>Name</th>
+                        <th>Code</th>
+                        <th class="text-center">Status</th>
+                        <th class="text-end">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     @foreach (var item in ItemsPaginados)
                     {
                         <tr>
-                            <td class="fw-semibold">@item.Nombre</td>
-                            <td><span class="badge bg-info">@item.Abreviatura</span></td>
+                            <td class="fw-semibold">@item.Name</td>
+                            <td><span class="badge bg-info">@item.Code</span></td>
                             <td class="text-center">
                                 <span class="badge @(item.Activo ? "bg-success" : "bg-secondary")">
-                                    @(item.Activo ? "Activo" : "Inactivo")
+                                    @(item.Activo ? "Active" : "Inactive")
                                 </span>
                             </td>
                             <td class="text-end">
                                 <button class="btn btn-outline-primary btn-sm me-1"
-                                        @onclick="() => ShowEditar(item)" title="Editar">
+                                        @onclick="() => ShowEditar(item)" title="Edit">
                                     <i class="bi bi-pencil"></i>
                                 </button>
                                 <button class="btn btn-outline-danger btn-sm"
-                                        @onclick="() => ConfirmDelete(item)" title="Eliminar">
+                                        @onclick="() => ConfirmDelete(item)" title="Delete">
                                     <i class="bi bi-trash"></i>
                                 </button>
                             </td>
@@ -84,7 +84,7 @@
         @if (TotalPaginas > 1)
         {
             <div class="card-footer d-flex justify-content-between align-items-center py-2">
-                <small class="text-muted">Mostrando @ItemsPaginados.Count de @ItemsFiltrados.Count</small>
+                <small class="text-muted">Showing @ItemsPaginados.Count of @ItemsFiltrados.Count</small>
                 <nav>
                     <ul class="pagination pagination-sm mb-0">
                         <li class="page-item @(_currentPage <= 1 ? "disabled" : "")">
@@ -114,37 +114,37 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">@(_editId.HasValue ? "Editar Unidad de Medida" : "Nueva Unidad de Medida")</h5>
+                    <h5 class="modal-title">@(_editId.HasValue ? "Edit Unit of Measure" : "New Unit of Measure")</h5>
                     <button type="button" class="btn-close" @onclick="CloseForm"></button>
                 </div>
                 <EditForm Model="_formModel" OnValidSubmit="SaveAsync">
                     <DataAnnotationsValidator />
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label class="form-label">Nombre *</label>
-                            <InputText class="form-control" @bind-Value="_formModel.Nombre" 
-                                       placeholder="Ej: Kilogramo, Litro, Unidad" />
-                            <ValidationMessage For="() => _formModel.Nombre" />
+                            <label class="form-label">Code *</label>
+                            <InputText class="form-control" @bind-Value="_formModel.Code"
+                                       placeholder="E.g.: KG, L, UND" />
+                            <ValidationMessage For="() => _formModel.Code" />
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Abreviatura *</label>
-                            <InputText class="form-control" @bind-Value="_formModel.Abreviatura" 
-                                       placeholder="Ej: Kg, L, Und" />
-                            <ValidationMessage For="() => _formModel.Abreviatura" />
+                            <label class="form-label">Name *</label>
+                            <InputText class="form-control" @bind-Value="_formModel.Name"
+                                       placeholder="E.g.: Kilogram, Liter, Unit" />
+                            <ValidationMessage For="() => _formModel.Name" />
                         </div>
                         @if (_editId.HasValue)
                         {
                             <div class="form-check">
                                 <InputCheckbox class="form-check-input" @bind-Value="_formActivo" />
-                                <label class="form-check-label">Activo</label>
+                                <label class="form-check-label">Active</label>
                             </div>
                         }
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" @onclick="CloseForm">Cancelar</button>
+                        <button type="button" class="btn btn-secondary" @onclick="CloseForm">Cancel</button>
                         <button type="submit" class="btn btn-primary" disabled="@_saving">
                             @if (_saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                            @(_editId.HasValue ? "Guardar" : "Crear")
+                            @(_editId.HasValue ? "Save" : "Create")
                         </button>
                     </div>
                 </EditForm>
@@ -160,15 +160,15 @@
         <div class="modal-dialog modal-sm">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Confirmar</h5>
+                    <h5 class="modal-title">Confirm</h5>
                     <button type="button" class="btn-close" @onclick="() => _deleteTarget = null"></button>
                 </div>
                 <div class="modal-body">
-                    <p>¿Eliminar la unidad de medida <strong>@_deleteTarget.Nombre</strong>?</p>
+                    <p>Delete unit <strong>@_deleteTarget.Name</strong>?</p>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-secondary btn-sm" @onclick="() => _deleteTarget = null">Cancelar</button>
-                    <button class="btn btn-danger btn-sm" @onclick="DeleteAsync" disabled="@_saving">Eliminar</button>
+                    <button class="btn btn-secondary btn-sm" @onclick="() => _deleteTarget = null">Cancel</button>
+                    <button class="btn btn-danger btn-sm" @onclick="DeleteAsync" disabled="@_saving">Delete</button>
                 </div>
             </div>
         </div>
@@ -176,63 +176,54 @@
 }
 
 @code {
-    private List<UnidadMedidaDto> _items = new();
+    private List<UomDto> _items = new();
     private bool _loading = true, _saving;
     private string? _mensaje;
     private bool _esError;
 
     private bool _showForm;
     private int? _editId;
-    private CreateUnidadMedidaDto _formModel = new();
+    private CreateUomDto _formModel = new();
     private bool _formActivo = true;
-    private UnidadMedidaDto? _deleteTarget;
+    private UomDto? _deleteTarget;
 
     private string _search = string.Empty;
     private int _currentPage = 1;
-    private int _pageSize = 15;
+    private const int _pageSize = 15;
 
-    private List<UnidadMedidaDto> ItemsFiltrados => _items
+    private List<UomDto> ItemsFiltrados => _items
         .Where(i => string.IsNullOrEmpty(_search)
-            || i.Nombre.Contains(_search, StringComparison.OrdinalIgnoreCase)
-            || i.Abreviatura.Contains(_search, StringComparison.OrdinalIgnoreCase))
+            || i.Name.Contains(_search, StringComparison.OrdinalIgnoreCase)
+            || i.Code.Contains(_search, StringComparison.OrdinalIgnoreCase))
         .ToList();
 
-    private List<UnidadMedidaDto> ItemsPaginados => ItemsFiltrados
-        .Skip((_currentPage - 1) * _pageSize)
-        .Take(_pageSize)
-        .ToList();
+    private List<UomDto> ItemsPaginados => ItemsFiltrados
+        .Skip((_currentPage - 1) * _pageSize).Take(_pageSize).ToList();
 
     private int TotalPaginas => (int)Math.Ceiling(ItemsFiltrados.Count / (double)_pageSize);
 
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadDataAsync();
-    }
+    protected override async Task OnInitializedAsync() => await LoadDataAsync();
 
     private async Task LoadDataAsync()
     {
         _loading = true;
         try { _items = await UnidadMedidaSvc.GetAllAsync(); }
-        catch { _mensaje = "Error al cargar unidades de medida."; _esError = true; }
+        catch { _mensaje = "Error loading units of measure."; _esError = true; }
         _loading = false;
     }
 
     private void ShowCrear()
     {
         _editId = null;
-        _formModel = new CreateUnidadMedidaDto();
+        _formModel = new CreateUomDto();
         _formActivo = true;
         _showForm = true;
     }
 
-    private void ShowEditar(UnidadMedidaDto item)
+    private void ShowEditar(UomDto item)
     {
-        _editId = item.Id;
-        _formModel = new CreateUnidadMedidaDto
-        {
-            Nombre = item.Nombre,
-            Abreviatura = item.Abreviatura
-        };
+        _editId = item.UomId;
+        _formModel = new CreateUomDto { Code = item.Code, Name = item.Name };
         _formActivo = item.Activo;
         _showForm = true;
     }
@@ -246,30 +237,25 @@
         {
             if (_editId.HasValue)
             {
-                var dto = new UpdateUnidadMedidaDto
-                {
-                    Nombre = _formModel.Nombre,
-                    Abreviatura = _formModel.Abreviatura,
-                    Activo = _formActivo
-                };
+                var dto = new UpdateUomDto { Code = _formModel.Code, Name = _formModel.Name, Activo = _formActivo };
                 var r = await UnidadMedidaSvc.UpdateAsync(_editId.Value, dto);
                 if (!r.Success) { _mensaje = r.Message; _esError = true; _saving = false; return; }
-                _mensaje = "Unidad de medida actualizada."; _esError = false;
+                _mensaje = "Unit of measure updated."; _esError = false;
             }
             else
             {
                 var r = await UnidadMedidaSvc.CreateAsync(_formModel);
                 if (!r.Success) { _mensaje = r.Message; _esError = true; _saving = false; return; }
-                _mensaje = "Unidad de medida creada."; _esError = false;
+                _mensaje = "Unit of measure created."; _esError = false;
             }
             CloseForm();
             await LoadDataAsync();
         }
-        catch { _mensaje = "Error de comunicación."; _esError = true; }
+        catch { _mensaje = "Communication error."; _esError = true; }
         _saving = false;
     }
 
-    private void ConfirmDelete(UnidadMedidaDto item) => _deleteTarget = item;
+    private void ConfirmDelete(UomDto item) => _deleteTarget = item;
 
     private async Task DeleteAsync()
     {
@@ -277,13 +263,13 @@
         _saving = true;
         try
         {
-            var r = await UnidadMedidaSvc.DeleteAsync(_deleteTarget.Id);
-            _mensaje = r.Success ? "Unidad de medida eliminada." : r.Message;
+            var r = await UnidadMedidaSvc.DeleteAsync(_deleteTarget.UomId);
+            _mensaje = r.Success ? "Unit of measure deleted." : r.Message;
             _esError = !r.Success;
             _deleteTarget = null;
             await LoadDataAsync();
         }
-        catch { _mensaje = "Error de comunicación."; _esError = true; }
+        catch { _mensaje = "Communication error."; _esError = true; }
         _saving = false;
     }
 }

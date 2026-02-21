@@ -4,36 +4,36 @@ using System.ComponentModel.DataAnnotations;
 
 public class CreateMovimientoInventarioDto
 {
-    [Required(ErrorMessage = "El tipo de movimiento es requerido.")]
-    public string TipoMovimiento { get; set; } = "Entrada";
+    [Required(ErrorMessage = "Movement type is required.")]
+    public string MovementType { get; set; } = "Receipt";
 
-    public DateTime FechaMovimiento { get; set; } = DateTime.Today;
+    public DateTime MovementDate { get; set; } = DateTime.Today;
 
-    [Required(ErrorMessage = "El producto es requerido.")]
-    [Range(1, int.MaxValue, ErrorMessage = "Seleccione un producto válido.")]
-    public int ProductoId { get; set; }
+    [Required(ErrorMessage = "Company product is required.")]
+    [Range(1, long.MaxValue, ErrorMessage = "Select a valid company product.")]
+    public long CompanyProductId { get; set; }
 
-    [Required(ErrorMessage = "El almacén es requerido.")]
-    [Range(1, int.MaxValue, ErrorMessage = "Seleccione un almacén válido.")]
-    public int AlmacenId { get; set; }
+    [Required(ErrorMessage = "Warehouse is required.")]
+    [Range(1, int.MaxValue, ErrorMessage = "Select a valid warehouse.")]
+    public int WarehouseId { get; set; }
 
-    /// <summary>Solo requerido para Transferencias.</summary>
-    public int? AlmacenDestinoId { get; set; }
+    /// <summary>Only required for Transfers.</summary>
+    public int? DestinationWarehouseId { get; set; }
 
-    [Required(ErrorMessage = "La cantidad es requerida.")]
-    [Range(0.0001, double.MaxValue, ErrorMessage = "La cantidad debe ser mayor a cero.")]
-    public decimal Cantidad { get; set; }
+    [Required(ErrorMessage = "Quantity is required.")]
+    [Range(0.0001, double.MaxValue, ErrorMessage = "Quantity must be greater than zero.")]
+    public decimal Quantity { get; set; }
 
     /// <summary>
-    /// Costo unitario (requerido para Entradas y Ajustes positivos).
-    /// Para Salidas se usa el costo promedio actual.
+    /// Unit cost (required for Receipts and positive Adjustments).
+    /// For Issues the current average cost is used.
     /// </summary>
-    [Range(0, double.MaxValue, ErrorMessage = "El costo unitario no puede ser negativo.")]
-    public decimal CostoUnitario { get; set; }
+    [Range(0, double.MaxValue, ErrorMessage = "Unit cost cannot be negative.")]
+    public decimal UnitCost { get; set; }
 
     [MaxLength(50)]
-    public string? Referencia { get; set; }
+    public string? Reference { get; set; }
 
     [MaxLength(500)]
-    public string? Observaciones { get; set; }
+    public string? Notes { get; set; }
 }

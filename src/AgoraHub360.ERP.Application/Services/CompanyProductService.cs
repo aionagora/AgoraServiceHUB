@@ -42,7 +42,7 @@ public class CompanyProductService : ICompanyProductService
 
         var items = await _repo.FindAsync(cp => cp.EmpresaId == empresaId.Value, ct);
         var products = await _productRepo.FindAsync(_ => true, ct);
-        var productMap = products.ToDictionary(p => p.ProductId, p => p.NombreComercial);
+        var productMap = products.ToDictionary(p => p.ProductId, p => p.CommercialName);
 
         return Result<IReadOnlyList<CompanyProductDto>>.Success(
             items.Select(cp => Map(cp, productMap)).ToList().AsReadOnly());
@@ -56,7 +56,7 @@ public class CompanyProductService : ICompanyProductService
 
         var product = await _productRepo.GetByIdAsync((int)entity.ProductId, ct);
         return Result<CompanyProductDto>.Success(Map(entity,
-            new Dictionary<long, string> { { entity.ProductId, product?.NombreComercial ?? "" } }));
+            new Dictionary<long, string> { { entity.ProductId, product?.CommercialName ?? "" } }));
     }
 
     public async Task<Result<CompanyProductDto>> CreateAsync(CreateCompanyProductDto dto, CancellationToken ct = default)
@@ -99,7 +99,7 @@ public class CompanyProductService : ICompanyProductService
         await _repo.AddAsync(entity, ct);
         await _uow.SaveChangesAsync(ct);
         return Result<CompanyProductDto>.Success(Map(entity,
-            new Dictionary<long, string> { { entity.ProductId, product.NombreComercial } }));
+            new Dictionary<long, string> { { entity.ProductId, product.CommercialName } }));
     }
 
     public async Task<Result<CompanyProductDto>> UpdateAsync(long id, UpdateCompanyProductDto dto, CancellationToken ct = default)
@@ -132,7 +132,7 @@ public class CompanyProductService : ICompanyProductService
 
         var product = await _productRepo.GetByIdAsync((int)entity.ProductId, ct);
         return Result<CompanyProductDto>.Success(Map(entity,
-            new Dictionary<long, string> { { entity.ProductId, product?.NombreComercial ?? "" } }));
+            new Dictionary<long, string> { { entity.ProductId, product?.CommercialName ?? "" } }));
     }
 
     public async Task<Result<bool>> DeleteAsync(long id, CancellationToken ct = default)

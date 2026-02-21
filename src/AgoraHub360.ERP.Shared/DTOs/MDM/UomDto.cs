@@ -1,20 +1,32 @@
 namespace AgoraHub360.ERP.Shared.DTOs.MDM;
 
-public record UomDto(
-    int UomId,
-    string Code,
-    string Nombre,
-    bool Activo);
+public class UomDto
+{
+    public int UomId { get; set; }
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public bool Activo { get; set; }
+}
 
-public record CreateUomDto(string Code, string Nombre);
-public record UpdateUomDto(string Code, string Nombre, bool Activo);
+public class CreateUomDto
+{
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+}
+
+public class UpdateUomDto
+{
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public bool Activo { get; set; } = true;
+}
 
 public record ProductUomDto(
     long ProductUomId,
     long ProductId,
     int UomId,
     string UomCode,
-    string UomNombre,
+    string UomName,
     bool IsBase,
     decimal FactorToBase,
     string? Barcode);

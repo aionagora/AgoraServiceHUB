@@ -45,7 +45,7 @@ public class ProductVariantService : IProductVariantService
         var result = new List<ProductVariantDto>();
         var product = await _productRepo.GetByIdAsync((int)parentProductId, ct);
         foreach (var v in variants)
-            result.Add(await MapAsync(v, product?.NombreComercial ?? "", ct));
+            result.Add(await MapAsync(v, product?.CommercialName ?? "", ct));
 
         return Result<IReadOnlyList<ProductVariantDto>>.Success(result.AsReadOnly());
     }
@@ -55,7 +55,7 @@ public class ProductVariantService : IProductVariantService
         var entity = await _repo.GetByIdAsync((int)id, ct);
         if (entity is null) return Result<ProductVariantDto>.Failure($"Variante {id} no encontrada.");
         var product = await _productRepo.GetByIdAsync((int)entity.ParentProductId, ct);
-        return Result<ProductVariantDto>.Success(await MapAsync(entity, product?.NombreComercial ?? "", ct));
+        return Result<ProductVariantDto>.Success(await MapAsync(entity, product?.CommercialName ?? "", ct));
     }
 
     public async Task<Result<ProductVariantDto>> CreateAsync(
@@ -83,7 +83,7 @@ public class ProductVariantService : IProductVariantService
             await SaveAxisValuesAsync(entity.VariantId, dto.AxisValues, ct);
 
         var product = await _productRepo.GetByIdAsync((int)dto.ParentProductId, ct);
-        return Result<ProductVariantDto>.Success(await MapAsync(entity, product?.NombreComercial ?? "", ct));
+        return Result<ProductVariantDto>.Success(await MapAsync(entity, product?.CommercialName ?? "", ct));
     }
 
     public async Task<Result<ProductVariantDto>> UpdateAsync(
@@ -109,7 +109,7 @@ public class ProductVariantService : IProductVariantService
 
         await _uow.SaveChangesAsync(ct);
         var product = await _productRepo.GetByIdAsync((int)entity.ParentProductId, ct);
-        return Result<ProductVariantDto>.Success(await MapAsync(entity, product?.NombreComercial ?? "", ct));
+        return Result<ProductVariantDto>.Success(await MapAsync(entity, product?.CommercialName ?? "", ct));
     }
 
     public async Task<Result<bool>> DeleteAsync(long id, CancellationToken ct = default)

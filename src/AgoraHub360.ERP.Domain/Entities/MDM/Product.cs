@@ -3,26 +3,26 @@ namespace AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Common;
 
 /// <summary>
-/// Plantilla / producto base del catálogo maestro global.
-/// No es tenant-aware: el vínculo con empresa se hace mediante CompanyProduct.
+/// Global product template / master catalog entry.
+/// Not tenant-aware: company binding is done via CompanyProduct.
 /// </summary>
 public class Product : AuditableEntity
 {
     public long ProductId { get; set; }
     public long CatalogId { get; set; }
 
-    /// <summary>1=Item, 2=Servicio, 3=Kit, 4=MateriaPrima, 5=Empaque</summary>
+    /// <summary>1=Item, 2=Service, 3=Kit, 4=RawMaterial, 5=Packaging</summary>
     public byte ProductKind { get; set; } = 1;
 
-    public string NombreGenerico { get; set; } = string.Empty;
-    public string NombreComercial { get; set; } = string.Empty;
-    public string? DescripcionCorta { get; set; }
-    public string? DescripcionLarga { get; set; }
+    public string GenericName { get; set; } = string.Empty;
+    public string CommercialName { get; set; } = string.Empty;
+    public string? ShortDescription { get; set; }
+    public string? LongDescription { get; set; }
 
     public long? BrandId { get; set; }
     public long? ManufacturerId { get; set; }
 
-    /// <summary>UoM base/predeterminada del producto.</summary>
+    /// <summary>Default/base unit of measure for this product.</summary>
     public int DefaultUomId { get; set; }
 
     public bool IsStockable { get; set; } = true;
@@ -31,7 +31,7 @@ public class Product : AuditableEntity
 
     public int LifecycleStatusId { get; set; }
 
-    // Navegación
+    // Navigation
     public Catalog Catalog { get; set; } = null!;
     public Brand? Brand { get; set; }
     public Manufacturer? Manufacturer { get; set; }

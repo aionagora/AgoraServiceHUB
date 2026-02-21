@@ -4,26 +4,26 @@ using AgoraHub360.ERP.Domain.Common;
 using AgoraHub360.ERP.Domain.Entities.MDM;
 
 /// <summary>
-/// Saldo de stock actual de un producto en un almacén específico.
-/// Se actualiza automáticamente con cada MovimientoInventario.
-/// El CostoPromedio se recalcula usando el método de Costo Promedio Ponderado (CPP).
+/// Current stock balance for a CompanyProduct in a specific warehouse.
+/// Updated automatically with each InventoryMovement.
+/// The AverageCost is recalculated using Weighted Average Cost (WAC).
 /// </summary>
 public class StockProducto : TenantEntity
 {
     public int Id { get; set; }
 
-    public int ProductoId { get; set; }
-    public Producto? Producto { get; set; }
+    public long CompanyProductId { get; set; }
+    public CompanyProduct? CompanyProduct { get; set; }
 
     public int AlmacenId { get; set; }
     public Almacen? Almacen { get; set; }
 
-    /// <summary>Cantidad disponible actual en el almacén.</summary>
-    public decimal StockActual { get; set; }
+    /// <summary>Current available quantity in the warehouse.</summary>
+    public decimal CurrentStock { get; set; }
 
-    /// <summary>Costo promedio ponderado vigente del producto en este almacén.</summary>
-    public decimal CostoPromedio { get; set; }
+    /// <summary>Weighted average cost (WAC) currently in effect.</summary>
+    public decimal AverageCost { get; set; }
 
-    /// <summary>Fecha y hora del último movimiento que actualizó este saldo.</summary>
-    public DateTime UltimaActualizacion { get; set; }
+    /// <summary>Date and time of the last movement that updated this balance.</summary>
+    public DateTime LastUpdated { get; set; }
 }

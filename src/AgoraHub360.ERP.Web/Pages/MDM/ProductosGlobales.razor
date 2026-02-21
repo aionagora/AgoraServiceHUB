@@ -70,8 +70,8 @@
                             @foreach (var p in productos)
                             {
                                 <tr>
-                                    <td><strong>@p.NombreComercial</strong></td>
-                                    <td><small class="text-muted">@p.NombreGenerico</small></td>
+                                    <td><strong>@p.CommercialName</strong></td>
+                                    <td><small class="text-muted">@p.GenericName</small></td>
                                     <td><span class="badge bg-secondary">@KindLabel(p.ProductKind)</span></td>
                                     <td>
                                         @if (p.Activo)
@@ -89,7 +89,7 @@
                                     <td class="text-center">
                                         <i class="bi @(p.IsSellable ? "bi-check-circle-fill text-success" : "bi-dash-circle text-secondary")"></i>
                                     </td>
-                                    <td><small>@p.CatalogNombre</small></td>
+                                    <td><small>@p.CatalogName</small></td>
                                     <td><span class="badge bg-info text-dark">@p.DefaultUomCode</span></td>
                                     <td class="text-end">
                                         <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditModal(p)" title="Editar">
@@ -363,10 +363,10 @@
         editForm = new EditForm
         {
             ProductKind = p.ProductKind,
-            NombreGenerico = p.NombreGenerico,
-            NombreComercial = p.NombreComercial,
-            DescripcionCorta = p.DescripcionCorta,
-            DescripcionLarga = p.DescripcionLarga,
+            NombreGenerico = p.GenericName,
+            NombreComercial = p.CommercialName,
+            DescripcionCorta = p.ShortDescription,
+            DescripcionLarga = p.LongDescription,
             DefaultUomId = p.DefaultUomId,
             IsStockable = p.IsStockable,
             IsSellable = p.IsSellable,
@@ -391,12 +391,19 @@
         {
             saving = true;
             errorMessage = null;
-            var dto = new AgoraHub360.ERP.Shared.DTOs.MDM.CreateProductDto2(
-                createForm.CatalogId, createForm.ProductKind,
-                createForm.NombreGenerico, createForm.NombreComercial,
-                createForm.DescripcionCorta, createForm.DescripcionLarga,
-                null, null, createForm.DefaultUomId,
-                createForm.IsStockable, createForm.IsSellable, createForm.IsPurchasable);
+            var dto = new AgoraHub360.ERP.Shared.DTOs.MDM.CreateProductDto2
+            {
+                CatalogId = createForm.CatalogId,
+                ProductKind = createForm.ProductKind,
+                GenericName = createForm.NombreGenerico,
+                CommercialName = createForm.NombreComercial,
+                ShortDescription = createForm.DescripcionCorta,
+                LongDescription = createForm.DescripcionLarga,
+                DefaultUomId = createForm.DefaultUomId,
+                IsStockable = createForm.IsStockable,
+                IsSellable = createForm.IsSellable,
+                IsPurchasable = createForm.IsPurchasable
+            };
             var result = await ProductoService.CreateAsync(dto);
             if (result.Success) { successMessage = "Producto creado exitosamente."; CloseCreateModal(); await LoadData(); }
             else errorMessage = result.Message;
@@ -416,12 +423,20 @@
         {
             saving = true;
             errorMessage = null;
-            var dto = new AgoraHub360.ERP.Shared.DTOs.MDM.UpdateProductDto2(
-                editForm.ProductKind, editForm.NombreGenerico, editForm.NombreComercial,
-                editForm.DescripcionCorta, editForm.DescripcionLarga,
-                null, null, editForm.DefaultUomId,
-                editForm.IsStockable, editForm.IsSellable, editForm.IsPurchasable,
-                editForm.LifecycleStatusId, editForm.Activo);
+            var dto = new AgoraHub360.ERP.Shared.DTOs.MDM.UpdateProductDto2
+            {
+                ProductKind = editForm.ProductKind,
+                GenericName = editForm.NombreGenerico,
+                CommercialName = editForm.NombreComercial,
+                ShortDescription = editForm.DescripcionCorta,
+                LongDescription = editForm.DescripcionLarga,
+                DefaultUomId = editForm.DefaultUomId,
+                IsStockable = editForm.IsStockable,
+                IsSellable = editForm.IsSellable,
+                IsPurchasable = editForm.IsPurchasable,
+                LifecycleStatusId = editForm.LifecycleStatusId,
+                Activo = editForm.Activo
+            };
             var result = await ProductoService.UpdateAsync(editingId, dto);
             if (result.Success) { successMessage = "Producto actualizado."; CloseEditModal(); await LoadData(); }
             else errorMessage = result.Message;
@@ -432,7 +447,7 @@
 
     private async Task DeleteProducto(AgoraHub360.ERP.Shared.DTOs.MDM.ProductDto2 p)
     {
-        if (!await JS.InvokeAsync<bool>("confirm", $"Eliminar el producto '{p.NombreComercial}'?")) return;
+        if (!await JS.InvokeAsync<bool>("confirm", $"Eliminar el producto '{p.CommercialName}'?")) return;
         try
         {
             errorMessage = null;

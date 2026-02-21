@@ -12,18 +12,18 @@ public class StockProductoConfiguration : IEntityTypeConfiguration<StockProducto
         builder.HasKey(s => s.Id);
         builder.Property(s => s.Id).UseIdentityColumn();
 
-        builder.Property(s => s.StockActual).HasColumnType("decimal(18,4)");
-        builder.Property(s => s.CostoPromedio).HasColumnType("decimal(18,4)");
-        builder.Property(s => s.UltimaActualizacion).IsRequired();
+        builder.Property(s => s.CurrentStock).HasColumnType("decimal(18,4)");
+        builder.Property(s => s.AverageCost).HasColumnType("decimal(18,4)");
+        builder.Property(s => s.LastUpdated).IsRequired();
         builder.Property(s => s.CreadoPor).HasMaxLength(100);
         builder.Property(s => s.ModificadoPor).HasMaxLength(100);
 
         // Índice único: un registro de stock por producto+almacén+empresa
-        builder.HasIndex(s => new { s.EmpresaId, s.ProductoId, s.AlmacenId }).IsUnique();
+        builder.HasIndex(s => new { s.EmpresaId, s.CompanyProductId, s.AlmacenId }).IsUnique();
 
-        builder.HasOne(s => s.Producto)
+        builder.HasOne(s => s.CompanyProduct)
             .WithMany()
-            .HasForeignKey(s => s.ProductoId)
+            .HasForeignKey(s => s.CompanyProductId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasOne(s => s.Almacen)

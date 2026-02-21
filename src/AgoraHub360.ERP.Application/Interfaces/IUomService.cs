@@ -3,7 +3,7 @@ namespace AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Application.Common;
 using AgoraHub360.ERP.Shared.DTOs.MDM;
 
-public interface IUnidadMedidaService
+public interface IUomService
 {
     Task<Result<IReadOnlyList<UomDto>>> GetAllAsync(CancellationToken ct = default);
     Task<Result<UomDto>> GetByIdAsync(int id, CancellationToken ct = default);
