@@ -99,7 +99,7 @@ public class EntityVersioningInterceptor : SaveChangesInterceptor
                 // Snapshot del estado actual (para Added/Modified) o anterior (para Deleted)
                 EntitySnapshot = entry.State == EntityState.Deleted
                     ? SerializeOriginal(entry)
-                    : JsonSerializer.Serialize(entry.Entity),
+                    : SerializeCurrent(entry),
                 ChangedBy = _currentUser.UserName,
                 ChangedAt = DateTime.UtcNow,
                 EmpresaId = _currentUser.EmpresaId
@@ -183,6 +183,13 @@ public class EntityVersioningInterceptor : SaveChangesInterceptor
     {
         var dict = entry.Properties
             .ToDictionary(p => p.Metadata.Name, p => p.OriginalValue);
+        return JsonSerializer.Serialize(dict);
+    }
+
+    private static string SerializeCurrent(EntityEntry entry)
+    {
+        var dict = entry.Properties
+            .ToDictionary(p => p.Metadata.Name, p => p.CurrentValue);
         return JsonSerializer.Serialize(dict);
     }
 

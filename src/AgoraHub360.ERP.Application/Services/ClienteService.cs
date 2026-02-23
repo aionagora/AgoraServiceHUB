@@ -4,7 +4,7 @@ using AgoraHub360.ERP.Application.Common;
 using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Interfaces;
-using AgoraHub360.ERP.Shared.DTOs.Cliente;
+using AgoraHub360.ERP.Shared.DTOs.MDM;
 
 public class ClienteService : IClienteService
 {
@@ -55,19 +55,22 @@ public class ClienteService : IClienteService
         if (!empresaId.HasValue)
             return Result<ClienteDto>.Failure("No se pudo determinar la empresa activa.");
 
-        // Validar NIT único
-        var byNit = await _repository.FindAsync(
-            c => c.EmpresaId == empresaId.Value && c.NIT == dto.NIT, ct);
-        if (byNit.Any())
-            return Result<ClienteDto>.Failure($"Ya existe un cliente con NIT '{dto.NIT}'.");
+        // Validar código único por empresa
+        var byCodigo = await _repository.FindAsync(
+            c => c.EmpresaId == empresaId.Value && c.Codigo == dto.Codigo, ct);
+        if (byCodigo.Any())
+            return Result<ClienteDto>.Failure($"Ya existe un cliente con código '{dto.Codigo}'.");
 
         var entity = new Cliente
         {
+            Codigo = dto.Codigo,
             RazonSocial = dto.RazonSocial,
             NIT = dto.NIT,
             Telefono = dto.Telefono,
             Email = dto.Email,
             Direccion = dto.Direccion,
+            NombreContacto = dto.NombreContacto,
+            TipoCliente = dto.TipoCliente,
             EmpresaId = empresaId.Value,
             Activo = true
         };
@@ -91,17 +94,20 @@ public class ClienteService : IClienteService
         if (entity.EmpresaId != empresaId.Value)
             return Result<ClienteDto>.Failure("No tiene permisos para modificar este cliente.");
 
-        // Validar NIT único
-        var byNit = await _repository.FindAsync(
-            c => c.EmpresaId == empresaId.Value && c.NIT == dto.NIT && c.Id != id, ct);
-        if (byNit.Any())
-            return Result<ClienteDto>.Failure($"Ya existe otro cliente con NIT '{dto.NIT}'.");
+        // Validar código único (excluyendo el actual)
+        var byCodigo = await _repository.FindAsync(
+            c => c.EmpresaId == empresaId.Value && c.Codigo == dto.Codigo && c.Id != id, ct);
+        if (byCodigo.Any())
+            return Result<ClienteDto>.Failure($"Ya existe otro cliente con código '{dto.Codigo}'.");
 
+        entity.Codigo = dto.Codigo;
         entity.RazonSocial = dto.RazonSocial;
         entity.NIT = dto.NIT;
         entity.Telefono = dto.Telefono;
         entity.Email = dto.Email;
         entity.Direccion = dto.Direccion;
+        entity.NombreContacto = dto.NombreContacto;
+        entity.TipoCliente = dto.TipoCliente;
         entity.Activo = dto.Activo;
 
         await _repository.UpdateAsync(entity, ct);
@@ -131,12 +137,15 @@ public class ClienteService : IClienteService
     private static ClienteDto MapToDto(Cliente e) => new()
     {
         Id = e.Id,
+        Codigo = e.Codigo,
         RazonSocial = e.RazonSocial,
         NIT = e.NIT,
         Telefono = e.Telefono,
         Email = e.Email,
         Direccion = e.Direccion,
+        NombreContacto = e.NombreContacto,
+        TipoCliente = e.TipoCliente,
         Activo = e.Activo,
-        EmpresaId = e.EmpresaId
+        FechaCreacion = e.FechaCreacion
     };
 }

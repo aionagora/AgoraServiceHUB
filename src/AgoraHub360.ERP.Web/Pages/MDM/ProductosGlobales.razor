@@ -1,6 +1,8 @@
 @page "/mdm/productos-globales"
 @attribute [Authorize]
 @inject MdmProductoGlobalHttpService ProductoService
+@inject CatalogoHttpService CatalogoService
+@inject UnidadMedidaHttpService UnidadMedidaService
 @inject IJSRuntime JS
 
 <PageTitle>Catalogo Global de Productos</PageTitle>
@@ -123,6 +125,20 @@
                     <button type="button" class="btn-close" @onclick="CloseCreateModal"></button>
                 </div>
                 <div class="modal-body">
+                    @if (catalogos.Count == 0)
+                    {
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i> Debe crear al menos un <strong>Catálogo</strong> antes de crear productos.
+                        </div>
+                    }
+                    else if (unidades.Count == 0)
+                    {
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i> Debe crear al menos una <strong>Unidad de Medida</strong> antes de crear productos.
+                        </div>
+                    }
+                    else
+                    {
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Nombre Comercial *</label>
@@ -144,14 +160,24 @@
                             </select>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label class="form-label">ID Catalogo *</label>
-                            <input type="number" class="form-control" @bind="createForm.CatalogId" placeholder="1" />
-                            <small class="text-muted">ID del catalogo MDM</small>
+                            <label class="form-label">Catálogo *</label>
+                            <select class="form-select" @bind="createForm.CatalogId">
+                                <option value="0">-- Seleccionar catálogo --</option>
+                                @foreach (var c in catalogos)
+                                {
+                                    <option value="@c.CatalogId">@c.Name</option>
+                                }
+                            </select>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label class="form-label">ID Unidad Medida Base *</label>
-                            <input type="number" class="form-control" @bind="createForm.DefaultUomId" placeholder="1" />
-                            <small class="text-muted">ID de la UoM base</small>
+                            <label class="form-label">Unidad de Medida Base *</label>
+                            <select class="form-select" @bind="createForm.DefaultUomId">
+                                <option value="0">-- Seleccionar UdM --</option>
+                                @foreach (var u in unidades)
+                                {
+                                    <option value="@u.UomId">@u.Name (@u.Code)</option>
+                                }
+                            </select>
                         </div>
                     </div>
                     <div class="mb-3">
@@ -182,10 +208,11 @@
                             </div>
                         </div>
                     </div>
+                    }
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" @onclick="CloseCreateModal">Cancelar</button>
-                    <button class="btn btn-primary" @onclick="CreateProducto" disabled="@saving">
+                    <button class="btn btn-primary" @onclick="CreateProducto" disabled="@(saving || catalogos.Count == 0 || unidades.Count == 0 || createForm.CatalogId == 0 || createForm.DefaultUomId == 0)">
                         @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
                         Guardar
                     </button>
@@ -227,8 +254,14 @@
                             </select>
                         </div>
                         <div class="col-md-4 mb-3">
-                            <label class="form-label">ID Unidad Medida Base</label>
-                            <input type="number" class="form-control" @bind="editForm.DefaultUomId" />
+                            <label class="form-label">Unidad de Medida Base</label>
+                            <select class="form-select" @bind="editForm.DefaultUomId">
+                                <option value="0">-- Seleccionar UdM --</option>
+                                @foreach (var u in unidades)
+                                {
+                                    <option value="@u.UomId">@u.Name (@u.Code)</option>
+                                }
+                            </select>
                         </div>
                         <div class="col-md-4 mb-3">
                             <label class="form-label">Estado Ciclo de Vida (ID)</label>
@@ -320,6 +353,8 @@
 
     // ── State ───────────────────────────────────────────────────────────────────
     private List<AgoraHub360.ERP.Shared.DTOs.MDM.ProductDto2> productos = new();
+    private List<AgoraHub360.ERP.Shared.DTOs.MDM.CatalogDto> catalogos = new();
+    private List<AgoraHub360.ERP.Shared.DTOs.MDM.UomDto> unidades = new();
     private bool loading = true;
     private bool saving = false;
     private bool showCreateModal = false;
@@ -330,7 +365,12 @@
     private CreateForm createForm = new();
     private EditForm editForm = new();
 
-    protected override async Task OnInitializedAsync() => await LoadData();
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+        catalogos = await CatalogoService.GetAllAsync();
+        unidades = await UnidadMedidaService.GetAllAsync();
+    }
 
     private async Task LoadData()
     {
@@ -338,7 +378,13 @@
         {
             loading = true;
             errorMessage = null;
-            productos = await ProductoService.GetAllAsync();
+            var tProductos = ProductoService.GetAllAsync();
+            var tCatalogos = CatalogoService.GetAllAsync();
+            var tUnidades = UnidadMedidaService.GetAllAsync();
+            await Task.WhenAll(tProductos, tCatalogos, tUnidades);
+            productos = await tProductos;
+            catalogos = await tCatalogos;
+            unidades = await tUnidades;
         }
         catch (Exception ex)
         {
@@ -352,7 +398,11 @@
 
     private void ShowCreateModal()
     {
-        createForm = new CreateForm();
+        createForm = new CreateForm
+        {
+            CatalogId = catalogos.FirstOrDefault()?.CatalogId ?? 0,
+            DefaultUomId = unidades.FirstOrDefault()?.UomId ?? 0
+        };
         showCreateModal = true;
     }
 

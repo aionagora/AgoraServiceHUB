@@ -32,7 +32,7 @@ public class CategoryService : ICategoryService
 
     public async Task<Result<CategoryDto>> GetByIdAsync(long id, CancellationToken ct = default)
     {
-        var entity = await _repo.GetByIdAsync((int)id, ct);
+        var entity = await _repo.GetByIdAsync(id, ct);
         if (entity is null) return Result<CategoryDto>.Failure($"Category {id} not found.");
         return Result<CategoryDto>.Success(Map(entity));
     }
@@ -61,7 +61,7 @@ public class CategoryService : ICategoryService
 
     public async Task<Result<CategoryDto>> UpdateAsync(long id, UpdateCategoryDto dto, CancellationToken ct = default)
     {
-        var entity = await _repo.GetByIdAsync((int)id, ct);
+        var entity = await _repo.GetByIdAsync(id, ct);
         if (entity is null) return Result<CategoryDto>.Failure($"Category {id} not found.");
 
         entity.ParentCategoryId = dto.ParentCategoryId;
@@ -76,7 +76,7 @@ public class CategoryService : ICategoryService
 
     public async Task<Result<bool>> DeleteAsync(long id, CancellationToken ct = default)
     {
-        var entity = await _repo.GetByIdAsync((int)id, ct);
+        var entity = await _repo.GetByIdAsync(id, ct);
         if (entity is null) return Result<bool>.Failure($"Category {id} not found.");
         await _repo.DeleteAsync(entity, ct);
         await _uow.SaveChangesAsync(ct);

@@ -43,7 +43,7 @@ public class ProductVariantService : IProductVariantService
                  (!empresaId.HasValue || v.EmpresaId == empresaId.Value), ct);
 
         var result = new List<ProductVariantDto>();
-        var product = await _productRepo.GetByIdAsync((int)parentProductId, ct);
+        var product = await _productRepo.GetByIdAsync(parentProductId, ct);
         foreach (var v in variants)
             result.Add(await MapAsync(v, product?.CommercialName ?? "", ct));
 
@@ -52,9 +52,9 @@ public class ProductVariantService : IProductVariantService
 
     public async Task<Result<ProductVariantDto>> GetByIdAsync(long id, CancellationToken ct = default)
     {
-        var entity = await _repo.GetByIdAsync((int)id, ct);
+        var entity = await _repo.GetByIdAsync(id, ct);
         if (entity is null) return Result<ProductVariantDto>.Failure($"Variante {id} no encontrada.");
-        var product = await _productRepo.GetByIdAsync((int)entity.ParentProductId, ct);
+        var product = await _productRepo.GetByIdAsync(entity.ParentProductId, ct);
         return Result<ProductVariantDto>.Success(await MapAsync(entity, product?.CommercialName ?? "", ct));
     }
 
@@ -82,14 +82,14 @@ public class ProductVariantService : IProductVariantService
         if (dto.AxisValues is not null)
             await SaveAxisValuesAsync(entity.VariantId, dto.AxisValues, ct);
 
-        var product = await _productRepo.GetByIdAsync((int)dto.ParentProductId, ct);
+        var product = await _productRepo.GetByIdAsync(dto.ParentProductId, ct);
         return Result<ProductVariantDto>.Success(await MapAsync(entity, product?.CommercialName ?? "", ct));
     }
 
     public async Task<Result<ProductVariantDto>> UpdateAsync(
         long id, UpdateProductVariantDto dto, CancellationToken ct = default)
     {
-        var entity = await _repo.GetByIdAsync((int)id, ct);
+        var entity = await _repo.GetByIdAsync(id, ct);
         if (entity is null) return Result<ProductVariantDto>.Failure($"Variante {id} no encontrada.");
         if (_currentUser.EmpresaId.HasValue && entity.EmpresaId != _currentUser.EmpresaId.Value)
             return Result<ProductVariantDto>.Failure("Sin acceso.");
@@ -108,13 +108,13 @@ public class ProductVariantService : IProductVariantService
             await SaveAxisValuesAsync(id, dto.AxisValues, ct);
 
         await _uow.SaveChangesAsync(ct);
-        var product = await _productRepo.GetByIdAsync((int)entity.ParentProductId, ct);
+        var product = await _productRepo.GetByIdAsync(entity.ParentProductId, ct);
         return Result<ProductVariantDto>.Success(await MapAsync(entity, product?.CommercialName ?? "", ct));
     }
 
     public async Task<Result<bool>> DeleteAsync(long id, CancellationToken ct = default)
     {
-        var entity = await _repo.GetByIdAsync((int)id, ct);
+        var entity = await _repo.GetByIdAsync(id, ct);
         if (entity is null) return Result<bool>.Failure($"Variante {id} no encontrada.");
         if (_currentUser.EmpresaId.HasValue && entity.EmpresaId != _currentUser.EmpresaId.Value)
             return Result<bool>.Failure("Sin acceso.");

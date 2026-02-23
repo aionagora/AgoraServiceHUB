@@ -30,7 +30,7 @@ public class CatalogService : ICatalogService
 
     public async Task<Result<CatalogDto>> GetByIdAsync(long id, CancellationToken ct = default)
     {
-        var entity = await _repo.GetByIdAsync((int)id, ct);
+        var entity = await _repo.GetByIdAsync(id, ct);
         if (entity is null) return Result<CatalogDto>.Failure($"Catalog {id} not found.");
         return Result<CatalogDto>.Success(Map(entity));
     }
@@ -57,7 +57,7 @@ public class CatalogService : ICatalogService
 
     public async Task<Result<CatalogDto>> UpdateAsync(long id, UpdateCatalogDto dto, CancellationToken ct = default)
     {
-        var entity = await _repo.GetByIdAsync((int)id, ct);
+        var entity = await _repo.GetByIdAsync(id, ct);
         if (entity is null) return Result<CatalogDto>.Failure($"Catalog {id} not found.");
 
         entity.Name = dto.Name;
@@ -71,7 +71,7 @@ public class CatalogService : ICatalogService
 
     public async Task<Result<bool>> DeleteAsync(long id, CancellationToken ct = default)
     {
-        var entity = await _repo.GetByIdAsync((int)id, ct);
+        var entity = await _repo.GetByIdAsync(id, ct);
         if (entity is null) return Result<bool>.Failure($"Catalog {id} not found.");
         await _repo.DeleteAsync(entity, ct);
         await _uow.SaveChangesAsync(ct);

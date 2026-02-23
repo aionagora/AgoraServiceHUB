@@ -34,6 +34,7 @@ builder.Services.AddScoped<NumeracionHttpService>();
 
 // ──── Servicios HTTP MDM (legacy) ────
 builder.Services.AddScoped<CategoriaProductoHttpService>();
+builder.Services.AddScoped<CatalogoHttpService>();
 builder.Services.AddScoped<UnidadMedidaHttpService>();
 builder.Services.AddScoped<ProductoHttpService>();
 builder.Services.AddScoped<ClienteHttpService>();

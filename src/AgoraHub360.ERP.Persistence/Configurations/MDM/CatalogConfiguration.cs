@@ -18,5 +18,9 @@ public class CatalogConfiguration : IEntityTypeConfiguration<Catalog>
         builder.Property(c => c.ModificadoPor).HasMaxLength(100);
 
         builder.HasIndex(c => new { c.Scope, c.EmpresaId, c.Name }).IsUnique();
+
+        builder.HasData(
+            new Catalog { CatalogId = 1, Scope = 1, EmpresaId = null, Name = "Catálogo General", IsDefault = true, Activo = true }
+        );
     }
 }

@@ -20,6 +20,14 @@ public class TenantRequiredMiddleware
         "/api/v1/usuarios",
         "/api/v1/audit-logs",
         "/api/v1/diagnostics",
+        "/api/v1/mdm/catalogs",
+        "/api/v1/mdm/categories",
+        "/api/v1/mdm/products",
+        "/api/v1/mdm/attributes",
+        "/api/v1/mdm/variants",
+        "/api/v1/products",
+        "/api/v1/categories",
+        "/api/v1/uoms",
         "/health",
         "/swagger"
     };

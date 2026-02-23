@@ -41,24 +41,26 @@ public class ProductService : IProductService
 
     public async Task<Result<ProductDto2>> GetByIdAsync(long id, CancellationToken ct = default)
     {
-        var entity = await _repo.GetByIdAsync((int)id, ct);
+        var entity = await _repo.GetByIdAsync(id, ct);
         if (entity is null) return Result<ProductDto2>.Failure($"Product {id} not found.");
         return Result<ProductDto2>.Success(await MapSingleAsync(entity, ct));
     }
 
     public async Task<Result<ProductDto2>> CreateAsync(CreateProductDto2 dto, CancellationToken ct = default)
     {
-        var catalog = await _catalogRepo.GetByIdAsync((int)dto.CatalogId, ct);
-        if (catalog is null) return Result<ProductDto2>.Failure("Catalog not found.");
+        var catalog = await _catalogRepo.GetByIdAsync(dto.CatalogId, ct);
+        if (catalog is null) return Result<ProductDto2>.Failure("Catálogo no encontrado.");
 
         var uom = await _uomRepo.GetByIdAsync(dto.DefaultUomId, ct);
-        if (uom is null) return Result<ProductDto2>.Failure("Unit of measure not found.");
+        if (uom is null) return Result<ProductDto2>.Failure("Unidad de medida no encontrada.");
 
         int statusId = dto.LifecycleStatusId;
         if (statusId == 0)
         {
-            var defStatus = (await _statusRepo.FindAsync(s => s.IsDefault, ct)).FirstOrDefault();
-            if (defStatus is null) return Result<ProductDto2>.Failure("No default product status configured.");
+            var allStatuses = await _statusRepo.FindAsync(_ => true, ct);
+            var defStatus = allStatuses.FirstOrDefault(s => s.IsDefault)
+                         ?? allStatuses.FirstOrDefault();
+            if (defStatus is null) return Result<ProductDto2>.Failure("No hay estados de producto configurados. Configure al menos un estado en ProductStatuses.");
             statusId = defStatus.ProductStatusId;
         }
 
@@ -87,7 +89,7 @@ public class ProductService : IProductService
 
     public async Task<Result<ProductDto2>> UpdateAsync(long id, UpdateProductDto2 dto, CancellationToken ct = default)
     {
-        var entity = await _repo.GetByIdAsync((int)id, ct);
+        var entity = await _repo.GetByIdAsync(id, ct);
         if (entity is null) return Result<ProductDto2>.Failure($"Product {id} not found.");
 
         entity.ProductKind = dto.ProductKind;
@@ -111,7 +113,7 @@ public class ProductService : IProductService
 
     public async Task<Result<bool>> DeleteAsync(long id, CancellationToken ct = default)
     {
-        var entity = await _repo.GetByIdAsync((int)id, ct);
+        var entity = await _repo.GetByIdAsync(id, ct);
         if (entity is null) return Result<bool>.Failure($"Product {id} not found.");
         await _repo.DeleteAsync(entity, ct);
         await _uow.SaveChangesAsync(ct);
@@ -123,12 +125,12 @@ public class ProductService : IProductService
     private async Task<ProductDto2> MapSingleAsync(Product p, CancellationToken ct)
     {
         var brandName = p.BrandId.HasValue
-            ? (await _brandRepo.GetByIdAsync((int)p.BrandId.Value, ct))?.Name : null;
+            ? (await _brandRepo.GetByIdAsync(p.BrandId.Value, ct))?.Name : null;
         var mfgName = p.ManufacturerId.HasValue
-            ? (await _manufacturerRepo.GetByIdAsync((int)p.ManufacturerId.Value, ct))?.Name : null;
+            ? (await _manufacturerRepo.GetByIdAsync(p.ManufacturerId.Value, ct))?.Name : null;
         var uomCode = (await _uomRepo.GetByIdAsync(p.DefaultUomId, ct))?.Code ?? "";
         var statusCode = (await _statusRepo.GetByIdAsync(p.LifecycleStatusId, ct))?.Code ?? "";
-        var catalogName = (await _catalogRepo.GetByIdAsync((int)p.CatalogId, ct))?.Name ?? "";
+        var catalogName = (await _catalogRepo.GetByIdAsync(p.CatalogId, ct))?.Name ?? "";
         return Map(p, catalogName, brandName, mfgName, uomCode, statusCode);
     }
 

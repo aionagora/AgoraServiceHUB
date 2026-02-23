@@ -19,6 +19,9 @@ public class Repository<T> : IRepository<T> where T : class
     public async Task<T?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
         => await _dbSet.FindAsync(new object[] { id }, cancellationToken);
 
+    public async Task<T?> GetByIdAsync(long id, CancellationToken cancellationToken = default)
+        => await _dbSet.FindAsync(new object[] { id }, cancellationToken);
+
     public async Task<IReadOnlyList<T>> GetAllAsync(CancellationToken cancellationToken = default)
         => await _dbSet.ToListAsync(cancellationToken);
 

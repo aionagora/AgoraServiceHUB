@@ -4,6 +4,7 @@ using AgoraHub360.ERP.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AgoraHub360.ERP.Persistence.Migrations
 {
     [DbContext(typeof(AgoraDbContext))]
-    partial class AgoraDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260223085825_SeedProductStatus")]
+    partial class SeedProductStatus
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1065,17 +1068,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasFilter("[EmpresaId] IS NOT NULL");
 
                     b.ToTable("Catalogs", "mdm");
-
-                    b.HasData(
-                        new
-                        {
-                            CatalogId = 1L,
-                            Activo = true,
-                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            IsDefault = true,
-                            Name = "Catálogo General",
-                            Scope = (byte)1
-                        });
                 });
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.Category", b =>
