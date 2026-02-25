@@ -1,0 +1,240 @@
+@page "/mdm/fabricantes"
+@attribute [Authorize]
+@inject ManufacturerHttpService MfgService
+@inject IJSRuntime JS
+
+<PageTitle>Fabricantes - AgoraHub360 ERP</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3><i class="bi bi-building"></i> Fabricantes</h3>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="ShowCreateModal">
+                <i class="bi bi-plus-circle"></i> Nuevo Fabricante
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (loading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2">Cargando fabricantes...</p>
+        </div>
+    }
+    else if (items.Count == 0)
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> No hay fabricantes registrados.
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center py-3">
+                <span>Fabricantes <span class="badge bg-secondary ms-1">@items.Count</span></span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nombre</th>
+                                <th>País</th>
+                                <th>Estado</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var m in items)
+                            {
+                                <tr>
+                                    <td><strong>@m.Name</strong></td>
+                                    <td>@(m.Country ?? "—")</td>
+                                    <td>
+                                        <span class="badge @(m.Activo ? "bg-success" : "bg-secondary")">
+                                            @(m.Activo ? "Activo" : "Inactivo")
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditModal(m)">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger ms-1" @onclick="() => Delete(m)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@if (showCreateModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nuevo Fabricante</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="createDto" OnValidSubmit="Create">
+                        <DataAnnotationsValidator />
+                        <div class="mb-3">
+                            <label class="form-label">Nombre *</label>
+                            <InputText class="form-control" @bind-Value="createDto.Name" placeholder="Ej: Sony Corporation" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">País</label>
+                            <InputText class="form-control" @bind-Value="createDto.Country" placeholder="Ej: Japón" />
+                        </div>
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary" disabled="@saving">
+                                @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                Guardar
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (showEditModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Fabricante</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="updateDto" OnValidSubmit="Update">
+                        <DataAnnotationsValidator />
+                        <div class="mb-3">
+                            <label class="form-label">Nombre *</label>
+                            <InputText class="form-control" @bind-Value="updateDto.Name" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">País</label>
+                            <InputText class="form-control" @bind-Value="updateDto.Country" />
+                        </div>
+                        <div class="mb-3 form-check">
+                            <InputCheckbox class="form-check-input" id="activoCheck" @bind-Value="updateDto.Activo" />
+                            <label class="form-check-label" for="activoCheck">Activo</label>
+                        </div>
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary" disabled="@saving">
+                                @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                Guardar
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<ManufacturerDto> items = new();
+    private bool loading = true;
+    private bool saving = false;
+    private bool showCreateModal = false;
+    private bool showEditModal = false;
+    private string? errorMessage;
+    private string? successMessage;
+    private long editingId;
+
+    private CreateMfgModel createDto = new();
+    private UpdateMfgModel updateDto = new();
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    private async Task LoadData()
+    {
+        loading = true; errorMessage = null;
+        try { items = await MfgService.GetAllAsync(); }
+        catch (Exception ex) { errorMessage = $"Error al cargar: {ex.Message}"; }
+        finally { loading = false; }
+    }
+
+    private void ShowCreateModal() { createDto = new(); showCreateModal = true; }
+    private void ShowEditModal(ManufacturerDto m)
+    {
+        editingId = m.ManufacturerId;
+        updateDto = new() { Name = m.Name, Country = m.Country, Activo = m.Activo };
+        showEditModal = true;
+    }
+    private void CloseModal() { showCreateModal = false; showEditModal = false; }
+
+    private async Task Create()
+    {
+        if (string.IsNullOrWhiteSpace(createDto.Name)) return;
+        saving = true; errorMessage = null;
+        try
+        {
+            var r = await MfgService.CreateAsync(new CreateManufacturerDto(createDto.Name.Trim(), createDto.Country?.Trim()));
+            if (r.Success) { successMessage = $"Fabricante '{createDto.Name}' creado."; CloseModal(); await LoadData(); }
+            else errorMessage = r.Message;
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { saving = false; }
+    }
+
+    private async Task Update()
+    {
+        if (string.IsNullOrWhiteSpace(updateDto.Name)) return;
+        saving = true; errorMessage = null;
+        try
+        {
+            var r = await MfgService.UpdateAsync(editingId, new UpdateManufacturerDto(updateDto.Name.Trim(), updateDto.Country?.Trim(), updateDto.Activo));
+            if (r.Success) { successMessage = "Fabricante actualizado."; CloseModal(); await LoadData(); }
+            else errorMessage = r.Message;
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { saving = false; }
+    }
+
+    private async Task Delete(ManufacturerDto m)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"¿Eliminar fabricante '{m.Name}'?")) return;
+        try
+        {
+            var r = await MfgService.DeleteAsync(m.ManufacturerId);
+            if (r.Success) { successMessage = "Fabricante eliminado."; await LoadData(); }
+            else errorMessage = r.Message;
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+    }
+
+    private class CreateMfgModel { public string Name { get; set; } = ""; public string? Country { get; set; } }
+    private class UpdateMfgModel { public string Name { get; set; } = ""; public string? Country { get; set; } public bool Activo { get; set; } = true; }
+}

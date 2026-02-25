@@ -1,0 +1,182 @@
+@page "/inventario/stock"
+@attribute [Authorize]
+@inject MovimientoInventarioHttpService InvService
+@inject AlmacenHttpService AlmacenService
+
+<PageTitle>Stock Actual - AgoraHub360 ERP</PageTitle>
+
+<div class="page-header">
+    <h1>Stock Actual</h1>
+    <p class="text-muted mb-0">Inventario &rsaquo; Stock</p>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label mb-1 small">Almacen</label>
+                <select class="form-select form-select-sm" @bind="filtroAlmacenId">
+                    <option value="0">Todos los almacenes</option>
+                    @foreach (var alm in almacenes)
+                    {
+                        <option value="@alm.Id">@alm.Nombre</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label mb-1 small">Buscar producto</label>
+                <input type="text" class="form-control form-control-sm" placeholder="SKU o nombre..."
+                       @bind="searchText" @bind:event="oninput" />
+            </div>
+            <div class="col-md-auto">
+                <button class="btn btn-sm btn-primary" @onclick="LoadData">
+                    <i class="bi bi-arrow-clockwise"></i> Actualizar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill"></i> @errorMessage</div>
+}
+
+@if (loading)
+{
+    <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+}
+else
+{
+    <div class="row mb-3">
+        <div class="col-md-3">
+            <div class="card border-primary">
+                <div class="card-body text-center py-2">
+                    <div class="small text-muted">Productos</div>
+                    <div class="fw-bold fs-4 text-primary">@FilteredItems.Select(s => s.CompanyProductId).Distinct().Count()</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-success">
+                <div class="card-body text-center py-2">
+                    <div class="small text-muted">Unidades Totales</div>
+                    <div class="fw-bold fs-4 text-success">@FilteredItems.Sum(s => s.CurrentStock).ToString("N2")</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-info">
+                <div class="card-body text-center py-2">
+                    <div class="small text-muted">Valor Total</div>
+                    <div class="fw-bold fs-4 text-info">@FilteredItems.Sum(s => s.TotalValue).ToString("N2")</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-warning">
+                <div class="card-body text-center py-2">
+                    <div class="small text-muted">Registros</div>
+                    <div class="fw-bold fs-4 text-warning">@FilteredItems.Count</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center py-3">
+            <span>Stock por Producto y Almacen <span class="badge bg-secondary ms-1">@FilteredItems.Count</span></span>
+        </div>
+        <div class="card-body p-0">
+            @if (FilteredItems.Count == 0)
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox" style="font-size:2.5rem;"></i>
+                    <p class="text-muted mt-3">No hay stock registrado.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>SKU</th>
+                                <th>Producto</th>
+                                <th>Almacen</th>
+                                <th class="text-end">Stock</th>
+                                <th class="text-end">Costo Prom.</th>
+                                <th class="text-end">Valor Total</th>
+                                <th>Ultima Actualizacion</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var s in FilteredItems.OrderBy(x => x.ProductSku).ThenBy(x => x.WarehouseName))
+                            {
+                                <tr class="@(s.CurrentStock <= 0 ? "table-danger" : "")">
+                                    <td><code class="small">@s.ProductSku</code></td>
+                                    <td>@s.ProductName</td>
+                                    <td><span class="badge bg-secondary">@s.WarehouseName</span></td>
+                                    <td class="text-end fw-bold @(s.CurrentStock <= 0 ? "text-danger" : "text-success")">
+                                        @s.CurrentStock.ToString("N4")
+                                    </td>
+                                    <td class="text-end">@s.AverageCost.ToString("N4")</td>
+                                    <td class="text-end fw-bold text-primary">@s.TotalValue.ToString("N2")</td>
+                                    <td><small class="text-muted">@s.LastUpdated.ToString("dd/MM/yyyy HH:mm")</small></td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr class="fw-bold">
+                                <td colspan="3" class="text-end">Totales:</td>
+                                <td class="text-end text-success">@FilteredItems.Sum(s => s.CurrentStock).ToString("N4")</td>
+                                <td></td>
+                                <td class="text-end text-primary">@FilteredItems.Sum(s => s.TotalValue).ToString("N2")</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private List<StockProductoDto> stockItems = new();
+    private List<AlmacenDto> almacenes = new();
+
+    private bool loading = true;
+    private string? errorMessage;
+    private int filtroAlmacenId = 0;
+    private string searchText = "";
+
+    private List<StockProductoDto> FilteredItems
+    {
+        get
+        {
+            IEnumerable<StockProductoDto> filtered = stockItems;
+            if (filtroAlmacenId > 0)
+                filtered = filtered.Where(s => s.WarehouseId == filtroAlmacenId);
+            if (!string.IsNullOrWhiteSpace(searchText))
+                filtered = filtered.Where(s =>
+                    s.ProductSku.Contains(searchText, StringComparison.OrdinalIgnoreCase) ||
+                    s.ProductName.Contains(searchText, StringComparison.OrdinalIgnoreCase));
+            return filtered.ToList();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { almacenes = await AlmacenService.GetAllAsync(); } catch { }
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        loading = true; errorMessage = null;
+        try { stockItems = await InvService.GetStockAsync(); }
+        catch (Exception ex) { errorMessage = $"Error: {ex.Message}"; }
+        finally { loading = false; }
+    }
+}

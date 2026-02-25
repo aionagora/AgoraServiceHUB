@@ -77,4 +77,20 @@ public class MdmAttributeHttpService
         return await response.Content.ReadFromJsonAsync<ApiResponse<bool>>()
             ?? ApiResponse<bool>.Fail("Error de comunicación con el servidor.");
     }
+
+    public async Task<List<ProductAttributeDto>> GetProductAttributesAsync(long productId)
+    {
+        var response = await _http.GetFromJsonAsync<ApiResponse<List<ProductAttributeDto>>>(
+            $"{BaseUrl}/product/{productId}");
+        return response?.Data ?? new();
+    }
+
+    public async Task<ApiResponse<ProductAttributeDto>> UpsertProductAttributeAsync(UpsertProductAttributeDto dto)
+    {
+        var response = await _http.PostAsJsonAsync($"{BaseUrl}/product", dto);
+        if (!response.IsSuccessStatusCode)
+            return ApiResponse<ProductAttributeDto>.Fail($"HTTP {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
+        return await response.Content.ReadFromJsonAsync<ApiResponse<ProductAttributeDto>>()
+            ?? ApiResponse<ProductAttributeDto>.Fail("Error de comunicación.");
+    }
 }

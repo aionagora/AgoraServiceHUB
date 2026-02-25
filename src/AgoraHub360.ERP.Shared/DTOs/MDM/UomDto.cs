@@ -29,11 +29,18 @@ public record ProductUomDto(
     string UomName,
     bool IsBase,
     decimal FactorToBase,
-    string? Barcode);
+    string? Barcode,
+    bool Activo);
 
 public record CreateProductUomDto(
     long ProductId,
     int UomId,
+    bool IsBase = false,
+    decimal FactorToBase = 1,
+    string? Barcode = null);
+
+public record UpdateProductUomDto(
     bool IsBase,
     decimal FactorToBase,
-    string? Barcode = null);
+    string? Barcode,
+    bool Activo);

@@ -28,6 +28,9 @@ public static class DependencyInjection
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IAttributeDefinitionService, AttributeDefinitionService>();
         services.AddScoped<IProductVariantService, ProductVariantService>();
+        services.AddScoped<IBrandService, BrandService>();
+        services.AddScoped<IManufacturerService, ManufacturerService>();
+        services.AddScoped<IProductUomService, ProductUomService>();
 
         // Legacy adapters (keep controllers/pages compiling)
         services.AddScoped<IUnidadMedidaService, UnidadMedidaService>();

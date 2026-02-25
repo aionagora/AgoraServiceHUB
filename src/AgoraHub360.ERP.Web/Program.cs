@@ -46,6 +46,11 @@ builder.Services.AddScoped<MdmProductoGlobalHttpService>();
 builder.Services.AddScoped<MdmCompanyProductHttpService>();
 builder.Services.AddScoped<MdmVariantHttpService>();
 builder.Services.AddScoped<MdmAttributeHttpService>();
+builder.Services.AddScoped<BrandHttpService>();
+builder.Services.AddScoped<ManufacturerHttpService>();
+builder.Services.AddScoped<ProductUomHttpService>();
+builder.Services.AddScoped<ProductCodeHttpService>();
+builder.Services.AddScoped<PriceListHttpService>();
 
 // ──── Servicios HTTP Inventario ────
 builder.Services.AddScoped<MovimientoInventarioHttpService>();

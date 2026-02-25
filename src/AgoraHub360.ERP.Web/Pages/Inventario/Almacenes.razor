@@ -1,21 +1,148 @@
 @page "/inventario/almacenes"
+@attribute [Authorize]
+@inject AlmacenHttpService AlmacenService
+@inject MovimientoInventarioHttpService InvService
 
-<PageTitle>Almacenes - AgoraHub360 ERP</PageTitle>
+<PageTitle>Almacenes - Inventario - AgoraHub360 ERP</PageTitle>
 
 <div class="page-header">
-    <h1>Almacenes</h1>
+    <h1>Almacenes - Vista Inventario</h1>
     <p class="text-muted mb-0">Inventario &rsaquo; Almacenes</p>
 </div>
 
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center py-3">
-        <span>Listado de Almacenes</span>
-        <button class="btn btn-primary btn-sm" disabled>
-            <i class="bi bi-plus-circle me-1"></i> Nuevo Almacen
-        </button>
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill"></i> @errorMessage</div>
+}
+
+@if (loading)
+{
+    <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+}
+else if (almacenes.Count == 0)
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> No hay almacenes registrados.
+        <a href="mdm/almacenes" class="alert-link">Crear almacenes en Datos Maestros</a>.
     </div>
-    <div class="card-body text-center py-5">
-        <i class="bi bi-house-gear" style="font-size: 3rem; color: var(--agora-text-light);"></i>
-        <p class="text-muted mt-3">Modulo en construccion.</p>
+}
+else
+{
+    <div class="row mb-3">
+        <div class="col-md-3">
+            <div class="card border-primary">
+                <div class="card-body text-center py-2">
+                    <div class="small text-muted">Almacenes</div>
+                    <div class="fw-bold fs-4 text-primary">@almacenes.Count(a => a.Activo)</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-success">
+                <div class="card-body text-center py-2">
+                    <div class="small text-muted">Productos en Stock</div>
+                    <div class="fw-bold fs-4 text-success">@stockItems.Select(s => s.CompanyProductId).Distinct().Count()</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-info">
+                <div class="card-body text-center py-2">
+                    <div class="small text-muted">Unidades Totales</div>
+                    <div class="fw-bold fs-4 text-info">@stockItems.Sum(s => s.CurrentStock).ToString("N2")</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-warning">
+                <div class="card-body text-center py-2">
+                    <div class="small text-muted">Valor Total</div>
+                    <div class="fw-bold fs-4 text-warning">@stockItems.Sum(s => s.TotalValue).ToString("N2")</div>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
+
+    <div class="row">
+        @foreach (var alm in almacenes.Where(a => a.Activo))
+        {
+            var almStock = stockItems.Where(s => s.WarehouseId == alm.Id).ToList();
+            <div class="col-md-6 col-lg-4 mb-3">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center py-3">
+                        <div>
+                            <i class="bi bi-house-gear-fill text-primary me-1"></i>
+                            <strong>@alm.Nombre</strong>
+                            <br /><code class="small">@alm.Codigo</code>
+                        </div>
+                        <span class="badge bg-success">@(almStock.Count) prod.</span>
+                    </div>
+                    <div class="card-body py-2">
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="small text-muted">Unidades</div>
+                                <div class="fw-bold">@almStock.Sum(s => s.CurrentStock).ToString("N2")</div>
+                            </div>
+                            <div class="col-4">
+                                <div class="small text-muted">Valor</div>
+                                <div class="fw-bold text-primary">@almStock.Sum(s => s.TotalValue).ToString("N2")</div>
+                            </div>
+                            <div class="col-4">
+                                <div class="small text-muted">Sin stock</div>
+                                <div class="fw-bold @(almStock.Count(s => s.CurrentStock <= 0) > 0 ? "text-danger" : "text-success")">
+                                    @almStock.Count(s => s.CurrentStock <= 0)
+                                </div>
+                            </div>
+                        </div>
+                        @if (!string.IsNullOrEmpty(alm.Responsable))
+                        {
+                            <hr class="my-2" />
+                            <small class="text-muted"><i class="bi bi-person"></i> @alm.Responsable</small>
+                        }
+                        @if (!string.IsNullOrEmpty(alm.Direccion))
+                        {
+                            <br /><small class="text-muted"><i class="bi bi-geo-alt"></i> @alm.Direccion</small>
+                        }
+                    </div>
+                    <div class="card-footer py-2 text-end">
+                        <a href="inventario/stock" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-box-seam-fill"></i> Ver Stock
+                        </a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (almacenes.Any(a => !a.Activo))
+    {
+        <div class="mt-3">
+            <small class="text-muted">
+                <i class="bi bi-info-circle"></i> @almacenes.Count(a => !a.Activo) almacen(es) inactivo(s) oculto(s).
+                <a href="mdm/almacenes">Gestionar en Datos Maestros</a>.
+            </small>
+        </div>
+    }
+}
+
+@code {
+    private List<AlmacenDto> almacenes = new();
+    private List<StockProductoDto> stockItems = new();
+    private bool loading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        loading = true;
+        try
+        {
+            var tAlm = AlmacenService.GetAllAsync();
+            var tStock = InvService.GetStockAsync();
+            await Task.WhenAll(tAlm, tStock);
+            almacenes = await tAlm;
+            stockItems = await tStock;
+        }
+        catch (Exception ex) { errorMessage = $"Error: {ex.Message}"; }
+        finally { loading = false; }
+    }
+}

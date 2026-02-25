@@ -1,0 +1,450 @@
+@page "/mdm/listas-precios"
+@attribute [Authorize]
+@inject PriceListHttpService PlService
+@inject MdmCompanyProductHttpService CpService
+@inject IJSRuntime JS
+
+<PageTitle>Listas de Precios - AgoraHub360 ERP</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3><i class="bi bi-currency-dollar"></i> Listas de Precios</h3>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="ShowCreateModal">
+                <i class="bi bi-plus-circle"></i> Nueva Lista
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle-fill"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (loading)
+    {
+        <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+    }
+    else if (priceLists.Count == 0)
+    {
+        <div class="alert alert-info"><i class="bi bi-info-circle"></i> No hay listas de precios.</div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-header py-3">
+                <span>Listas de Precios <span class="badge bg-secondary ms-1">@priceLists.Count</span></span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th></th>
+                                <th>Codigo</th>
+                                <th>Nombre</th>
+                                <th>Moneda</th>
+                                <th>Vigencia</th>
+                                <th>Default</th>
+                                <th>Estado</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var pl in priceLists)
+                            {
+                                <tr>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => ToggleItems(pl.PriceListId)">
+                                            <i class="bi @(expandedId == pl.PriceListId ? "bi-chevron-up" : "bi-chevron-down")"></i>
+                                        </button>
+                                    </td>
+                                    <td><code>@pl.Code</code></td>
+                                    <td><strong>@pl.Name</strong></td>
+                                    <td><span class="badge bg-info text-dark">@pl.CurrencyId</span></td>
+                                    <td>
+                                        <small class="text-muted">
+                                            @(pl.ValidFrom?.ToString("dd/MM/yyyy") ?? "—")
+                                            ? @(pl.ValidTo?.ToString("dd/MM/yyyy") ?? "—")
+                                        </small>
+                                    </td>
+                                    <td>
+                                        @if (pl.IsDefault) { <i class="bi bi-star-fill text-warning"></i> }
+                                    </td>
+                                    <td>
+                                        <span class="badge @(pl.Activo ? "bg-success" : "bg-secondary")">
+                                            @(pl.Activo ? "Activo" : "Inactivo")
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditModal(pl)">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger ms-1" @onclick="() => DeleteList(pl)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                @if (expandedId == pl.PriceListId)
+                                {
+                                    <tr>
+                                        <td colspan="8" class="bg-light p-3">
+                                            @if (loadingItems)
+                                            {
+                                                <div class="text-center py-2"><div class="spinner-border spinner-border-sm"></div></div>
+                                            }
+                                            else
+                                            {
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <strong>Precios <span class="badge bg-secondary">@currentItems.Count</span></strong>
+                                                    <button class="btn btn-sm btn-success" @onclick="() => ShowAddItemModal(pl.PriceListId)">
+                                                        <i class="bi bi-plus"></i> Agregar Precio
+                                                    </button>
+                                                </div>
+                                                @if (currentItems.Count == 0)
+                                                {
+                                                    <p class="text-muted mb-0">Sin precios asignados.</p>
+                                                }
+                                                else
+                                                {
+                                                    <table class="table table-sm table-bordered mb-0">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Prod. Empresa ID</th>
+                                                                <th>Variante ID</th>
+                                                                <th class="text-end">Precio</th>
+                                                                <th class="text-end">Cant. Min</th>
+                                                                <th class="text-end">Dto %</th>
+                                                                <th>Vigencia</th>
+                                                                <th class="text-end">Accion</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @foreach (var item in currentItems)
+                                                            {
+                                                                <tr>
+                                                                    <td>@(item.CompanyProductId?.ToString() ?? "—")</td>
+                                                                    <td>@(item.VariantId?.ToString() ?? "—")</td>
+                                                                    <td class="text-end fw-bold">@item.Price.ToString("N2")</td>
+                                                                    <td class="text-end">@(item.MinQty?.ToString("N2") ?? "—")</td>
+                                                                    <td class="text-end">@(item.DiscountPercent?.ToString("N2") ?? "—")</td>
+                                                                    <td>
+                                                                        <small>@(item.ValidFrom?.ToString("dd/MM/yy") ?? "—") ? @(item.ValidTo?.ToString("dd/MM/yy") ?? "—")</small>
+                                                                    </td>
+                                                                    <td class="text-end">
+                                                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteItem(pl.PriceListId, item.ItemId)">
+                                                                            <i class="bi bi-x-lg"></i>
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+                                                            }
+                                                        </tbody>
+                                                    </table>
+                                                }
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@* ?? Modal Crear/Editar Lista ?? *@
+@if (showListModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(isEditing ? "Editar" : "Nueva") Lista de Precios</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModals"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="listModel" OnValidSubmit="SaveList">
+                        <DataAnnotationsValidator />
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Codigo *</label>
+                                <InputText class="form-control" @bind-Value="listModel.Code" placeholder="PL-001" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Moneda *</label>
+                                <InputText class="form-control" @bind-Value="listModel.CurrencyId" placeholder="BOB, USD..." />
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Nombre *</label>
+                            <InputText class="form-control" @bind-Value="listModel.Name" placeholder="Lista General" />
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Vigencia Desde</label>
+                                <InputDate class="form-control" @bind-Value="listModel.ValidFrom" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Vigencia Hasta</label>
+                                <InputDate class="form-control" @bind-Value="listModel.ValidTo" />
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3 form-check ms-2">
+                                <InputCheckbox class="form-check-input" id="isDefaultCheck" @bind-Value="listModel.IsDefault" />
+                                <label class="form-check-label" for="isDefaultCheck">Lista por defecto</label>
+                            </div>
+                            @if (isEditing)
+                            {
+                                <div class="col-md-6 mb-3 form-check">
+                                    <InputCheckbox class="form-check-input" id="activoListCheck" @bind-Value="listModel.Activo" />
+                                    <label class="form-check-label" for="activoListCheck">Activo</label>
+                                </div>
+                            }
+                        </div>
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseModals">Cancelar</button>
+                            <button type="submit" class="btn btn-primary" disabled="@saving">
+                                @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                Guardar
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* ?? Modal Agregar Item ?? *@
+@if (showItemModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Agregar Precio</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModals"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="itemModel" OnValidSubmit="SaveItem">
+                        <DataAnnotationsValidator />
+                        <div class="mb-3">
+                            <label class="form-label">Producto Empresa *</label>
+                            <InputSelect class="form-select" @bind-Value="itemModel.CompanyProductId">
+                                <option value="0">-- Seleccionar --</option>
+                                @foreach (var cp in companyProducts)
+                                {
+                                    <option value="@cp.CompanyProductId">@cp.Sku - @cp.NombreComercial</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Precio *</label>
+                                <InputNumber class="form-control" @bind-Value="itemModel.Price" />
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Cant. Minima</label>
+                                <InputNumber class="form-control" @bind-Value="itemModel.MinQty" />
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Descuento %</label>
+                                <InputNumber class="form-control" @bind-Value="itemModel.DiscountPercent" />
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Vigencia Desde</label>
+                                <InputDate class="form-control" @bind-Value="itemModel.ValidFrom" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Vigencia Hasta</label>
+                                <InputDate class="form-control" @bind-Value="itemModel.ValidTo" />
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseModals">Cancelar</button>
+                            <button type="submit" class="btn btn-success" disabled="@(saving || itemModel.CompanyProductId == 0)">
+                                @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                Agregar
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<PriceListDto> priceLists = new();
+    private List<PriceListItemDto> currentItems = new();
+    private List<CompanyProductDto> companyProducts = new();
+
+    private bool loading = true;
+    private bool loadingItems = false;
+    private bool saving = false;
+    private bool showListModal = false;
+    private bool showItemModal = false;
+    private bool isEditing = false;
+    private string? errorMessage;
+    private string? successMessage;
+
+    private long editingId;
+    private long expandedId;
+    private long addItemListId;
+
+    private ListModel listModel = new();
+    private ItemModel itemModel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { companyProducts = await CpService.GetAllAsync(); } catch { }
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        loading = true; errorMessage = null;
+        try { priceLists = await PlService.GetAllAsync(); }
+        catch (Exception ex) { errorMessage = $"Error: {ex.Message}"; }
+        finally { loading = false; }
+    }
+
+    // ?? Expand items ??
+    private async Task ToggleItems(long plId)
+    {
+        if (expandedId == plId) { expandedId = 0; return; }
+        expandedId = plId;
+        loadingItems = true;
+        try { currentItems = await PlService.GetItemsAsync(plId); }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { loadingItems = false; }
+    }
+
+    // ?? List CRUD ??
+    private void ShowCreateModal() { listModel = new(); isEditing = false; showListModal = true; }
+    private void ShowEditModal(PriceListDto pl)
+    {
+        editingId = pl.PriceListId;
+        listModel = new()
+        {
+            Code = pl.Code, Name = pl.Name, CurrencyId = pl.CurrencyId,
+            ValidFrom = pl.ValidFrom, ValidTo = pl.ValidTo,
+            IsDefault = pl.IsDefault, Activo = pl.Activo
+        };
+        isEditing = true; showListModal = true;
+    }
+    private void CloseModals() { showListModal = false; showItemModal = false; }
+
+    private async Task SaveList()
+    {
+        if (string.IsNullOrWhiteSpace(listModel.Code) || string.IsNullOrWhiteSpace(listModel.Name)) return;
+        saving = true; errorMessage = null;
+        try
+        {
+            if (isEditing)
+            {
+                var dto = new UpdatePriceListDto(listModel.Code.Trim(), listModel.Name.Trim(),
+                    listModel.CurrencyId.Trim(), null, listModel.ValidFrom, listModel.ValidTo,
+                    listModel.IsDefault, listModel.Activo);
+                var r = await PlService.UpdateAsync(editingId, dto);
+                if (r.Success) { successMessage = "Lista actualizada."; CloseModals(); await LoadData(); }
+                else errorMessage = r.Message;
+            }
+            else
+            {
+                var dto = new CreatePriceListDto(listModel.Code.Trim(), listModel.Name.Trim(),
+                    listModel.CurrencyId.Trim(), null, listModel.ValidFrom, listModel.ValidTo,
+                    listModel.IsDefault);
+                var r = await PlService.CreateAsync(dto);
+                if (r.Success) { successMessage = $"Lista '{listModel.Code}' creada."; CloseModals(); await LoadData(); }
+                else errorMessage = r.Message;
+            }
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { saving = false; }
+    }
+
+    private async Task DeleteList(PriceListDto pl)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"¿Eliminar lista '{pl.Name}'?")) return;
+        try
+        {
+            var r = await PlService.DeleteAsync(pl.PriceListId);
+            if (r.Success) { successMessage = "Lista eliminada."; if (expandedId == pl.PriceListId) expandedId = 0; await LoadData(); }
+            else errorMessage = r.Message;
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+    }
+
+    // ?? Items ??
+    private void ShowAddItemModal(long plId) { addItemListId = plId; itemModel = new(); showItemModal = true; }
+
+    private async Task SaveItem()
+    {
+        if (itemModel.CompanyProductId == 0 || itemModel.Price <= 0) return;
+        saving = true; errorMessage = null;
+        try
+        {
+            var dto = new CreatePriceListItemDto(addItemListId,
+                itemModel.CompanyProductId, null, itemModel.Price,
+                itemModel.MinQty, itemModel.DiscountPercent,
+                itemModel.ValidFrom, itemModel.ValidTo);
+            var r = await PlService.AddItemAsync(addItemListId, dto);
+            if (r.Success) { successMessage = "Precio agregado."; CloseModals(); await ToggleItems(0); await ToggleItems(addItemListId); }
+            else errorMessage = r.Message;
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { saving = false; }
+    }
+
+    private async Task DeleteItem(long plId, long itemId)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", "¿Eliminar este precio?")) return;
+        try
+        {
+            var r = await PlService.DeleteItemAsync(plId, itemId);
+            if (r.Success) { successMessage = "Precio eliminado."; await ToggleItems(0); await ToggleItems(plId); }
+            else errorMessage = r.Message;
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+    }
+
+    // ?? Models ??
+    private class ListModel
+    {
+        public string Code { get; set; } = "";
+        public string Name { get; set; } = "";
+        public string CurrencyId { get; set; } = "BOB";
+        public DateOnly? ValidFrom { get; set; }
+        public DateOnly? ValidTo { get; set; }
+        public bool IsDefault { get; set; }
+        public bool Activo { get; set; } = true;
+    }
+
+    private class ItemModel
+    {
+        public long CompanyProductId { get; set; }
+        public decimal Price { get; set; }
+        public decimal? MinQty { get; set; }
+        public decimal? DiscountPercent { get; set; }
+        public DateOnly? ValidFrom { get; set; }
+        public DateOnly? ValidTo { get; set; }
+    }
+}

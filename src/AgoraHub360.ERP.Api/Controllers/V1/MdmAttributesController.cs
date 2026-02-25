@@ -64,4 +64,20 @@ public class MdmAttributesController : ControllerBase
         if (!result.IsSuccess) return NotFound(ApiResponse<bool>.Fail(result.Error!));
         return Ok(ApiResponse<bool>.Ok(true, "Opción eliminada."));
     }
+
+    [HttpGet("product/{productId:long}")]
+    public async Task<IActionResult> GetProductAttributes(long productId, CancellationToken ct)
+    {
+        var result = await _service.GetProductAttributesAsync(productId, ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<IReadOnlyList<ProductAttributeDto>>.Fail(result.Error!));
+        return Ok(ApiResponse<IReadOnlyList<ProductAttributeDto>>.Ok(result.Value!));
+    }
+
+    [HttpPost("product")]
+    public async Task<IActionResult> UpsertProductAttribute([FromBody] UpsertProductAttributeDto dto, CancellationToken ct)
+    {
+        var result = await _service.UpsertProductAttributeAsync(dto, ct);
+        if (!result.IsSuccess) return BadRequest(ApiResponse<ProductAttributeDto>.Fail(result.Error!));
+        return Ok(ApiResponse<ProductAttributeDto>.Ok(result.Value!, "Atributo asignado."));
+    }
 }

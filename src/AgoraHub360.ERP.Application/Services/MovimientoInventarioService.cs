@@ -95,7 +95,7 @@ public class MovimientoInventarioService : IMovimientoInventarioService
             return Result<MovimientoInventarioDto>.Failure("No active company.");
 
         // Validate CompanyProduct
-        var companyProduct = await _companyProductRepo.GetByIdAsync((int)dto.CompanyProductId, ct);
+        var companyProduct = await _companyProductRepo.GetByIdAsync(dto.CompanyProductId, ct);
         if (companyProduct is null || companyProduct.EmpresaId != empresaId.Value)
             return Result<MovimientoInventarioDto>.Failure("Company product not found or does not belong to your company.");
 
@@ -210,7 +210,7 @@ public class MovimientoInventarioService : IMovimientoInventarioService
         if (!empresaId.HasValue)
             return Result<KardexDto>.Failure("No active company.");
 
-        var companyProduct = await _companyProductRepo.GetByIdAsync(productoId, ct);
+        var companyProduct = await _companyProductRepo.GetByIdAsync((long)productoId, ct);
         if (companyProduct is null || companyProduct.EmpresaId != empresaId.Value)
             return Result<KardexDto>.Failure("Company product not found.");
 
