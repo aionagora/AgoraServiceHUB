@@ -120,6 +120,9 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     public DbSet<PeriodoContable> PeriodosContables => Set<PeriodoContable>();
     public DbSet<PlantillaContable> PlantillasContables => Set<PlantillaContable>();
     public DbSet<PlantillaContableLinea> PlantillaContableLineas => Set<PlantillaContableLinea>();
+    public DbSet<TipoComprobante> TiposComprobante => Set<TipoComprobante>();
+    public DbSet<TipoCambio> TiposCambio => Set<TipoCambio>();
+    public DbSet<TipoPago> TiposPago => Set<TipoPago>();
 
     // ── Audit ─────────────────────────────────────────────────────────────────
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();

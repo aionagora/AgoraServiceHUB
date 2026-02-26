@@ -16,13 +16,13 @@ public class AsientoContableHttpService
 
     public async Task<List<AsientoContableDto>> GetAllAsync(
         DateTime? desde = null, DateTime? hasta = null,
-        string? estado = null, string? origenTipo = null, string? search = null)
+        string? estado = null, int? tipoComprobanteId = null, string? search = null)
     {
         var url = $"{Base}?";
         if (desde.HasValue) url += $"desde={desde.Value:yyyy-MM-dd}&";
         if (hasta.HasValue) url += $"hasta={hasta.Value:yyyy-MM-dd}&";
         if (!string.IsNullOrEmpty(estado)) url += $"estado={Uri.EscapeDataString(estado)}&";
-        if (!string.IsNullOrEmpty(origenTipo)) url += $"origenTipo={Uri.EscapeDataString(origenTipo)}&";
+        if (tipoComprobanteId.HasValue) url += $"tipoComprobanteId={tipoComprobanteId}&";
         if (!string.IsNullOrEmpty(search)) url += $"search={Uri.EscapeDataString(search)}&";
         var response = await _http.GetFromJsonAsync<ApiResponse<List<AsientoContableDto>>>(url.TrimEnd('&', '?'));
         return response?.Data ?? new();
@@ -37,48 +37,72 @@ public class AsientoContableHttpService
     public async Task<ApiResponse<AsientoContableDto>> CreateAsync(CreateAsientoContableDto dto)
     {
         var response = await _http.PostAsJsonAsync(Base, dto);
-        if (!response.IsSuccessStatusCode)
-        {
-            var body = await response.Content.ReadAsStringAsync();
-            return ApiResponse<AsientoContableDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
-        }
-        return await response.Content.ReadFromJsonAsync<ApiResponse<AsientoContableDto>>()
-            ?? ApiResponse<AsientoContableDto>.Fail("Error de comunicación.");
+        return await ParseResponse<AsientoContableDto>(response);
+    }
+
+    public async Task<ApiResponse<AsientoContableDto>> UpdateAsync(long id, UpdateAsientoContableDto dto)
+    {
+        var response = await _http.PutAsJsonAsync($"{Base}/{id}", dto);
+        return await ParseResponse<AsientoContableDto>(response);
+    }
+
+    public async Task<ApiResponse<AsientoContableDto>> CopiarAsync(long id)
+    {
+        var response = await _http.PostAsync($"{Base}/{id}/copiar", null);
+        return await ParseResponse<AsientoContableDto>(response);
     }
 
     public async Task<ApiResponse<AsientoContableDto>> ContabilizarAsync(long id)
     {
         var response = await _http.PostAsync($"{Base}/{id}/contabilizar", null);
-        if (!response.IsSuccessStatusCode)
-        {
-            var body = await response.Content.ReadAsStringAsync();
-            return ApiResponse<AsientoContableDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
-        }
-        return await response.Content.ReadFromJsonAsync<ApiResponse<AsientoContableDto>>()
-            ?? ApiResponse<AsientoContableDto>.Fail("Error de comunicación.");
+        return await ParseResponse<AsientoContableDto>(response);
     }
 
     public async Task<ApiResponse<AsientoContableDto>> AnularAsync(long id)
     {
         var response = await _http.PostAsync($"{Base}/{id}/anular", null);
-        if (!response.IsSuccessStatusCode)
-        {
-            var body = await response.Content.ReadAsStringAsync();
-            return ApiResponse<AsientoContableDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
-        }
-        return await response.Content.ReadFromJsonAsync<ApiResponse<AsientoContableDto>>()
-            ?? ApiResponse<AsientoContableDto>.Fail("Error de comunicación.");
+        return await ParseResponse<AsientoContableDto>(response);
     }
 
     public async Task<ApiResponse<bool>> DeleteAsync(long id)
     {
         var response = await _http.DeleteAsync($"{Base}/{id}");
+        return await ParseResponse<bool>(response);
+    }
+
+    // ?? Catálogos ??
+    public async Task<List<TipoComprobanteDto>> GetTiposComprobanteAsync()
+    {
+        var r = await _http.GetFromJsonAsync<ApiResponse<List<TipoComprobanteDto>>>($"{Base}/tipos-comprobante");
+        return r?.Data ?? new();
+    }
+
+    public async Task<List<TipoCambioDto>> GetTiposCambioAsync()
+    {
+        var r = await _http.GetFromJsonAsync<ApiResponse<List<TipoCambioDto>>>($"{Base}/tipos-cambio");
+        return r?.Data ?? new();
+    }
+
+    public async Task<List<TipoPagoDto>> GetTiposPagoAsync()
+    {
+        var r = await _http.GetFromJsonAsync<ApiResponse<List<TipoPagoDto>>>($"{Base}/tipos-pago");
+        return r?.Data ?? new();
+    }
+
+    public async Task<ApiResponse<int>> SeedCatalogosAsync()
+    {
+        var response = await _http.PostAsync($"{Base}/seed-catalogos", null);
+        return await ParseResponse<int>(response);
+    }
+
+    private static async Task<ApiResponse<T>> ParseResponse<T>(HttpResponseMessage response)
+    {
         if (!response.IsSuccessStatusCode)
         {
             var body = await response.Content.ReadAsStringAsync();
-            return ApiResponse<bool>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
+            return ApiResponse<T>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
-        return await response.Content.ReadFromJsonAsync<ApiResponse<bool>>()
-            ?? ApiResponse<bool>.Fail("Error de comunicación.");
+        return await response.Content.ReadFromJsonAsync<ApiResponse<T>>()
+            ?? ApiResponse<T>.Fail("Error de comunicación.");
     }
 }

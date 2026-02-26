@@ -21,6 +21,7 @@ public class ContabilizacionService : IContabilizacionService
     private readonly IRepository<AsientoContableLinea> _asientoLineaRepo;
     private readonly IRepository<CuentaContable> _cuentaRepo;
     private readonly IRepository<PeriodoContable> _periodoRepo;
+    private readonly IRepository<TipoComprobante> _tipoCompRepo;
     private readonly IRepository<NumeracionDocumento> _numRepo;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
@@ -32,6 +33,7 @@ public class ContabilizacionService : IContabilizacionService
         IRepository<AsientoContableLinea> asientoLineaRepo,
         IRepository<CuentaContable> cuentaRepo,
         IRepository<PeriodoContable> periodoRepo,
+        IRepository<TipoComprobante> tipoCompRepo,
         IRepository<NumeracionDocumento> numRepo,
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser)
@@ -42,6 +44,7 @@ public class ContabilizacionService : IContabilizacionService
         _asientoLineaRepo = asientoLineaRepo;
         _cuentaRepo = cuentaRepo;
         _periodoRepo = periodoRepo;
+        _tipoCompRepo = tipoCompRepo;
         _numRepo = numRepo;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
@@ -134,18 +137,38 @@ public class ContabilizacionService : IContabilizacionService
         if (!string.IsNullOrEmpty(glosaExtra))
             glosa = glosa.Replace("{Proveedor}", glosaExtra);
 
-        // ?? 6. Generate entry number ??
-        var numero = await GenerarNumeroAsync(empresaId.Value, fecha, ct);
+        // ?? 6. Resolve TipoComprobante (use Traspaso for auto entries) ??
+        var tiposComp = await _tipoCompRepo.FindAsync(
+            t => t.EmpresaId == empresaId.Value && t.Codigo == "TRA" && t.Activo, ct);
+        var tipoComp = tiposComp.FirstOrDefault();
+        if (tipoComp is null)
+        {
+            // Fallback: get any active type
+            var allTipos = await _tipoCompRepo.FindAsync(t => t.EmpresaId == empresaId.Value && t.Activo, ct);
+            tipoComp = allTipos.FirstOrDefault();
+            if (tipoComp is null)
+                return Result<AsientoContableDto>.Failure("No hay tipos de comprobante configurados. Ejecute 'Generar Catálogos' primero.");
+        }
 
-        // ?? 7. Create journal entry ??
+        // ?? 7. Generate entry number ??
+        var gestion = fecha.Year;
+        var existentes = await _asientoRepo.FindAsync(
+            a => a.EmpresaId == empresaId.Value && a.TipoComprobanteId == tipoComp.TipoComprobanteId
+                && a.Gestion == gestion, ct);
+        var numero = $"{tipoComp.Prefijo}-{(existentes.Count + 1):D4}";
+
+        // ?? 8. Create journal entry ??
         var asiento = new AsientoContable
         {
             EmpresaId = empresaId.Value,
+            TipoComprobanteId = tipoComp.TipoComprobanteId,
             Numero = numero,
             Fecha = fecha,
-            Tipo = "Automático",
+            Gestion = gestion,
+            TipoRegistro = "Automático",
             Glosa = glosa,
-            Estado = "Contabilizado", // Auto-posted
+            Estado = "Contabilizado",
+            RegistradoPor = _currentUser.UserName,
             OrigenTipo = tipoDocumento,
             OrigenId = origenId,
             OrigenReferencia = origenReferencia,
@@ -157,7 +180,7 @@ public class ContabilizacionService : IContabilizacionService
         await _asientoRepo.AddAsync(asiento, ct);
         await _unitOfWork.SaveChangesAsync(ct);
 
-        // ?? 8. Create lines ??
+        // ?? 9. Create lines ??
         int lineNum = 1;
         foreach (var (cuentaId, debe, haber, lineGlosa) in asientoLineas)
         {
@@ -174,7 +197,7 @@ public class ContabilizacionService : IContabilizacionService
             }, ct);
         }
 
-        // ?? 9. Update account balances ??
+        // ?? 10. Update account balances ??
         foreach (var (cuentaId, debe, haber, _) in asientoLineas)
         {
             var cuenta = await _cuentaRepo.GetByIdAsync(cuentaId, ct);
@@ -190,7 +213,7 @@ public class ContabilizacionService : IContabilizacionService
 
         await _unitOfWork.SaveChangesAsync(ct);
 
-        // ?? 10. Return DTO ??
+        // ?? 11. Return DTO ??
         var cuentaIds = asientoLineas.Select(l => l.cuentaId).Distinct().ToList();
         var cuentas = await _cuentaRepo.FindAsync(c => cuentaIds.Contains(c.CuentaContableId), ct);
         var cuentaMap = cuentas.ToDictionary(c => c.CuentaContableId);
@@ -199,11 +222,16 @@ public class ContabilizacionService : IContabilizacionService
         {
             AsientoContableId = asiento.AsientoContableId,
             EmpresaId = asiento.EmpresaId,
+            TipoComprobanteId = tipoComp.TipoComprobanteId,
+            TipoComprobanteCodigo = tipoComp.Codigo,
+            TipoComprobanteNombre = tipoComp.Nombre,
             Numero = asiento.Numero,
             Fecha = asiento.Fecha,
-            Tipo = asiento.Tipo,
+            Gestion = asiento.Gestion,
+            TipoRegistro = asiento.TipoRegistro,
             Glosa = asiento.Glosa,
             Estado = asiento.Estado,
+            RegistradoPor = asiento.RegistradoPor,
             OrigenTipo = asiento.OrigenTipo,
             OrigenId = asiento.OrigenId,
             OrigenReferencia = asiento.OrigenReferencia,
@@ -233,20 +261,5 @@ public class ContabilizacionService : IContabilizacionService
     private static decimal ResolverMonto(string campoMonto, Dictionary<string, decimal> montos)
     {
         return montos.TryGetValue(campoMonto, out var valor) ? valor : 0m;
-    }
-
-    private async Task<string> GenerarNumeroAsync(int empresaId, DateTime fecha, CancellationToken ct)
-    {
-        var numeraciones = await _numRepo.FindAsync(
-            n => n.EmpresaId == empresaId && n.TipoDocumento == "AST", ct);
-        var num = numeraciones.FirstOrDefault();
-        if (num is not null)
-        {
-            var numero = num.GenerarSiguiente();
-            await _numRepo.UpdateAsync(num, ct);
-            return numero;
-        }
-        var existentes = await _asientoRepo.FindAsync(a => a.EmpresaId == empresaId, ct);
-        return $"AST-{fecha.Year}-{(existentes.Count + 1):D5}";
     }
 }

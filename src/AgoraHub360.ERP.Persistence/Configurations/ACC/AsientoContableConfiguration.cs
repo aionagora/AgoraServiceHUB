@@ -14,9 +14,13 @@ public class AsientoContableConfiguration : IEntityTypeConfiguration<AsientoCont
 
         builder.Property(a => a.Numero).IsRequired().HasMaxLength(30);
         builder.Property(a => a.Fecha).IsRequired();
-        builder.Property(a => a.Tipo).IsRequired().HasMaxLength(20);
-        builder.Property(a => a.Glosa).IsRequired().HasMaxLength(500);
+        builder.Property(a => a.TipoRegistro).IsRequired().HasMaxLength(20);
         builder.Property(a => a.Estado).IsRequired().HasMaxLength(20);
+        builder.Property(a => a.Concepto).HasMaxLength(300);
+        builder.Property(a => a.Glosa).IsRequired().HasMaxLength(500);
+        builder.Property(a => a.ValorTipoCambio).HasColumnType("decimal(18,6)");
+        builder.Property(a => a.NumeroDocumentoPago).HasMaxLength(100);
+        builder.Property(a => a.RegistradoPor).HasMaxLength(100);
         builder.Property(a => a.OrigenTipo).HasMaxLength(50);
         builder.Property(a => a.OrigenReferencia).HasMaxLength(100);
         builder.Property(a => a.TotalDebe).HasColumnType("decimal(18,4)");
@@ -27,7 +31,24 @@ public class AsientoContableConfiguration : IEntityTypeConfiguration<AsientoCont
         builder.HasIndex(a => new { a.EmpresaId, a.Numero }).IsUnique();
         builder.HasIndex(a => new { a.EmpresaId, a.Fecha });
         builder.HasIndex(a => new { a.EmpresaId, a.Estado });
+        builder.HasIndex(a => new { a.EmpresaId, a.Gestion });
         builder.HasIndex(a => new { a.OrigenTipo, a.OrigenId });
+
+        builder.HasOne(a => a.TipoComprobante)
+            .WithMany()
+            .HasForeignKey(a => a.TipoComprobanteId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(a => a.TipoCambio)
+            .WithMany()
+            .HasForeignKey(a => a.TipoCambioId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(a => a.TipoPago)
+            .WithMany()
+            .HasForeignKey(a => a.TipoPagoId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasMany(a => a.Lineas)
             .WithOne(l => l.AsientoContable)
