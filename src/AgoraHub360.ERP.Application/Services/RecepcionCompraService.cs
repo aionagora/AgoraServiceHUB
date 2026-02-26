@@ -21,6 +21,7 @@ public class RecepcionCompraService : IRecepcionCompraService
     private readonly IRepository<NumeracionDocumento> _numRepo;
     private readonly IRepository<MovimientoInventario> _movRepo;
     private readonly IRepository<StockProducto> _stockRepo;
+    private readonly IContabilizacionService _contabilizacion;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
 
@@ -34,6 +35,7 @@ public class RecepcionCompraService : IRecepcionCompraService
         IRepository<NumeracionDocumento> numRepo,
         IRepository<MovimientoInventario> movRepo,
         IRepository<StockProducto> stockRepo,
+        IContabilizacionService contabilizacion,
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser)
     {
@@ -46,6 +48,7 @@ public class RecepcionCompraService : IRecepcionCompraService
         _numRepo = numRepo;
         _movRepo = movRepo;
         _stockRepo = stockRepo;
+        _contabilizacion = contabilizacion;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
     }
@@ -207,6 +210,30 @@ public class RecepcionCompraService : IRecepcionCompraService
         await _ocRepo.UpdateAsync(oc, ct);
 
         await _unitOfWork.SaveChangesAsync(ct);
+
+        // ?? Contabilización automática ??
+        var subtotal = dto.Lineas.Sum(l =>
+        {
+            var ocL = ocLineasMap[l.OrdenCompraLineaId];
+            var costo = l.CostoUnitario ?? ocL.PrecioUnitario;
+            return costo * l.CantidadRecibida;
+        });
+        var impuesto = subtotal * 0.13m; // IVA 13% — configurable via plantilla
+        var totalRecepcion = subtotal + impuesto;
+
+        await _contabilizacion.ContabilizarDocumentoAsync(
+            tipoDocumento: "Recepcion",
+            montos: new Dictionary<string, decimal>
+            {
+                ["Subtotal"] = subtotal,
+                ["Impuesto"] = impuesto,
+                ["Total"] = totalRecepcion
+            },
+            origenId: recepcion.RecepcionCompraId,
+            origenReferencia: recepcion.Numero,
+            fecha: recepcion.FechaRecepcion,
+            glosaExtra: oc.Numero,
+            ct: ct);
 
         return Result<RecepcionCompraDto>.Success(await BuildDto(recepcion, ct));
     }

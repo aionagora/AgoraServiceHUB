@@ -22,6 +22,7 @@ public class HojaImportacionService : IHojaImportacionService
     private readonly IRepository<StockProducto> _stockRepo;
     private readonly IRepository<MovimientoInventario> _movRepo;
     private readonly IRepository<Almacen> _almacenRepo;
+    private readonly IContabilizacionService _contabilizacion;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
 
@@ -36,6 +37,7 @@ public class HojaImportacionService : IHojaImportacionService
         IRepository<StockProducto> stockRepo,
         IRepository<MovimientoInventario> movRepo,
         IRepository<Almacen> almacenRepo,
+        IContabilizacionService contabilizacion,
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser)
     {
@@ -49,6 +51,7 @@ public class HojaImportacionService : IHojaImportacionService
         _stockRepo = stockRepo;
         _movRepo = movRepo;
         _almacenRepo = almacenRepo;
+        _contabilizacion = contabilizacion;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
     }
@@ -345,6 +348,20 @@ public class HojaImportacionService : IHojaImportacionService
         hoja.Liquidada = true;
         await _hojaRepo.UpdateAsync(hoja, ct);
         await _unitOfWork.SaveChangesAsync(ct);
+
+        // ?? Contabilización automática ??
+        await _contabilizacion.ContabilizarDocumentoAsync(
+            tipoDocumento: "Importacion",
+            montos: new Dictionary<string, decimal>
+            {
+                ["GastoAsignado"] = totalGastos,
+                ["Total"] = totalGastos
+            },
+            origenId: hoja.HojaImportacionId,
+            origenReferencia: hoja.Numero,
+            fecha: hoja.Fecha,
+            glosaExtra: oc.Numero,
+            ct: ct);
 
         return Result<HojaImportacionDto>.Success(await BuildDto(hoja, ct));
     }

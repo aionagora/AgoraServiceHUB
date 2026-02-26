@@ -64,5 +64,6 @@ builder.Services.AddScoped<HojaImportacionHttpService>();
 builder.Services.AddScoped<CuentaContableHttpService>();
 builder.Services.AddScoped<AsientoContableHttpService>();
 builder.Services.AddScoped<PeriodoContableHttpService>();
+builder.Services.AddScoped<PlantillaContableHttpService>();
 
 await builder.Build().RunAsync();
