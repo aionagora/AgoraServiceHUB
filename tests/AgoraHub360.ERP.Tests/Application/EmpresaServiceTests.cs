@@ -104,6 +104,9 @@ public class EmpresaServiceTests
         public Task<Empresa?> GetByIdAsync(int id, CancellationToken ct = default)
             => Task.FromResult(_store.FirstOrDefault(e => e.Id == id));
 
+        public Task<Empresa?> GetByIdAsync(long id, CancellationToken ct = default)
+            => GetByIdAsync((int)id, ct);
+
         public Task<IReadOnlyList<Empresa>> GetAllAsync(CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<Empresa>>(_store.AsReadOnly());
 

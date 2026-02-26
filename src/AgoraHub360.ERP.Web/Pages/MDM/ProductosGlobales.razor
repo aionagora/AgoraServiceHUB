@@ -1,0 +1,1105 @@
+@page "/mdm/productos-globales"
+@attribute [Authorize]
+@inject MdmProductoGlobalHttpService ProductoService
+@inject CatalogoHttpService CatalogoService
+@inject UnidadMedidaHttpService UnidadMedidaService
+@inject BrandHttpService BrandService
+@inject ManufacturerHttpService ManufacturerService
+@inject ProductUomHttpService ProductUomService
+@inject ProductCodeHttpService ProductCodeService
+@inject MdmAttributeHttpService AttributeService
+@inject CategoriaProductoHttpService CategoriaService
+@inject IJSRuntime JS
+
+<PageTitle>Catalogo Global de Productos</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3><i class="bi bi-database"></i> Catalogo Global de Productos</h3>
+            <p class="text-muted mb-0">Plantillas globales de productos (independientes de empresa)</p>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="ShowCreateModal">
+                <i class="bi bi-plus-circle"></i> Nuevo Producto
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (loading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2">Cargando productos...</p>
+        </div>
+    }
+    else if (productos.Count == 0)
+    {
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> No hay productos en el catalogo global.
+        </div>
+    }
+    else
+    {
+        <div class="card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th></th>
+                                <th>Nombre Comercial</th>
+                                <th>Nombre Generico</th>
+                                <th>Tipo</th>
+                                <th>Marca</th>
+                                <th>Fabricante</th>
+                                <th>Estado</th>
+                                <th class="text-center">Stockable</th>
+                                <th class="text-center">Vendible</th>
+                                <th>UoM</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in productos)
+                            {
+                                <tr>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => ToggleDetail(p.ProductId)" title="Ver relaciones">
+                                            <i class="bi @(expandedId == p.ProductId ? "bi-chevron-up" : "bi-chevron-down")"></i>
+                                        </button>
+                                    </td>
+                                    <td><strong>@p.CommercialName</strong></td>
+                                    <td><small class="text-muted">@p.GenericName</small></td>
+                                    <td><span class="badge bg-secondary">@KindLabel(p.ProductKind)</span></td>
+                                    <td><small>@(p.BrandName ?? "—")</small></td>
+                                    <td><small>@(p.ManufacturerName ?? "—")</small></td>
+                                    <td>
+                                        <span class="badge @(p.Activo ? "bg-success" : "bg-secondary")">@p.LifecycleStatusCode</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <i class="bi @(p.IsStockable ? "bi-check-circle-fill text-success" : "bi-dash-circle text-secondary")"></i>
+                                    </td>
+                                    <td class="text-center">
+                                        <i class="bi @(p.IsSellable ? "bi-check-circle-fill text-success" : "bi-dash-circle text-secondary")"></i>
+                                    </td>
+                                    <td><span class="badge bg-info text-dark">@p.DefaultUomCode</span></td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditModal(p)" title="Editar">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger ms-1" @onclick="() => DeleteProducto(p)" title="Eliminar">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                @if (expandedId == p.ProductId)
+                                {
+                                    <tr>
+                                        <td colspan="11" class="bg-light px-4 py-3">
+                                            @* ── Sub-panel: UdM alternativas ── *@
+                                            <div class="mb-3">
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <strong><i class="bi bi-rulers"></i> Unidades de Medida Alternativas</strong>
+                                                    <button class="btn btn-sm btn-success" @onclick="() => ShowAddUomModal(p.ProductId)">
+                                                        <i class="bi bi-plus"></i> Agregar UdM
+                                                    </button>
+                                                </div>
+                                                @if (loadingDetail)
+                                                {
+                                                    <div class="spinner-border spinner-border-sm"></div>
+                                                }
+                                                else if (currentUoms.Count == 0)
+                                                {
+                                                    <p class="text-muted small mb-0">Sin UdM alternativas asignadas.</p>
+                                                }
+                                                else
+                                                {
+                                                    <table class="table table-sm table-bordered mb-0">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>UdM</th>
+                                                                <th>Codigo</th>
+                                                                <th class="text-center">Base</th>
+                                                                <th class="text-end">Factor</th>
+                                                                <th>Codigo Barras</th>
+                                                                <th class="text-end">Accion</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @foreach (var pu in currentUoms)
+                                                            {
+                                                                <tr>
+                                                                    <td>@pu.UomName</td>
+                                                                    <td><code>@pu.UomCode</code></td>
+                                                                    <td class="text-center">
+                                                                        @if (pu.IsBase) { <i class="bi bi-star-fill text-warning"></i> }
+                                                                    </td>
+                                                                    <td class="text-end">@pu.FactorToBase.ToString("N6")</td>
+                                                                    <td><small>@(pu.Barcode ?? "—")</small></td>
+                                                                    <td class="text-end">
+                                                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteUom(p.ProductId, pu.ProductUomId)">
+                                                                            <i class="bi bi-x-lg"></i>
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+                                                            }
+                                                        </tbody>
+                                                    </table>
+                                                }
+                                            </div>
+
+                                            @* ── Sub-panel: Codigos ── *@
+                                            <div class="mb-3">
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <strong><i class="bi bi-upc-scan"></i> Códigos de Producto</strong>
+                                                    <button class="btn btn-sm btn-success" @onclick="() => ShowAddCodeModal(p.ProductId)">
+                                                        <i class="bi bi-plus"></i> Agregar Código
+                                                    </button>
+                                                </div>
+                                                @if (currentCodes.Count == 0)
+                                                {
+                                                    <p class="text-muted small mb-0">Sin códigos asignados.</p>
+                                                }
+                                                else
+                                                {
+                                                    <table class="table table-sm table-bordered mb-0">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Tipo</th>
+                                                                <th>Valor</th>
+                                                                <th class="text-center">Principal</th>
+                                                                <th>Vigencia</th>
+                                                                <th class="text-end">Accion</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @foreach (var c in currentCodes)
+                                                            {
+                                                                <tr>
+                                                                    <td><span class="badge bg-secondary">@CodeTypeLabel(c.CodeType)</span></td>
+                                                                    <td><code>@c.Valor</code></td>
+                                                                    <td class="text-center">
+                                                                        @if (c.IsPrimary) { <i class="bi bi-star-fill text-warning"></i> }
+                                                                    </td>
+                                                                    <td><small>@(c.ValidFrom?.ToString("dd/MM/yy") ?? "—") → @(c.ValidTo?.ToString("dd/MM/yy") ?? "—")</small></td>
+                                                                    <td class="text-end">
+                                                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteCode(p.ProductId, c.ProductCodeId)">
+                                                                            <i class="bi bi-x-lg"></i>
+                                                                        </button>
+                                                                    </td>
+                                                                </tr>
+                                                            }
+                                                        </tbody>
+                                                    </table>
+                                                }
+                                            </div>
+
+                                            @* ── Sub-panel: Atributos ── *@
+                                            <div class="mb-3">
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <strong><i class="bi bi-list-check"></i> Atributos del Producto</strong>
+                                                    <button class="btn btn-sm btn-success" @onclick="() => ShowAddAttrModal(p.ProductId)">
+                                                        <i class="bi bi-plus"></i> Asignar Atributo
+                                                    </button>
+                                                </div>
+                                                @if (currentAttrs.Count == 0)
+                                                {
+                                                    <p class="text-muted small mb-0">Sin atributos asignados.</p>
+                                                }
+                                                else
+                                                {
+                                                    <table class="table table-sm table-bordered mb-0">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Atributo</th>
+                                                                <th>Valor</th>
+                                                                <th>Vigencia</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @foreach (var a in currentAttrs)
+                                                            {
+                                                                <tr>
+                                                                    <td><strong>@a.AttributeName</strong></td>
+                                                                    <td>@FormatAttrValue(a)</td>
+                                                                    <td><small>@(a.ValidFrom?.ToString("dd/MM/yy") ?? "—") → @(a.ValidTo?.ToString("dd/MM/yy") ?? "—")</small></td>
+                                                                </tr>
+                                                            }
+                                                        </tbody>
+                                                    </table>
+                                                }
+                                            </div>
+
+                                            @* ── Sub-panel: Categorias ── *@
+                                            <div>
+                                                <strong><i class="bi bi-tags"></i> Categorias asignadas</strong>
+                                                <p class="text-muted small mb-0 mt-1">
+                                                    Gestione categorias desde <a href="mdm/categorias">Datos Maestros &rsaquo; Categorias</a>.
+                                                </p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer text-muted small">
+                @productos.Count producto(s) en el catalogo global
+            </div>
+        </div>
+    }
+</div>
+
+@* ── Modal Crear ── *@
+@if (showCreateModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-plus-circle"></i> Nuevo Producto Global</h5>
+                    <button type="button" class="btn-close" @onclick="CloseCreateModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (catalogos.Count == 0)
+                    {
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i> Debe crear al menos un <strong>Catálogo</strong> antes de crear productos.
+                        </div>
+                    }
+                    else if (unidades.Count == 0)
+                    {
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i> Debe crear al menos una <strong>Unidad de Medida</strong> antes de crear productos.
+                        </div>
+                    }
+                    else
+                    {
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Nombre Comercial *</label>
+                            <input class="form-control" @bind="createForm.NombreComercial" placeholder="Nombre comercial" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Nombre Generico *</label>
+                            <input class="form-control" @bind="createForm.NombreGenerico" placeholder="Nombre generico" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Tipo de Producto *</label>
+                            <select class="form-select" @bind="createForm.ProductKind">
+                                <option value="1">Bien</option>
+                                <option value="2">Servicio</option>
+                                <option value="3">Kit / Bundle</option>
+                                <option value="4">BOM / Fabricado</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Catálogo *</label>
+                            <select class="form-select" @bind="createForm.CatalogId">
+                                <option value="0">-- Seleccionar catálogo --</option>
+                                @foreach (var c in catalogos)
+                                {
+                                    <option value="@c.CatalogId">@c.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Unidad de Medida Base *</label>
+                            <select class="form-select" @bind="createForm.DefaultUomId">
+                                <option value="0">-- Seleccionar UdM --</option>
+                                @foreach (var u in unidades)
+                                {
+                                    <option value="@u.UomId">@u.Name (@u.Code)</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Marca</label>
+                            <select class="form-select" @bind="createForm.BrandId">
+                                <option value="">-- Sin marca --</option>
+                                @foreach (var b in brands)
+                                {
+                                    <option value="@b.BrandId">@b.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Fabricante</label>
+                            <select class="form-select" @bind="createForm.ManufacturerId">
+                                <option value="">-- Sin fabricante --</option>
+                                @foreach (var m in manufacturers)
+                                {
+                                    <option value="@m.ManufacturerId">@m.Name @(!string.IsNullOrEmpty(m.Country) ? $"({m.Country})" : "")</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripcion Corta</label>
+                        <input class="form-control" @bind="createForm.DescripcionCorta" placeholder="Descripcion breve" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripcion Larga</label>
+                        <textarea class="form-control" @bind="createForm.DescripcionLarga" rows="2"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-auto">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="createForm.IsStockable" id="cStockable" />
+                                <label class="form-check-label" for="cStockable">Stockable</label>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="createForm.IsSellable" id="cSellable" />
+                                <label class="form-check-label" for="cSellable">Vendible</label>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="createForm.IsPurchasable" id="cPurchasable" />
+                                <label class="form-check-label" for="cPurchasable">Comprable</label>
+                            </div>
+                        </div>
+                    </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseCreateModal">Cancelar</button>
+                    <button class="btn btn-primary" @onclick="CreateProducto" disabled="@(saving || catalogos.Count == 0 || unidades.Count == 0 || createForm.CatalogId == 0 || createForm.DefaultUomId == 0)">
+                        @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        Guardar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* ── Modal Editar ── *@
+@if (showEditModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-pencil"></i> Editar Producto</h5>
+                    <button type="button" class="btn-close" @onclick="CloseEditModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Nombre Comercial *</label>
+                            <input class="form-control" @bind="editForm.NombreComercial" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Nombre Generico *</label>
+                            <input class="form-control" @bind="editForm.NombreGenerico" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Tipo</label>
+                            <select class="form-select" @bind="editForm.ProductKind">
+                                <option value="1">Bien</option>
+                                <option value="2">Servicio</option>
+                                <option value="3">Kit / Bundle</option>
+                                <option value="4">BOM / Fabricado</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">UdM Base</label>
+                            <select class="form-select" @bind="editForm.DefaultUomId">
+                                @foreach (var u in unidades)
+                                {
+                                    <option value="@u.UomId">@u.Name (@u.Code)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label">Estado Ciclo</label>
+                            <select class="form-select" @bind="editForm.LifecycleStatusId">
+                                <option value="1">Borrador</option>
+                                <option value="2">Activo</option>
+                                <option value="3">Bloqueado</option>
+                                <option value="4">Descontinuado</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="form-check form-switch mt-4">
+                                <input class="form-check-input" type="checkbox" @bind="editForm.Activo" id="eActivo" />
+                                <label class="form-check-label" for="eActivo">Activo</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Marca</label>
+                            <select class="form-select" @bind="editForm.BrandId">
+                                <option value="">-- Sin marca --</option>
+                                @foreach (var b in brands)
+                                {
+                                    <option value="@b.BrandId">@b.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Fabricante</label>
+                            <select class="form-select" @bind="editForm.ManufacturerId">
+                                <option value="">-- Sin fabricante --</option>
+                                @foreach (var m in manufacturers)
+                                {
+                                    <option value="@m.ManufacturerId">@m.Name @(!string.IsNullOrEmpty(m.Country) ? $"({m.Country})" : "")</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripcion Corta</label>
+                        <input class="form-control" @bind="editForm.DescripcionCorta" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripcion Larga</label>
+                        <textarea class="form-control" @bind="editForm.DescripcionLarga" rows="2"></textarea>
+                    </div>
+                    <div class="row">
+                        <div class="col-auto">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="editForm.IsStockable" id="eStockable" />
+                                <label class="form-check-label" for="eStockable">Stockable</label>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="editForm.IsSellable" id="eSellable" />
+                                <label class="form-check-label" for="eSellable">Vendible</label>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" @bind="editForm.IsPurchasable" id="ePurchasable" />
+                                <label class="form-check-label" for="ePurchasable">Comprable</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseEditModal">Cancelar</button>
+                    <button class="btn btn-primary" @onclick="UpdateProducto" disabled="@saving">
+                        @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        Actualizar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* ── Modal Agregar UdM ── *@
+@if (showAddUomModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Agregar UdM Alternativa</h5>
+                    <button type="button" class="btn-close" @onclick="() => showAddUomModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Unidad de Medida *</label>
+                        <select class="form-select" @bind="addUomForm.UomId">
+                            <option value="0">-- Seleccionar --</option>
+                            @foreach (var u in unidades)
+                            {
+                                <option value="@u.UomId">@u.Name (@u.Code)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Factor a Base *</label>
+                            <input type="number" step="0.000001" class="form-control" @bind="addUomForm.FactorToBase" />
+                            <small class="text-muted">Ej: 1 CJ = 12 UND → Factor = 12</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Codigo de Barras</label>
+                            <input class="form-control" @bind="addUomForm.Barcode" />
+                        </div>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" @bind="addUomForm.IsBase" id="uomBase" />
+                        <label class="form-check-label" for="uomBase">Es unidad base</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="() => showAddUomModal = false">Cancelar</button>
+                    <button class="btn btn-success" @onclick="AddUom" disabled="@(saving || addUomForm.UomId == 0)">
+                        @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        Agregar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* ── Modal Agregar Código ── *@
+@if (showAddCodeModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Agregar Código de Producto</h5>
+                    <button type="button" class="btn-close" @onclick="() => showAddCodeModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Tipo de Código *</label>
+                        <select class="form-select" @bind="addCodeForm.CodeType">
+                            <option value="0">-- Seleccionar tipo --</option>
+                            <option value="1">Código de Barras</option>
+                            <option value="2">SKU</option>
+                            <option value="3">EAN</option>
+                            <option value="4">Otro</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Valor *</label>
+                        <input class="form-control" @bind="addCodeForm.Valor" placeholder="Valor del código" />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Vigencia</label>
+                        <div class="row g-2">
+                            <div class="col">
+                                <InputDate class="form-control" @bind-Value="addCodeForm.ValidFrom" />
+                            </div>
+                            <div class="col">
+                                <InputDate class="form-control" @bind-Value="addCodeForm.ValidTo" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" @bind="addCodeForm.IsPrimary" id="codePrimary" />
+                        <label class="form-check-label" for="codePrimary">Marca como código principal</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="() => showAddCodeModal = false">Cancelar</button>
+                    <button class="btn btn-success" @onclick="AddCode" disabled="@(saving || addCodeForm.CodeType == 0 || string.IsNullOrWhiteSpace(addCodeForm.Valor))">
+                        @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        Agregar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* ── Modal Agregar Atributo ── *@
+@if (showAddAttrModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Asignar Atributo al Producto</h5>
+                    <button type="button" class="btn-close" @onclick="() => showAddAttrModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Atributo *</label>
+                        <select class="form-select" @bind="addAttrForm.AttributeId" @bind:after="OnAttrSelected">
+                            <option value="0">-- Seleccionar atributo --</option>
+                            @foreach (var a in allAttributes)
+                            {
+                                <option value="@a.AttributeId">@a.Name (@a.Code) — @DataTypeLabel(a.DataType)</option>
+                            }
+                        </select>
+                    </div>
+                    @if (selectedAttrDef is not null)
+                    {
+                        @if (selectedAttrDef.DataType == 6 && selectedAttrDef.Options.Count > 0)
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">Opcion *</label>
+                                <select class="form-select" @bind="addAttrForm.OptionId">
+                                    <option value="">-- Seleccionar opcion --</option>
+                                    @foreach (var opt in selectedAttrDef.Options)
+                                    {
+                                        <option value="@opt.OptionId">@opt.Value</option>
+                                    }
+                                </select>
+                            </div>
+                        }
+                        else if (selectedAttrDef.DataType == 1)
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">Valor (Texto)</label>
+                                <input class="form-control" @bind="addAttrForm.ValueString" />
+                            </div>
+                        }
+                        else if (selectedAttrDef.DataType == 2)
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">Valor (Numero) @(!string.IsNullOrEmpty(selectedAttrDef.UnitHint) ? selectedAttrDef.UnitHint : "")</label>
+                                <input type="number" step="0.0001" class="form-control" @bind="addAttrForm.ValueDecimal" />
+                            </div>
+                        }
+                        else if (selectedAttrDef.DataType == 3)
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">Valor (Entero)</label>
+                                <input type="number" class="form-control" @bind="addAttrForm.ValueInt" />
+                            </div>
+                        }
+                        else if (selectedAttrDef.DataType == 4)
+                        {
+                            <div class="mb-3 form-check">
+                                <input class="form-check-input" type="checkbox" @bind="addAttrForm.ValueBool" id="attrBool" />
+                                <label class="form-check-label" for="attrBool">Si / No</label>
+                            </div>
+                        }
+                        else if (selectedAttrDef.DataType == 5)
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">Valor (Fecha)</label>
+                                <InputDate class="form-control" @bind-Value="addAttrForm.ValueDate" />
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">Valor (Texto)</label>
+                                <input class="form-control" @bind="addAttrForm.ValueString" />
+                            </div>
+                        }
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="() => showAddAttrModal = false">Cancelar</button>
+                    <button class="btn btn-success" @onclick="AddAttr" disabled="@(saving || addAttrForm.AttributeId == 0)">
+                        @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        Asignar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private class CreateForm
+    {
+        public long CatalogId { get; set; } = 1;
+        public byte ProductKind { get; set; } = 1;
+        public string NombreGenerico { get; set; } = "";
+        public string NombreComercial { get; set; } = "";
+        public string? DescripcionCorta { get; set; }
+        public string? DescripcionLarga { get; set; }
+        public int DefaultUomId { get; set; } = 1;
+        public long? BrandId { get; set; }
+        public long? ManufacturerId { get; set; }
+        public bool IsStockable { get; set; } = true;
+        public bool IsSellable { get; set; } = true;
+        public bool IsPurchasable { get; set; } = true;
+    }
+
+    private class EditForm
+    {
+        public byte ProductKind { get; set; }
+        public string NombreGenerico { get; set; } = "";
+        public string NombreComercial { get; set; } = "";
+        public string? DescripcionCorta { get; set; }
+        public string? DescripcionLarga { get; set; }
+        public int DefaultUomId { get; set; }
+        public long? BrandId { get; set; }
+        public long? ManufacturerId { get; set; }
+        public bool IsStockable { get; set; }
+        public bool IsSellable { get; set; }
+        public bool IsPurchasable { get; set; }
+        public int LifecycleStatusId { get; set; }
+        public bool Activo { get; set; }
+    }
+
+    private class AddUomForm
+    {
+        public int UomId { get; set; }
+        public decimal FactorToBase { get; set; } = 1;
+        public string? Barcode { get; set; }
+        public bool IsBase { get; set; }
+    }
+
+    private class AddCodeForm
+    {
+        public byte CodeType { get; set; }
+        public string Valor { get; set; } = "";
+        public DateOnly? ValidFrom { get; set; }
+        public DateOnly? ValidTo { get; set; }
+        public bool IsPrimary { get; set; }
+    }
+
+    private class AddAttrForm
+    {
+        public long AttributeId { get; set; }
+        public string? ValueString { get; set; }
+        public decimal? ValueDecimal { get; set; }
+        public int? ValueInt { get; set; }
+        public bool? ValueBool { get; set; }
+        public DateOnly? ValueDate { get; set; }
+        public long? OptionId { get; set; }
+    }
+
+    // State
+    private List<ProductDto2> productos = new();
+    private List<CatalogDto> catalogos = new();
+    private List<UomDto> unidades = new();
+    private List<BrandDto> brands = new();
+    private List<ManufacturerDto> manufacturers = new();
+    private List<ProductUomDto> currentUoms = new();
+    private List<ProductCodeDto> currentCodes = new();
+    private List<ProductAttributeDto> currentAttrs = new();
+    private List<AttributeDefinitionDto> allAttributes = new();
+    private AttributeDefinitionDto? selectedAttrDef;
+
+    private bool loading = true;
+    private bool saving = false;
+    private bool loadingDetail = false;
+    private bool showCreateModal = false;
+    private bool showEditModal = false;
+    private bool showAddUomModal = false;
+    private bool showAddCodeModal = false;
+    private bool showAddAttrModal = false;
+    private string? errorMessage;
+    private string? successMessage;
+    private long editingId;
+    private long expandedId;
+    private long addUomProductId;
+    private long addCodeProductId;
+
+    private CreateForm createForm = new();
+    private EditForm editForm = new();
+    private AddUomForm addUomForm = new();
+    private AddCodeForm addCodeForm = new();
+    private AddAttrForm addAttrForm = new();
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    private async Task LoadData()
+    {
+        try
+        {
+            loading = true; errorMessage = null;
+            var t1 = ProductoService.GetAllAsync();
+            var t2 = CatalogoService.GetAllAsync();
+            var t3 = UnidadMedidaService.GetAllAsync();
+            var t4 = BrandService.GetAllAsync();
+            var t5 = ManufacturerService.GetAllAsync();
+            var t6 = AttributeService.GetAllAsync();
+            await Task.WhenAll(t1, t2, t3, t4, t5, t6);
+            productos = await t1;
+            catalogos = await t2;
+            unidades = await t3;
+            brands = await t4;
+            manufacturers = await t5;
+            allAttributes = await t6;
+        }
+        catch (Exception ex) { errorMessage = $"Error al cargar datos: {ex.Message}"; }
+        finally { loading = false; }
+    }
+
+    // ── Expand detail ──
+    private async Task ToggleDetail(long productId)
+    {
+        if (expandedId == productId) { expandedId = 0; return; }
+        expandedId = productId;
+        loadingDetail = true;
+        try
+        {
+            currentUoms = await ProductUomService.GetByProductAsync(productId);
+            currentCodes = await ProductCodeService.GetByProductAsync(productId);
+            currentAttrs = await AttributeService.GetProductAttributesAsync(productId);
+        }
+        catch { currentUoms = new(); currentCodes = new(); currentAttrs = new(); }
+        finally { loadingDetail = false; }
+    }
+
+    // ── Create ──
+    private void ShowCreateModal()
+    {
+        createForm = new CreateForm
+        {
+            CatalogId = catalogos.FirstOrDefault()?.CatalogId ?? 0,
+            DefaultUomId = unidades.FirstOrDefault()?.UomId ?? 0
+        };
+        showCreateModal = true;
+    }
+    private void CloseCreateModal() => showCreateModal = false;
+
+    private async Task CreateProducto()
+    {
+        if (string.IsNullOrWhiteSpace(createForm.NombreComercial) || createForm.CatalogId == 0 || createForm.DefaultUomId == 0)
+        { errorMessage = "Nombre Comercial, Catalogo y UdM son obligatorios."; return; }
+        try
+        {
+            saving = true; errorMessage = null;
+            var dto = new CreateProductDto2
+            {
+                CatalogId = createForm.CatalogId,
+                ProductKind = createForm.ProductKind,
+                GenericName = createForm.NombreGenerico,
+                CommercialName = createForm.NombreComercial,
+                ShortDescription = createForm.DescripcionCorta,
+                LongDescription = createForm.DescripcionLarga,
+                DefaultUomId = createForm.DefaultUomId,
+                BrandId = createForm.BrandId,
+                ManufacturerId = createForm.ManufacturerId,
+                IsStockable = createForm.IsStockable,
+                IsSellable = createForm.IsSellable,
+                IsPurchasable = createForm.IsPurchasable
+            };
+            var result = await ProductoService.CreateAsync(dto);
+            if (result.Success) { successMessage = "Producto creado."; CloseCreateModal(); await LoadData(); }
+            else errorMessage = result.Message;
+        }
+        catch (Exception ex) { errorMessage = $"Error: {ex.Message}"; }
+        finally { saving = false; }
+    }
+
+    // ── Edit ──
+    private void ShowEditModal(ProductDto2 p)
+    {
+        editForm = new EditForm
+        {
+            ProductKind = p.ProductKind,
+            NombreGenerico = p.GenericName,
+            NombreComercial = p.CommercialName,
+            DescripcionCorta = p.ShortDescription,
+            DescripcionLarga = p.LongDescription,
+            DefaultUomId = p.DefaultUomId,
+            BrandId = p.BrandId,
+            ManufacturerId = p.ManufacturerId,
+            IsStockable = p.IsStockable,
+            IsSellable = p.IsSellable,
+            IsPurchasable = p.IsPurchasable,
+            LifecycleStatusId = p.LifecycleStatusId,
+            Activo = p.Activo
+        };
+        editingId = p.ProductId;
+        showEditModal = true;
+    }
+    private void CloseEditModal() => showEditModal = false;
+
+    private async Task UpdateProducto()
+    {
+        if (string.IsNullOrWhiteSpace(editForm.NombreComercial))
+        { errorMessage = "El nombre comercial es obligatorio."; return; }
+        try
+        {
+            saving = true; errorMessage = null;
+            var dto = new UpdateProductDto2
+            {
+                ProductKind = editForm.ProductKind,
+                GenericName = editForm.NombreGenerico,
+                CommercialName = editForm.NombreComercial,
+                ShortDescription = editForm.DescripcionCorta,
+                LongDescription = editForm.DescripcionLarga,
+                DefaultUomId = editForm.DefaultUomId,
+                BrandId = editForm.BrandId,
+                ManufacturerId = editForm.ManufacturerId,
+                IsStockable = editForm.IsStockable,
+                IsSellable = editForm.IsSellable,
+                IsPurchasable = editForm.IsPurchasable,
+                LifecycleStatusId = editForm.LifecycleStatusId,
+                Activo = editForm.Activo
+            };
+            var result = await ProductoService.UpdateAsync(editingId, dto);
+            if (result.Success) { successMessage = "Producto actualizado."; CloseEditModal(); await LoadData(); }
+            else errorMessage = result.Message;
+        }
+        catch (Exception ex) { errorMessage = $"Error: {ex.Message}"; }
+        finally { saving = false; }
+    }
+
+    // ── Delete ──
+    private async Task DeleteProducto(ProductDto2 p)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"Eliminar el producto '{p.CommercialName}'?")) return;
+        try
+        {
+            errorMessage = null;
+            var result = await ProductoService.DeleteAsync(p.ProductId);
+            if (result.Success) { successMessage = "Producto eliminado."; await LoadData(); }
+            else errorMessage = result.Message;
+        }
+        catch (Exception ex) { errorMessage = $"Error: {ex.Message}"; }
+    }
+
+    // ── UdM Alternativas ──
+    private void ShowAddUomModal(long productId)
+    {
+        addUomProductId = productId;
+        addUomForm = new();
+        showAddUomModal = true;
+    }
+
+    private async Task AddUom()
+    {
+        if (addUomForm.UomId == 0) return;
+        saving = true; errorMessage = null;
+        try
+        {
+            var dto = new CreateProductUomDto(addUomProductId, addUomForm.UomId, addUomForm.IsBase, addUomForm.FactorToBase, addUomForm.Barcode);
+            var r = await ProductUomService.CreateAsync(dto);
+            if (r.Success) { successMessage = "UdM asignada."; showAddUomModal = false; expandedId = 0; await ToggleDetail(addUomProductId); }
+            else errorMessage = r.Message;
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { saving = false; }
+    }
+
+    private async Task DeleteUom(long productId, long productUomId)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", "¿Eliminar esta UdM del producto?")) return;
+        try
+        {
+            var r = await ProductUomService.DeleteAsync(productUomId);
+            if (r.Success) { successMessage = "UdM eliminada."; expandedId = 0; await ToggleDetail(productId); }
+            else errorMessage = r.Message;
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+    }
+
+    // ── Códigos de Producto ──
+    private void ShowAddCodeModal(long productId)
+    {
+        addCodeProductId = productId;
+        addCodeForm = new();
+        showAddCodeModal = true;
+    }
+
+    private async Task AddCode()
+    {
+        if (string.IsNullOrWhiteSpace(addCodeForm.Valor) || addCodeForm.CodeType == 0) return;
+        saving = true; errorMessage = null;
+        try
+        {
+            var dto = new CreateProductCodeDto(addCodeProductId, addCodeForm.CodeType, addCodeForm.Valor,
+                null, null, null, null, addCodeForm.ValidFrom, addCodeForm.ValidTo, addCodeForm.IsPrimary);
+            var r = await ProductCodeService.CreateAsync(dto);
+            if (r.Success) { successMessage = "Código asignado."; showAddCodeModal = false; expandedId = 0; await ToggleDetail(addCodeProductId); }
+            else errorMessage = r.Message;
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { saving = false; }
+    }
+
+    private async Task DeleteCode(long productId, long productCodeId)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", "¿Eliminar este código del producto?")) return;
+        try
+        {
+            var r = await ProductCodeService.DeleteAsync(productCodeId);
+            if (r.Success) { successMessage = "Código eliminado."; expandedId = 0; await ToggleDetail(productId); }
+            else errorMessage = r.Message;
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+    }
+
+    // ── Atributos del Producto ──
+    private long addAttrProductId;
+
+    private void ShowAddAttrModal(long productId)
+    {
+        addAttrProductId = productId;
+        addAttrForm = new();
+        selectedAttrDef = null;
+        showAddAttrModal = true;
+    }
+
+    private void OnAttrSelected()
+    {
+        selectedAttrDef = allAttributes.FirstOrDefault(a => a.AttributeId == addAttrForm.AttributeId);
+        addAttrForm.ValueString = null;
+        addAttrForm.ValueDecimal = null;
+        addAttrForm.ValueInt = null;
+        addAttrForm.ValueBool = null;
+        addAttrForm.ValueDate = null;
+        addAttrForm.OptionId = null;
+    }
+
+    private async Task AddAttr()
+    {
+        if (addAttrForm.AttributeId == 0) return;
+        saving = true; errorMessage = null;
+        try
+        {
+            var dto = new UpsertProductAttributeDto(
+                addAttrProductId, addAttrForm.AttributeId,
+                addAttrForm.ValueString, addAttrForm.ValueDecimal,
+                addAttrForm.ValueInt, addAttrForm.ValueBool,
+                addAttrForm.ValueDate, null, addAttrForm.OptionId);
+            var r = await AttributeService.UpsertProductAttributeAsync(dto);
+            if (r.Success) { successMessage = "Atributo asignado."; showAddAttrModal = false; expandedId = 0; await ToggleDetail(addAttrProductId); }
+            else errorMessage = r.Message;
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { saving = false; }
+    }
+
+    private static string FormatAttrValue(ProductAttributeDto a)
+    {
+        if (!string.IsNullOrEmpty(a.OptionValue)) return a.OptionValue;
+        if (!string.IsNullOrEmpty(a.ValueString)) return a.ValueString;
+        if (a.ValueDecimal.HasValue) return a.ValueDecimal.Value.ToString("N4");
+        if (a.ValueInt.HasValue) return a.ValueInt.Value.ToString();
+        if (a.ValueBool.HasValue) return a.ValueBool.Value ? "Sí" : "No";
+        if (a.ValueDate.HasValue) return a.ValueDate.Value.ToString("dd/MM/yyyy");
+        if (!string.IsNullOrEmpty(a.ValueJson)) return "[JSON]";
+        return "—";
+    }
+
+    private static string DataTypeLabel(byte dt) => dt switch
+    {
+        1 => "Texto", 2 => "Decimal", 3 => "Entero", 4 => "Booleano",
+        5 => "Fecha", 6 => "Opción", _ => dt.ToString()
+    };
+
+    private static string KindLabel(byte kind) => kind switch
+    {
+        1 => "Bien", 2 => "Servicio", 3 => "Kit", 4 => "BOM", _ => kind.ToString()
+    };
+
+    private static string CodeTypeLabel(byte type) => type switch
+    {
+        1 => "Código de Barras",
+        2 => "SKU",
+        3 => "EAN",
+        4 => "Otro",
+        _ => "Desconocido"
+    };
+}

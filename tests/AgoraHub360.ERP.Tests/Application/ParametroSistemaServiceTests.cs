@@ -110,6 +110,9 @@ public class ParametroSistemaServiceTests
         public Task<ParametroSistema?> GetByIdAsync(int id, CancellationToken ct = default)
             => Task.FromResult(_store.FirstOrDefault(p => p.Id == id));
 
+        public Task<ParametroSistema?> GetByIdAsync(long id, CancellationToken ct = default)
+            => GetByIdAsync((int)id, ct);
+
         public Task<IReadOnlyList<ParametroSistema>> GetAllAsync(CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<ParametroSistema>>(_store.AsReadOnly());
 

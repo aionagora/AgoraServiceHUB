@@ -2,7 +2,7 @@ namespace AgoraHub360.ERP.Web.Services;
 
 using System.Net.Http.Json;
 using AgoraHub360.ERP.Shared.DTOs;
-using AgoraHub360.ERP.Shared.DTOs.Cliente;
+using AgoraHub360.ERP.Shared.DTOs.MDM;
 
 public class ClienteHttpService
 {

@@ -2,14 +2,14 @@ namespace AgoraHub360.ERP.Api.Controllers.V1;
 
 using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Shared.DTOs;
-using AgoraHub360.ERP.Shared.DTOs.CategoriaProducto;
+using AgoraHub360.ERP.Shared.DTOs.MDM;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
 [ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/categorias")]
+[Route("api/v{version:apiVersion}/categories")]
 [Authorize]
 public class CategoriasProductoController : ControllerBase
 {
@@ -24,50 +24,47 @@ public class CategoriasProductoController : ControllerBase
     public async Task<IActionResult> GetAll(CancellationToken ct)
     {
         var result = await _service.GetAllAsync(ct);
-        return Ok(ApiResponse<IReadOnlyList<CategoriaProductoDto>>.Ok(result.Value!));
+        return Ok(ApiResponse<IReadOnlyList<CategoryDto>>.Ok(result.Value!));
     }
 
-    [HttpGet("{id:int}")]
-    public async Task<IActionResult> GetById(int id, CancellationToken ct)
+    [HttpGet("{id:long}")]
+    public async Task<IActionResult> GetById(long id, CancellationToken ct)
     {
         var result = await _service.GetByIdAsync(id, ct);
         if (!result.IsSuccess)
-            return NotFound(ApiResponse<CategoriaProductoDto>.Fail(result.Error!));
-        return Ok(ApiResponse<CategoriaProductoDto>.Ok(result.Value!));
+            return NotFound(ApiResponse<CategoryDto>.Fail(result.Error!));
+        return Ok(ApiResponse<CategoryDto>.Ok(result.Value!));
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateCategoriaProductoDto dto, CancellationToken ct)
+    public async Task<IActionResult> Create([FromBody] CreateCategoryDto dto, CancellationToken ct)
     {
         var result = await _service.CreateAsync(dto, ct);
         if (!result.IsSuccess)
-            return BadRequest(ApiResponse<CategoriaProductoDto>.Fail(result.Error!));
-        
-        return CreatedAtAction(
-            nameof(GetById),
-            new { id = result.Value!.Id },
-            ApiResponse<CategoriaProductoDto>.Ok(result.Value!, "Categoría creada exitosamente."));
+            return BadRequest(ApiResponse<CategoryDto>.Fail(result.Error!));
+        return CreatedAtAction(nameof(GetById), new { id = result.Value!.CategoryId },
+            ApiResponse<CategoryDto>.Ok(result.Value!, "Category created."));
     }
 
-    [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, [FromBody] UpdateCategoriaProductoDto dto, CancellationToken ct)
+    [HttpPut("{id:long}")]
+    public async Task<IActionResult> Update(long id, [FromBody] UpdateCategoryDto dto, CancellationToken ct)
     {
         var result = await _service.UpdateAsync(id, dto, ct);
         if (!result.IsSuccess)
         {
-            if (result.Error!.Contains("no encontrada"))
-                return NotFound(ApiResponse<CategoriaProductoDto>.Fail(result.Error!));
-            return BadRequest(ApiResponse<CategoriaProductoDto>.Fail(result.Error!));
+            if (result.Error!.Contains("not found"))
+                return NotFound(ApiResponse<CategoryDto>.Fail(result.Error!));
+            return BadRequest(ApiResponse<CategoryDto>.Fail(result.Error!));
         }
-        return Ok(ApiResponse<CategoriaProductoDto>.Ok(result.Value!, "Categoría actualizada exitosamente."));
+        return Ok(ApiResponse<CategoryDto>.Ok(result.Value!, "Category updated."));
     }
 
-    [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+    [HttpDelete("{id:long}")]
+    public async Task<IActionResult> Delete(long id, CancellationToken ct)
     {
         var result = await _service.DeleteAsync(id, ct);
         if (!result.IsSuccess)
             return NotFound(ApiResponse<bool>.Fail(result.Error!));
-        return Ok(ApiResponse<bool>.Ok(true, "Categoría eliminada exitosamente."));
+        return Ok(ApiResponse<bool>.Ok(true, "Category deleted."));
     }
 }

@@ -2,63 +2,51 @@ namespace AgoraHub360.ERP.Web.Services;
 
 using System.Net.Http.Json;
 using AgoraHub360.ERP.Shared.DTOs;
-using AgoraHub360.ERP.Shared.DTOs.CategoriaProducto;
+using AgoraHub360.ERP.Shared.DTOs.MDM;
 
 public class CategoriaProductoHttpService
 {
     private readonly HttpClient _http;
-    private const string BaseUrl = "api/v1/categorias";
+    private const string BaseUrl = "api/v1/categories";
 
-    public CategoriaProductoHttpService(HttpClient http)
+    public CategoriaProductoHttpService(HttpClient http) => _http = http;
+
+    public async Task<List<CategoryDto>> GetAllAsync()
     {
-        _http = http;
+        var response = await _http.GetFromJsonAsync<ApiResponse<List<CategoryDto>>>(BaseUrl);
+        return response?.Data ?? new();
     }
 
-    public async Task<List<CategoriaProductoDto>> GetAllAsync()
+    public async Task<CategoryDto?> GetByIdAsync(long id)
     {
-        var response = await _http.GetFromJsonAsync<ApiResponse<List<CategoriaProductoDto>>>(BaseUrl);
-        return response?.Data ?? new List<CategoriaProductoDto>();
-    }
-
-    public async Task<CategoriaProductoDto?> GetByIdAsync(int id)
-    {
-        var response = await _http.GetFromJsonAsync<ApiResponse<CategoriaProductoDto>>($"{BaseUrl}/{id}");
+        var response = await _http.GetFromJsonAsync<ApiResponse<CategoryDto>>($"{BaseUrl}/{id}");
         return response?.Data;
     }
 
-    public async Task<ApiResponse<CategoriaProductoDto>> CreateAsync(CreateCategoriaProductoDto dto)
+    public async Task<ApiResponse<CategoryDto>> CreateAsync(CreateCategoryDto dto)
     {
         var response = await _http.PostAsJsonAsync(BaseUrl, dto);
         if (!response.IsSuccessStatusCode)
-        {
-            var body = await response.Content.ReadAsStringAsync();
-            return ApiResponse<CategoriaProductoDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
-        }
-        return await response.Content.ReadFromJsonAsync<ApiResponse<CategoriaProductoDto>>()
-            ?? ApiResponse<CategoriaProductoDto>.Fail("Error de comunicación con el servidor.");
+            return ApiResponse<CategoryDto>.Fail($"HTTP {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
+        return await response.Content.ReadFromJsonAsync<ApiResponse<CategoryDto>>()
+            ?? ApiResponse<CategoryDto>.Fail("Communication error.");
     }
 
-    public async Task<ApiResponse<CategoriaProductoDto>> UpdateAsync(int id, UpdateCategoriaProductoDto dto)
+    public async Task<ApiResponse<CategoryDto>> UpdateAsync(long id, UpdateCategoryDto dto)
     {
         var response = await _http.PutAsJsonAsync($"{BaseUrl}/{id}", dto);
         if (!response.IsSuccessStatusCode)
-        {
-            var body = await response.Content.ReadAsStringAsync();
-            return ApiResponse<CategoriaProductoDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
-        }
-        return await response.Content.ReadFromJsonAsync<ApiResponse<CategoriaProductoDto>>()
-            ?? ApiResponse<CategoriaProductoDto>.Fail("Error de comunicación con el servidor.");
+            return ApiResponse<CategoryDto>.Fail($"HTTP {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
+        return await response.Content.ReadFromJsonAsync<ApiResponse<CategoryDto>>()
+            ?? ApiResponse<CategoryDto>.Fail("Communication error.");
     }
 
-    public async Task<ApiResponse<bool>> DeleteAsync(int id)
+    public async Task<ApiResponse<bool>> DeleteAsync(long id)
     {
         var response = await _http.DeleteAsync($"{BaseUrl}/{id}");
         if (!response.IsSuccessStatusCode)
-        {
-            var body = await response.Content.ReadAsStringAsync();
-            return ApiResponse<bool>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
-        }
+            return ApiResponse<bool>.Fail($"HTTP {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
         return await response.Content.ReadFromJsonAsync<ApiResponse<bool>>()
-            ?? ApiResponse<bool>.Fail("Error de comunicación con el servidor.");
+            ?? ApiResponse<bool>.Fail("Communication error.");
     }
 }

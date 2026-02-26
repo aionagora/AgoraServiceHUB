@@ -2,6 +2,9 @@
 @attribute [Authorize]
 @inject ClienteHttpService ClienteService
 @inject IJSRuntime JS
+@using ClienteDto = AgoraHub360.ERP.Shared.DTOs.MDM.ClienteDto
+@using CreateClienteDto = AgoraHub360.ERP.Shared.DTOs.MDM.CreateClienteDto
+@using UpdateClienteDto = AgoraHub360.ERP.Shared.DTOs.MDM.UpdateClienteDto
 
 <PageTitle>Clientes</PageTitle>
 
@@ -56,11 +59,12 @@
                     <table class="table table-hover">
                         <thead>
                             <tr>
-                                <th>ID</th>
+                                <th>Código</th>
                                 <th>Razón Social</th>
                                 <th>NIT</th>
                                 <th>Teléfono</th>
                                 <th>Email</th>
+                                <th>Tipo</th>
                                 <th>Estado</th>
                                 <th class="text-end">Acciones</th>
                             </tr>
@@ -69,11 +73,12 @@
                             @foreach (var cliente in clientes)
                             {
                                 <tr>
-                                    <td>@cliente.Id</td>
+                                    <td><code>@cliente.Codigo</code></td>
                                     <td><strong>@cliente.RazonSocial</strong></td>
                                     <td>@cliente.NIT</td>
                                     <td>@(cliente.Telefono ?? "-")</td>
                                     <td>@(cliente.Email ?? "-")</td>
+                                    <td>@cliente.TipoCliente</td>
                                     <td>
                                         @if (cliente.Activo)
                                         {
@@ -118,30 +123,51 @@
                         <ValidationSummary class="text-danger" />
 
                         <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Código *</label>
+                                <InputText class="form-control" @bind-Value="createDto.Codigo" placeholder="Ej: CLI-001" />
+                                <ValidationMessage For="@(() => createDto.Codigo)" />
+                            </div>
                             <div class="col-md-8 mb-3">
                                 <label class="form-label">Razón Social *</label>
                                 <InputText class="form-control" @bind-Value="createDto.RazonSocial" placeholder="Nombre o razón social" />
                                 <ValidationMessage For="@(() => createDto.RazonSocial)" />
                             </div>
+                        </div>
 
+                        <div class="row">
                             <div class="col-md-4 mb-3">
-                                <label class="form-label">NIT *</label>
+                                <label class="form-label">NIT</label>
                                 <InputText class="form-control" @bind-Value="createDto.NIT" placeholder="NIT o CI" />
                                 <ValidationMessage For="@(() => createDto.NIT)" />
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Tipo de Cliente *</label>
+                                <InputSelect class="form-select" @bind-Value="createDto.TipoCliente">
+                                    <option value="General">General</option>
+                                    <option value="Mayorista">Mayorista</option>
+                                    <option value="Minorista">Minorista</option>
+                                    <option value="Corporativo">Corporativo</option>
+                                </InputSelect>
+                                <ValidationMessage For="@(() => createDto.TipoCliente)" />
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Teléfono</label>
+                                <InputText class="form-control" @bind-Value="createDto.Telefono" placeholder="77123456" />
+                                <ValidationMessage For="@(() => createDto.Telefono)" />
                             </div>
                         </div>
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Teléfono</label>
-                                <InputText class="form-control" @bind-Value="createDto.Telefono" placeholder="77123456" />
-                                <ValidationMessage For="@(() => createDto.Telefono)" />
-                            </div>
-
-                            <div class="col-md-6 mb-3">
                                 <label class="form-label">Email</label>
                                 <InputText class="form-control" type="email" @bind-Value="createDto.Email" placeholder="cliente@ejemplo.com" />
                                 <ValidationMessage For="@(() => createDto.Email)" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Nombre Contacto</label>
+                                <InputText class="form-control" @bind-Value="createDto.NombreContacto" placeholder="Persona de contacto" />
+                                <ValidationMessage For="@(() => createDto.NombreContacto)" />
                             </div>
                         </div>
 
@@ -184,30 +210,51 @@
                         <ValidationSummary class="text-danger" />
 
                         <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Código *</label>
+                                <InputText class="form-control" @bind-Value="updateDto.Codigo" placeholder="Ej: CLI-001" />
+                                <ValidationMessage For="@(() => updateDto.Codigo)" />
+                            </div>
                             <div class="col-md-8 mb-3">
                                 <label class="form-label">Razón Social *</label>
                                 <InputText class="form-control" @bind-Value="updateDto.RazonSocial" placeholder="Nombre o razón social" />
                                 <ValidationMessage For="@(() => updateDto.RazonSocial)" />
                             </div>
+                        </div>
 
+                        <div class="row">
                             <div class="col-md-4 mb-3">
-                                <label class="form-label">NIT *</label>
+                                <label class="form-label">NIT</label>
                                 <InputText class="form-control" @bind-Value="updateDto.NIT" placeholder="NIT o CI" />
                                 <ValidationMessage For="@(() => updateDto.NIT)" />
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Tipo de Cliente *</label>
+                                <InputSelect class="form-select" @bind-Value="updateDto.TipoCliente">
+                                    <option value="General">General</option>
+                                    <option value="Mayorista">Mayorista</option>
+                                    <option value="Minorista">Minorista</option>
+                                    <option value="Corporativo">Corporativo</option>
+                                </InputSelect>
+                                <ValidationMessage For="@(() => updateDto.TipoCliente)" />
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Teléfono</label>
+                                <InputText class="form-control" @bind-Value="updateDto.Telefono" placeholder="77123456" />
+                                <ValidationMessage For="@(() => updateDto.Telefono)" />
                             </div>
                         </div>
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Teléfono</label>
-                                <InputText class="form-control" @bind-Value="updateDto.Telefono" placeholder="77123456" />
-                                <ValidationMessage For="@(() => updateDto.Telefono)" />
-                            </div>
-
-                            <div class="col-md-6 mb-3">
                                 <label class="form-label">Email</label>
                                 <InputText class="form-control" type="email" @bind-Value="updateDto.Email" placeholder="cliente@ejemplo.com" />
                                 <ValidationMessage For="@(() => updateDto.Email)" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Nombre Contacto</label>
+                                <InputText class="form-control" @bind-Value="updateDto.NombreContacto" placeholder="Persona de contacto" />
+                                <ValidationMessage For="@(() => updateDto.NombreContacto)" />
                             </div>
                         </div>
 
@@ -280,30 +327,27 @@
         showCreateModal = true;
     }
 
-    private void CloseCreateModal()
-    {
-        showCreateModal = false;
-    }
+    private void CloseCreateModal() => showCreateModal = false;
 
     private void ShowEditModal(ClienteDto cliente)
     {
         updateDto = new UpdateClienteDto
         {
+            Codigo = cliente.Codigo,
             RazonSocial = cliente.RazonSocial,
             NIT = cliente.NIT,
             Telefono = cliente.Telefono,
             Email = cliente.Email,
             Direccion = cliente.Direccion,
+            NombreContacto = cliente.NombreContacto,
+            TipoCliente = cliente.TipoCliente,
             Activo = cliente.Activo
         };
         editingId = cliente.Id;
         showEditModal = true;
     }
 
-    private void CloseEditModal()
-    {
-        showEditModal = false;
-    }
+    private void CloseEditModal() => showEditModal = false;
 
     private async Task CreateCliente()
     {

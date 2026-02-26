@@ -66,6 +66,8 @@ public class RolServiceTests
         public void Seed(Rol r) => _store.Add(r);
         public Task<Rol?> GetByIdAsync(int id, CancellationToken ct = default)
             => Task.FromResult(_store.FirstOrDefault(r => r.Id == id));
+        public Task<Rol?> GetByIdAsync(long id, CancellationToken ct = default)
+            => GetByIdAsync((int)id, ct);
         public Task<IReadOnlyList<Rol>> GetAllAsync(CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<Rol>>(_store.AsReadOnly());
         public Task<IReadOnlyList<Rol>> FindAsync(Expression<Func<Rol, bool>> p, CancellationToken ct = default)

@@ -2,7 +2,7 @@ namespace AgoraHub360.ERP.Api.Controllers.V1;
 
 using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Shared.DTOs;
-using AgoraHub360.ERP.Shared.DTOs.Cliente;
+using AgoraHub360.ERP.Shared.DTOs.MDM;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

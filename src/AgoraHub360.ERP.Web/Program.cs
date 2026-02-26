@@ -32,12 +32,27 @@ builder.Services.AddScoped<AuditLogHttpService>();
 builder.Services.AddScoped<ParametroHttpService>();
 builder.Services.AddScoped<NumeracionHttpService>();
 
-// ──── Servicios HTTP MDM ────
+// ──── Servicios HTTP MDM (legacy) ────
 builder.Services.AddScoped<CategoriaProductoHttpService>();
+builder.Services.AddScoped<CatalogoHttpService>();
 builder.Services.AddScoped<UnidadMedidaHttpService>();
 builder.Services.AddScoped<ProductoHttpService>();
 builder.Services.AddScoped<ClienteHttpService>();
 builder.Services.AddScoped<ProveedorHttpService>();
 builder.Services.AddScoped<AlmacenHttpService>();
+
+// ──── Servicios HTTP MDM avanzado (Gestion de Productos) ────
+builder.Services.AddScoped<MdmProductoGlobalHttpService>();
+builder.Services.AddScoped<MdmCompanyProductHttpService>();
+builder.Services.AddScoped<MdmVariantHttpService>();
+builder.Services.AddScoped<MdmAttributeHttpService>();
+builder.Services.AddScoped<BrandHttpService>();
+builder.Services.AddScoped<ManufacturerHttpService>();
+builder.Services.AddScoped<ProductUomHttpService>();
+builder.Services.AddScoped<ProductCodeHttpService>();
+builder.Services.AddScoped<PriceListHttpService>();
+
+// ──── Servicios HTTP Inventario ────
+builder.Services.AddScoped<MovimientoInventarioHttpService>();
 
 await builder.Build().RunAsync();

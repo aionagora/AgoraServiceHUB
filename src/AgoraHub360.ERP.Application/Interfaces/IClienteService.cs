@@ -1,7 +1,7 @@
 namespace AgoraHub360.ERP.Application.Interfaces;
 
 using AgoraHub360.ERP.Application.Common;
-using AgoraHub360.ERP.Shared.DTOs.Cliente;
+using AgoraHub360.ERP.Shared.DTOs.MDM;
 
 public interface IClienteService
 {

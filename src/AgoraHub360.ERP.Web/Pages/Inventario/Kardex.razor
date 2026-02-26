@@ -1,0 +1,231 @@
+@page "/inventario/kardex"
+@attribute [Authorize]
+@inject MovimientoInventarioHttpService InvService
+@inject AlmacenHttpService AlmacenService
+@inject ProductoHttpService ProductoService
+
+<PageTitle>Kardex - AgoraHub360 ERP</PageTitle>
+
+<div class="page-header">
+    <h1>Inventory Kardex</h1>
+    <p class="text-muted mb-0">Inventory &rsaquo; Kardex</p>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label mb-1 small">Product *</label>
+                <select class="form-select form-select-sm" @bind="selectedProductoId">
+                    <option value="0">-- Select product --</option>
+                    @foreach (var p in productos)
+                    {
+                        <option value="@p.ProductId">@p.CommercialName</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label mb-1 small">Warehouse</label>
+                <select class="form-select form-select-sm" @bind="selectedAlmacenId">
+                    <option value="0">All warehouses</option>
+                    @foreach (var alm in almacenes)
+                    {
+                        <option value="@alm.Id">@alm.Nombre</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label mb-1 small">From</label>
+                <input type="date" class="form-control form-control-sm" @bind="filtroDesde" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label mb-1 small">To</label>
+                <input type="date" class="form-control form-control-sm" @bind="filtroHasta" />
+            </div>
+            <div class="col-md-auto">
+                <button class="btn btn-sm btn-primary" @onclick="LoadKardex" disabled="@(selectedProductoId == 0)">
+                    <i class="bi bi-search"></i> View Kardex
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill"></i> @errorMessage</div>
+}
+
+@if (loading)
+{
+    <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>
+}
+else if (kardex is not null)
+{
+    <div class="row mb-3">
+        <div class="col-md-3">
+            <div class="card border-primary">
+                <div class="card-body text-center py-2">
+                    <div class="small text-muted">Product</div>
+                    <div class="fw-bold">@kardex.ProductSku</div>
+                    <div class="small">@kardex.ProductName</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-success">
+                <div class="card-body text-center py-2">
+                    <div class="small text-muted">Current Stock</div>
+                    <div class="fw-bold fs-4 text-success">@kardex.CurrentStock.ToString("N4")</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-info">
+                <div class="card-body text-center py-2">
+                    <div class="small text-muted">Average Cost</div>
+                    <div class="fw-bold fs-4 text-info">@kardex.AverageCost.ToString("N4")</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-warning">
+                <div class="card-body text-center py-2">
+                    <div class="small text-muted">Total Value</div>
+                    <div class="fw-bold fs-4 text-warning">@((kardex.CurrentStock * kardex.AverageCost).ToString("N2"))</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header py-3">
+            <span>
+                Kardex: <strong>@kardex.ProductName</strong>
+                @if (!string.IsNullOrEmpty(kardex.WarehouseName))
+                {
+                    <span class="text-muted ms-2">| Warehouse: @kardex.WarehouseName</span>
+                }
+                <span class="badge bg-secondary ms-2">@kardex.Movements.Count movements</span>
+            </span>
+        </div>
+        <div class="card-body p-0">
+            @if (kardex.Movements.Count == 0)
+            {
+                <div class="text-center py-5">
+                    <p class="text-muted mt-2">No movements in the selected period.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Date</th>
+                                <th>Number</th>
+                                <th>Type</th>
+                                <th>Reference</th>
+                                <th class="text-end text-success">In</th>
+                                <th class="text-end text-danger">Out</th>
+                                <th class="text-end">Unit Cost</th>
+                                <th class="text-end">Amount</th>
+                                <th class="text-end fw-bold">Balance Units</th>
+                                <th class="text-end">Avg Cost</th>
+                                <th class="text-end fw-bold">Balance Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in kardex.Movements)
+                            {
+                                <tr>
+                                    <td class="small">@item.MovementDate.ToString("dd/MM/yyyy")</td>
+                                    <td><code class="small">@item.Number</code></td>
+                                    <td><span class="badge @GetBadgeClass(item.MovementType) badge-sm">@item.MovementType</span></td>
+                                    <td class="small text-muted">@item.Reference</td>
+                                    <td class="text-end text-success">@(item.In > 0 ? item.In.ToString("N4") : "")</td>
+                                    <td class="text-end text-danger">@(item.Out > 0 ? item.Out.ToString("N4") : "")</td>
+                                    <td class="text-end">@item.UnitCost.ToString("N4")</td>
+                                    <td class="text-end">@item.TotalCost.ToString("N2")</td>
+                                    <td class="text-end fw-bold">@item.BalanceUnits.ToString("N4")</td>
+                                    <td class="text-end">@item.AverageCost.ToString("N4")</td>
+                                    <td class="text-end fw-bold text-primary">@item.BalanceValue.ToString("N2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr class="fw-bold">
+                                <td colspan="4" class="text-end">Totals:</td>
+                                <td class="text-end text-success">@kardex.Movements.Sum(m => m.In).ToString("N4")</td>
+                                <td class="text-end text-danger">@kardex.Movements.Sum(m => m.Out).ToString("N4")</td>
+                                <td colspan="2"></td>
+                                <td class="text-end">@kardex.CurrentStock.ToString("N4")</td>
+                                <td class="text-end">@kardex.AverageCost.ToString("N4")</td>
+                                <td class="text-end text-primary">@((kardex.CurrentStock * kardex.AverageCost).ToString("N2"))</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-journal-text" style="font-size:3rem;"></i>
+            <p class="text-muted mt-3">Select a product and click "View Kardex".</p>
+        </div>
+    </div>
+}
+
+@code {
+    private List<AlmacenDto> almacenes = new();
+    private List<ProductDto2> productos = new();
+    private KardexDto? kardex;
+
+    private bool loading = false;
+    private string? errorMessage;
+
+    private long selectedProductoId = 0;
+    private int selectedAlmacenId = 0;
+    private DateTime? filtroDesde;
+    private DateTime? filtroHasta;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var almTask = AlmacenService.GetAllAsync();
+        var prodTask = ProductoService.GetAllAsync();
+        await Task.WhenAll(almTask, prodTask);
+        almacenes = await almTask;
+        productos = await prodTask;
+    }
+
+    private async Task LoadKardex()
+    {
+        if (selectedProductoId == 0) return;
+        loading = true;
+        errorMessage = null;
+        kardex = null;
+        try
+        {
+            kardex = await InvService.GetKardexAsync(
+                (int)selectedProductoId,
+                almacenId: selectedAlmacenId > 0 ? selectedAlmacenId : null,
+                desde: filtroDesde,
+                hasta: filtroHasta);
+        }
+        catch (Exception ex) { errorMessage = $"Error loading kardex: {ex.Message}"; }
+        finally { loading = false; }
+    }
+
+    private static string GetBadgeClass(string tipo) => tipo switch
+    {
+        "Receipt"    => "bg-success",
+        "Issue"      => "bg-danger",
+        "Adjustment" => "bg-warning text-dark",
+        "Transfer"   => "bg-info text-dark",
+        _            => "bg-secondary"
+    };
+}

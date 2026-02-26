@@ -4,7 +4,7 @@ using AgoraHub360.ERP.Application.Common;
 using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Interfaces;
-using AgoraHub360.ERP.Shared.DTOs.Proveedor;
+using AgoraHub360.ERP.Shared.DTOs.MDM;
 
 public class ProveedorService : IProveedorService
 {
@@ -55,20 +55,24 @@ public class ProveedorService : IProveedorService
         if (!empresaId.HasValue)
             return Result<ProveedorDto>.Failure("No se pudo determinar la empresa activa.");
 
-        // Validar NIT único
-        var byNit = await _repository.FindAsync(
-            p => p.EmpresaId == empresaId.Value && p.NIT == dto.NIT, ct);
-        if (byNit.Any())
-            return Result<ProveedorDto>.Failure($"Ya existe un proveedor con NIT '{dto.NIT}'.");
+        // Validar código único por empresa
+        var byCodigo = await _repository.FindAsync(
+            p => p.EmpresaId == empresaId.Value && p.Codigo == dto.Codigo, ct);
+        if (byCodigo.Any())
+            return Result<ProveedorDto>.Failure($"Ya existe un proveedor con código '{dto.Codigo}'.");
 
         var entity = new Proveedor
         {
+            Codigo = dto.Codigo,
             RazonSocial = dto.RazonSocial,
             NIT = dto.NIT,
             Telefono = dto.Telefono,
             Email = dto.Email,
             Direccion = dto.Direccion,
+            NombreContacto = dto.NombreContacto,
             TipoProveedor = dto.TipoProveedor,
+            Pais = dto.Pais,
+            CondicionPago = dto.CondicionPago,
             EmpresaId = empresaId.Value,
             Activo = true
         };
@@ -92,18 +96,22 @@ public class ProveedorService : IProveedorService
         if (entity.EmpresaId != empresaId.Value)
             return Result<ProveedorDto>.Failure("No tiene permisos para modificar este proveedor.");
 
-        // Validar NIT único
-        var byNit = await _repository.FindAsync(
-            p => p.EmpresaId == empresaId.Value && p.NIT == dto.NIT && p.Id != id, ct);
-        if (byNit.Any())
-            return Result<ProveedorDto>.Failure($"Ya existe otro proveedor con NIT '{dto.NIT}'.");
+        // Validar código único (excluyendo el actual)
+        var byCodigo = await _repository.FindAsync(
+            p => p.EmpresaId == empresaId.Value && p.Codigo == dto.Codigo && p.Id != id, ct);
+        if (byCodigo.Any())
+            return Result<ProveedorDto>.Failure($"Ya existe otro proveedor con código '{dto.Codigo}'.");
 
+        entity.Codigo = dto.Codigo;
         entity.RazonSocial = dto.RazonSocial;
         entity.NIT = dto.NIT;
         entity.Telefono = dto.Telefono;
         entity.Email = dto.Email;
         entity.Direccion = dto.Direccion;
+        entity.NombreContacto = dto.NombreContacto;
         entity.TipoProveedor = dto.TipoProveedor;
+        entity.Pais = dto.Pais;
+        entity.CondicionPago = dto.CondicionPago;
         entity.Activo = dto.Activo;
 
         await _repository.UpdateAsync(entity, ct);
@@ -133,13 +141,17 @@ public class ProveedorService : IProveedorService
     private static ProveedorDto MapToDto(Proveedor e) => new()
     {
         Id = e.Id,
+        Codigo = e.Codigo,
         RazonSocial = e.RazonSocial,
         NIT = e.NIT,
         Telefono = e.Telefono,
         Email = e.Email,
         Direccion = e.Direccion,
+        NombreContacto = e.NombreContacto,
         TipoProveedor = e.TipoProveedor,
+        Pais = e.Pais,
+        CondicionPago = e.CondicionPago,
         Activo = e.Activo,
-        EmpresaId = e.EmpresaId
+        FechaCreacion = e.FechaCreacion
     };
 }

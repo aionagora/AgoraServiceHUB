@@ -6,4 +6,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Folder Include="DTOs\CategoriaProducto\" />
+    <Folder Include="DTOs\Producto\" />
+    <Folder Include="DTOs\UnidadMedida\" />
+  </ItemGroup>
+
 </Project>

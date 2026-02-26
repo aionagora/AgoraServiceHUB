@@ -98,6 +98,9 @@ public class NumeracionDocumentoServiceTests
         public Task<NumeracionDocumento?> GetByIdAsync(int id, CancellationToken ct = default)
             => Task.FromResult(_store.FirstOrDefault(n => n.Id == id));
 
+        public Task<NumeracionDocumento?> GetByIdAsync(long id, CancellationToken ct = default)
+            => GetByIdAsync((int)id, ct);
+
         public Task<IReadOnlyList<NumeracionDocumento>> GetAllAsync(CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<NumeracionDocumento>>(_store.AsReadOnly());
 

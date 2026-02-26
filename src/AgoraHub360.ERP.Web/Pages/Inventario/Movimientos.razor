@@ -1,18 +1,319 @@
 @page "/inventario/movimientos"
+@attribute [Authorize]
+@inject MovimientoInventarioHttpService InvService
+@inject AlmacenHttpService AlmacenService
+@inject ProductoHttpService ProductoService
+@inject IJSRuntime JS
 
-<PageTitle>Movimientos - AgoraHub360 ERP</PageTitle>
+<PageTitle>Inventory Movements - AgoraHub360 ERP</PageTitle>
 
 <div class="page-header">
-    <h1>Movimientos de Inventario</h1>
-    <p class="text-muted mb-0">Inventario &rsaquo; Movimientos</p>
+    <h1>Inventory Movements</h1>
+    <p class="text-muted mb-0">Inventory &rsaquo; Movements</p>
+</div>
+
+@if (!string.IsNullOrEmpty(successMessage))
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle-fill"></i> @successMessage
+        <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+    </div>
+}
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+        <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+    </div>
+}
+
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label mb-1 small">Type</label>
+                <select class="form-select form-select-sm" @bind="filtroTipo">
+                    <option value="">All</option>
+                    <option value="Receipt">Receipt</option>
+                    <option value="Issue">Issue</option>
+                    <option value="Adjustment">Adjustment</option>
+                    <option value="Transfer">Transfer</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label mb-1 small">Warehouse</label>
+                <select class="form-select form-select-sm" @bind="filtroAlmacenId">
+                    <option value="0">All</option>
+                    @foreach (var alm in almacenes)
+                    {
+                        <option value="@alm.Id">@alm.Nombre</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label mb-1 small">From</label>
+                <input type="date" class="form-control form-control-sm" @bind="filtroDesde" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label mb-1 small">To</label>
+                <input type="date" class="form-control form-control-sm" @bind="filtroHasta" />
+            </div>
+            <div class="col-md-auto">
+                <button class="btn btn-sm btn-outline-secondary" @onclick="LoadData">
+                    <i class="bi bi-funnel"></i> Filter
+                </button>
+            </div>
+            <div class="col-md-auto ms-auto">
+                <button class="btn btn-sm btn-primary" @onclick="ShowCreateModal">
+                    <i class="bi bi-plus-circle"></i> New Movement
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center py-3">
-        <span>Historial de Movimientos</span>
+        <span>Movement History <span class="badge bg-secondary ms-1">@movimientos.Count</span></span>
     </div>
-    <div class="card-body text-center py-5">
-        <i class="bi bi-arrow-left-right" style="font-size: 3rem; color: var(--agora-text-light);"></i>
-        <p class="text-muted mt-3">Modulo en construccion.</p>
+    <div class="card-body p-0">
+        @if (loading)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+            </div>
+        }
+        else if (movimientos.Count == 0)
+        {
+            <div class="text-center py-5">
+                <i class="bi bi-inbox" style="font-size:2.5rem;"></i>
+                <p class="text-muted mt-3">No movements registered.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Number</th>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Product</th>
+                            <th>Warehouse</th>
+                            <th class="text-end">Qty</th>
+                            <th class="text-end">Unit Cost</th>
+                            <th class="text-end">Total</th>
+                            <th>Reference</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var mov in movimientos)
+                        {
+                            <tr>
+                                <td><code class="small">@mov.Number</code></td>
+                                <td>@mov.MovementDate.ToString("dd/MM/yyyy")</td>
+                                <td><span class="badge @GetBadgeClass(mov.MovementType)">@mov.MovementType</span></td>
+                                <td>
+                                    <code class="small">@mov.ProductSku</code>
+                                    <span class="ms-1">@mov.ProductName</span>
+                                </td>
+                                <td>
+                                    @mov.WarehouseName
+                                    @if (!string.IsNullOrEmpty(mov.DestinationWarehouseName))
+                                    {
+                                        <span class="text-muted"> → @mov.DestinationWarehouseName</span>
+                                    }
+                                </td>
+                                <td class="text-end fw-bold">@mov.Quantity.ToString("N4")</td>
+                                <td class="text-end">@mov.UnitCost.ToString("N4")</td>
+                                <td class="text-end">@mov.TotalCost.ToString("N2")</td>
+                                <td><small class="text-muted">@mov.Reference</small></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
     </div>
 </div>
+
+@if (showCreateModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">New Inventory Movement</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="createDto" OnValidSubmit="CreateMovimiento">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="text-danger small" />
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Movement Type *</label>
+                                <InputSelect class="form-select" @bind-Value="createDto.MovementType">
+                                    <option value="Receipt">Receipt</option>
+                                    <option value="Issue">Issue</option>
+                                    <option value="Adjustment">Adjustment</option>
+                                    <option value="Transfer">Transfer</option>
+                                </InputSelect>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Date *</label>
+                                <InputDate class="form-control" @bind-Value="createDto.MovementDate" />
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Reference</label>
+                                <InputText class="form-control" @bind-Value="createDto.Reference" placeholder="PO-001, INV-001..." />
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Product *</label>
+                                <InputSelect class="form-select" @bind-Value="createDto.CompanyProductId">
+                                    <option value="0">-- Select product --</option>
+                                    @foreach (var p in productos)
+                                    {
+                                        <option value="@p.ProductId">@p.CommercialName (@p.DefaultUomCode)</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="@(() => createDto.CompanyProductId)" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Source Warehouse *</label>
+                                <InputSelect class="form-select" @bind-Value="createDto.WarehouseId">
+                                    <option value="0">-- Select warehouse --</option>
+                                    @foreach (var alm in almacenes)
+                                    {
+                                        <option value="@alm.Id">@alm.Nombre</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="@(() => createDto.WarehouseId)" />
+                            </div>
+                        </div>
+                        @if (createDto.MovementType == "Transfer")
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">Destination Warehouse *</label>
+                                <InputSelect class="form-select" @bind-Value="createDto.DestinationWarehouseId">
+                                    <option value="">-- Select destination --</option>
+                                    @foreach (var alm in almacenes.Where(a => a.Id != createDto.WarehouseId))
+                                    {
+                                        <option value="@alm.Id">@alm.Nombre</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                        }
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Quantity *</label>
+                                <InputNumber class="form-control" @bind-Value="createDto.Quantity" />
+                                <ValidationMessage For="@(() => createDto.Quantity)" />
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Unit Cost</label>
+                                <InputNumber class="form-control" @bind-Value="createDto.UnitCost"
+                                             disabled="@(createDto.MovementType is "Issue" or "Transfer")" />
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Notes</label>
+                                <InputText class="form-control" @bind-Value="createDto.Notes" />
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-secondary" @onclick="CloseModal">Cancel</button>
+                            <button type="submit" class="btn btn-primary" disabled="@saving">
+                                @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                Register Movement
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<MovimientoInventarioDto> movimientos = new();
+    private List<AlmacenDto> almacenes = new();
+    private List<ProductDto2> productos = new();
+
+    private bool loading = true;
+    private bool saving = false;
+    private bool showCreateModal = false;
+    private string? errorMessage;
+    private string? successMessage;
+
+    private string filtroTipo = "";
+    private int filtroAlmacenId = 0;
+    private DateTime? filtroDesde;
+    private DateTime? filtroHasta;
+
+    private CreateMovimientoInventarioDto createDto = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var almTask = AlmacenService.GetAllAsync();
+        var prodTask = ProductoService.GetAllAsync();
+        await Task.WhenAll(almTask, prodTask);
+        almacenes = await almTask;
+        productos = await prodTask;
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        loading = true;
+        errorMessage = null;
+        try
+        {
+            movimientos = await InvService.GetMovimientosAsync(
+                almacenId: filtroAlmacenId > 0 ? filtroAlmacenId : null,
+                tipo: string.IsNullOrEmpty(filtroTipo) ? null : filtroTipo,
+                desde: filtroDesde,
+                hasta: filtroHasta);
+        }
+        catch (Exception ex) { errorMessage = $"Error loading movements: {ex.Message}"; }
+        finally { loading = false; }
+    }
+
+    private void ShowCreateModal()
+    {
+        createDto = new CreateMovimientoInventarioDto { MovementDate = DateTime.Today };
+        showCreateModal = true;
+    }
+
+    private void CloseModal() => showCreateModal = false;
+
+    private async Task CreateMovimiento()
+    {
+        saving = true;
+        errorMessage = null;
+        try
+        {
+            var response = await InvService.CreateAsync(createDto);
+            if (response.Success)
+            {
+                successMessage = $"Movement {response.Data?.Number} registered.";
+                CloseModal();
+                await LoadData();
+            }
+            else errorMessage = response.Message;
+        }
+        catch (Exception ex) { errorMessage = $"Error: {ex.Message}"; }
+        finally { saving = false; }
+    }
+
+    private static string GetBadgeClass(string tipo) => tipo switch
+    {
+        "Receipt"    => "bg-success",
+        "Issue"      => "bg-danger",
+        "Adjustment" => "bg-warning text-dark",
+        "Transfer"   => "bg-info text-dark",
+        _            => "bg-secondary"
+    };
+}
