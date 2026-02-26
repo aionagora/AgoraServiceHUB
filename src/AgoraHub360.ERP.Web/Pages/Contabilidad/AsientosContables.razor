@@ -10,7 +10,7 @@
     <div class="row mb-3">
         <div class="col">
             <h3><i class="bi bi-journal-text"></i> Comprobantes Contables</h3>
-            <p class="text-muted mb-0">Libro Diario — Registro de comprobantes contables</p>
+            <p class="text-muted mb-0">Libro Diario • Registro de comprobantes contables</p>
         </div>
         <div class="col-auto d-flex gap-2">
             <button class="btn btn-outline-success btn-sm" @onclick="SeedCatalogos" disabled="@seeding">
@@ -76,6 +76,19 @@
                     </div>
                     <div class="col-md-auto">
                         <button class="btn btn-sm btn-primary" @onclick="LoadData"><i class="bi bi-search"></i></button>
+                    </div>
+                    <div class="col-md-auto ms-auto">
+                        <button class="btn btn-sm btn-success" @onclick="ExportarExcel" disabled="@(exportando || asientos.Count == 0)" title="Exportar a Excel">
+                            @if (exportando) 
+                            { 
+                                <span class="spinner-border spinner-border-sm me-1"></span> 
+                            }
+                            else
+                            {
+                                <i class="bi bi-file-earmark-excel me-1"></i>
+                            }
+                            Exportar Excel
+                        </button>
                     </div>
                 </div>
             </div>
@@ -457,6 +470,7 @@
     private bool seeding = false;
     private string? successMessage;
     private string? errorMessage;
+    private bool exportando = false;
 
     // ?? Filtros ??
     private DateTime? filtroDesde;
@@ -772,4 +786,43 @@
         "Anulado" => "bg-danger",
         _ => "bg-secondary"
     };
+
+    private async Task ExportarExcel()
+    {
+        exportando = true;
+        errorMessage = null;
+        try
+        {
+            var tipoId = filtroTipoComp > 0 ? (int?)filtroTipoComp : null;
+            var estadoFiltro = string.IsNullOrEmpty(filtroEstado) ? null : filtroEstado;
+            var searchFiltro = string.IsNullOrEmpty(filtroSearch) ? null : filtroSearch;
+
+            var fileBytes = await AsientoService.ExportarExcelAsync(
+                filtroDesde, filtroHasta, estadoFiltro, tipoId, searchFiltro);
+
+            if (fileBytes != null && fileBytes.Length > 0)
+            {
+                var fileName = $"Comprobantes_Contables_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+                
+                // Descargar el archivo usando JavaScript
+                await JS.InvokeVoidAsync("downloadFile", fileName, 
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+                    Convert.ToBase64String(fileBytes));
+
+                successMessage = "Archivo Excel generado exitosamente.";
+            }
+            else
+            {
+                errorMessage = "No se pudo generar el archivo Excel. Intente nuevamente.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al exportar: {ex.Message}";
+        }
+        finally
+        {
+            exportando = false;
+        }
+    }
 }
