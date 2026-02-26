@@ -49,6 +49,9 @@ public static class DependencyInjection
         // INV
         services.AddScoped<IMovimientoInventarioService, MovimientoInventarioService>();
 
+        // CMP
+        services.AddScoped<IOrdenCompraService, OrdenCompraService>();
+
         return services;
     }
 }

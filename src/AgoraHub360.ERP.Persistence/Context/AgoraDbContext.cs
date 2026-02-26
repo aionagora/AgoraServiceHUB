@@ -3,6 +3,7 @@ namespace AgoraHub360.ERP.Persistence.Context;
 using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Domain.Common;
 using AgoraHub360.ERP.Domain.Entities.Core;
+using AgoraHub360.ERP.Domain.Entities.CMP;
 using AgoraHub360.ERP.Domain.Entities.CST;
 using AgoraHub360.ERP.Domain.Entities.DOC;
 using AgoraHub360.ERP.Domain.Entities.INV;
@@ -101,6 +102,10 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     // ── INV: Inventory ────────────────────────────────────────────────────────
     public DbSet<MovimientoInventario> MovimientosInventario => Set<MovimientoInventario>();
     public DbSet<StockProducto> StockProductos => Set<StockProducto>();
+
+    // ── CMP: Compras ──────────────────────────────────────────────────────────
+    public DbSet<OrdenCompra> OrdenesCompra => Set<OrdenCompra>();
+    public DbSet<OrdenCompraLinea> OrdenCompraLineas => Set<OrdenCompraLinea>();
 
     // ── Audit ─────────────────────────────────────────────────────────────────
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();

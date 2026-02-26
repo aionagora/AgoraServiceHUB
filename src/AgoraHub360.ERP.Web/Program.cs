@@ -55,4 +55,7 @@ builder.Services.AddScoped<PriceListHttpService>();
 // ──── Servicios HTTP Inventario ────
 builder.Services.AddScoped<MovimientoInventarioHttpService>();
 
+// ──── Servicios HTTP Compras ────
+builder.Services.AddScoped<OrdenCompraHttpService>();
+
 await builder.Build().RunAsync();

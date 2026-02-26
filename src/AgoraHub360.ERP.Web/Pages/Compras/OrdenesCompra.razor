@@ -1,21 +1,679 @@
 @page "/compras/ordenes"
+@attribute [Authorize]
+@inject OrdenCompraHttpService OcService
+@inject ProveedorHttpService ProveedorService
+@inject AlmacenHttpService AlmacenService
+@inject MdmCompanyProductHttpService CompanyProductService
+@inject IJSRuntime JS
 
-<PageTitle>Ordenes de Compra - AgoraHub360 ERP</PageTitle>
+<PageTitle>Órdenes de Compra - AgoraHub360 ERP</PageTitle>
 
-<div class="page-header">
-    <h1>Ordenes de Compra</h1>
-    <p class="text-muted mb-0">Compras &rsaquo; Ordenes</p>
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3><i class="bi bi-cart-check-fill"></i> Órdenes de Compra</h3>
+            <p class="text-muted mb-0">Gestión de órdenes de compra a proveedores</p>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="ShowCreateModal">
+                <i class="bi bi-plus-circle"></i> Nueva OC
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle-fill"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @* ?? Filtros ?? *@
+    <div class="card mb-3">
+        <div class="card-body py-2">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label mb-1 small">Proveedor</label>
+                    <select class="form-select form-select-sm" @bind="filtroProveedorId">
+                        <option value="0">Todos</option>
+                        @foreach (var p in proveedores) { <option value="@p.Id">@p.RazonSocial</option> }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label mb-1 small">Estado</label>
+                    <select class="form-select form-select-sm" @bind="filtroEstado">
+                        <option value="">Todos</option>
+                        <option value="Borrador">Borrador</option>
+                        <option value="Confirmado">Confirmado</option>
+                        <option value="Aprobado">Aprobado</option>
+                        <option value="Anulado">Anulado</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label mb-1 small">Desde</label>
+                    <input type="date" class="form-control form-control-sm" @bind="filtroDesde" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label mb-1 small">Hasta</label>
+                    <input type="date" class="form-control form-control-sm" @bind="filtroHasta" />
+                </div>
+                <div class="col-md-auto">
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="LoadData"><i class="bi bi-funnel"></i> Filtrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ?? Lista ?? *@
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center py-3">
+            <span>Órdenes <span class="badge bg-secondary ms-1">@ordenes.Count</span></span>
+        </div>
+        <div class="card-body p-0">
+            @if (loading)
+            {
+                <div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2">Cargando...</p></div>
+            }
+            else if (ordenes.Count == 0)
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox" style="font-size:2.5rem;"></i>
+                    <p class="text-muted mt-3">No hay órdenes de compra registradas.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:40px"></th>
+                                <th>Número</th>
+                                <th>Fecha</th>
+                                <th>Proveedor</th>
+                                <th>Almacén</th>
+                                <th>Moneda</th>
+                                <th class="text-end">Total</th>
+                                <th>Estado</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var oc in ordenes)
+                            {
+                                <tr>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => ToggleDetail(oc.OrdenCompraId)" title="Ver líneas">
+                                            <i class="bi @(expandedId == oc.OrdenCompraId ? "bi-chevron-up" : "bi-chevron-down")"></i>
+                                        </button>
+                                    </td>
+                                    <td><strong>@oc.Numero</strong></td>
+                                    <td>@oc.FechaEmision.ToString("dd/MM/yyyy")</td>
+                                    <td>@oc.ProveedorNombre</td>
+                                    <td>@oc.AlmacenDestinoNombre</td>
+                                    <td><span class="badge bg-info text-dark">@oc.MonedaId</span></td>
+                                    <td class="text-end"><strong>@oc.Total.ToString("N2")</strong></td>
+                                    <td>
+                                        <span class="badge @GetEstadoBadge(oc.Estado)">@oc.Estado</span>
+                                    </td>
+                                    <td class="text-end">
+                                        @if (oc.Estado == "Borrador")
+                                        {
+                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditModal(oc)" title="Editar"><i class="bi bi-pencil"></i></button>
+                                            <button class="btn btn-sm btn-outline-success ms-1" @onclick='() => CambiarEstado(oc, "Confirmado")' title="Confirmar"><i class="bi bi-check-lg"></i></button>
+                                            <button class="btn btn-sm btn-outline-danger ms-1" @onclick="() => DeleteOrden(oc)" title="Eliminar"><i class="bi bi-trash"></i></button>
+                                        }
+                                        @if (oc.Estado == "Confirmado")
+                                        {
+                                            <button class="btn btn-sm btn-outline-success" @onclick='() => CambiarEstado(oc, "Aprobado")' title="Aprobar"><i class="bi bi-hand-thumbs-up"></i></button>
+                                            <button class="btn btn-sm btn-outline-warning ms-1" @onclick='() => CambiarEstado(oc, "Anulado")' title="Anular"><i class="bi bi-x-circle"></i></button>
+                                        }
+                                    </td>
+                                </tr>
+                                @if (expandedId == oc.OrdenCompraId)
+                                {
+                                    <tr>
+                                        <td colspan="9" class="bg-light p-0">
+                                            <div class="p-3">
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <strong><i class="bi bi-list-ol"></i> Líneas de la OC @oc.Numero</strong>
+                                                    @if (oc.Estado == "Borrador")
+                                                    {
+                                                        <button class="btn btn-sm btn-success" @onclick="() => ShowAddLineaModal(oc.OrdenCompraId)"><i class="bi bi-plus"></i> Agregar Línea</button>
+                                                    }
+                                                </div>
+                                                @if (oc.Lineas.Count == 0)
+                                                {
+                                                    <p class="text-muted small">Sin líneas.</p>
+                                                }
+                                                else
+                                                {
+                                                    <table class="table table-sm table-bordered mb-2">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>#</th>
+                                                                <th>Producto</th>
+                                                                <th>Descripción</th>
+                                                                <th>UdM</th>
+                                                                <th class="text-end">Cant.</th>
+                                                                <th class="text-end">P/U</th>
+                                                                <th class="text-end">Desc%</th>
+                                                                <th class="text-end">Imp%</th>
+                                                                <th class="text-end">Total</th>
+                                                                <th class="text-end">Recibido</th>
+                                                                <th class="text-end">Pend.</th>
+                                                                @if (oc.Estado == "Borrador") { <th class="text-end"></th> }
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @foreach (var l in oc.Lineas)
+                                                            {
+                                                                <tr>
+                                                                    <td>@l.NumeroLinea</td>
+                                                                    <td><code>@l.ProductoSku</code></td>
+                                                                    <td>@l.Descripcion</td>
+                                                                    <td>@l.UnidadMedida</td>
+                                                                    <td class="text-end">@l.Cantidad.ToString("N2")</td>
+                                                                    <td class="text-end">@l.PrecioUnitario.ToString("N4")</td>
+                                                                    <td class="text-end">@l.PorcentajeDescuento.ToString("N1")%</td>
+                                                                    <td class="text-end">@l.PorcentajeImpuesto.ToString("N1")%</td>
+                                                                    <td class="text-end"><strong>@l.TotalLinea.ToString("N2")</strong></td>
+                                                                    <td class="text-end">
+                                                                        @if (l.CantidadRecepcionada > 0)
+                                                                        {
+                                                                            <span class="text-success">@l.CantidadRecepcionada.ToString("N2")</span>
+                                                                        }
+                                                                        else { <span class="text-muted">0</span> }
+                                                                    </td>
+                                                                    <td class="text-end">
+                                                                        @if (l.CantidadPendiente > 0)
+                                                                        {
+                                                                            <span class="text-warning">@l.CantidadPendiente.ToString("N2")</span>
+                                                                        }
+                                                                        else { <span class="badge bg-success">Completo</span> }
+                                                                    </td>
+                                                                    @if (oc.Estado == "Borrador")
+                                                                    {
+                                                                        <td class="text-end">
+                                                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditLineaModal(oc.OrdenCompraId, l)"><i class="bi bi-pencil"></i></button>
+                                                                            <button class="btn btn-sm btn-outline-danger ms-1" @onclick="() => RemoveLinea(oc.OrdenCompraId, l.OrdenCompraLineaId)"><i class="bi bi-x-lg"></i></button>
+                                                                        </td>
+                                                                    }
+                                                                </tr>
+                                                            }
+                                                        </tbody>
+                                                        <tfoot class="table-light">
+                                                            <tr>
+                                                                <td colspan="8" class="text-end"><strong>Subtotal:</strong></td>
+                                                                <td class="text-end">@oc.Subtotal.ToString("N2")</td>
+                                                                <td colspan="3"></td>
+                                                            </tr>
+                                                            @if (oc.Descuento > 0)
+                                                            {
+                                                                <tr>
+                                                                    <td colspan="8" class="text-end text-danger"><strong>Descuento:</strong></td>
+                                                                    <td class="text-end text-danger">-@oc.Descuento.ToString("N2")</td>
+                                                                    <td colspan="3"></td>
+                                                                </tr>
+                                                            }
+                                                            @if (oc.Impuesto > 0)
+                                                            {
+                                                                <tr>
+                                                                    <td colspan="8" class="text-end"><strong>Impuesto:</strong></td>
+                                                                    <td class="text-end">@oc.Impuesto.ToString("N2")</td>
+                                                                    <td colspan="3"></td>
+                                                                </tr>
+                                                            }
+                                                            <tr>
+                                                                <td colspan="8" class="text-end"><strong>TOTAL:</strong></td>
+                                                                <td class="text-end"><strong class="text-primary fs-5">@oc.Total.ToString("N2")</strong></td>
+                                                                <td colspan="3"></td>
+                                                            </tr>
+                                                        </tfoot>
+                                                    </table>
+                                                }
+                                                @if (oc.Observaciones is not null)
+                                                {
+                                                    <div class="mt-2"><small class="text-muted"><i class="bi bi-chat-left-text"></i> @oc.Observaciones</small></div>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
 </div>
 
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center py-3">
-        <span>Listado de Ordenes</span>
-        <button class="btn btn-primary btn-sm" disabled>
-            <i class="bi bi-plus-circle me-1"></i> Nueva Orden
-        </button>
+@* ?????? Modal Crear/Editar OC ?????? *@
+@if (showModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi @(isEditing ? "bi-pencil" : "bi-plus-circle")"></i> @(isEditing ? "Editar" : "Nueva") Orden de Compra</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Proveedor *</label>
+                            <select class="form-select" @bind="formProveedorId">
+                                <option value="0">-- Seleccionar --</option>
+                                @foreach (var p in proveedores) { <option value="@p.Id">@p.RazonSocial</option> }
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Almacén Destino *</label>
+                            <select class="form-select" @bind="formAlmacenId">
+                                <option value="0">-- Seleccionar --</option>
+                                @foreach (var a in almacenes) { <option value="@a.Id">@a.Nombre</option> }
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Fecha Emisión *</label>
+                            <input type="date" class="form-control" @bind="formFechaEmision" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Fecha Entrega Estimada</label>
+                            <input type="date" class="form-control" @bind="formFechaEntrega" />
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label">Moneda</label>
+                            <input class="form-control" @bind="formMoneda" />
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <label class="form-label">T/C</label>
+                            <input type="number" step="0.0001" class="form-control" @bind="formTasaCambio" />
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">Condición de Pago</label>
+                            <input class="form-control" @bind="formCondicionPago" />
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Referencia Externa</label>
+                            <input class="form-control" @bind="formReferenciaExterna" placeholder="Nro. cotización proveedor" />
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Observaciones</label>
+                            <input class="form-control" @bind="formObservaciones" />
+                        </div>
+                    </div>
+
+                    @* ?? Líneas (solo en creación) ?? *@
+                    @if (!isEditing)
+                    {
+                        <hr />
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong><i class="bi bi-list-ol"></i> Líneas</strong>
+                        </div>
+                        <div class="row g-2 align-items-end mb-2">
+                            <div class="col-md-3">
+                                <label class="form-label small">Producto *</label>
+                                <select class="form-select form-select-sm" @bind="newLineProductId">
+                                    <option value="0">-- Seleccionar --</option>
+                                    @foreach (var cp in companyProducts) { <option value="@cp.CompanyProductId">@cp.Sku — @cp.NombreComercial</option> }
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small">Descripción</label>
+                                <input class="form-control form-control-sm" @bind="newLineDesc" />
+                            </div>
+                            <div class="col-md-1">
+                                <label class="form-label small">Cant. *</label>
+                                <input type="number" step="0.01" class="form-control form-control-sm" @bind="newLineCant" />
+                            </div>
+                            <div class="col-md-1">
+                                <label class="form-label small">P/U *</label>
+                                <input type="number" step="0.01" class="form-control form-control-sm" @bind="newLinePrecio" />
+                            </div>
+                            <div class="col-md-1">
+                                <label class="form-label small">Desc%</label>
+                                <input type="number" step="0.1" class="form-control form-control-sm" @bind="newLineDesc2" />
+                            </div>
+                            <div class="col-md-1">
+                                <label class="form-label small">Imp%</label>
+                                <input type="number" step="0.1" class="form-control form-control-sm" @bind="newLineImp" />
+                            </div>
+                            <div class="col-md-1">
+                                <label class="form-label small">UdM</label>
+                                <input class="form-control form-control-sm" @bind="newLineUdm" />
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-success btn-sm w-100" @onclick="AddTempLinea" disabled="@(newLineProductId == 0 || newLineCant <= 0)"><i class="bi bi-plus"></i> Agregar</button>
+                            </div>
+                        </div>
+
+                        @if (tempLineas.Count > 0)
+                        {
+                            <table class="table table-sm table-bordered mb-0">
+                                <thead><tr><th>#</th><th>Producto</th><th>Desc.</th><th>UdM</th><th class="text-end">Cant.</th><th class="text-end">P/U</th><th class="text-end">Desc%</th><th class="text-end">Imp%</th><th class="text-end">Total</th><th></th></tr></thead>
+                                <tbody>
+                                    @for (int i = 0; i < tempLineas.Count; i++)
+                                    {
+                                        var idx = i;
+                                        var l = tempLineas[i];
+                                        var total = (l.Cantidad * l.PrecioUnitario) * (1 - l.PorcentajeDescuento / 100m) * (1 + l.PorcentajeImpuesto / 100m);
+                                        <tr>
+                                            <td>@(i + 1)</td>
+                                            <td><code>@(companyProducts.FirstOrDefault(c => c.CompanyProductId == l.CompanyProductId)?.Sku ?? "—")</code></td>
+                                            <td>@l.Descripcion</td>
+                                            <td>@l.UnidadMedida</td>
+                                            <td class="text-end">@l.Cantidad.ToString("N2")</td>
+                                            <td class="text-end">@l.PrecioUnitario.ToString("N4")</td>
+                                            <td class="text-end">@l.PorcentajeDescuento.ToString("N1")%</td>
+                                            <td class="text-end">@l.PorcentajeImpuesto.ToString("N1")%</td>
+                                            <td class="text-end"><strong>@total.ToString("N2")</strong></td>
+                                            <td class="text-end"><button class="btn btn-sm btn-outline-danger" @onclick="() => tempLineas.RemoveAt(idx)"><i class="bi bi-x-lg"></i></button></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseModal">Cancelar</button>
+                    <button class="btn btn-primary" @onclick="SaveOrden" disabled="@(saving || formProveedorId == 0 || formAlmacenId == 0)">
+                        @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> } @(isEditing ? "Actualizar" : "Crear OC")
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="card-body text-center py-5">
-        <i class="bi bi-cart" style="font-size: 3rem; color: var(--agora-text-light);"></i>
-        <p class="text-muted mt-3">Modulo en construccion.</p>
+}
+
+@* ?????? Modal Agregar Línea (a OC existente) ?????? *@
+@if (showLineaModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title"><i class="bi bi-plus"></i> @(editingLineaId > 0 ? "Editar" : "Agregar") Línea</h5><button type="button" class="btn-close" @onclick="() => showLineaModal = false"></button></div>
+                <div class="modal-body">
+                    <div class="row">
+                        @if (editingLineaId == 0)
+                        {
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Producto *</label>
+                                <select class="form-select" @bind="lineaFormProductId">
+                                    <option value="0">-- Seleccionar --</option>
+                                    @foreach (var cp in companyProducts) { <option value="@cp.CompanyProductId">@cp.Sku — @cp.NombreComercial</option> }
+                                </select>
+                            </div>
+                        }
+                        <div class="col-md-6 mb-3"><label class="form-label">Descripción</label><input class="form-control" @bind="lineaFormDesc" /></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-2 mb-3"><label class="form-label">UdM</label><input class="form-control" @bind="lineaFormUdm" /></div>
+                        <div class="col-md-2 mb-3"><label class="form-label">Cantidad *</label><input type="number" step="0.01" class="form-control" @bind="lineaFormCant" /></div>
+                        <div class="col-md-3 mb-3"><label class="form-label">Precio Unit. *</label><input type="number" step="0.01" class="form-control" @bind="lineaFormPrecio" /></div>
+                        <div class="col-md-2 mb-3"><label class="form-label">Desc. %</label><input type="number" step="0.1" class="form-control" @bind="lineaFormDescPct" /></div>
+                        <div class="col-md-2 mb-3"><label class="form-label">Imp. %</label><input type="number" step="0.1" class="form-control" @bind="lineaFormImpPct" /></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="() => showLineaModal = false">Cancelar</button>
+                    <button class="btn btn-success" @onclick="SaveLinea" disabled="@saving">
+                        @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> } @(editingLineaId > 0 ? "Actualizar" : "Agregar")
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
+}
+
+@code {
+    // ?? State ??
+    private List<OrdenCompraDto> ordenes = new();
+    private List<AgoraHub360.ERP.Shared.DTOs.MDM.ProveedorDto> proveedores = new();
+    private List<AlmacenDto> almacenes = new();
+    private List<CompanyProductDto> companyProducts = new();
+
+    private bool loading = true;
+    private bool saving = false;
+    private string? successMessage;
+    private string? errorMessage;
+
+    // Filters
+    private int filtroProveedorId;
+    private string filtroEstado = "";
+    private DateTime? filtroDesde;
+    private DateTime? filtroHasta;
+
+    // Detail expand
+    private long expandedId;
+
+    // Modal create/edit
+    private bool showModal;
+    private bool isEditing;
+    private long editingOcId;
+    private int formProveedorId;
+    private int formAlmacenId;
+    private DateTime formFechaEmision = DateTime.Today;
+    private DateTime? formFechaEntrega;
+    private string formMoneda = "BOB";
+    private decimal formTasaCambio = 1;
+    private string? formCondicionPago;
+    private string? formObservaciones;
+    private string? formReferenciaExterna;
+
+    // Temp lines for create
+    private List<CreateOrdenCompraLineaDto> tempLineas = new();
+    private long newLineProductId;
+    private string newLineDesc = "";
+    private decimal newLineCant;
+    private decimal newLinePrecio;
+    private decimal newLineDesc2;
+    private decimal newLineImp = 13;
+    private string newLineUdm = "UND";
+
+    // Modal linea (add/edit to existing OC)
+    private bool showLineaModal;
+    private long lineaModalOrdenId;
+    private long editingLineaId;
+    private long lineaFormProductId;
+    private string lineaFormDesc = "";
+    private string lineaFormUdm = "UND";
+    private decimal lineaFormCant;
+    private decimal lineaFormPrecio;
+    private decimal lineaFormDescPct;
+    private decimal lineaFormImpPct = 13;
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    private async Task LoadData()
+    {
+        loading = true; errorMessage = null;
+        try
+        {
+            var t1 = OcService.GetAllAsync(
+                filtroProveedorId > 0 ? filtroProveedorId : null,
+                string.IsNullOrEmpty(filtroEstado) ? null : filtroEstado,
+                filtroDesde,
+                filtroHasta);
+            var t2 = ProveedorService.GetAllAsync();
+            var t3 = AlmacenService.GetAllAsync();
+            var t4 = CompanyProductService.GetAllAsync();
+            await Task.WhenAll(t1, t2, t3, t4);
+            ordenes = await t1;
+            proveedores = await t2;
+            almacenes = await t3;
+            companyProducts = await t4;
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { loading = false; }
+    }
+
+    private void ToggleDetail(long id)
+    {
+        expandedId = expandedId == id ? 0 : id;
+    }
+
+    // ?? Create/Edit modal ??
+    private void ShowCreateModal()
+    {
+        isEditing = false; editingOcId = 0;
+        formProveedorId = proveedores.FirstOrDefault()?.Id ?? 0;
+        formAlmacenId = almacenes.FirstOrDefault()?.Id ?? 0;
+        formFechaEmision = DateTime.Today;
+        formFechaEntrega = null;
+        formMoneda = "BOB"; formTasaCambio = 1;
+        formCondicionPago = null; formObservaciones = null; formReferenciaExterna = null;
+        tempLineas = new(); ResetNewLine();
+        showModal = true;
+    }
+
+    private void ShowEditModal(OrdenCompraDto oc)
+    {
+        isEditing = true; editingOcId = oc.OrdenCompraId;
+        formProveedorId = oc.ProveedorId;
+        formAlmacenId = oc.AlmacenDestinoId;
+        formFechaEmision = oc.FechaEmision;
+        formFechaEntrega = oc.FechaEntregaEstimada;
+        formMoneda = oc.MonedaId; formTasaCambio = oc.TasaCambio;
+        formCondicionPago = oc.CondicionPago; formObservaciones = oc.Observaciones; formReferenciaExterna = oc.ReferenciaExterna;
+        showModal = true;
+    }
+
+    private void CloseModal() => showModal = false;
+
+    private void ResetNewLine()
+    {
+        newLineProductId = 0; newLineDesc = ""; newLineCant = 0; newLinePrecio = 0; newLineDesc2 = 0; newLineImp = 13; newLineUdm = "UND";
+    }
+
+    private void AddTempLinea()
+    {
+        if (newLineProductId == 0 || newLineCant <= 0) return;
+        var cp = companyProducts.FirstOrDefault(c => c.CompanyProductId == newLineProductId);
+        tempLineas.Add(new CreateOrdenCompraLineaDto(
+            newLineProductId,
+            string.IsNullOrWhiteSpace(newLineDesc) ? (cp?.Sku ?? "Producto") : newLineDesc,
+            newLineUdm, newLineCant, newLinePrecio, newLineDesc2, newLineImp));
+        ResetNewLine();
+    }
+
+    private async Task SaveOrden()
+    {
+        saving = true; errorMessage = null;
+        try
+        {
+            if (isEditing)
+            {
+                var dto = new UpdateOrdenCompraDto(formFechaEmision, formFechaEntrega, formProveedorId, formAlmacenId, formMoneda, formTasaCambio, formCondicionPago, formObservaciones, formReferenciaExterna);
+                var r = await OcService.UpdateAsync(editingOcId, dto);
+                if (r.Success) { successMessage = "OC actualizada."; CloseModal(); await LoadData(); } else errorMessage = r.Message;
+            }
+            else
+            {
+                var dto = new CreateOrdenCompraDto(formFechaEmision, formFechaEntrega, formProveedorId, formAlmacenId, formMoneda, formTasaCambio, formCondicionPago, formObservaciones, formReferenciaExterna, tempLineas.Count > 0 ? tempLineas : null);
+                var r = await OcService.CreateAsync(dto);
+                if (r.Success) { successMessage = $"OC {r.Data?.Numero} creada."; CloseModal(); await LoadData(); } else errorMessage = r.Message;
+            }
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { saving = false; }
+    }
+
+    // ?? Líneas modal ??
+    private void ShowAddLineaModal(long ordenId)
+    {
+        lineaModalOrdenId = ordenId; editingLineaId = 0;
+        lineaFormProductId = 0; lineaFormDesc = ""; lineaFormUdm = "UND"; lineaFormCant = 0; lineaFormPrecio = 0; lineaFormDescPct = 0; lineaFormImpPct = 13;
+        showLineaModal = true;
+    }
+
+    private void ShowEditLineaModal(long ordenId, OrdenCompraLineaDto l)
+    {
+        lineaModalOrdenId = ordenId; editingLineaId = l.OrdenCompraLineaId;
+        lineaFormProductId = l.CompanyProductId; lineaFormDesc = l.Descripcion; lineaFormUdm = l.UnidadMedida;
+        lineaFormCant = l.Cantidad; lineaFormPrecio = l.PrecioUnitario; lineaFormDescPct = l.PorcentajeDescuento; lineaFormImpPct = l.PorcentajeImpuesto;
+        showLineaModal = true;
+    }
+
+    private async Task SaveLinea()
+    {
+        saving = true; errorMessage = null;
+        try
+        {
+            ApiResponse<OrdenCompraDto> r;
+            if (editingLineaId > 0)
+            {
+                r = await OcService.UpdateLineaAsync(lineaModalOrdenId, editingLineaId,
+                    new UpdateOrdenCompraLineaDto(lineaFormDesc, lineaFormUdm, lineaFormCant, lineaFormPrecio, lineaFormDescPct, lineaFormImpPct));
+            }
+            else
+            {
+                r = await OcService.AddLineaAsync(lineaModalOrdenId,
+                    new AddOrdenCompraLineaDto(lineaFormProductId, lineaFormDesc, lineaFormUdm, lineaFormCant, lineaFormPrecio, lineaFormDescPct, lineaFormImpPct));
+            }
+            if (r.Success) { successMessage = editingLineaId > 0 ? "Línea actualizada." : "Línea agregada."; showLineaModal = false; await LoadData(); }
+            else errorMessage = r.Message;
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { saving = false; }
+    }
+
+    private async Task RemoveLinea(long ordenId, long lineaId)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", "¿Eliminar esta línea?")) return;
+        try
+        {
+            var r = await OcService.RemoveLineaAsync(ordenId, lineaId);
+            if (r.Success) { successMessage = "Línea eliminada."; await LoadData(); } else errorMessage = r.Message;
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+    }
+
+    // ?? Estado ??
+    private async Task CambiarEstado(OrdenCompraDto oc, string estado)
+    {
+        var label = estado switch { "Confirmado" => "confirmar", "Aprobado" => "aprobar", "Anulado" => "anular", _ => estado.ToLower() };
+        if (!await JS.InvokeAsync<bool>("confirm", $"¿{char.ToUpper(label[0])}{label[1..]} la OC {oc.Numero}?")) return;
+        try
+        {
+            var r = await OcService.CambiarEstadoAsync(oc.OrdenCompraId, estado);
+            if (r.Success) { successMessage = $"OC {oc.Numero} ? {estado}."; await LoadData(); } else errorMessage = r.Message;
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+    }
+
+    private async Task DeleteOrden(OrdenCompraDto oc)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"¿Eliminar la OC {oc.Numero}?")) return;
+        try
+        {
+            var r = await OcService.DeleteAsync(oc.OrdenCompraId);
+            if (r.Success) { successMessage = "OC eliminada."; await LoadData(); } else errorMessage = r.Message;
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+    }
+
+    // ?? Helpers ??
+    private static string GetEstadoBadge(string estado) => estado switch
+    {
+        "Borrador" => "bg-secondary",
+        "Confirmado" => "bg-primary",
+        "Aprobado" => "bg-success",
+        "Anulado" => "bg-danger",
+        _ => "bg-secondary"
+    };
+}
