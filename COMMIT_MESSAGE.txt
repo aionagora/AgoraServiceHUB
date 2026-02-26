@@ -1,0 +1,53 @@
+feat(contabilidad): agregar exportación a Excel de comprobantes contables
+
+## Descripción
+Implementa funcionalidad para exportar los comprobantes contables filtrados a un archivo Excel desde el formulario de asientos.
+
+## Cambios realizados
+
+### Backend (API)
+- Agregado paquete EPPlus 7.5.2 para generación de archivos Excel
+- Creado endpoint `GET /api/v1/contabilidad/asientos/exportar-excel`
+- Implementada lógica de exportación con formato profesional:
+  - Encabezados con estilo
+  - Formato de moneda
+  - Fila de totales
+  - Auto-ajuste de columnas
+
+### Frontend (Web)
+- Agregado botón "Exportar Excel" en barra de filtros
+- Implementado método `ExportarExcelAsync()` en servicio HTTP
+- Agregada función JavaScript `downloadFile()` para descarga de archivos
+- Control de estado durante exportación (spinner, deshabilitar botón)
+
+### Características
+? Exporta comprobantes respetando todos los filtros activos
+? Incluye 15 columnas de información
+? Formato profesional con totales
+? Nombre de archivo con timestamp
+? Manejo de errores y mensajes de confirmación
+
+## Archivos modificados
+- src/AgoraHub360.ERP.Api/AgoraHub360.ERP.Api.csproj
+- src/AgoraHub360.ERP.Api/Controllers/V1/AsientosContablesController.cs
+- src/AgoraHub360.ERP.Web/Pages/Contabilidad/AsientosContables.razor
+- src/AgoraHub360.ERP.Web/Services/AsientoContableHttpService.cs
+- src/AgoraHub360.ERP.Web/wwwroot/index.html
+- docs/EXPORTAR_EXCEL_ASIENTOS.md (nuevo)
+
+## Testing
+? Compilación exitosa
+? Sin errores de build
+? Integración correcta de EPPlus
+? Endpoint registrado
+? Función JavaScript implementada
+
+## Notas
+- EPPlus configurado con licencia NonCommercial
+- Compatible con Excel, LibreOffice, Google Sheets
+- Recomendado hasta 10,000 registros por exportación
+
+## Relacionado
+Cierra: Feature request de exportación de comprobantes
+Módulo: Contabilidad
+Tipo: Feature

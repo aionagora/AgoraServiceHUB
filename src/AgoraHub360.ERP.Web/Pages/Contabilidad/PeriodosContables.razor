@@ -1,0 +1,191 @@
+@page "/contabilidad/periodos"
+@attribute [Authorize]
+@inject PeriodoContableHttpService PeriodoService
+@inject IJSRuntime JS
+
+<PageTitle>Períodos Contables - AgoraHub360 ERP</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3><i class="bi bi-calendar3"></i> Períodos Contables</h3>
+            <p class="text-muted mb-0">Gestión de períodos mensuales — Apertura y cierre</p>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle-fill"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @* ?? Generar períodos ?? *@
+    <div class="card mb-3">
+        <div class="card-body py-2">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label mb-1 small">Año</label>
+                    <select class="form-select form-select-sm" @bind="selectedAnio">
+                        @for (int y = DateTime.Today.Year + 1; y >= DateTime.Today.Year - 5; y--)
+                        {
+                            <option value="@y">@y</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-auto">
+                    <button class="btn btn-sm btn-primary" @onclick="LoadData"><i class="bi bi-search"></i> Ver</button>
+                </div>
+                <div class="col-md-auto">
+                    <button class="btn btn-sm btn-success" @onclick="GenerarPeriodos" disabled="@generando">
+                        @if (generando) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        <i class="bi bi-calendar-plus"></i> Generar Períodos @selectedAnio
+                    </button>
+                </div>
+                <div class="col-md-auto ms-auto">
+                    @if (periodos.Count > 0)
+                    {
+                        var abiertos = periodos.Count(p => p.Estado == "Abierto");
+                        var cerrados = periodos.Count(p => p.Estado == "Cerrado");
+                        <span class="badge bg-success me-1">@abiertos abiertos</span>
+                        <span class="badge bg-secondary">@cerrados cerrados</span>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ?? Grid de períodos ?? *@
+    <div class="card">
+        <div class="card-body p-0">
+            @if (loading)
+            {
+                <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+            }
+            else if (periodos.Count == 0)
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-calendar-x" style="font-size:2.5rem;"></i>
+                    <p class="text-muted mt-3">No hay períodos para el año <strong>@selectedAnio</strong>. Use <strong>"Generar Períodos"</strong> para crearlos.</p>
+                </div>
+            }
+            else
+            {
+                <div class="row g-3 p-3">
+                    @foreach (var p in periodos)
+                    {
+                        var esCerrado = p.Estado == "Cerrado";
+                        <div class="col-md-3 col-sm-4 col-6">
+                            <div class="card h-100 @(esCerrado ? "border-secondary" : "border-success")">
+                                <div class="card-header d-flex justify-content-between align-items-center @(esCerrado ? "bg-secondary bg-opacity-10" : "bg-success bg-opacity-10")">
+                                    <strong>@p.Nombre</strong>
+                                    <span class="badge @(esCerrado ? "bg-secondary" : "bg-success")">
+                                        <i class="bi @(esCerrado ? "bi-lock-fill" : "bi-unlock-fill")"></i> @p.Estado
+                                    </span>
+                                </div>
+                                <div class="card-body py-2">
+                                    <div class="d-flex justify-content-between">
+                                        <small class="text-muted">Asientos contabilizados:</small>
+                                        <strong>@p.CantidadAsientos</strong>
+                                    </div>
+                                    @if (esCerrado && p.FechaCierre.HasValue)
+                                    {
+                                        <div class="mt-1">
+                                            <small class="text-muted">Cerrado: @p.FechaCierre.Value.ToString("dd/MM/yyyy HH:mm")</small>
+                                        </div>
+                                        @if (!string.IsNullOrEmpty(p.CerradoPor))
+                                        {
+                                            <small class="text-muted">Por: @p.CerradoPor</small>
+                                        }
+                                    }
+                                </div>
+                                <div class="card-footer text-center py-1">
+                                    @if (!esCerrado)
+                                    {
+                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => CerrarPeriodo(p)" title="Cerrar período">
+                                            <i class="bi bi-lock"></i> Cerrar
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-sm btn-outline-warning" @onclick="() => ReabrirPeriodo(p)" title="Reabrir período">
+                                            <i class="bi bi-unlock"></i> Reabrir
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<PeriodoContableDto> periodos = new();
+    private int selectedAnio = DateTime.Today.Year;
+    private bool loading = true;
+    private bool generando = false;
+    private string? successMessage;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    private async Task LoadData()
+    {
+        loading = true; errorMessage = null;
+        try
+        {
+            periodos = await PeriodoService.GetAllAsync(selectedAnio);
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { loading = false; }
+    }
+
+    private async Task GenerarPeriodos()
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"¿Generar los 12 períodos mensuales para el año {selectedAnio}?")) return;
+        generando = true; errorMessage = null;
+        try
+        {
+            var r = await PeriodoService.GenerarPeriodosAsync(selectedAnio);
+            if (r.Success) { successMessage = r.Message ?? "Períodos generados."; await LoadData(); }
+            else errorMessage = r.Message;
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { generando = false; }
+    }
+
+    private async Task CerrarPeriodo(PeriodoContableDto periodo)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"¿Cerrar el período {periodo.Nombre}? No se podrán crear ni contabilizar asientos en este mes.")) return;
+        try
+        {
+            var r = await PeriodoService.CerrarAsync(periodo.PeriodoContableId);
+            if (r.Success) { successMessage = $"Período {periodo.Nombre} cerrado."; await LoadData(); }
+            else errorMessage = r.Message;
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+    }
+
+    private async Task ReabrirPeriodo(PeriodoContableDto periodo)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"¿Reabrir el período {periodo.Nombre}?")) return;
+        try
+        {
+            var r = await PeriodoService.ReabrirAsync(periodo.PeriodoContableId);
+            if (r.Success) { successMessage = $"Período {periodo.Nombre} reabierto."; await LoadData(); }
+            else errorMessage = r.Message;
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+    }
+}

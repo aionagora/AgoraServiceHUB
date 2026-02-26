@@ -1,0 +1,398 @@
+@page "/contabilidad/plantillas"
+@attribute [Authorize]
+@inject PlantillaContableHttpService PlantillaService
+@inject CuentaContableHttpService CuentaService
+@inject IJSRuntime JS
+
+<PageTitle>Plantillas Contables - AgoraHub360 ERP</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3><i class="bi bi-file-earmark-ruled"></i> Plantillas de Contabilización</h3>
+            <p class="text-muted mb-0">Configuración de asientos automáticos por tipo de documento</p>
+        </div>
+        <div class="col-auto d-flex gap-2">
+            <button class="btn btn-outline-success" @onclick="SeedPlantillas" disabled="@seeding">
+                @if (seeding) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                <i class="bi bi-magic"></i> Generar Plantillas Estándar
+            </button>
+            <button class="btn btn-primary" @onclick="ShowCreateModal">
+                <i class="bi bi-plus-circle"></i> Nueva Plantilla
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle-fill"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (loading)
+    {
+        <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+    }
+    else if (plantillas.Count == 0)
+    {
+        <div class="text-center py-5">
+            <i class="bi bi-file-earmark-x" style="font-size:2.5rem;"></i>
+            <p class="text-muted mt-3">No hay plantillas configuradas. Use <strong>"Generar Plantillas Estándar"</strong> para crear las plantillas predefinidas.</p>
+        </div>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var p in plantillas)
+            {
+                <div class="col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="badge bg-primary me-2">@p.Codigo</span>
+                                <strong>@p.Nombre</strong>
+                            </div>
+                            <div>
+                                <span class="badge bg-info text-dark">@GetTipoDocLabel(p.TipoDocumento)</span>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            @if (!string.IsNullOrEmpty(p.Descripcion))
+                            {
+                                <div class="px-3 pt-2"><small class="text-muted">@p.Descripcion</small></div>
+                            }
+                            <div class="px-3 pt-2 pb-1">
+                                <small class="text-muted"><i class="bi bi-chat-left-quote"></i> @p.GlosaPlantilla</small>
+                            </div>
+                            <table class="table table-sm mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Cuenta</th>
+                                        <th>Movimiento</th>
+                                        <th>Campo</th>
+                                        <th class="text-end">Factor</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var l in p.Lineas)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <code>@l.CuentaCodigo</code>
+                                                <small class="text-muted d-block">@l.CuentaNombre</small>
+                                            </td>
+                                            <td>
+                                                <span class="badge @(l.TipoMovimiento == "Debe" ? "bg-primary" : "bg-success")">
+                                                    @l.TipoMovimiento
+                                                </span>
+                                            </td>
+                                            <td><code>@l.CampoMonto</code></td>
+                                            <td class="text-end">@(l.Factor != 1m ? l.Factor.ToString("N4") : "×1")</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="card-footer text-end py-1">
+                            <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditModal(p)" title="Editar">
+                                <i class="bi bi-pencil"></i> Editar
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger ms-1" @onclick="() => DeletePlantilla(p)" title="Eliminar">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@* ?????? Modal Crear/Editar ?????? *@
+@if (showModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-file-earmark-plus"></i> @(isEditing ? "Editar" : "Nueva") Plantilla Contable</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        @if (!isEditing)
+                        {
+                            <div class="col-md-2">
+                                <label class="form-label">Código *</label>
+                                <input class="form-control" @bind="formCodigo" placeholder="REC" />
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Tipo Documento *</label>
+                                <select class="form-select" @bind="formTipoDoc">
+                                    <option value="Recepcion">Recepción de Compra</option>
+                                    <option value="Importacion">Liquidación de Importación</option>
+                                    <option value="Venta">Venta / Factura</option>
+                                    <option value="CostoVenta">Costo de Venta</option>
+                                    <option value="AjusteInventario">Ajuste de Inventario</option>
+                                    <option value="Otro">Otro</option>
+                                </select>
+                            </div>
+                        }
+                        <div class="@(isEditing ? "col-md-5" : "col-md-4")">
+                            <label class="form-label">Nombre *</label>
+                            <input class="form-control" @bind="formNombre" />
+                        </div>
+                        <div class="@(isEditing ? "col-md-7" : "col-md-3")">
+                            <label class="form-label">Glosa Plantilla *</label>
+                            <input class="form-control" @bind="formGlosa" placeholder="Recepción {Numero}..." />
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción</label>
+                        <input class="form-control" @bind="formDescripcion" />
+                    </div>
+
+                    <hr />
+                    <strong><i class="bi bi-list-ol"></i> Líneas de la Plantilla</strong>
+
+                    <div class="row g-2 align-items-end mt-2 mb-2">
+                        <div class="col-md-4">
+                            <label class="form-label small">Cuenta *</label>
+                            <select class="form-select form-select-sm" @bind="newCuentaId">
+                                <option value="0">-- Seleccionar --</option>
+                                @foreach (var c in cuentasMov)
+                                {
+                                    <option value="@c.CuentaContableId">@c.Codigo — @c.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small">Movimiento *</label>
+                            <select class="form-select form-select-sm" @bind="newTipoMov">
+                                <option value="Debe">Debe</option>
+                                <option value="Haber">Haber</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small">Campo Monto *</label>
+                            <select class="form-select form-select-sm" @bind="newCampoMonto">
+                                <option value="Total">Total</option>
+                                <option value="Subtotal">Subtotal</option>
+                                <option value="Impuesto">Impuesto</option>
+                                <option value="GastoAsignado">GastoAsignado</option>
+                                <option value="CostoTotal">CostoTotal</option>
+                                <option value="Cantidad">Cantidad</option>
+                            </select>
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label small">Factor</label>
+                            <input type="number" step="0.0001" class="form-control form-control-sm" @bind="newFactor" />
+                        </div>
+                        <div class="col-md-1">
+                            <button class="btn btn-success btn-sm w-100" @onclick="AddLinea" disabled="@(newCuentaId == 0)">
+                                <i class="bi bi-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    @if (tempLineas.Count > 0)
+                    {
+                        <table class="table table-sm table-bordered mb-0">
+                            <thead>
+                                <tr>
+                                    <th>#</th><th>Cuenta</th><th>Movimiento</th><th>Campo</th><th class="text-end">Factor</th><th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (int i = 0; i < tempLineas.Count; i++)
+                                {
+                                    var idx = i;
+                                    var l = tempLineas[i];
+                                    <tr>
+                                        <td>@(i + 1)</td>
+                                        <td><code>@l.CuentaCodigo</code> <small class="text-muted">@l.CuentaNombre</small></td>
+                                        <td><span class="badge @(l.TipoMov == "Debe" ? "bg-primary" : "bg-success")">@l.TipoMov</span></td>
+                                        <td><code>@l.Campo</code></td>
+                                        <td class="text-end">@(l.Factor != 1m ? l.Factor.ToString("N4") : "×1")</td>
+                                        <td class="text-end"><button class="btn btn-sm btn-outline-danger" @onclick="() => tempLineas.RemoveAt(idx)"><i class="bi bi-x-lg"></i></button></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                        <div class="mt-2">
+                            @if (tempLineas.Any(l => l.TipoMov == "Debe") && tempLineas.Any(l => l.TipoMov == "Haber"))
+                            {
+                                <span class="text-success"><i class="bi bi-check-circle-fill"></i> Plantilla tiene líneas Debe y Haber</span>
+                            }
+                            else
+                            {
+                                <span class="text-danger"><i class="bi bi-exclamation-triangle-fill"></i> Falta al menos una línea @(tempLineas.Any(l => l.TipoMov == "Debe") ? "Haber" : "Debe")</span>
+                            }
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseModal">Cancelar</button>
+                    <button class="btn btn-primary" @onclick="SavePlantilla"
+                            disabled="@(saving || string.IsNullOrWhiteSpace(formNombre) || tempLineas.Count < 2)">
+                        @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        @(isEditing ? "Actualizar" : "Crear")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<PlantillaContableDto> plantillas = new();
+    private List<CuentaContableDto> cuentasMov = new();
+    private bool loading = true;
+    private bool saving = false;
+    private bool seeding = false;
+    private string? successMessage;
+    private string? errorMessage;
+
+    // Modal
+    private bool showModal;
+    private bool isEditing;
+    private int editingId;
+    private string formCodigo = "";
+    private string formNombre = "";
+    private string formTipoDoc = "Recepcion";
+    private string? formDescripcion;
+    private string formGlosa = "";
+    private List<TempLinea> tempLineas = new();
+
+    // New line
+    private int newCuentaId;
+    private string newTipoMov = "Debe";
+    private string newCampoMonto = "Total";
+    private decimal newFactor = 1m;
+
+    private record TempLinea(int CuentaId, string CuentaCodigo, string CuentaNombre, string TipoMov, string Campo, decimal Factor);
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    private async Task LoadData()
+    {
+        loading = true; errorMessage = null;
+        try { plantillas = await PlantillaService.GetAllAsync(); }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { loading = false; }
+    }
+
+    private async Task LoadCuentas()
+    {
+        try { cuentasMov = await CuentaService.GetAllAsync(permiteMovimientos: true); }
+        catch (Exception ex) { errorMessage = ex.Message; }
+    }
+
+    private async Task ShowCreateModal()
+    {
+        isEditing = false; editingId = 0;
+        formCodigo = ""; formNombre = ""; formTipoDoc = "Recepcion"; formDescripcion = null; formGlosa = "";
+        tempLineas = new(); newCuentaId = 0; newTipoMov = "Debe"; newCampoMonto = "Total"; newFactor = 1m;
+        await LoadCuentas();
+        showModal = true;
+    }
+
+    private async Task ShowEditModal(PlantillaContableDto p)
+    {
+        isEditing = true; editingId = p.PlantillaContableId;
+        formCodigo = p.Codigo; formNombre = p.Nombre; formTipoDoc = p.TipoDocumento;
+        formDescripcion = p.Descripcion; formGlosa = p.GlosaPlantilla;
+        tempLineas = p.Lineas.Select(l => new TempLinea(l.CuentaContableId, l.CuentaCodigo, l.CuentaNombre, l.TipoMovimiento, l.CampoMonto, l.Factor)).ToList();
+        newCuentaId = 0; newTipoMov = "Debe"; newCampoMonto = "Total"; newFactor = 1m;
+        await LoadCuentas();
+        showModal = true;
+    }
+
+    private void CloseModal() => showModal = false;
+
+    private void AddLinea()
+    {
+        if (newCuentaId == 0) return;
+        var cuenta = cuentasMov.FirstOrDefault(c => c.CuentaContableId == newCuentaId);
+        if (cuenta is null) return;
+        tempLineas.Add(new TempLinea(cuenta.CuentaContableId, cuenta.Codigo, cuenta.Nombre, newTipoMov, newCampoMonto, newFactor));
+        newCuentaId = 0; newTipoMov = "Debe"; newCampoMonto = "Total"; newFactor = 1m;
+    }
+
+    private async Task SavePlantilla()
+    {
+        saving = true; errorMessage = null;
+        try
+        {
+            var lineas = tempLineas.Select(l => new CreatePlantillaLineaDto
+            {
+                CuentaContableId = l.CuentaId,
+                TipoMovimiento = l.TipoMov,
+                CampoMonto = l.Campo,
+                Factor = l.Factor
+            }).ToList();
+
+            if (isEditing)
+            {
+                var dto = new UpdatePlantillaContableDto { Nombre = formNombre, Descripcion = formDescripcion, GlosaPlantilla = formGlosa, Lineas = lineas };
+                var r = await PlantillaService.UpdateAsync(editingId, dto);
+                if (r.Success) { successMessage = "Plantilla actualizada."; CloseModal(); await LoadData(); }
+                else errorMessage = r.Message;
+            }
+            else
+            {
+                var dto = new CreatePlantillaContableDto { Codigo = formCodigo, Nombre = formNombre, TipoDocumento = formTipoDoc, Descripcion = formDescripcion, GlosaPlantilla = formGlosa, Lineas = lineas };
+                var r = await PlantillaService.CreateAsync(dto);
+                if (r.Success) { successMessage = $"Plantilla {formCodigo} creada."; CloseModal(); await LoadData(); }
+                else errorMessage = r.Message;
+            }
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { saving = false; }
+    }
+
+    private async Task DeletePlantilla(PlantillaContableDto p)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"¿Eliminar plantilla {p.Codigo} — {p.Nombre}?")) return;
+        try
+        {
+            var r = await PlantillaService.DeleteAsync(p.PlantillaContableId);
+            if (r.Success) { successMessage = "Plantilla eliminada."; await LoadData(); }
+            else errorMessage = r.Message;
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+    }
+
+    private async Task SeedPlantillas()
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", "¿Generar las plantillas estándar? Requiere que el plan de cuentas ya exista.")) return;
+        seeding = true; errorMessage = null;
+        try
+        {
+            var r = await PlantillaService.SeedPlantillasAsync();
+            if (r.Success) { successMessage = r.Message ?? "Plantillas generadas."; await LoadData(); }
+            else errorMessage = r.Message;
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { seeding = false; }
+    }
+
+    private static string GetTipoDocLabel(string tipo) => tipo switch
+    {
+        "Recepcion" => "?? Recepción",
+        "Importacion" => "?? Importación",
+        "Venta" => "?? Venta",
+        "CostoVenta" => "?? Costo Venta",
+        "AjusteInventario" => "?? Ajuste Inv.",
+        _ => tipo
+    };
+}

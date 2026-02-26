@@ -3,8 +3,10 @@ namespace AgoraHub360.ERP.Persistence.Context;
 using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Domain.Common;
 using AgoraHub360.ERP.Domain.Entities.Core;
+using AgoraHub360.ERP.Domain.Entities.CMP;
 using AgoraHub360.ERP.Domain.Entities.CST;
 using AgoraHub360.ERP.Domain.Entities.DOC;
+using AgoraHub360.ERP.Domain.Entities.ACC;
 using AgoraHub360.ERP.Domain.Entities.INV;
 using AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Entities.PRC;
@@ -101,6 +103,26 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     // ── INV: Inventory ────────────────────────────────────────────────────────
     public DbSet<MovimientoInventario> MovimientosInventario => Set<MovimientoInventario>();
     public DbSet<StockProducto> StockProductos => Set<StockProducto>();
+
+    // ── CMP: Compras ──────────────────────────────────────────────────────────
+    public DbSet<OrdenCompra> OrdenesCompra => Set<OrdenCompra>();
+    public DbSet<OrdenCompraLinea> OrdenCompraLineas => Set<OrdenCompraLinea>();
+    public DbSet<RecepcionCompra> RecepcionesCompra => Set<RecepcionCompra>();
+    public DbSet<RecepcionCompraLinea> RecepcionCompraLineas => Set<RecepcionCompraLinea>();
+    public DbSet<HojaImportacion> HojasImportacion => Set<HojaImportacion>();
+    public DbSet<GastoImportacion> GastosImportacion => Set<GastoImportacion>();
+    public DbSet<ImportacionLinea> ImportacionLineas => Set<ImportacionLinea>();
+
+    // ── ACC: Contabilidad ────────────────────────────────────────────────────
+    public DbSet<CuentaContable> CuentasContables => Set<CuentaContable>();
+    public DbSet<AsientoContable> AsientosContables => Set<AsientoContable>();
+    public DbSet<AsientoContableLinea> AsientoContableLineas => Set<AsientoContableLinea>();
+    public DbSet<PeriodoContable> PeriodosContables => Set<PeriodoContable>();
+    public DbSet<PlantillaContable> PlantillasContables => Set<PlantillaContable>();
+    public DbSet<PlantillaContableLinea> PlantillaContableLineas => Set<PlantillaContableLinea>();
+    public DbSet<TipoComprobante> TiposComprobante => Set<TipoComprobante>();
+    public DbSet<TipoCambio> TiposCambio => Set<TipoCambio>();
+    public DbSet<TipoPago> TiposPago => Set<TipoPago>();
 
     // ── Audit ─────────────────────────────────────────────────────────────────
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();

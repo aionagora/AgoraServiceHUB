@@ -1,0 +1,515 @@
+@page "/compras/importaciones"
+@attribute [Authorize]
+@inject HojaImportacionHttpService ImpService
+@inject OrdenCompraHttpService OcService
+@inject IJSRuntime JS
+
+<PageTitle>Importaciones (Landed Cost) - AgoraHub360 ERP</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3><i class="bi bi-globe-americas"></i> Hojas de Importación</h3>
+            <p class="text-muted mb-0">Distribución de gastos de importación (Landed Cost) sobre Órdenes de Compra</p>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="ShowCreateModal">
+                <i class="bi bi-plus-circle"></i> Nueva Importación
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle-fill"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @* ?? Lista ?? *@
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center py-3">
+            <span>Hojas de Importación <span class="badge bg-secondary ms-1">@hojas.Count</span></span>
+        </div>
+        <div class="card-body p-0">
+            @if (loading)
+            {
+                <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+            }
+            else if (hojas.Count == 0)
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox" style="font-size:2.5rem;"></i>
+                    <p class="text-muted mt-3">No hay hojas de importación registradas.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:40px"></th>
+                                <th>Número</th>
+                                <th>Fecha</th>
+                                <th>OC</th>
+                                <th>Ref. Aduanera</th>
+                                <th>Método</th>
+                                <th class="text-end">Total Gastos</th>
+                                <th>Estado</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var h in hojas)
+                            {
+                                <tr>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => ToggleDetail(h.HojaImportacionId)">
+                                            <i class="bi @(expandedId == h.HojaImportacionId ? "bi-chevron-up" : "bi-chevron-down")"></i>
+                                        </button>
+                                    </td>
+                                    <td><strong>@h.Numero</strong></td>
+                                    <td>@h.Fecha.ToString("dd/MM/yyyy")</td>
+                                    <td><span class="badge bg-info text-dark">@h.OrdenCompraNumero</span></td>
+                                    <td>@(h.ReferenciaAduanera ?? "—")</td>
+                                    <td><span class="badge bg-outline-secondary border">@h.MetodoDistribucionNombre</span></td>
+                                    <td class="text-end"><strong>@h.TotalGastos.ToString("N2")</strong></td>
+                                    <td>
+                                        @if (h.Liquidada)
+                                        {
+                                            <span class="badge bg-success"><i class="bi bi-check-circle"></i> Liquidada</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning text-dark">Pendiente</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        @if (!h.Liquidada)
+                                        {
+                                            <button class="btn btn-sm btn-outline-success" @onclick="() => ShowAddGastoModal(h.HojaImportacionId)" title="Agregar gasto"><i class="bi bi-plus-lg"></i></button>
+                                            <button class="btn btn-sm btn-success ms-1" @onclick="() => Liquidar(h)" title="Liquidar"><i class="bi bi-calculator"></i> Liquidar</button>
+                                            <button class="btn btn-sm btn-outline-danger ms-1" @onclick="() => DeleteHoja(h)" title="Eliminar"><i class="bi bi-trash"></i></button>
+                                        }
+                                    </td>
+                                </tr>
+                                @if (expandedId == h.HojaImportacionId)
+                                {
+                                    <tr>
+                                        <td colspan="9" class="bg-light p-0">
+                                            <div class="p-3">
+                                                @* ?? Gastos ?? *@
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <strong><i class="bi bi-cash-stack"></i> Gastos de Importación</strong>
+                                                </div>
+                                                <table class="table table-sm table-bordered mb-3">
+                                                    <thead>
+                                                        <tr><th>Tipo</th><th>Descripción</th><th class="text-end">Monto</th><th>Moneda</th><th class="text-end">T/C</th><th class="text-end">Monto Base</th><th>Referencia</th>
+                                                            @if (!h.Liquidada) { <th></th> }
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach (var g in h.Gastos)
+                                                        {
+                                                            <tr>
+                                                                <td><span class="badge bg-primary">@g.TipoGasto</span></td>
+                                                                <td>@(g.Descripcion ?? "—")</td>
+                                                                <td class="text-end">@g.Monto.ToString("N2")</td>
+                                                                <td>@g.MonedaId</td>
+                                                                <td class="text-end">@g.TasaCambio.ToString("N4")</td>
+                                                                <td class="text-end"><strong>@g.MontoBase.ToString("N2")</strong></td>
+                                                                <td><small>@(g.Referencia ?? "—")</small></td>
+                                                                @if (!h.Liquidada)
+                                                                {
+                                                                    <td class="text-end">
+                                                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveGasto(h.HojaImportacionId, g.GastoImportacionId)"><i class="bi bi-x-lg"></i></button>
+                                                                    </td>
+                                                                }
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                    <tfoot class="table-light">
+                                                        <tr>
+                                                            <td colspan="5" class="text-end"><strong>Total Gastos:</strong></td>
+                                                            <td class="text-end"><strong class="text-primary">@h.TotalGastos.ToString("N2")</strong></td>
+                                                            <td colspan="2"></td>
+                                                        </tr>
+                                                    </tfoot>
+                                                </table>
+
+                                                @* ?? Distribución (solo si liquidada) ?? *@
+                                                @if (h.Liquidada && h.Lineas.Count > 0)
+                                                {
+                                                    <div class="mb-2"><strong><i class="bi bi-diagram-3"></i> Distribución Landed Cost</strong></div>
+                                                    <table class="table table-sm table-bordered mb-0">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>#</th><th>Producto</th><th>Descripción</th>
+                                                                <th class="text-end">Cant. Recibida</th>
+                                                                <th class="text-end">FOB Unit.</th><th class="text-end">FOB Total</th>
+                                                                <th class="text-end">% Dist.</th><th class="text-end">Gasto Asig.</th>
+                                                                <th class="text-end bg-success bg-opacity-10">Landed Unit.</th>
+                                                                <th class="text-end bg-success bg-opacity-10">Landed Total</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @foreach (var l in h.Lineas)
+                                                            {
+                                                                <tr>
+                                                                    <td>@l.NumeroLineaOC</td>
+                                                                    <td><code>@l.ProductoSku</code></td>
+                                                                    <td>@l.Descripcion</td>
+                                                                    <td class="text-end">@l.CantidadRecepcionada.ToString("N2")</td>
+                                                                    <td class="text-end">@l.CostoFobUnitario.ToString("N4")</td>
+                                                                    <td class="text-end">@l.CostoFobTotal.ToString("N2")</td>
+                                                                    <td class="text-end">@((l.FactorDistribucion * 100).ToString("N2"))%</td>
+                                                                    <td class="text-end text-primary">@l.GastoAsignado.ToString("N2")</td>
+                                                                    <td class="text-end bg-success bg-opacity-10"><strong>@l.CostoLandedUnitario.ToString("N4")</strong></td>
+                                                                    <td class="text-end bg-success bg-opacity-10"><strong>@l.CostoLandedTotal.ToString("N2")</strong></td>
+                                                                </tr>
+                                                            }
+                                                        </tbody>
+                                                        <tfoot class="table-light">
+                                                            <tr>
+                                                                <td colspan="5" class="text-end"><strong>Totales:</strong></td>
+                                                                <td class="text-end"><strong>@h.Lineas.Sum(l => l.CostoFobTotal).ToString("N2")</strong></td>
+                                                                <td></td>
+                                                                <td class="text-end"><strong class="text-primary">@h.Lineas.Sum(l => l.GastoAsignado).ToString("N2")</strong></td>
+                                                                <td></td>
+                                                                <td class="text-end"><strong class="text-success">@h.Lineas.Sum(l => l.CostoLandedTotal).ToString("N2")</strong></td>
+                                                            </tr>
+                                                        </tfoot>
+                                                    </table>
+                                                }
+                                                @if (h.Observaciones is not null)
+                                                {
+                                                    <div class="mt-2"><small class="text-muted"><i class="bi bi-chat-left-text"></i> @h.Observaciones</small></div>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@* ?????? Modal Crear Hoja ?????? *@
+@if (showCreateModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-globe-americas"></i> Nueva Hoja de Importación</h5>
+                    <button type="button" class="btn-close" @onclick="() => showCreateModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-3">
+                        <div class="col-md-5">
+                            <label class="form-label">Orden de Compra (recepcionada) *</label>
+                            <select class="form-select" @bind="formOcId">
+                                <option value="0">-- Seleccionar --</option>
+                                @foreach (var oc in ocDisponibles)
+                                {
+                                    <option value="@oc.OrdenCompraId">@oc.Numero — @oc.ProveedorNombre (@oc.Estado) — Total: @oc.Total.ToString("N2")</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Fecha *</label>
+                            <input type="date" class="form-control" @bind="formFecha" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Método Distribución</label>
+                            <select class="form-select" @bind="formMetodo">
+                                <option value="3">Por Valor FOB</option>
+                                <option value="4">Por Unidades</option>
+                                <option value="1">Por Peso</option>
+                                <option value="2">Por Volumen</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Ref. Aduanera</label>
+                            <input class="form-control" @bind="formRefAduanera" placeholder="DUI/DIM" />
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label">Observaciones</label>
+                            <input class="form-control" @bind="formObs" />
+                        </div>
+                    </div>
+
+                    <hr />
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong><i class="bi bi-cash-stack"></i> Gastos de Importación</strong>
+                    </div>
+                    <div class="row g-2 align-items-end mb-2">
+                        <div class="col-md-2">
+                            <label class="form-label small">Tipo *</label>
+                            <select class="form-select form-select-sm" @bind="newGastoTipo">
+                                <option value="Flete">Flete</option>
+                                <option value="Seguro">Seguro</option>
+                                <option value="Arancel">Arancel</option>
+                                <option value="Agencia">Agencia</option>
+                                <option value="Almacenaje">Almacenaje</option>
+                                <option value="Inspección">Inspección</option>
+                                <option value="Otros">Otros</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small">Descripción</label>
+                            <input class="form-control form-control-sm" @bind="newGastoDesc" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small">Monto *</label>
+                            <input type="number" step="0.01" class="form-control form-control-sm" @bind="newGastoMonto" />
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label small">Moneda</label>
+                            <input class="form-control form-control-sm" @bind="newGastoMoneda" />
+                        </div>
+                        <div class="col-md-1">
+                            <label class="form-label small">T/C</label>
+                            <input type="number" step="0.0001" class="form-control form-control-sm" @bind="newGastoTc" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small">Referencia</label>
+                            <input class="form-control form-control-sm" @bind="newGastoRef" />
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-success btn-sm w-100" @onclick="AddTempGasto" disabled="@(newGastoMonto <= 0)"><i class="bi bi-plus"></i> Agregar</button>
+                        </div>
+                    </div>
+                    @if (tempGastos.Count > 0)
+                    {
+                        <table class="table table-sm table-bordered mb-0">
+                            <thead><tr><th>Tipo</th><th>Desc.</th><th class="text-end">Monto</th><th>Mon.</th><th class="text-end">T/C</th><th class="text-end">Base</th><th>Ref.</th><th></th></tr></thead>
+                            <tbody>
+                                @for (int i = 0; i < tempGastos.Count; i++)
+                                {
+                                    var idx = i;
+                                    var g = tempGastos[i];
+                                    <tr>
+                                        <td><span class="badge bg-primary">@g.TipoGasto</span></td>
+                                        <td>@(g.Descripcion ?? "—")</td>
+                                        <td class="text-end">@g.Monto.ToString("N2")</td>
+                                        <td>@g.MonedaId</td>
+                                        <td class="text-end">@g.TasaCambio.ToString("N4")</td>
+                                        <td class="text-end"><strong>@((g.Monto * g.TasaCambio).ToString("N2"))</strong></td>
+                                        <td>@(g.Referencia ?? "—")</td>
+                                        <td class="text-end"><button class="btn btn-sm btn-outline-danger" @onclick="() => tempGastos.RemoveAt(idx)"><i class="bi bi-x-lg"></i></button></td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <td colspan="5" class="text-end"><strong>Total:</strong></td>
+                                    <td class="text-end"><strong class="text-primary">@tempGastos.Sum(g => g.Monto * g.TasaCambio).ToString("N2")</strong></td>
+                                    <td colspan="2"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="() => showCreateModal = false">Cancelar</button>
+                    <button class="btn btn-primary" @onclick="SaveHoja" disabled="@(saving || formOcId == 0 || tempGastos.Count == 0)">
+                        @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        <i class="bi bi-globe-americas"></i> Crear Hoja
+                    </button>
+                    @if (tempGastos.Count == 0)
+                    {
+                        <small class="text-danger ms-2"><i class="bi bi-exclamation-triangle"></i> Agregue al menos un gasto</small>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* ?????? Modal Agregar Gasto (a hoja existente) ?????? *@
+@if (showGastoModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header"><h5 class="modal-title"><i class="bi bi-plus"></i> Agregar Gasto</h5><button type="button" class="btn-close" @onclick="() => showGastoModal = false"></button></div>
+                <div class="modal-body">
+                    <div class="mb-3"><label class="form-label">Tipo *</label>
+                        <select class="form-select" @bind="gastoFormTipo">
+                            <option value="Flete">Flete</option><option value="Seguro">Seguro</option><option value="Arancel">Arancel</option>
+                            <option value="Agencia">Agencia</option><option value="Almacenaje">Almacenaje</option><option value="Inspección">Inspección</option><option value="Otros">Otros</option>
+                        </select>
+                    </div>
+                    <div class="mb-3"><label class="form-label">Descripción</label><input class="form-control" @bind="gastoFormDesc" /></div>
+                    <div class="row">
+                        <div class="col-md-4 mb-3"><label class="form-label">Monto *</label><input type="number" step="0.01" class="form-control" @bind="gastoFormMonto" /></div>
+                        <div class="col-md-4 mb-3"><label class="form-label">Moneda</label><input class="form-control" @bind="gastoFormMoneda" /></div>
+                        <div class="col-md-4 mb-3"><label class="form-label">T/C</label><input type="number" step="0.0001" class="form-control" @bind="gastoFormTc" /></div>
+                    </div>
+                    <div class="mb-3"><label class="form-label">Referencia</label><input class="form-control" @bind="gastoFormRef" /></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="() => showGastoModal = false">Cancelar</button>
+                    <button class="btn btn-success" @onclick="SaveGasto" disabled="@(saving || gastoFormMonto <= 0)">
+                        @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> } Agregar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<HojaImportacionDto> hojas = new();
+    private List<OrdenCompraDto> ocDisponibles = new();
+    private bool loading = true;
+    private bool saving = false;
+    private string? successMessage;
+    private string? errorMessage;
+    private long expandedId;
+
+    // Create modal
+    private bool showCreateModal;
+    private long formOcId;
+    private DateTime formFecha = DateTime.Today;
+    private byte formMetodo = 3;
+    private string? formRefAduanera;
+    private string? formObs;
+    private List<CreateGastoImportacionDto> tempGastos = new();
+    private string newGastoTipo = "Flete";
+    private string? newGastoDesc;
+    private decimal newGastoMonto;
+    private string newGastoMoneda = "BOB";
+    private decimal newGastoTc = 1;
+    private string? newGastoRef;
+
+    // Add gasto modal
+    private bool showGastoModal;
+    private long gastoModalHojaId;
+    private string gastoFormTipo = "Flete";
+    private string? gastoFormDesc;
+    private decimal gastoFormMonto;
+    private string gastoFormMoneda = "BOB";
+    private decimal gastoFormTc = 1;
+    private string? gastoFormRef;
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    private async Task LoadData()
+    {
+        loading = true; errorMessage = null;
+        try { hojas = await ImpService.GetAllAsync(); }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { loading = false; }
+    }
+
+    private void ToggleDetail(long id) => expandedId = expandedId == id ? 0 : id;
+
+    // ?? Create modal ??
+    private async Task ShowCreateModal()
+    {
+        formOcId = 0; formFecha = DateTime.Today; formMetodo = 3;
+        formRefAduanera = null; formObs = null; tempGastos = new(); ResetNewGasto();
+        var todas = await OcService.GetAllAsync();
+        ocDisponibles = todas.Where(o => o.Estado is "Aprobado" or "RecepcionParcial" or "Cerrado").ToList();
+        showCreateModal = true;
+    }
+
+    private void ResetNewGasto()
+    {
+        newGastoTipo = "Flete"; newGastoDesc = null; newGastoMonto = 0;
+        newGastoMoneda = "BOB"; newGastoTc = 1; newGastoRef = null;
+    }
+
+    private void AddTempGasto()
+    {
+        if (newGastoMonto <= 0) return;
+        tempGastos.Add(new CreateGastoImportacionDto(newGastoTipo, newGastoDesc, newGastoMonto, newGastoMoneda, newGastoTc, newGastoRef));
+        ResetNewGasto();
+    }
+
+    private async Task SaveHoja()
+    {
+        saving = true; errorMessage = null;
+        try
+        {
+            var dto = new CreateHojaImportacionDto(formOcId, formFecha, formRefAduanera, formObs, formMetodo, tempGastos.Count > 0 ? tempGastos : null);
+            var r = await ImpService.CreateAsync(dto);
+            if (r.Success) { successMessage = $"Hoja {r.Data?.Numero} creada. Puede agregar más gastos o liquidar."; showCreateModal = false; await LoadData(); }
+            else errorMessage = r.Message;
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { saving = false; }
+    }
+
+    // ?? Add gasto modal ??
+    private void ShowAddGastoModal(long hojaId)
+    {
+        gastoModalHojaId = hojaId; gastoFormTipo = "Flete"; gastoFormDesc = null;
+        gastoFormMonto = 0; gastoFormMoneda = "BOB"; gastoFormTc = 1; gastoFormRef = null;
+        showGastoModal = true;
+    }
+
+    private async Task SaveGasto()
+    {
+        saving = true; errorMessage = null;
+        try
+        {
+            var r = await ImpService.AddGastoAsync(gastoModalHojaId, new AddGastoImportacionDto(gastoFormTipo, gastoFormDesc, gastoFormMonto, gastoFormMoneda, gastoFormTc, gastoFormRef));
+            if (r.Success) { successMessage = "Gasto agregado."; showGastoModal = false; await LoadData(); } else errorMessage = r.Message;
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { saving = false; }
+    }
+
+    private async Task RemoveGasto(long hojaId, long gastoId)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", "¿Eliminar este gasto?")) return;
+        try
+        {
+            var r = await ImpService.RemoveGastoAsync(hojaId, gastoId);
+            if (r.Success) { successMessage = "Gasto eliminado."; await LoadData(); } else errorMessage = r.Message;
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+    }
+
+    // ?? Liquidar ??
+    private async Task Liquidar(HojaImportacionDto hoja)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"¿Liquidar {hoja.Numero}? Esto distribuirá los gastos y actualizará los costos de inventario.")) return;
+        try
+        {
+            var r = await ImpService.LiquidarAsync(hoja.HojaImportacionId);
+            if (r.Success) { successMessage = $"{hoja.Numero} liquidada. Costos de inventario actualizados."; await LoadData(); expandedId = hoja.HojaImportacionId; }
+            else errorMessage = r.Message;
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+    }
+
+    private async Task DeleteHoja(HojaImportacionDto hoja)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"¿Eliminar {hoja.Numero}?")) return;
+        try
+        {
+            var r = await ImpService.DeleteAsync(hoja.HojaImportacionId);
+            if (r.Success) { successMessage = "Hoja eliminada."; await LoadData(); } else errorMessage = r.Message;
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+    }
+}

@@ -49,6 +49,19 @@ public static class DependencyInjection
         // INV
         services.AddScoped<IMovimientoInventarioService, MovimientoInventarioService>();
 
+        // CMP
+        services.AddScoped<IOrdenCompraService, OrdenCompraService>();
+        services.AddScoped<IRecepcionCompraService, RecepcionCompraService>();
+        services.AddScoped<IHojaImportacionService, HojaImportacionService>();
+
+        // ACC
+        services.AddScoped<ICuentaContableService, CuentaContableService>();
+        services.AddScoped<IAsientoContableService, AsientoContableService>();
+        services.AddScoped<IPeriodoContableService, PeriodoContableService>();
+        services.AddScoped<IPlantillaContableService, PlantillaContableService>();
+        services.AddScoped<IContabilizacionService, ContabilizacionService>();
+        services.AddScoped<IEstadoFinancieroService, EstadoFinancieroService>();
+
         return services;
     }
 }

@@ -1,0 +1,828 @@
+@page "/contabilidad/asientos"
+@attribute [Authorize]
+@inject AsientoContableHttpService AsientoService
+@inject CuentaContableHttpService CuentaService
+@inject IJSRuntime JS
+
+<PageTitle>Comprobantes Contables - AgoraHub360 ERP</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3><i class="bi bi-journal-text"></i> Comprobantes Contables</h3>
+            <p class="text-muted mb-0">Libro Diario • Registro de comprobantes contables</p>
+        </div>
+        <div class="col-auto d-flex gap-2">
+            <button class="btn btn-outline-success btn-sm" @onclick="SeedCatalogos" disabled="@seeding">
+                @if (seeding) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                <i class="bi bi-magic"></i> Generar Catálogos
+            </button>
+            <button class="btn btn-primary" @onclick="NuevoComprobante">
+                <i class="bi bi-plus-circle"></i> Nuevo Comprobante
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle-fill"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @* ?????? VISTA LISTA ?????? *@
+    @if (!showForm)
+    {
+        <div class="card mb-3">
+            <div class="card-body py-2">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-2">
+                        <label class="form-label mb-1 small">Desde</label>
+                        <input type="date" class="form-control form-control-sm" @bind="filtroDesde" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1 small">Hasta</label>
+                        <input type="date" class="form-control form-control-sm" @bind="filtroHasta" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1 small">Tipo</label>
+                        <select class="form-select form-select-sm" @bind="filtroTipoComp">
+                            <option value="0">Todos</option>
+                            @foreach (var t in tiposComprobante)
+                            {
+                                <option value="@t.TipoComprobanteId">@t.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label mb-1 small">Estado</label>
+                        <select class="form-select form-select-sm" @bind="filtroEstado">
+                            <option value="">Todos</option>
+                            <option value="Borrador">Borrador</option>
+                            <option value="Contabilizado">Contabilizado</option>
+                            <option value="Anulado">Anulado</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <input class="form-control form-control-sm" @bind="filtroSearch" placeholder="Buscar..." />
+                    </div>
+                    <div class="col-md-auto">
+                        <button class="btn btn-sm btn-primary" @onclick="LoadData"><i class="bi bi-search"></i></button>
+                    </div>
+                    <div class="col-md-auto ms-auto">
+                        <button class="btn btn-sm btn-success" @onclick="ExportarExcel" disabled="@(exportando || asientos.Count == 0)" title="Exportar a Excel">
+                            @if (exportando) 
+                            { 
+                                <span class="spinner-border spinner-border-sm me-1"></span> 
+                            }
+                            else
+                            {
+                                <i class="bi bi-file-earmark-excel me-1"></i>
+                            }
+                            Exportar Excel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body p-0">
+                @if (loading)
+                {
+                    <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+                }
+                else if (asientos.Count == 0)
+                {
+                    <div class="text-center py-5">
+                        <i class="bi bi-journal-x" style="font-size:2.5rem;"></i>
+                        <p class="text-muted mt-3">No hay comprobantes.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Tipo</th>
+                                    <th>Número</th>
+                                    <th>Fecha</th>
+                                    <th>Gestión</th>
+                                    <th>Concepto / Glosa</th>
+                                    <th>Registro</th>
+                                    <th>T/C</th>
+                                    <th>Documento</th>
+                                    <th class="text-end">Debe</th>
+                                    <th class="text-end">Haber</th>
+                                    <th>Estado</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var a in asientos)
+                                {
+                                    <tr class="@(a.Estado == "Anulado" ? "text-decoration-line-through text-muted" : "")" style="cursor:pointer" @onclick="() => VerComprobante(a)">
+                                        <td><span class="badge bg-secondary">@a.TipoComprobanteCodigo</span></td>
+                                        <td><strong>@a.Numero</strong></td>
+                                        <td>@a.Fecha.ToString("dd/MM/yyyy")</td>
+                                        <td>@a.Gestion</td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(a.Concepto))
+                                            {
+                                                <small class="d-block fw-semibold">@a.Concepto</small>
+                                            }
+                                            <small class="text-muted">@(a.Glosa.Length > 60 ? a.Glosa[..60] + "..." : a.Glosa)</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge @(a.TipoRegistro == "Automático" ? "bg-info text-dark" : "bg-outline-secondary border")">
+                                                @a.TipoRegistro
+                                            </span>
+                                        </td>
+                                        <td>
+                                            @if (a.ValorTipoCambio.HasValue)
+                                            {
+                                                <small>@a.TipoCambioMoneda @a.ValorTipoCambio.Value.ToString("N2")</small>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(a.TipoPagoCodigo) && a.TipoPagoCodigo != "S/D")
+                                            {
+                                                <small>@a.TipoPagoNombre</small>
+                                                @if (!string.IsNullOrEmpty(a.NumeroDocumentoPago))
+                                                {
+                                                    <small class="text-muted d-block">@a.NumeroDocumentoPago</small>
+                                                }
+                                            }
+                                        </td>
+                                        <td class="text-end fw-semibold">@a.TotalDebe.ToString("N2")</td>
+                                        <td class="text-end fw-semibold">@a.TotalHaber.ToString("N2")</td>
+                                        <td>
+                                            <span class="badge @GetEstadoBadge(a.Estado)">@a.Estado</span>
+                                        </td>
+                                        <td class="text-end">
+                                            @if (a.Estado == "Borrador")
+                                            {
+                                                <button class="btn btn-sm btn-outline-success" @onclick:stopPropagation @onclick="() => Contabilizar(a)" title="Contabilizar">
+                                                    <i class="bi bi-check2-circle"></i>
+                                                </button>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    @* ?????? VISTA FORMULARIO (Crear/Ver/Editar) ?????? *@
+    @if (showForm)
+    {
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="bi bi-journal-text"></i>
+                    @if (isViewing) { <text>Comprobante @formNumero</text> }
+                    else if (isEditing) { <text>Editar Comprobante @formNumero</text> }
+                    else { <text>Nuevo Comprobante</text> }
+                </h5>
+                <div>
+                    @if (isViewing)
+                    {
+                        <span class="badge @GetEstadoBadge(viewingEstado) fs-6">@viewingEstado</span>
+                    }
+                    <button class="btn btn-sm btn-outline-secondary ms-2" @onclick="VolverALista"><i class="bi bi-arrow-left"></i> Volver</button>
+                </div>
+            </div>
+            <div class="card-body">
+                @* ?? Cabecera ?? *@
+                <div class="row g-3 mb-3">
+                    <div class="col-md-2">
+                        <label class="form-label">Tipo Comprobante *</label>
+                        <select class="form-select" @bind="formTipoCompId" disabled="@isViewing">
+                            @foreach (var t in tiposComprobante)
+                            {
+                                <option value="@t.TipoComprobanteId">@t.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Nro Comprobante</label>
+                        <input class="form-control" value="@formNumero" readonly />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Fecha *</label>
+                        <input type="date" class="form-control" @bind="formFecha" disabled="@isViewing" />
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label">Gestión</label>
+                        <input class="form-control" value="@formFecha.Year" readonly />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Tipo Cambio</label>
+                        <select class="form-select" @bind="formTipoCambioId" disabled="@isViewing">
+                            <option value="0">-- Sin T/C --</option>
+                            @foreach (var tc in tiposCambio)
+                            {
+                                <option value="@tc.TipoCambioId">@tc.Moneda — @tc.TasaVenta.ToString("N2")</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Documento Pago</label>
+                        <select class="form-select" @bind="formTipoPagoId" disabled="@isViewing">
+                            @foreach (var tp in tiposPago)
+                            {
+                                <option value="@tp.TipoPagoId">@tp.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-1">
+                        <label class="form-label">Nro Doc.</label>
+                        <input class="form-control" @bind="formNroDocPago" disabled="@isViewing" placeholder="Nro..." />
+                    </div>
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Concepto (por concepto de)</label>
+                        <input class="form-control" @bind="formConcepto" disabled="@isViewing" placeholder="Por concepto de..." />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Glosa General *</label>
+                        <input class="form-control" @bind="formGlosa" disabled="@isViewing" />
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Registrado por</label>
+                        <input class="form-control" value="@formRegistradoPor" readonly />
+                    </div>
+                </div>
+
+                <hr />
+
+                @* ?? Detalle: GridView de líneas ?? *@
+                <h6><i class="bi bi-list-ol"></i> Detalle del Comprobante</h6>
+
+                @if (!isViewing)
+                {
+                    <div class="row g-2 align-items-end mb-2">
+                        <div class="col-md-5">
+                            <label class="form-label small">Cuenta (buscar por código o nombre)</label>
+                            <input class="form-control form-control-sm" list="cuentasList" @bind="searchCuenta" @bind:event="oninput"
+                                   @onchange="OnCuentaSelected" placeholder="Ej: 1.1.3.01 o Inventario..." />
+                            <datalist id="cuentasList">
+                                @foreach (var c in cuentasFiltradas)
+                                {
+                                    <option value="@c.Codigo — @c.Nombre" />
+                                }
+                            </datalist>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small">Glosa detalle</label>
+                            <input class="form-control form-control-sm" @bind="newGlosa" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small">Debe</label>
+                            <input type="number" step="0.01" class="form-control form-control-sm" @bind="newDebe" />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small">Haber</label>
+                            <input type="number" step="0.01" class="form-control form-control-sm" @bind="newHaber" />
+                        </div>
+                        <div class="col-md-1">
+                            <button class="btn btn-success btn-sm w-100" @onclick="AddLinea" disabled="@(newCuentaId == 0)">
+                                <i class="bi bi-plus"></i> Agregar
+                            </button>
+                        </div>
+                    </div>
+                }
+
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:40px">#</th>
+                                <th style="width:120px">Código</th>
+                                <th>Nombre Cuenta</th>
+                                <th>Glosa Detalle</th>
+                                <th class="text-end" style="width:130px">Debe</th>
+                                <th class="text-end" style="width:130px">Haber</th>
+                                @if (!isViewing) { <th style="width:80px"></th> }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (tempLineas.Count == 0)
+                            {
+                                <tr><td colspan="@(isViewing ? 6 : 7)" class="text-center text-muted py-3">Sin líneas de detalle</td></tr>
+                            }
+                            @for (int i = 0; i < tempLineas.Count; i++)
+                            {
+                                var idx = i;
+                                var l = tempLineas[i];
+                                <tr>
+                                    <td class="text-center">@(i + 1)</td>
+                                    <td><code>@l.CuentaCodigo</code></td>
+                                    <td>@l.CuentaNombre</td>
+                                    <td>
+                                        @if (!isViewing && editingLineIdx == idx)
+                                        {
+                                            <input class="form-control form-control-sm" @bind="editGlosa" />
+                                        }
+                                        else
+                                        {
+                                            @l.Glosa
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        @if (!isViewing && editingLineIdx == idx)
+                                        {
+                                            <input type="number" step="0.01" class="form-control form-control-sm text-end" @bind="editDebe" />
+                                        }
+                                        else
+                                        {
+                                            <span class="@(l.Debe > 0 ? "fw-semibold text-primary" : "")">@l.Debe.ToString("N2")</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        @if (!isViewing && editingLineIdx == idx)
+                                        {
+                                            <input type="number" step="0.01" class="form-control form-control-sm text-end" @bind="editHaber" />
+                                        }
+                                        else
+                                        {
+                                            <span class="@(l.Haber > 0 ? "fw-semibold text-success" : "")">@l.Haber.ToString("N2")</span>
+                                        }
+                                    </td>
+                                    @if (!isViewing)
+                                    {
+                                        <td class="text-center">
+                                            @if (editingLineIdx == idx)
+                                            {
+                                                <button class="btn btn-sm btn-outline-success" @onclick="SaveLineEdit" title="Guardar"><i class="bi bi-check"></i></button>
+                                                <button class="btn btn-sm btn-outline-secondary" @onclick="CancelLineEdit" title="Cancelar"><i class="bi bi-x"></i></button>
+                                            }
+                                            else
+                                            {
+                                                <button class="btn btn-sm btn-outline-primary" @onclick="() => StartLineEdit(idx)" title="Editar"><i class="bi bi-pencil"></i></button>
+                                                <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveLinea(idx)" title="Quitar"><i class="bi bi-trash"></i></button>
+                                            }
+                                        </td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr class="fw-bold">
+                                <td colspan="4" class="text-end">TOTALES:</td>
+                                <td class="text-end text-primary">@TotalDebe.ToString("N2")</td>
+                                <td class="text-end text-success">@TotalHaber.ToString("N2")</td>
+                                @if (!isViewing) { <td></td> }
+                            </tr>
+                            <tr>
+                                <td colspan="@(isViewing ? 6 : 7)" class="text-end">
+                                    @if (TotalDebe == TotalHaber && tempLineas.Count >= 2)
+                                    {
+                                        <span class="text-success"><i class="bi bi-check-circle-fill"></i> Comprobante cuadrado — Diferencia: 0.00</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-danger"><i class="bi bi-exclamation-triangle-fill"></i> Diferencia: @Math.Abs(TotalDebe - TotalHaber).ToString("N2")</span>
+                                    }
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            @* ?? Barra de acciones inferior ?? *@
+            <div class="card-footer d-flex justify-content-between align-items-center">
+                <div class="d-flex gap-2">
+                    @if (isViewing && viewingEstado == "Borrador")
+                    {
+                        <button class="btn btn-warning" @onclick="EditarComprobante"><i class="bi bi-pencil-square"></i> Editar</button>
+                    }
+                    @if (isViewing && viewingEstado == "Contabilizado")
+                    {
+                        <button class="btn btn-danger" @onclick="AnularComprobante"><i class="bi bi-x-octagon"></i> Anular</button>
+                    }
+                    @if (isViewing)
+                    {
+                        <button class="btn btn-outline-info" @onclick="CopiarComprobante"><i class="bi bi-copy"></i> Copiar este comprobante</button>
+                    }
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-primary" @onclick="NuevoComprobante"><i class="bi bi-file-earmark-plus"></i> Nuevo</button>
+                    @if (!isViewing)
+                    {
+                        <button class="btn btn-primary" @onclick="GuardarComprobante"
+                                disabled="@(saving || string.IsNullOrWhiteSpace(formGlosa) || tempLineas.Count < 2 || TotalDebe != TotalHaber)">
+                            @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                            <i class="bi bi-floppy"></i> Guardar
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@* ?????? Popup de error emergente ?????? *@
+@if (showPopupError)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-danger">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill"></i> Error de Validación</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="() => showPopupError = false"></button>
+                </div>
+                <div class="modal-body">
+                    <p>@popupErrorMessage</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-danger" @onclick="() => showPopupError = false">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    // ?? State ??
+    private List<AsientoContableDto> asientos = new();
+    private List<CuentaContableDto> cuentasMov = new();
+    private List<TipoComprobanteDto> tiposComprobante = new();
+    private List<TipoCambioDto> tiposCambio = new();
+    private List<TipoPagoDto> tiposPago = new();
+    private bool loading = true;
+    private bool saving = false;
+    private bool seeding = false;
+    private string? successMessage;
+    private string? errorMessage;
+    private bool exportando = false;
+
+    // ?? Filtros ??
+    private DateTime? filtroDesde;
+    private DateTime? filtroHasta;
+    private string filtroEstado = "";
+    private int filtroTipoComp = 0;
+    private string filtroSearch = "";
+
+    // ?? Form ??
+    private bool showForm = false;
+    private bool isViewing = false;
+    private bool isEditing = false;
+    private long editingId = 0;
+    private string formNumero = "(auto)";
+    private int formTipoCompId;
+    private DateTime formFecha = DateTime.Today;
+    private string? formConcepto;
+    private string formGlosa = "";
+    private int formTipoCambioId = 0;
+    private int formTipoPagoId;
+    private string? formNroDocPago;
+    private string formRegistradoPor = "";
+    private string viewingEstado = "";
+    private List<TempLinea> tempLineas = new();
+
+    // ?? New line ??
+    private string searchCuenta = "";
+    private int newCuentaId;
+    private string? newGlosa;
+    private decimal newDebe;
+    private decimal newHaber;
+
+    // ?? Edit line ??
+    private int editingLineIdx = -1;
+    private string? editGlosa;
+    private decimal editDebe;
+    private decimal editHaber;
+
+    // ?? Popup ??
+    private bool showPopupError;
+    private string popupErrorMessage = "";
+
+    private decimal TotalDebe => tempLineas.Sum(l => l.Debe);
+    private decimal TotalHaber => tempLineas.Sum(l => l.Haber);
+
+    private IEnumerable<CuentaContableDto> cuentasFiltradas =>
+        string.IsNullOrWhiteSpace(searchCuenta) ? cuentasMov :
+        cuentasMov.Where(c => c.Codigo.Contains(searchCuenta, StringComparison.OrdinalIgnoreCase)
+            || c.Nombre.Contains(searchCuenta, StringComparison.OrdinalIgnoreCase)).Take(20);
+
+    private record TempLinea(int CuentaId, string CuentaCodigo, string CuentaNombre, string? Glosa, decimal Debe, decimal Haber);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCatalogos();
+        await LoadData();
+    }
+
+    private async Task LoadCatalogos()
+    {
+        try
+        {
+            tiposComprobante = await AsientoService.GetTiposComprobanteAsync();
+            tiposCambio = await AsientoService.GetTiposCambioAsync();
+            tiposPago = await AsientoService.GetTiposPagoAsync();
+
+            if (tiposComprobante.Count > 0) formTipoCompId = tiposComprobante[0].TipoComprobanteId;
+            if (tiposPago.Count > 0) formTipoPagoId = tiposPago.FirstOrDefault(p => p.Codigo == "S/D")?.TipoPagoId ?? tiposPago[0].TipoPagoId;
+
+            // Default tipo cambio = USD
+            var usd = tiposCambio.FirstOrDefault(t => t.Moneda == "USD");
+            if (usd is not null) formTipoCambioId = usd.TipoCambioId;
+        }
+        catch { }
+    }
+
+    private async Task LoadCuentas()
+    {
+        if (cuentasMov.Count == 0)
+            cuentasMov = await CuentaService.GetAllAsync(permiteMovimientos: true);
+    }
+
+    private async Task LoadData()
+    {
+        loading = true; errorMessage = null;
+        try
+        {
+            var tipoId = filtroTipoComp > 0 ? (int?)filtroTipoComp : null;
+            asientos = await AsientoService.GetAllAsync(filtroDesde, filtroHasta, 
+                string.IsNullOrEmpty(filtroEstado) ? null : filtroEstado, tipoId, 
+                string.IsNullOrEmpty(filtroSearch) ? null : filtroSearch);
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { loading = false; }
+    }
+
+    // ?? Navegación ??
+
+    private async Task NuevoComprobante()
+    {
+        await LoadCuentas();
+        isViewing = false; isEditing = false; editingId = 0;
+        formNumero = "(auto)";
+        formTipoCompId = tiposComprobante.Count > 0 ? tiposComprobante[0].TipoComprobanteId : 0;
+        formFecha = DateTime.Today;
+        formConcepto = null; formGlosa = "";
+        formTipoCambioId = tiposCambio.FirstOrDefault(t => t.Moneda == "USD")?.TipoCambioId ?? 0;
+        formTipoPagoId = tiposPago.FirstOrDefault(p => p.Codigo == "S/D")?.TipoPagoId ?? 0;
+        formNroDocPago = null;
+        formRegistradoPor = "(usuario actual)";
+        viewingEstado = "";
+        tempLineas = new();
+        editingLineIdx = -1;
+        showForm = true;
+    }
+
+    private async Task VerComprobante(AsientoContableDto a)
+    {
+        await LoadCuentas();
+        isViewing = true; isEditing = false; editingId = a.AsientoContableId;
+        formNumero = a.Numero;
+        formTipoCompId = a.TipoComprobanteId ?? 0;
+        formFecha = a.Fecha;
+        formConcepto = a.Concepto;
+        formGlosa = a.Glosa;
+        formTipoCambioId = a.TipoCambioId ?? 0;
+        formTipoPagoId = a.TipoPagoId ?? 0;
+        formNroDocPago = a.NumeroDocumentoPago;
+        formRegistradoPor = a.RegistradoPor ?? "";
+        viewingEstado = a.Estado;
+        tempLineas = a.Lineas.Select(l => new TempLinea(l.CuentaContableId, l.CuentaCodigo, l.CuentaNombre, l.Glosa, l.Debe, l.Haber)).ToList();
+        editingLineIdx = -1;
+        showForm = true;
+    }
+
+    private void EditarComprobante()
+    {
+        isViewing = false; isEditing = true;
+        editingLineIdx = -1;
+    }
+
+    private async Task VolverALista()
+    {
+        showForm = false;
+        await LoadData();
+    }
+
+    // ?? Líneas ??
+
+    private void OnCuentaSelected(ChangeEventArgs e)
+    {
+        var val = e.Value?.ToString() ?? "";
+        var match = cuentasMov.FirstOrDefault(c => $"{c.Codigo} — {c.Nombre}" == val);
+        newCuentaId = match?.CuentaContableId ?? 0;
+    }
+
+    private void AddLinea()
+    {
+        if (newCuentaId == 0)
+        {
+            ShowPopup("Seleccione una cuenta contable válida."); return;
+        }
+        if (newDebe > 0 && newHaber > 0)
+        {
+            ShowPopup("Una línea no puede tener montos en Debe y Haber simultáneamente."); return;
+        }
+        if (newDebe == 0 && newHaber == 0)
+        {
+            ShowPopup("Ingrese un monto en Debe o en Haber."); return;
+        }
+
+        var cuenta = cuentasMov.First(c => c.CuentaContableId == newCuentaId);
+        tempLineas.Add(new TempLinea(cuenta.CuentaContableId, cuenta.Codigo, cuenta.Nombre, newGlosa, newDebe, newHaber));
+        searchCuenta = ""; newCuentaId = 0; newGlosa = null; newDebe = 0; newHaber = 0;
+    }
+
+    private void RemoveLinea(int idx)
+    {
+        if (editingLineIdx == idx) editingLineIdx = -1;
+        tempLineas.RemoveAt(idx);
+    }
+
+    private void StartLineEdit(int idx)
+    {
+        editingLineIdx = idx;
+        var l = tempLineas[idx];
+        editGlosa = l.Glosa; editDebe = l.Debe; editHaber = l.Haber;
+    }
+
+    private void SaveLineEdit()
+    {
+        if (editDebe > 0 && editHaber > 0)
+        {
+            ShowPopup("Una línea no puede tener montos en Debe y Haber simultáneamente."); return;
+        }
+        if (editDebe == 0 && editHaber == 0)
+        {
+            ShowPopup("Ingrese un monto en Debe o en Haber."); return;
+        }
+        var old = tempLineas[editingLineIdx];
+        tempLineas[editingLineIdx] = old with { Glosa = editGlosa, Debe = editDebe, Haber = editHaber };
+        editingLineIdx = -1;
+    }
+
+    private void CancelLineEdit() => editingLineIdx = -1;
+
+    // ?? Guardar ??
+
+    private async Task GuardarComprobante()
+    {
+        if (TotalDebe != TotalHaber)
+        {
+            ShowPopup($"El comprobante no cuadra. Debe: {TotalDebe:N2}, Haber: {TotalHaber:N2}. Diferencia: {Math.Abs(TotalDebe - TotalHaber):N2}");
+            return;
+        }
+
+        saving = true; errorMessage = null;
+        try
+        {
+            var lineas = tempLineas.Select(l => new CreateAsientoLineaDto
+            {
+                CuentaContableId = l.CuentaId, Debe = l.Debe, Haber = l.Haber, Glosa = l.Glosa
+            }).ToList();
+
+            if (isEditing)
+            {
+                var dto = new UpdateAsientoContableDto
+                {
+                    TipoComprobanteId = formTipoCompId, Fecha = formFecha, Concepto = formConcepto,
+                    Glosa = formGlosa, TipoCambioId = formTipoCambioId > 0 ? formTipoCambioId : null,
+                    TipoPagoId = formTipoPagoId > 0 ? formTipoPagoId : null,
+                    NumeroDocumentoPago = formNroDocPago, Lineas = lineas
+                };
+                var r = await AsientoService.UpdateAsync(editingId, dto);
+                if (r.Success) { successMessage = "Comprobante actualizado."; await VerComprobante(r.Data!); }
+                else ShowPopup(r.Message ?? "Error al actualizar.");
+            }
+            else
+            {
+                var dto = new CreateAsientoContableDto
+                {
+                    TipoComprobanteId = formTipoCompId, Fecha = formFecha, Concepto = formConcepto,
+                    Glosa = formGlosa, TipoCambioId = formTipoCambioId > 0 ? formTipoCambioId : null,
+                    TipoPagoId = formTipoPagoId > 0 ? formTipoPagoId : null,
+                    NumeroDocumentoPago = formNroDocPago, Lineas = lineas
+                };
+                var r = await AsientoService.CreateAsync(dto);
+                if (r.Success) { successMessage = "Comprobante creado."; await VerComprobante(r.Data!); }
+                else ShowPopup(r.Message ?? "Error al crear.");
+            }
+        }
+        catch (Exception ex) { ShowPopup(ex.Message); }
+        finally { saving = false; }
+    }
+
+    // ?? Acciones ??
+
+    private async Task Contabilizar(AsientoContableDto a)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"¿Contabilizar comprobante {a.Numero}?")) return;
+        try
+        {
+            var r = await AsientoService.ContabilizarAsync(a.AsientoContableId);
+            if (r.Success) { successMessage = $"Comprobante {a.Numero} contabilizado."; await LoadData(); }
+            else ShowPopup(r.Message ?? "Error.");
+        }
+        catch (Exception ex) { ShowPopup(ex.Message); }
+    }
+
+    private async Task AnularComprobante()
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"¿Anular comprobante {formNumero}? Se revertirán los saldos.")) return;
+        try
+        {
+            var r = await AsientoService.AnularAsync(editingId);
+            if (r.Success) { successMessage = "Comprobante anulado."; await VerComprobante(r.Data!); }
+            else ShowPopup(r.Message ?? "Error.");
+        }
+        catch (Exception ex) { ShowPopup(ex.Message); }
+    }
+
+    private async Task CopiarComprobante()
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", $"¿Crear una copia del comprobante {formNumero}?")) return;
+        try
+        {
+            var r = await AsientoService.CopiarAsync(editingId);
+            if (r.Success) { successMessage = $"Comprobante copiado como {r.Data!.Numero}."; await VerComprobante(r.Data!); }
+            else ShowPopup(r.Message ?? "Error.");
+        }
+        catch (Exception ex) { ShowPopup(ex.Message); }
+    }
+
+    private async Task SeedCatalogos()
+    {
+        seeding = true;
+        try
+        {
+            var r = await AsientoService.SeedCatalogosAsync();
+            if (r.Success) { successMessage = r.Message ?? "Catálogos generados."; await LoadCatalogos(); }
+            else errorMessage = r.Message;
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { seeding = false; }
+    }
+
+    private void ShowPopup(string msg) { popupErrorMessage = msg; showPopupError = true; }
+
+    private static string GetEstadoBadge(string estado) => estado switch
+    {
+        "Borrador" => "bg-warning text-dark",
+        "Contabilizado" => "bg-success",
+        "Anulado" => "bg-danger",
+        _ => "bg-secondary"
+    };
+
+    private async Task ExportarExcel()
+    {
+        exportando = true;
+        errorMessage = null;
+        try
+        {
+            var tipoId = filtroTipoComp > 0 ? (int?)filtroTipoComp : null;
+            var estadoFiltro = string.IsNullOrEmpty(filtroEstado) ? null : filtroEstado;
+            var searchFiltro = string.IsNullOrEmpty(filtroSearch) ? null : filtroSearch;
+
+            var fileBytes = await AsientoService.ExportarExcelAsync(
+                filtroDesde, filtroHasta, estadoFiltro, tipoId, searchFiltro);
+
+            if (fileBytes != null && fileBytes.Length > 0)
+            {
+                var fileName = $"Comprobantes_Contables_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+                
+                // Descargar el archivo usando JavaScript
+                await JS.InvokeVoidAsync("downloadFile", fileName, 
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
+                    Convert.ToBase64String(fileBytes));
+
+                successMessage = "Archivo Excel generado exitosamente.";
+            }
+            else
+            {
+                errorMessage = "No se pudo generar el archivo Excel. Intente nuevamente.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al exportar: {ex.Message}";
+        }
+        finally
+        {
+            exportando = false;
+        }
+    }
+}

@@ -55,4 +55,16 @@ builder.Services.AddScoped<PriceListHttpService>();
 // ──── Servicios HTTP Inventario ────
 builder.Services.AddScoped<MovimientoInventarioHttpService>();
 
+// ──── Servicios HTTP Compras ────
+builder.Services.AddScoped<OrdenCompraHttpService>();
+builder.Services.AddScoped<RecepcionCompraHttpService>();
+builder.Services.AddScoped<HojaImportacionHttpService>();
+
+// ──── Servicios HTTP Contabilidad ────
+builder.Services.AddScoped<CuentaContableHttpService>();
+builder.Services.AddScoped<AsientoContableHttpService>();
+builder.Services.AddScoped<PeriodoContableHttpService>();
+builder.Services.AddScoped<PlantillaContableHttpService>();
+builder.Services.AddScoped<EstadoFinancieroHttpService>();
+
 await builder.Build().RunAsync();
