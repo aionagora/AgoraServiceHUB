@@ -1,0 +1,446 @@
+@page "/compras/recepciones"
+@attribute [Authorize]
+@inject RecepcionCompraHttpService RecService
+@inject OrdenCompraHttpService OcService
+@inject AlmacenHttpService AlmacenService
+@inject IJSRuntime JS
+
+<PageTitle>Recepciones de Compra - AgoraHub360 ERP</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3><i class="bi bi-box-seam-fill"></i> Recepciones de Compra</h3>
+            <p class="text-muted mb-0">Recepción de mercadería contra Órdenes de Compra aprobadas</p>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="ShowCreateModal">
+                <i class="bi bi-plus-circle"></i> Nueva Recepción
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle-fill"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @* ?? Filtros ?? *@
+    <div class="card mb-3">
+        <div class="card-body py-2">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label mb-1 small">Desde</label>
+                    <input type="date" class="form-control form-control-sm" @bind="filtroDesde" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label mb-1 small">Hasta</label>
+                    <input type="date" class="form-control form-control-sm" @bind="filtroHasta" />
+                </div>
+                <div class="col-md-auto">
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="LoadData"><i class="bi bi-funnel"></i> Filtrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ?? Lista ?? *@
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center py-3">
+            <span>Recepciones <span class="badge bg-secondary ms-1">@recepciones.Count</span></span>
+        </div>
+        <div class="card-body p-0">
+            @if (loading)
+            {
+                <div class="text-center py-5"><div class="spinner-border text-primary"></div><p class="mt-2">Cargando...</p></div>
+            }
+            else if (recepciones.Count == 0)
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox" style="font-size:2.5rem;"></i>
+                    <p class="text-muted mt-3">No hay recepciones registradas.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:40px"></th>
+                                <th>Número</th>
+                                <th>Fecha</th>
+                                <th>OC</th>
+                                <th>Almacén</th>
+                                <th>Doc. Proveedor</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var rec in recepciones)
+                            {
+                                <tr>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => ToggleDetail(rec.RecepcionCompraId)" title="Ver líneas">
+                                            <i class="bi @(expandedId == rec.RecepcionCompraId ? "bi-chevron-up" : "bi-chevron-down")"></i>
+                                        </button>
+                                    </td>
+                                    <td><strong>@rec.Numero</strong></td>
+                                    <td>@rec.FechaRecepcion.ToString("dd/MM/yyyy")</td>
+                                    <td><span class="badge bg-info text-dark">@rec.OrdenCompraNumero</span></td>
+                                    <td>@rec.AlmacenNombre</td>
+                                    <td>@(rec.DocumentoProveedor ?? "—")</td>
+                                    <td>
+                                        @if (rec.Confirmada)
+                                        {
+                                            <span class="badge bg-success"><i class="bi bi-check-circle"></i> Confirmada</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning text-dark">Pendiente</span>
+                                        }
+                                    </td>
+                                </tr>
+                                @if (expandedId == rec.RecepcionCompraId)
+                                {
+                                    <tr>
+                                        <td colspan="7" class="bg-light p-0">
+                                            <div class="p-3">
+                                                <strong><i class="bi bi-list-ol"></i> Líneas recibidas — @rec.Numero</strong>
+                                                <table class="table table-sm table-bordered mt-2 mb-0">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>#</th>
+                                                            <th>Producto</th>
+                                                            <th>Descripción</th>
+                                                            <th>UdM</th>
+                                                            <th class="text-end">Ordenada</th>
+                                                            <th class="text-end">Recibida</th>
+                                                            <th class="text-end">Costo U.</th>
+                                                            <th class="text-end">Total</th>
+                                                            <th>Notas</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach (var l in rec.Lineas)
+                                                        {
+                                                            <tr>
+                                                                <td>@l.NumeroLineaOC</td>
+                                                                <td><code>@l.ProductoSku</code></td>
+                                                                <td>@l.Descripcion</td>
+                                                                <td>@l.UnidadMedida</td>
+                                                                <td class="text-end">@l.CantidadOrdenada.ToString("N2")</td>
+                                                                <td class="text-end"><strong class="text-success">@l.CantidadRecibida.ToString("N2")</strong></td>
+                                                                <td class="text-end">@l.CostoUnitario.ToString("N4")</td>
+                                                                <td class="text-end"><strong>@((l.CantidadRecibida * l.CostoUnitario).ToString("N2"))</strong></td>
+                                                                <td><small class="text-muted">@(l.Notas ?? "—")</small></td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                                @if (rec.Observaciones is not null)
+                                                {
+                                                    <div class="mt-2"><small class="text-muted"><i class="bi bi-chat-left-text"></i> @rec.Observaciones</small></div>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@* ?????? Modal Nueva Recepción ?????? *@
+@if (showModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-box-seam"></i> Nueva Recepción de Compra</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    @* ?? Paso 1: Seleccionar OC ?? *@
+                    <div class="row mb-3">
+                        <div class="col-md-5">
+                            <label class="form-label">Orden de Compra *</label>
+                            <select class="form-select" @bind="selectedOcId" @bind:after="OnOcSelected">
+                                <option value="0">-- Seleccionar OC aprobada --</option>
+                                @foreach (var oc in ocDisponibles)
+                                {
+                                    <option value="@oc.OrdenCompraId">@oc.Numero — @oc.ProveedorNombre (@oc.Estado)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Fecha Recepción *</label>
+                            <input type="date" class="form-control" @bind="formFecha" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Almacén Destino</label>
+                            <select class="form-select" @bind="formAlmacenId">
+                                @foreach (var a in almacenes)
+                                {
+                                    <option value="@a.Id">@a.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Doc. Proveedor</label>
+                            <input class="form-control" @bind="formDocProv" placeholder="Guía, factura, remisión…" />
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">Observaciones</label>
+                            <input class="form-control" @bind="formObs" />
+                        </div>
+                    </div>
+
+                    @* ?? Paso 2: Líneas pendientes de la OC ?? *@
+                    @if (selectedOc is not null)
+                    {
+                        <hr />
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <strong><i class="bi bi-list-check"></i> Líneas pendientes de recepcionar</strong>
+                            <button class="btn btn-sm btn-outline-success" @onclick="RecibirTodo"><i class="bi bi-check-all"></i> Recibir Todo</button>
+                        </div>
+
+                        @if (lineasPendientes.Count == 0)
+                        {
+                            <div class="alert alert-info"><i class="bi bi-info-circle"></i> Todas las líneas de esta OC ya fueron recepcionadas.</div>
+                        }
+                        else
+                        {
+                            <table class="table table-sm table-bordered mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Producto</th>
+                                        <th>Descripción</th>
+                                        <th>UdM</th>
+                                        <th class="text-end">Ordenada</th>
+                                        <th class="text-end">Ya recibida</th>
+                                        <th class="text-end">Pendiente</th>
+                                        <th class="text-end" style="width:120px">Recibir ahora *</th>
+                                        <th class="text-end" style="width:120px">Costo U.</th>
+                                        <th style="width:150px">Notas</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var lp in lineasPendientes)
+                                    {
+                                        <tr>
+                                            <td>@lp.NumeroLinea</td>
+                                            <td><code>@lp.ProductoSku</code></td>
+                                            <td>@lp.Descripcion</td>
+                                            <td>@lp.UnidadMedida</td>
+                                            <td class="text-end">@lp.CantidadOrdenada.ToString("N2")</td>
+                                            <td class="text-end">@lp.CantidadYaRecibida.ToString("N2")</td>
+                                            <td class="text-end"><span class="text-warning fw-bold">@lp.CantidadPendiente.ToString("N2")</span></td>
+                                            <td class="text-end">
+                                                <input type="number" step="0.01" min="0" max="@lp.CantidadPendiente"
+                                                       class="form-control form-control-sm text-end"
+                                                       @bind="lp.CantidadARecibir" />
+                                            </td>
+                                            <td class="text-end">
+                                                <input type="number" step="0.01" class="form-control form-control-sm text-end"
+                                                       @bind="lp.CostoUnitario" />
+                                            </td>
+                                            <td>
+                                                <input class="form-control form-control-sm" @bind="lp.Notas" placeholder="Notas…" />
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseModal">Cancelar</button>
+                    <button class="btn btn-success" @onclick="SaveRecepcion"
+                            disabled="@(saving || selectedOcId == 0 || !lineasPendientes.Any(l => l.CantidadARecibir > 0))">
+                        @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        <i class="bi bi-box-seam"></i> Confirmar Recepción
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    // ?? State ??
+    private List<RecepcionCompraDto> recepciones = new();
+    private List<OrdenCompraDto> ocDisponibles = new();
+    private List<AlmacenDto> almacenes = new();
+
+    private bool loading = true;
+    private bool saving = false;
+    private string? successMessage;
+    private string? errorMessage;
+
+    // Filters
+    private DateTime? filtroDesde;
+    private DateTime? filtroHasta;
+
+    // Detail expand
+    private long expandedId;
+
+    // Modal
+    private bool showModal;
+    private long selectedOcId;
+    private OrdenCompraDto? selectedOc;
+    private DateTime formFecha = DateTime.Today;
+    private int formAlmacenId;
+    private string? formDocProv;
+    private string? formObs;
+    private List<LineaPendienteVM> lineasPendientes = new();
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    private async Task LoadData()
+    {
+        loading = true; errorMessage = null;
+        try
+        {
+            var t1 = RecService.GetAllAsync(desde: filtroDesde, hasta: filtroHasta);
+            var t2 = AlmacenService.GetAllAsync();
+            await Task.WhenAll(t1, t2);
+            recepciones = await t1;
+            almacenes = await t2;
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { loading = false; }
+    }
+
+    private void ToggleDetail(long id) => expandedId = expandedId == id ? 0 : id;
+
+    // ?? Modal ??
+
+    private async Task ShowCreateModal()
+    {
+        selectedOcId = 0; selectedOc = null;
+        formFecha = DateTime.Today; formDocProv = null; formObs = null;
+        formAlmacenId = almacenes.FirstOrDefault()?.Id ?? 0;
+        lineasPendientes = new();
+
+        // Cargar OC que se pueden recepcionar
+        var todas = await OcService.GetAllAsync();
+        ocDisponibles = todas.Where(o => o.Estado is "Aprobado" or "RecepcionParcial").ToList();
+        showModal = true;
+    }
+
+    private void CloseModal() => showModal = false;
+
+    private async Task OnOcSelected()
+    {
+        selectedOc = null; lineasPendientes = new();
+        if (selectedOcId == 0) return;
+
+        selectedOc = await OcService.GetByIdAsync(selectedOcId);
+        if (selectedOc is null) return;
+
+        formAlmacenId = selectedOc.AlmacenDestinoId;
+
+        lineasPendientes = selectedOc.Lineas
+            .Where(l => l.CantidadPendiente > 0)
+            .Select(l => new LineaPendienteVM
+            {
+                OrdenCompraLineaId = l.OrdenCompraLineaId,
+                NumeroLinea = l.NumeroLinea,
+                ProductoSku = l.ProductoSku,
+                Descripcion = l.Descripcion,
+                UnidadMedida = l.UnidadMedida,
+                CantidadOrdenada = l.Cantidad,
+                CantidadYaRecibida = l.CantidadRecepcionada,
+                CantidadPendiente = l.CantidadPendiente,
+                CantidadARecibir = l.CantidadPendiente, // default: recibir todo pendiente
+                CostoUnitario = l.PrecioUnitario,
+                Notas = null
+            }).ToList();
+    }
+
+    private void RecibirTodo()
+    {
+        foreach (var l in lineasPendientes)
+            l.CantidadARecibir = l.CantidadPendiente;
+    }
+
+    private async Task SaveRecepcion()
+    {
+        saving = true; errorMessage = null;
+        try
+        {
+            var lineas = lineasPendientes
+                .Where(l => l.CantidadARecibir > 0)
+                .Select(l => new CreateRecepcionCompraLineaDto(
+                    l.OrdenCompraLineaId,
+                    l.CantidadARecibir,
+                    l.CostoUnitario,
+                    l.Notas))
+                .ToList();
+
+            if (lineas.Count == 0)
+            {
+                errorMessage = "Debe recibir al menos una línea.";
+                return;
+            }
+
+            var dto = new CreateRecepcionCompraDto(
+                selectedOcId,
+                formFecha,
+                formAlmacenId,
+                formDocProv,
+                formObs,
+                lineas);
+
+            var result = await RecService.CreateAsync(dto);
+            if (result.Success)
+            {
+                successMessage = $"Recepción {result.Data?.Numero} registrada. Stock actualizado.";
+                CloseModal();
+                await LoadData();
+            }
+            else
+            {
+                errorMessage = result.Message;
+            }
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { saving = false; }
+    }
+
+    // ?? ViewModel para líneas pendientes ??
+    private class LineaPendienteVM
+    {
+        public long OrdenCompraLineaId { get; set; }
+        public int NumeroLinea { get; set; }
+        public string ProductoSku { get; set; } = "";
+        public string Descripcion { get; set; } = "";
+        public string UnidadMedida { get; set; } = "";
+        public decimal CantidadOrdenada { get; set; }
+        public decimal CantidadYaRecibida { get; set; }
+        public decimal CantidadPendiente { get; set; }
+        public decimal CantidadARecibir { get; set; }
+        public decimal CostoUnitario { get; set; }
+        public string? Notas { get; set; }
+    }
+}

@@ -620,7 +620,7 @@ Domain  ???  Application  ???  Persistence
 | `AlmacenDestinoId` | `int` FK | Almacén destino |
 | `MonedaId` | `string(3)` | Moneda (ISO 4217) |
 | `TasaCambio` | `decimal` | Tasa de cambio |
-| `Estado` | `byte` (enum) | 1=Borrador, 2=Confirmado, 3=Aprobado, 4=Anulado |
+| `Estado` | `byte` (enum) | 1=Borrador, 2=Confirmado, 3=Aprobado, 4=Anulado, 5=RecepcionParcial, 6=Cerrado |
 | `CondicionPago` | `string?` | Condición de pago |
 | `Observaciones` | `string?` | Observaciones |
 | `ReferenciaExterna` | `string?` | Nro. cotización proveedor |
@@ -647,6 +647,75 @@ Domain  ???  Application  ???  Persistence
 | `MontoImpuesto` | `decimal` | Monto impuesto calculado |
 | `TotalLinea` | `decimal` | Subtotal + Impuesto |
 | `CantidadRecepcionada` | `decimal` | Cantidad ya recibida |
+
+#### `RecepcionesCompra` (TenantEntity)
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `RecepcionCompraId` | `long` PK | Identificador |
+| `EmpresaId` | `int` FK | Empresa |
+| `Numero` | `string(30)` | Número único "REC-000001" |
+| `OrdenCompraId` | `long` FK | OC asociada |
+| `FechaRecepcion` | `DateTime` | Fecha de recepción |
+| `AlmacenId` | `int` FK | Almacén destino |
+| `DocumentoProveedor` | `string?` | Guía/factura del proveedor |
+| `Observaciones` | `string?` | Observaciones |
+| `Confirmada` | `bool` | Ya generó movimientos INV |
+
+#### `RecepcionCompraLineas`
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `RecepcionCompraLineaId` | `long` PK | Identificador |
+| `RecepcionCompraId` | `long` FK | Recepción |
+| `OrdenCompraLineaId` | `long` FK | Línea de OC |
+| `CantidadRecibida` | `decimal` | Cantidad recibida |
+| `CostoUnitario` | `decimal` | Costo unitario |
+| `Notas` | `string?` | Notas |
+
+#### `HojasImportacion` (TenantEntity)
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `Id` | `int` PK | Identificador |
+| `EmpresaId` | `int` FK | Empresa |
+| `Fecha` | `DateTime` | Fecha de la importación |
+| `ArchivoNombre` | `string` | Nombre del archivo |
+| `ArchivoHash` | `string` | Hash de integridad |
+| `ArchivoTamano` | `long` | Tamaño en bytes |
+| `Estado` | `byte` | 1=EnCola, 2=EnProceso, 3=Completo, 4=Error |
+| `MensajeError` | `string?` | Mensaje de error si falla |
+| `RegistrosProcesados` | `int` | Cantidad de registros procesados |
+| `RegistrosExitosos` | `int` | Cantidad de registros exitosos |
+| `RegistrosErrores` | `int` | Cantidad de registros con errores |
+
+#### `GastosImportacion` (TenantEntity)
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `Id` | `int` PK | Identificador |
+| `HojaImportacionId` | `int` FK | Referencia a la hoja de importación |
+| `Linea` | `int` | Línea en el archivo |
+| `Descripcion` | `string` | Descripción del gasto |
+| `Monto` | `decimal` | Monto del gasto |
+| `MonedaId` | `string(3)` | Moneda del gasto |
+| `ProveedorId` | `int?` | Proveedor asociado (opcional) |
+| `Fecha` | `DateTime?` | Fecha del gasto (opcional) |
+| `TipoGasto` | `string` | Tipo de gasto (fijo, variable) |
+| `CentroCosto` | `string?` | Centro de costo (opcional) |
+
+#### `ImportacionLineas` (TenantEntity)
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `Id` | `int` PK | Identificador |
+| `HojaImportacionId` | `int` FK | Referencia a la hoja de importación |
+| `Linea` | `int` | Línea en el archivo |
+| `ProveedorId` | `int` | Proveedor |
+| `ProductoId` | `long` | Producto global |
+| `Sku` | `string?` | SKU propio empresa |
+| `Cantidad` | `decimal` | Cantidad ordenada |
+| `PrecioUnitario` | `decimal` | Precio unitario |
+| `MonedaId` | `string(3)` | Moneda del precio |
+| `TasaCambio` | `decimal` | Tasa de cambio a moneda base |
+| `Descuento` | `decimal?` | Descuento aplicado |
+| `Impuesto` | `decimal?` | Impuesto aplicado |
+| `TotalLinea` | `decimal` | Total línea (Cantidad x PrecioUnitario) |
 
 ---
 
@@ -676,10 +745,11 @@ VER:         EntityVersions
 
 DOC:         Documents · ProductDocuments
 
-CMP:         OrdenesCompra · OrdenCompraLineas
+CMP:         OrdenesCompra · OrdenCompraLineas · RecepcionesCompra · RecepcionCompraLineas
+             HojasImportacion · GastosImportacion · ImportacionLineas
 ```
 
-**Total de tablas: 45**
+**Total de tablas: 51**
 
 ---
 
@@ -727,6 +797,8 @@ Result<T>
 | `IVersioningService` | `VersioningService` | Consulta versiones |
 | `ICurrentUserService` | `CurrentUserService` (Api) | Contexto usuario/empresa |
 | `IOrdenCompraService` | `OrdenCompraService` | CRUD órdenes de compra |
+| `IRecepcionCompraService` | `RecepcionCompraService` | Recepciones + movimientos INV automáticos |
+| `IHojaImportacionService` | `HojaImportacionService` | Landed Cost: gastos + distribución + ajuste WAC |
 
 ---
 
@@ -764,6 +836,8 @@ Result<T>
 | `RulIndustriesController` | `/rul/industries` | GET all, POST, PUT, DELETE; rules |
 | `DiagnosticsController` | `/diagnostics` | GET health/ping |
 | `OrdenesCompraController` | `/compras/ordenes` | GET all, GET id, POST, PUT, DELETE; POST /{id}/lineas; PUT/DELETE /{id}/lineas/{lineaId}; POST /{id}/estado |
+| `RecepcionesCompraController` | `/compras/recepciones` | GET all, GET id, POST, DELETE |
+| `ImportacionesController` | `/compras/importaciones` | GET all, GET id, POST, DELETE; POST /{id}/gastos; DELETE /{id}/gastos/{gastoId}; POST /{id}/liquidar |
 
 ### Middleware
 
@@ -926,6 +1000,8 @@ Roles.User  = "Usuario"
 | `PriceListHttpService` | `/prc/price-lists` | Listas de precios |
 | `MovimientoInventarioHttpService` | `/inventario/movimientos` | Inventario |
 | `OrdenCompraHttpService` | `/compras/ordenes` | Órdenes de compra |
+| `RecepcionCompraHttpService` | `/compras/recepciones` | Recepciones de compra |
+| `HojaImportacionHttpService` | `/compras/importaciones` | Hojas de importación (Landed Cost) |
 
 ### 7.2 Páginas Blazor
 
@@ -963,16 +1039,13 @@ Roles.User  = "Usuario"
 | `/mdm/marcas` | `Marcas.razor` | ? CRUD |
 | `/mdm/fabricantes` | `Fabricantes.razor` | ? CRUD |
 | `/mdm/listas-precios` | `ListasPrecios.razor` | ? CRUD + ítems |
-| **Inventario** | | |
-| `/inventario/movimientos` | `Movimientos.razor` | ? CRUD + filtros |
-| `/inventario/stock` | `Stock.razor` | ? Consulta |
-| `/inventario/kardex` | `Kardex.razor` | ? Kardex producto |
-| `/inventario/almacenes` | `Almacenes.razor` (INV) | ? Vista |
 | **Ventas** | | |
 | `/ventas/pedidos` | `Pedidos.razor` | ?? Placeholder |
 | `/ventas/facturas` | `Facturas.razor` | ?? Placeholder |
 | **Compras** | | |
 | `/compras/ordenes` | `OrdenesCompra.razor` | ? **CRUD completo + líneas + flujo estado** |
+| `/compras/recepciones` | `RecepcionesCompra.razor` | ? **Recepción parcial/total + INV automático** |
+| `/compras/importaciones` | `Importaciones.razor` | ? **Landed Cost: gastos + distribución + liquidación** |
 
 ### 7.3 Wizard "Nuevo Producto" (`/mdm/productos`)
 
@@ -1115,12 +1188,13 @@ El modelo EAV para `ProductAttribute` soporta:
 | **Industrias/Reglas** | ? Completo | ?? Sin UI | Endpoint disponible |
 | **Listas de Precios** | ? Completo | ? Completo | Con ítems |
 | **Inventario Movimientos** | ? Completo | ? Completo | 4 tipos de movimiento |
-| **Stock / Kardex** | ? Completo | ? Completo | WAC automático |
 | **Versionado** | ? Automático | ?? Sin UI | Interceptor activo |
 | **Documentos** | ? Entidad/Config | ?? Sin UI | Storage pendiente |
 | **Costeo** | ? Entidad/Config | ?? Sin UI | CostingRules + LandedCost |
 | **Ventas (Pedidos/Facturas)** | ?? Pendiente | ?? Placeholder | Rama activa |
-| **Compras (OC)** | ? Completo | ? **CRUD + líneas + flujo** | Cabecera + líneas, Confirmar/Aprobar/Anular |
+| **Compras** | ? Completo | ? **CRUD + líneas + flujo** | Confirmar/Aprobar/RecepciónParcial/Cerrado/Anular |
+| **Recepción de Compra** | ? Completo | ? **Recepción parcial/total** | Genera Receipt INV + actualiza WAC automáticamente |
+| **Importación (Landed Cost)** | ? Completo | ? **Gastos + Distribución + Liquidación** | Por Valor/Unidades/Peso/Volumen + ajuste WAC |
 
 ---
 
@@ -1128,8 +1202,8 @@ El modelo EAV para `ProductAttribute` soporta:
 
 ### Alta prioridad (rama `GestionImportacion`)
 - [x] **Módulo Compras** — Órdenes de Compra con líneas de productos, flujo aprobación
-- [ ] **Recepción de OC** — Crear movimiento Receipt automático al recepcionar
-- [ ] **Módulo Importación** — Landed Cost aplicado sobre OC, distribución por método
+- [x] **Recepción de OC** — Crear movimiento Receipt automático al recepcionar
+- [x] **Módulo Importación** — Landed Cost aplicado sobre OC, distribución por método
 - [ ] **Módulo Ventas** — Pedidos y Facturas integradas con stock e inventario
 
 ### Media prioridad
@@ -1145,7 +1219,3 @@ El modelo EAV para `ProductAttribute` soporta:
 - [ ] **Tests** — Cobertura de servicios Application
 - [ ] **CI/CD** pipeline GitHub Actions
 - [ ] **Migración almacén** — UI para `UbicacionesAlmacen`
-
----
-
-*Documento generado automáticamente desde el estado del workspace en D:\AgoraCORE\AgoraHUB360-ERP*

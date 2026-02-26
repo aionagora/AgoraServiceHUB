@@ -51,6 +51,8 @@ public static class DependencyInjection
 
         // CMP
         services.AddScoped<IOrdenCompraService, OrdenCompraService>();
+        services.AddScoped<IRecepcionCompraService, RecepcionCompraService>();
+        services.AddScoped<IHojaImportacionService, HojaImportacionService>();
 
         return services;
     }

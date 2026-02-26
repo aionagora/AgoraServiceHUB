@@ -99,6 +99,10 @@ public class OrdenCompraService : IOrdenCompraService
         if (!empresaId.HasValue)
             return Result<OrdenCompraDto>.Failure("No active company.");
 
+        // Validate at least one line
+        if (dto.Lineas is null || dto.Lineas.Count == 0)
+            return Result<OrdenCompraDto>.Failure("An order must have at least one line.");
+
         // Validate proveedor
         var proveedor = await _proveedorRepo.GetByIdAsync(dto.ProveedorId, ct);
         if (proveedor is null || proveedor.EmpresaId != empresaId.Value)
@@ -108,6 +112,14 @@ public class OrdenCompraService : IOrdenCompraService
         var almacen = await _almacenRepo.GetByIdAsync(dto.AlmacenDestinoId, ct);
         if (almacen is null || almacen.EmpresaId != empresaId.Value)
             return Result<OrdenCompraDto>.Failure("Warehouse not found or does not belong to your company.");
+
+        // Validate all products before creating
+        foreach (var lineaDto in dto.Lineas)
+        {
+            var cp = await _companyProductRepo.GetByIdAsync(lineaDto.CompanyProductId, ct);
+            if (cp is null || cp.EmpresaId != empresaId.Value)
+                return Result<OrdenCompraDto>.Failure($"Product {lineaDto.CompanyProductId} not found.");
+        }
 
         // Generate number from NumeracionDocumento
         var numero = await GenerarNumeroAsync(empresaId.Value, ct);
@@ -133,36 +145,28 @@ public class OrdenCompraService : IOrdenCompraService
         await _unitOfWork.SaveChangesAsync(ct);
 
         // Add lines
-        if (dto.Lineas?.Count > 0)
+        int lineNum = 1;
+        foreach (var lineaDto in dto.Lineas)
         {
-            int lineNum = 1;
-            foreach (var lineaDto in dto.Lineas)
+            var linea = new OrdenCompraLinea
             {
-                var cp = await _companyProductRepo.GetByIdAsync(lineaDto.CompanyProductId, ct);
-                if (cp is null || cp.EmpresaId != empresaId.Value)
-                    return Result<OrdenCompraDto>.Failure($"Product {lineaDto.CompanyProductId} not found.");
-
-                var linea = new OrdenCompraLinea
-                {
-                    OrdenCompraId = oc.OrdenCompraId,
-                    NumeroLinea = lineNum++,
-                    CompanyProductId = lineaDto.CompanyProductId,
-                    Descripcion = lineaDto.Descripcion,
-                    UnidadMedida = lineaDto.UnidadMedida,
-                    Cantidad = lineaDto.Cantidad,
-                    PrecioUnitario = lineaDto.PrecioUnitario,
-                    PorcentajeDescuento = lineaDto.PorcentajeDescuento,
-                    PorcentajeImpuesto = lineaDto.PorcentajeImpuesto,
-                    Activo = true
-                };
-                linea.Recalcular();
-                await _lineaRepo.AddAsync(linea, ct);
-            }
+                OrdenCompraId = oc.OrdenCompraId,
+                NumeroLinea = lineNum++,
+                CompanyProductId = lineaDto.CompanyProductId,
+                Descripcion = lineaDto.Descripcion,
+                UnidadMedida = lineaDto.UnidadMedida,
+                Cantidad = lineaDto.Cantidad,
+                PrecioUnitario = lineaDto.PrecioUnitario,
+                PorcentajeDescuento = lineaDto.PorcentajeDescuento,
+                PorcentajeImpuesto = lineaDto.PorcentajeImpuesto,
+                Activo = true
+            };
+            linea.Recalcular();
+            oc.Lineas.Add(linea);
+            await _lineaRepo.AddAsync(linea, ct);
         }
 
-        // Recalculate totals
-        var lineasGuardadas = await _lineaRepo.FindAsync(l => l.OrdenCompraId == oc.OrdenCompraId, ct);
-        oc.Lineas = lineasGuardadas.ToList();
+        // Recalculate totals using in-memory collection
         oc.RecalcularTotales();
         await _ocRepo.UpdateAsync(oc, ct);
         await _unitOfWork.SaveChangesAsync(ct);
@@ -345,11 +349,14 @@ public class OrdenCompraService : IOrdenCompraService
                 $"Cannot transition from {oc.Estado} to {estadoTarget}.");
 
         // Validaciones adicionales
-        if (estadoTarget == EstadoDocumento.Confirmado)
+        if (estadoTarget is EstadoDocumento.Confirmado or EstadoDocumento.Aprobado)
         {
             var lineas = await _lineaRepo.FindAsync(l => l.OrdenCompraId == id, ct);
             if (lineas.Count == 0)
-                return Result<OrdenCompraDto>.Failure("Cannot confirm an order without lines.");
+            {
+                var action = estadoTarget == EstadoDocumento.Confirmado ? "confirm" : "approve";
+                return Result<OrdenCompraDto>.Failure($"Cannot {action} an order without lines. Please add at least one line first.");
+            }
         }
 
         oc.Estado = estadoTarget;

@@ -106,6 +106,11 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     // ── CMP: Compras ──────────────────────────────────────────────────────────
     public DbSet<OrdenCompra> OrdenesCompra => Set<OrdenCompra>();
     public DbSet<OrdenCompraLinea> OrdenCompraLineas => Set<OrdenCompraLinea>();
+    public DbSet<RecepcionCompra> RecepcionesCompra => Set<RecepcionCompra>();
+    public DbSet<RecepcionCompraLinea> RecepcionCompraLineas => Set<RecepcionCompraLinea>();
+    public DbSet<HojaImportacion> HojasImportacion => Set<HojaImportacion>();
+    public DbSet<GastoImportacion> GastosImportacion => Set<GastoImportacion>();
+    public DbSet<ImportacionLinea> ImportacionLineas => Set<ImportacionLinea>();
 
     // ── Audit ─────────────────────────────────────────────────────────────────
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();

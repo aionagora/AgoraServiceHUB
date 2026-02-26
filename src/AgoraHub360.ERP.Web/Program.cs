@@ -57,5 +57,7 @@ builder.Services.AddScoped<MovimientoInventarioHttpService>();
 
 // ──── Servicios HTTP Compras ────
 builder.Services.AddScoped<OrdenCompraHttpService>();
+builder.Services.AddScoped<RecepcionCompraHttpService>();
+builder.Services.AddScoped<HojaImportacionHttpService>();
 
 await builder.Build().RunAsync();

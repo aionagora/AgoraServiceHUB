@@ -54,6 +54,8 @@
                         <option value="Borrador">Borrador</option>
                         <option value="Confirmado">Confirmado</option>
                         <option value="Aprobado">Aprobado</option>
+                        <option value="RecepcionParcial">Recepción Parcial</option>
+                        <option value="Cerrado">Cerrado</option>
                         <option value="Anulado">Anulado</option>
                     </select>
                 </div>
@@ -128,13 +130,24 @@
                                         @if (oc.Estado == "Borrador")
                                         {
                                             <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditModal(oc)" title="Editar"><i class="bi bi-pencil"></i></button>
-                                            <button class="btn btn-sm btn-outline-success ms-1" @onclick='() => CambiarEstado(oc, "Confirmado")' title="Confirmar"><i class="bi bi-check-lg"></i></button>
+                                            @if (oc.Lineas.Count > 0)
+                                            {
+                                                <button class="btn btn-sm btn-outline-success ms-1" @onclick='() => CambiarEstado(oc, "Confirmado")' title="Confirmar"><i class="bi bi-check-lg"></i></button>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger ms-1" title="Agregue líneas para confirmar"><i class="bi bi-exclamation-triangle"></i> Sin líneas</span>
+                                            }
                                             <button class="btn btn-sm btn-outline-danger ms-1" @onclick="() => DeleteOrden(oc)" title="Eliminar"><i class="bi bi-trash"></i></button>
                                         }
                                         @if (oc.Estado == "Confirmado")
                                         {
                                             <button class="btn btn-sm btn-outline-success" @onclick='() => CambiarEstado(oc, "Aprobado")' title="Aprobar"><i class="bi bi-hand-thumbs-up"></i></button>
                                             <button class="btn btn-sm btn-outline-warning ms-1" @onclick='() => CambiarEstado(oc, "Anulado")' title="Anular"><i class="bi bi-x-circle"></i></button>
+                                        }
+                                        @if (oc.Estado is "Aprobado" or "RecepcionParcial")
+                                        {
+                                            <a href="/compras/recepciones" class="btn btn-sm btn-outline-info" title="Recepcionar"><i class="bi bi-box-seam"></i> Recepcionar</a>
                                         }
                                     </td>
                                 </tr>
@@ -391,9 +404,13 @@
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" @onclick="CloseModal">Cancelar</button>
-                    <button class="btn btn-primary" @onclick="SaveOrden" disabled="@(saving || formProveedorId == 0 || formAlmacenId == 0)">
+                    <button class="btn btn-primary" @onclick="SaveOrden" disabled="@(saving || formProveedorId == 0 || formAlmacenId == 0 || (!isEditing && tempLineas.Count == 0))">
                         @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> } @(isEditing ? "Actualizar" : "Crear OC")
                     </button>
+                    @if (!isEditing && tempLineas.Count == 0)
+                    {
+                        <small class="text-danger ms-2"><i class="bi bi-exclamation-triangle"></i> Agregue al menos una línea</small>
+                    }
                 </div>
             </div>
         </div>
@@ -673,6 +690,8 @@
         "Borrador" => "bg-secondary",
         "Confirmado" => "bg-primary",
         "Aprobado" => "bg-success",
+        "RecepcionParcial" => "bg-info",
+        "Cerrado" => "bg-dark",
         "Anulado" => "bg-danger",
         _ => "bg-secondary"
     };
