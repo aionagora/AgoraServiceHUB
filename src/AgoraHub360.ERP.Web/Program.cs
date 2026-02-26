@@ -60,4 +60,9 @@ builder.Services.AddScoped<OrdenCompraHttpService>();
 builder.Services.AddScoped<RecepcionCompraHttpService>();
 builder.Services.AddScoped<HojaImportacionHttpService>();
 
+// ──── Servicios HTTP Contabilidad ────
+builder.Services.AddScoped<CuentaContableHttpService>();
+builder.Services.AddScoped<AsientoContableHttpService>();
+builder.Services.AddScoped<PeriodoContableHttpService>();
+
 await builder.Build().RunAsync();

@@ -4,6 +4,7 @@ using AgoraHub360.ERP.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AgoraHub360.ERP.Persistence.Migrations
 {
     [DbContext(typeof(AgoraDbContext))]
-    partial class AgoraDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260226064451_ACC_CuentasContables")]
+    partial class ACC_CuentasContables
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,147 +24,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
-
-            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.ACC.AsientoContable", b =>
-                {
-                    b.Property<long>("AsientoContableId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("AsientoContableId"));
-
-                    b.Property<bool>("Activo")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("CreadoPor")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<int>("EmpresaId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Estado")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<DateTime>("Fecha")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("FechaCreacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("FechaModificacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Glosa")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("ModificadoPor")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Numero")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
-                    b.Property<long?>("OrigenId")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("OrigenReferencia")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("OrigenTipo")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("Tipo")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<decimal>("TotalDebe")
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<decimal>("TotalHaber")
-                        .HasColumnType("decimal(18,4)");
-
-                    b.HasKey("AsientoContableId");
-
-                    b.HasIndex("EmpresaId");
-
-                    b.HasIndex("EmpresaId", "Estado");
-
-                    b.HasIndex("EmpresaId", "Fecha");
-
-                    b.HasIndex("EmpresaId", "Numero")
-                        .IsUnique();
-
-                    b.HasIndex("OrigenTipo", "OrigenId");
-
-                    b.ToTable("AsientosContables", "acc");
-                });
-
-            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.ACC.AsientoContableLinea", b =>
-                {
-                    b.Property<long>("AsientoContableLineaId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("AsientoContableLineaId"));
-
-                    b.Property<bool>("Activo")
-                        .HasColumnType("bit");
-
-                    b.Property<long>("AsientoContableId")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("CreadoPor")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<int>("CuentaContableId")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("Debe")
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<DateTime>("FechaCreacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("FechaModificacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Glosa")
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
-
-                    b.Property<decimal>("Haber")
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<string>("ModificadoPor")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<int>("NumeroLinea")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Referencia")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.HasKey("AsientoContableLineaId");
-
-                    b.HasIndex("AsientoContableId");
-
-                    b.HasIndex("CuentaContableId");
-
-                    b.ToTable("AsientoContableLineas", "acc");
-                });
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.ACC.CuentaContable", b =>
                 {
@@ -237,69 +99,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.HasIndex("EmpresaId", "Tipo");
 
                     b.ToTable("CuentasContables", "acc");
-                });
-
-            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.ACC.PeriodoContable", b =>
-                {
-                    b.Property<int>("PeriodoContableId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PeriodoContableId"));
-
-                    b.Property<bool>("Activo")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("Anio")
-                        .HasColumnType("int");
-
-                    b.Property<string>("CerradoPor")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("CreadoPor")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<int>("EmpresaId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Estado")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<DateTime?>("FechaCierre")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("FechaCreacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("FechaModificacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Mes")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ModificadoPor")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Nombre")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.HasKey("PeriodoContableId");
-
-                    b.HasIndex("EmpresaId");
-
-                    b.HasIndex("EmpresaId", "Estado");
-
-                    b.HasIndex("EmpresaId", "Anio", "Mes")
-                        .IsUnique();
-
-                    b.ToTable("PeriodosContables", "acc");
                 });
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CMP.GastoImportacion", b =>
@@ -3104,25 +2903,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.ToTable("EntityVersions", "ver");
                 });
 
-            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.ACC.AsientoContableLinea", b =>
-                {
-                    b.HasOne("AgoraHub360.ERP.Domain.Entities.ACC.AsientoContable", "AsientoContable")
-                        .WithMany("Lineas")
-                        .HasForeignKey("AsientoContableId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("AgoraHub360.ERP.Domain.Entities.ACC.CuentaContable", "CuentaContable")
-                        .WithMany()
-                        .HasForeignKey("CuentaContableId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("AsientoContable");
-
-                    b.Navigation("CuentaContable");
-                });
-
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.ACC.CuentaContable", b =>
                 {
                     b.HasOne("AgoraHub360.ERP.Domain.Entities.ACC.CuentaContable", "CuentaPadre")
@@ -3598,11 +3378,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Industry");
-                });
-
-            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.ACC.AsientoContable", b =>
-                {
-                    b.Navigation("Lineas");
                 });
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.ACC.CuentaContable", b =>

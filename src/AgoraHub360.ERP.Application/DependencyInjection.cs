@@ -54,6 +54,11 @@ public static class DependencyInjection
         services.AddScoped<IRecepcionCompraService, RecepcionCompraService>();
         services.AddScoped<IHojaImportacionService, HojaImportacionService>();
 
+        // ACC
+        services.AddScoped<ICuentaContableService, CuentaContableService>();
+        services.AddScoped<IAsientoContableService, AsientoContableService>();
+        services.AddScoped<IPeriodoContableService, PeriodoContableService>();
+
         return services;
     }
 }
