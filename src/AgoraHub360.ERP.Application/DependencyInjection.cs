@@ -60,6 +60,7 @@ public static class DependencyInjection
         services.AddScoped<IPeriodoContableService, PeriodoContableService>();
         services.AddScoped<IPlantillaContableService, PlantillaContableService>();
         services.AddScoped<IContabilizacionService, ContabilizacionService>();
+        services.AddScoped<IEstadoFinancieroService, EstadoFinancieroService>();
 
         return services;
     }

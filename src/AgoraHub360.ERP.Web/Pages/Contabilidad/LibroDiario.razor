@@ -1,0 +1,222 @@
+@page "/contabilidad/libro-diario"
+@attribute [Authorize]
+@inject EstadoFinancieroHttpService ReporteService
+@inject IJSRuntime JS
+
+<PageTitle>Libro Diario - AgoraHub360 ERP</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3><i class="bi bi-journal-bookmark-fill"></i> Libro Diario</h3>
+            <p class="text-muted mb-0">Registro cronológico de comprobantes contables</p>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body py-2">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label mb-1 small">Desde</label>
+                    <input type="date" class="form-control form-control-sm" @bind="fechaDesde" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label mb-1 small">Hasta</label>
+                    <input type="date" class="form-control form-control-sm" @bind="fechaHasta" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label mb-1 small">Estado</label>
+                    <select class="form-select form-select-sm" @bind="filtroEstado">
+                        <option value="">Todos</option>
+                        <option value="Contabilizado">Contabilizado</option>
+                        <option value="Borrador">Borrador</option>
+                        <option value="Anulado">Anulado</option>
+                    </select>
+                </div>
+                <div class="col-md-auto">
+                    <button class="btn btn-sm btn-primary" @onclick="Generar" disabled="@loading">
+                        @if (loading) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        <i class="bi bi-calculator"></i> Generar
+                    </button>
+                </div>
+                <div class="col-md-auto">
+                    <button class="btn btn-sm btn-success" @onclick="ExportarExcel" disabled="@(exportando || data == null)">
+                        @if (exportando) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        <i class="bi bi-file-earmark-excel"></i> Excel
+                    </button>
+                </div>
+                <div class="col-md-auto">
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="Imprimir" disabled="@(data == null)">
+                        <i class="bi bi-printer"></i> Imprimir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (data != null)
+    {
+        <div id="printArea">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <h4 class="fw-bold">@data.Empresa</h4>
+                        <h5>LIBRO DIARIO</h5>
+                        <p class="text-muted">Del @data.FechaDesde.ToString("dd/MM/yyyy") al @data.FechaHasta.ToString("dd/MM/yyyy") — Gestión @data.Gestion</p>
+                        <p class="small text-muted">(Expresado en Bolivianos)</p>
+                    </div>
+
+                    @if (data.Entradas.Count == 0)
+                    {
+                        <div class="text-center py-5 text-muted">
+                            <i class="bi bi-journal-x" style="font-size:2.5rem;"></i>
+                            <p class="mt-3">No hay comprobantes en el período seleccionado.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-0">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th style="width:100px">Fecha</th>
+                                        <th style="width:140px">Nro. Comprobante</th>
+                                        <th style="width:120px">Código</th>
+                                        <th>Cuenta / Glosa</th>
+                                        <th class="text-end" style="width:130px">Debe</th>
+                                        <th class="text-end" style="width:130px">Haber</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var entrada in data.Entradas)
+                                    {
+                                        @* Header del comprobante *@
+                                        <tr class="table-light">
+                                            <td class="fw-semibold">@entrada.Fecha.ToString("dd/MM/yyyy")</td>
+                                            <td>
+                                                <strong>@entrada.Numero</strong>
+                                                <span class="badge ms-1 @GetEstadoBadge(entrada.Estado)">@entrada.Estado</span>
+                                            </td>
+                                            <td></td>
+                                            <td class="fst-italic text-muted">@entrada.Glosa</td>
+                                            <td></td>
+                                            <td></td>
+                                        </tr>
+                                        @* Líneas del comprobante *@
+                                        @foreach (var linea in entrada.Lineas)
+                                        {
+                                            <tr>
+                                                <td></td>
+                                                <td></td>
+                                                <td><code>@linea.CuentaCodigo</code></td>
+                                                <td class="@(linea.Haber > 0 ? "ps-4" : "")">
+                                                    @linea.CuentaNombre
+                                                    @if (!string.IsNullOrEmpty(linea.Glosa))
+                                                    {
+                                                        <small class="text-muted d-block">@linea.Glosa</small>
+                                                    }
+                                                </td>
+                                                <td class="text-end @(linea.Debe > 0 ? "fw-semibold" : "")">@(linea.Debe > 0 ? linea.Debe.ToString("N2") : "")</td>
+                                                <td class="text-end @(linea.Haber > 0 ? "fw-semibold" : "")">@(linea.Haber > 0 ? linea.Haber.ToString("N2") : "")</td>
+                                            </tr>
+                                        }
+                                        @* Sub-total *@
+                                        <tr class="border-top">
+                                            <td colspan="4" class="text-end small text-muted">Subtotal:</td>
+                                            <td class="text-end fw-semibold border-top">@entrada.TotalDebe.ToString("N2")</td>
+                                            <td class="text-end fw-semibold border-top">@entrada.TotalHaber.ToString("N2")</td>
+                                        </tr>
+                                        @* Spacer *@
+                                        <tr class="border-0"><td colspan="6" class="border-0 py-1"></td></tr>
+                                    }
+                                </tbody>
+                                <tfoot class="table-dark">
+                                    <tr class="fw-bold">
+                                        <td colspan="4" class="text-end">TOTAL LIBRO DIARIO:</td>
+                                        <td class="text-end">@data.TotalDebe.ToString("N2")</td>
+                                        <td class="text-end">@data.TotalHaber.ToString("N2")</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        <div class="mt-3 text-muted small d-flex justify-content-between">
+                            <span><strong>@data.Entradas.Count</strong> comprobantes en el período.</span>
+                            <span>
+                                @if (data.TotalDebe == data.TotalHaber)
+                                {
+                                    <span class="text-success"><i class="bi bi-check-circle-fill"></i> Totales cuadrados</span>
+                                }
+                                else
+                                {
+                                    <span class="text-danger"><i class="bi bi-exclamation-triangle-fill"></i> Diferencia: @Math.Abs(data.TotalDebe - data.TotalHaber).ToString("N2")</span>
+                                }
+                            </span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private DateTime fechaDesde = new DateTime(DateTime.Today.Year, 1, 1);
+    private DateTime fechaHasta = DateTime.Today;
+    private string filtroEstado = "";
+    private LibroDiarioDto? data;
+    private bool loading;
+    private bool exportando;
+    private string? errorMessage;
+
+    private async Task Generar()
+    {
+        loading = true; errorMessage = null;
+        try
+        {
+            var estado = string.IsNullOrEmpty(filtroEstado) ? null : filtroEstado;
+            data = await ReporteService.GetLibroDiarioAsync(fechaDesde, fechaHasta, estado);
+            if (data == null) errorMessage = "No se pudo generar el Libro Diario.";
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { loading = false; }
+    }
+
+    private async Task ExportarExcel()
+    {
+        exportando = true;
+        try
+        {
+            var estado = string.IsNullOrEmpty(filtroEstado) ? null : filtroEstado;
+            var bytes = await ReporteService.ExportLibroDiarioExcelAsync(fechaDesde, fechaHasta, estado);
+            if (bytes != null)
+                await JS.InvokeVoidAsync("downloadFile",
+                    $"Libro_Diario_{fechaDesde:yyyyMMdd}_{fechaHasta:yyyyMMdd}.xlsx",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    Convert.ToBase64String(bytes));
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { exportando = false; }
+    }
+
+    private async Task Imprimir()
+    {
+        await JS.InvokeVoidAsync("eval", "window.print()");
+    }
+
+    private static string GetEstadoBadge(string estado) => estado switch
+    {
+        "Borrador" => "bg-warning text-dark",
+        "Contabilizado" => "bg-success",
+        "Anulado" => "bg-danger",
+        _ => "bg-secondary"
+    };
+}

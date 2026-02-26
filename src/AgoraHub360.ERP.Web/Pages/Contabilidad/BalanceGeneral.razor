@@ -1,0 +1,184 @@
+@page "/contabilidad/balance-general"
+@attribute [Authorize]
+@inject EstadoFinancieroHttpService ReporteService
+@inject IJSRuntime JS
+
+<PageTitle>Balance General - AgoraHub360 ERP</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3><i class="bi bi-bar-chart-line-fill"></i> Balance General</h3>
+            <p class="text-muted mb-0">Estado de Situación Financiera</p>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body py-2">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label mb-1 small">Fecha de Corte</label>
+                    <input type="date" class="form-control form-control-sm" @bind="fechaCorte" />
+                </div>
+                <div class="col-md-auto">
+                    <button class="btn btn-sm btn-primary" @onclick="Generar" disabled="@loading">
+                        @if (loading) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        <i class="bi bi-calculator"></i> Generar
+                    </button>
+                </div>
+                <div class="col-md-auto">
+                    <button class="btn btn-sm btn-success" @onclick="ExportarExcel" disabled="@(exportando || data == null)">
+                        @if (exportando) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        <i class="bi bi-file-earmark-excel"></i> Excel
+                    </button>
+                </div>
+                <div class="col-md-auto">
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="Imprimir" disabled="@(data == null)">
+                        <i class="bi bi-printer"></i> Imprimir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (data != null)
+    {
+        <div id="printArea">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <h4 class="fw-bold">@data.Empresa</h4>
+                        <h5>BALANCE GENERAL</h5>
+                        <p class="text-muted">Al @data.FechaCorte.ToString("dd/MM/yyyy") — Gestión @data.Gestion</p>
+                        <p class="small text-muted">(Expresado en Bolivianos)</p>
+                    </div>
+
+                    <div class="row">
+                        @* ACTIVOS *@
+                        <div class="col-md-6">
+                            <h6 class="fw-bold border-bottom pb-2 text-primary"><i class="bi bi-arrow-up-circle"></i> ACTIVOS</h6>
+                            @RenderGrupo(data.Activos)
+                            <div class="d-flex justify-content-between fw-bold border-top border-2 border-primary pt-2 mt-2">
+                                <span>TOTAL ACTIVOS</span>
+                                <span>@data.TotalActivos.ToString("N2")</span>
+                            </div>
+                        </div>
+
+                        @* PASIVOS Y PATRIMONIO *@
+                        <div class="col-md-6">
+                            <h6 class="fw-bold border-bottom pb-2 text-danger"><i class="bi bi-arrow-down-circle"></i> PASIVOS</h6>
+                            @RenderGrupo(data.Pasivos)
+                            <div class="d-flex justify-content-between fw-bold border-top pt-2 mt-2">
+                                <span>TOTAL PASIVOS</span>
+                                <span>@data.TotalPasivos.ToString("N2")</span>
+                            </div>
+
+                            <h6 class="fw-bold border-bottom pb-2 text-info mt-4"><i class="bi bi-bank"></i> PATRIMONIO</h6>
+                            @RenderGrupo(data.Patrimonio)
+                            <div class="d-flex justify-content-between fw-bold border-top pt-2 mt-2">
+                                <span>TOTAL PATRIMONIO</span>
+                                <span>@data.TotalPatrimonio.ToString("N2")</span>
+                            </div>
+
+                            <div class="d-flex justify-content-between fw-bold border-top border-2 border-dark pt-2 mt-3 fs-6">
+                                <span>TOTAL PASIVO + PATRIMONIO</span>
+                                <span>@data.TotalPasivoPatrimonio.ToString("N2")</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-4">
+                        @if (data.Cuadrado)
+                        {
+                            <span class="badge bg-success fs-6"><i class="bi bi-check-circle-fill"></i> Balance cuadrado — Activos = Pasivos + Patrimonio</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-danger fs-6"><i class="bi bi-exclamation-triangle-fill"></i> Balance NO cuadra — Diferencia: @Math.Abs(data.TotalActivos - data.TotalPasivoPatrimonio).ToString("N2")</span>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private DateTime fechaCorte = DateTime.Today;
+    private BalanceGeneralDto? data;
+    private bool loading;
+    private bool exportando;
+    private string? errorMessage;
+
+    private async Task Generar()
+    {
+        loading = true; errorMessage = null;
+        try
+        {
+            data = await ReporteService.GetBalanceGeneralAsync(fechaCorte);
+            if (data == null) errorMessage = "No se pudo generar el Balance General.";
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { loading = false; }
+    }
+
+    private async Task ExportarExcel()
+    {
+        exportando = true;
+        try
+        {
+            var bytes = await ReporteService.ExportBalanceGeneralExcelAsync(fechaCorte);
+            if (bytes != null)
+                await JS.InvokeVoidAsync("downloadFile",
+                    $"Balance_General_{fechaCorte:yyyyMMdd}.xlsx",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    Convert.ToBase64String(bytes));
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { exportando = false; }
+    }
+
+    private async Task Imprimir()
+    {
+        await JS.InvokeVoidAsync("eval", "window.print()");
+    }
+
+    private RenderFragment RenderGrupo(List<BalanceGrupoDto> items) => builder =>
+    {
+        foreach (var item in items)
+            RenderNodo(builder, item, 0);
+    };
+
+    private void RenderNodo(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder, BalanceGrupoDto nodo, int indent)
+    {
+        var seq = 0;
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", $"d-flex justify-content-between py-1 {(nodo.EsAgrupador ? "fw-semibold" : "")}");
+        builder.AddAttribute(seq++, "style", $"padding-left:{indent * 16}px");
+
+        builder.OpenElement(seq++, "span");
+        builder.OpenElement(seq++, "small");
+        builder.AddAttribute(seq++, "class", "text-muted me-2");
+        builder.AddContent(seq++, nodo.Codigo);
+        builder.CloseElement(); // small
+        builder.AddContent(seq++, nodo.Nombre);
+        builder.CloseElement(); // span
+
+        builder.OpenElement(seq++, "span");
+        builder.AddContent(seq++, nodo.Saldo.ToString("N2"));
+        builder.CloseElement(); // span
+
+        builder.CloseElement(); // div
+
+        foreach (var child in nodo.SubCuentas)
+            RenderNodo(builder, child, indent + 1);
+    }
+}

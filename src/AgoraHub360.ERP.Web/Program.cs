@@ -65,5 +65,6 @@ builder.Services.AddScoped<CuentaContableHttpService>();
 builder.Services.AddScoped<AsientoContableHttpService>();
 builder.Services.AddScoped<PeriodoContableHttpService>();
 builder.Services.AddScoped<PlantillaContableHttpService>();
+builder.Services.AddScoped<EstadoFinancieroHttpService>();
 
 await builder.Build().RunAsync();

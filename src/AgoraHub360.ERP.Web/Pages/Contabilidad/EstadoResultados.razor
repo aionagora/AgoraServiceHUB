@@ -1,0 +1,184 @@
+@page "/contabilidad/estado-resultados"
+@attribute [Authorize]
+@inject EstadoFinancieroHttpService ReporteService
+@inject IJSRuntime JS
+
+<PageTitle>Estado de Resultados - AgoraHub360 ERP</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3><i class="bi bi-graph-up-arrow"></i> Estado de Resultados</h3>
+            <p class="text-muted mb-0">Estado de Pérdidas y Ganancias</p>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body py-2">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label mb-1 small">Desde</label>
+                    <input type="date" class="form-control form-control-sm" @bind="fechaDesde" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label mb-1 small">Hasta</label>
+                    <input type="date" class="form-control form-control-sm" @bind="fechaHasta" />
+                </div>
+                <div class="col-md-auto">
+                    <button class="btn btn-sm btn-primary" @onclick="Generar" disabled="@loading">
+                        @if (loading) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        <i class="bi bi-calculator"></i> Generar
+                    </button>
+                </div>
+                <div class="col-md-auto">
+                    <button class="btn btn-sm btn-success" @onclick="ExportarExcel" disabled="@(exportando || data == null)">
+                        @if (exportando) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        <i class="bi bi-file-earmark-excel"></i> Excel
+                    </button>
+                </div>
+                <div class="col-md-auto">
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="Imprimir" disabled="@(data == null)">
+                        <i class="bi bi-printer"></i> Imprimir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (data != null)
+    {
+        <div id="printArea">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <h4 class="fw-bold">@data.Empresa</h4>
+                        <h5>ESTADO DE RESULTADOS</h5>
+                        <p class="text-muted">Del @data.FechaDesde.ToString("dd/MM/yyyy") al @data.FechaHasta.ToString("dd/MM/yyyy") — Gestión @data.Gestion</p>
+                        <p class="small text-muted">(Expresado en Bolivianos)</p>
+                    </div>
+
+                    <div class="mx-auto" style="max-width:700px;">
+                        @* INGRESOS *@
+                        <h6 class="fw-bold text-success border-bottom pb-2"><i class="bi bi-arrow-up-circle-fill"></i> INGRESOS</h6>
+                        @RenderGrupo(data.Ingresos)
+                        <div class="d-flex justify-content-between fw-bold border-top pt-2 mt-2 text-success">
+                            <span>TOTAL INGRESOS</span>
+                            <span>@data.TotalIngresos.ToString("N2")</span>
+                        </div>
+
+                        @* COSTOS *@
+                        <h6 class="fw-bold text-warning border-bottom pb-2 mt-4"><i class="bi bi-boxes"></i> COSTOS</h6>
+                        @RenderGrupo(data.Costos)
+                        <div class="d-flex justify-content-between fw-bold border-top pt-2 mt-2 text-warning">
+                            <span>TOTAL COSTOS</span>
+                            <span>(@data.TotalCostos.ToString("N2"))</span>
+                        </div>
+
+                        @* UTILIDAD BRUTA *@
+                        <div class="d-flex justify-content-between fw-bold border-top border-2 border-dark pt-3 mt-3 fs-6">
+                            <span>UTILIDAD BRUTA</span>
+                            <span class="@(data.UtilidadBruta >= 0 ? "text-success" : "text-danger")">@data.UtilidadBruta.ToString("N2")</span>
+                        </div>
+
+                        @* GASTOS *@
+                        <h6 class="fw-bold text-danger border-bottom pb-2 mt-4"><i class="bi bi-arrow-down-circle-fill"></i> GASTOS</h6>
+                        @RenderGrupo(data.Gastos)
+                        <div class="d-flex justify-content-between fw-bold border-top pt-2 mt-2 text-danger">
+                            <span>TOTAL GASTOS</span>
+                            <span>(@data.TotalGastos.ToString("N2"))</span>
+                        </div>
+
+                        @* UTILIDAD NETA *@
+                        <div class="d-flex justify-content-between fw-bold border-top border-bottom border-3 border-dark py-3 mt-4 fs-5">
+                            <span>UTILIDAD (PÉRDIDA) NETA</span>
+                            <span class="@(data.UtilidadNeta >= 0 ? "text-success" : "text-danger")">
+                                @(data.UtilidadNeta >= 0 ? data.UtilidadNeta.ToString("N2") : $"({Math.Abs(data.UtilidadNeta).ToString("N2")})")
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private DateTime fechaDesde = new DateTime(DateTime.Today.Year, 1, 1);
+    private DateTime fechaHasta = DateTime.Today;
+    private EstadoResultadosDto? data;
+    private bool loading;
+    private bool exportando;
+    private string? errorMessage;
+
+    private async Task Generar()
+    {
+        loading = true; errorMessage = null;
+        try
+        {
+            data = await ReporteService.GetEstadoResultadosAsync(fechaDesde, fechaHasta);
+            if (data == null) errorMessage = "No se pudo generar el Estado de Resultados.";
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { loading = false; }
+    }
+
+    private async Task ExportarExcel()
+    {
+        exportando = true;
+        try
+        {
+            var bytes = await ReporteService.ExportEstadoResultadosExcelAsync(fechaDesde, fechaHasta);
+            if (bytes != null)
+                await JS.InvokeVoidAsync("downloadFile",
+                    $"Estado_Resultados_{fechaDesde:yyyyMMdd}_{fechaHasta:yyyyMMdd}.xlsx",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    Convert.ToBase64String(bytes));
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { exportando = false; }
+    }
+
+    private async Task Imprimir()
+    {
+        await JS.InvokeVoidAsync("eval", "window.print()");
+    }
+
+    private RenderFragment RenderGrupo(List<BalanceGrupoDto> items) => builder =>
+    {
+        foreach (var item in items)
+            RenderNodo(builder, item, 0);
+    };
+
+    private void RenderNodo(Microsoft.AspNetCore.Components.Rendering.RenderTreeBuilder builder, BalanceGrupoDto nodo, int indent)
+    {
+        var seq = 0;
+        builder.OpenElement(seq++, "div");
+        builder.AddAttribute(seq++, "class", $"d-flex justify-content-between py-1 {(nodo.EsAgrupador ? "fw-semibold" : "")}");
+        builder.AddAttribute(seq++, "style", $"padding-left:{indent * 16}px");
+
+        builder.OpenElement(seq++, "span");
+        builder.OpenElement(seq++, "small");
+        builder.AddAttribute(seq++, "class", "text-muted me-2");
+        builder.AddContent(seq++, nodo.Codigo);
+        builder.CloseElement();
+        builder.AddContent(seq++, nodo.Nombre);
+        builder.CloseElement();
+
+        builder.OpenElement(seq++, "span");
+        builder.AddContent(seq++, nodo.Saldo.ToString("N2"));
+        builder.CloseElement();
+
+        builder.CloseElement();
+
+        foreach (var child in nodo.SubCuentas)
+            RenderNodo(builder, child, indent + 1);
+    }
+}
