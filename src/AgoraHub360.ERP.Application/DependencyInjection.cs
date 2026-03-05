@@ -50,9 +50,11 @@ public static class DependencyInjection
         services.AddScoped<IMovimientoInventarioService, MovimientoInventarioService>();
 
         // CMP
+        services.AddScoped<IOrdenPedidoService, OrdenPedidoService>();
         services.AddScoped<IOrdenCompraService, OrdenCompraService>();
         services.AddScoped<IRecepcionCompraService, RecepcionCompraService>();
         services.AddScoped<IHojaImportacionService, HojaImportacionService>();
+        services.AddScoped<IExpedienteImportacionService, ExpedienteImportacionService>();
 
         // ACC
         services.AddScoped<ICuentaContableService, CuentaContableService>();

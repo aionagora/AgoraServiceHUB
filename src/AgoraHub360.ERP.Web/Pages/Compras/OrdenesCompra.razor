@@ -595,13 +595,13 @@
         {
             if (isEditing)
             {
-                var dto = new UpdateOrdenCompraDto(formFechaEmision, formFechaEntrega, formProveedorId, formAlmacenId, formMoneda, formTasaCambio, formCondicionPago, formObservaciones, formReferenciaExterna);
+                var dto = new UpdateOrdenCompraDto(formFechaEmision, formFechaEntrega, formProveedorId, formAlmacenId, formMoneda, formTasaCambio, formCondicionPago, null, formObservaciones, formReferenciaExterna);
                 var r = await OcService.UpdateAsync(editingOcId, dto);
                 if (r.Success) { successMessage = "OC actualizada."; CloseModal(); await LoadData(); } else errorMessage = r.Message;
             }
             else
             {
-                var dto = new CreateOrdenCompraDto(formFechaEmision, formFechaEntrega, formProveedorId, formAlmacenId, formMoneda, formTasaCambio, formCondicionPago, formObservaciones, formReferenciaExterna, tempLineas.Count > 0 ? tempLineas : null);
+                var dto = new CreateOrdenCompraDto(formFechaEmision, formFechaEntrega, formProveedorId, formAlmacenId, formMoneda, formTasaCambio, formCondicionPago, null, formObservaciones, formReferenciaExterna, null, tempLineas.Count > 0 ? tempLineas : null);
                 var r = await OcService.CreateAsync(dto);
                 if (r.Success) { successMessage = $"OC {r.Data?.Numero} creada."; CloseModal(); await LoadData(); } else errorMessage = r.Message;
             }

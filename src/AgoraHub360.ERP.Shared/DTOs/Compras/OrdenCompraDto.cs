@@ -15,13 +15,17 @@ public record OrdenCompraDto(
     decimal TasaCambio,
     string Estado,
     string? CondicionPago,
+    string? Incoterm,
     string? Observaciones,
     string? ReferenciaExterna,
+    string? MotivoRechazo,
     decimal Subtotal,
     decimal Descuento,
     decimal Impuesto,
     decimal Total,
     bool Activo,
+    long? OrdenPedidoId,
+    long? ExpedienteImportacionId,
     List<OrdenCompraLineaDto> Lineas);
 
 /// <summary>DTO de lectura para línea de OC.</summary>
@@ -52,8 +56,10 @@ public record CreateOrdenCompraDto(
     string MonedaId = "BOB",
     decimal TasaCambio = 1,
     string? CondicionPago = null,
+    string? Incoterm = null,
     string? Observaciones = null,
     string? ReferenciaExterna = null,
+    long? OrdenPedidoId = null,
     List<CreateOrdenCompraLineaDto>? Lineas = null);
 
 /// <summary>DTO para crear una línea de OC.</summary>
@@ -75,6 +81,7 @@ public record UpdateOrdenCompraDto(
     string MonedaId,
     decimal TasaCambio,
     string? CondicionPago,
+    string? Incoterm,
     string? Observaciones,
     string? ReferenciaExterna);
 
@@ -96,3 +103,8 @@ public record UpdateOrdenCompraLineaDto(
     decimal PrecioUnitario,
     decimal PorcentajeDescuento,
     decimal PorcentajeImpuesto);
+
+/// <summary>DTO para aprobar o rechazar la OC (gate de Finanzas/Dirección).</summary>
+public record AprobarRechazarOrdenCompraDto(
+    bool Aprobado,
+    string? MotivoRechazo = null);

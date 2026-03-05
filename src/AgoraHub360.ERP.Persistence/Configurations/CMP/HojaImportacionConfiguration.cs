@@ -23,12 +23,14 @@ public class HojaImportacionConfiguration : IEntityTypeConfiguration<HojaImporta
         // Indexes
         builder.HasIndex(h => new { h.EmpresaId, h.Numero }).IsUnique();
         builder.HasIndex(h => new { h.EmpresaId, h.OrdenCompraId });
+        builder.HasIndex(h => new { h.EmpresaId, h.ExpedienteImportacionId });
 
         // Relations
         builder.HasOne(h => h.OrdenCompra)
             .WithMany()
             .HasForeignKey(h => h.OrdenCompraId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.Restrict)
+            .IsRequired(false);
 
         builder.HasMany(h => h.Gastos)
             .WithOne(g => g.HojaImportacion)

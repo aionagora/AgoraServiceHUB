@@ -5,8 +5,10 @@ public record HojaImportacionDto(
     long HojaImportacionId,
     int EmpresaId,
     string Numero,
-    long OrdenCompraId,
-    string OrdenCompraNumero,
+    long? OrdenCompraId,
+    string? OrdenCompraNumero,
+    long? ExpedienteImportacionId,
+    string? ExpedienteNumero,
     DateTime Fecha,
     string? ReferenciaAduanera,
     string? Observaciones,
@@ -43,10 +45,11 @@ public record ImportacionLineaDto(
     decimal CostoLandedUnitario,
     decimal CostoLandedTotal);
 
-/// <summary>DTO para crear una hoja de importación.</summary>
+/// <summary>DTO para crear una hoja de importación (vinculada a OC directa).</summary>
 public record CreateHojaImportacionDto(
-    long OrdenCompraId,
-    DateTime Fecha,
+    long? OrdenCompraId = null,
+    long? ExpedienteImportacionId = null,
+    DateTime Fecha = default,
     string? ReferenciaAduanera = null,
     string? Observaciones = null,
     byte MetodoDistribucion = 3,

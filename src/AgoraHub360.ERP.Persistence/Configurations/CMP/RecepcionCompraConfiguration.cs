@@ -16,6 +16,11 @@ public class RecepcionCompraConfiguration : IEntityTypeConfiguration<RecepcionCo
         builder.Property(r => r.FechaRecepcion).IsRequired();
         builder.Property(r => r.DocumentoProveedor).HasMaxLength(100);
         builder.Property(r => r.Observaciones).HasMaxLength(1000);
+        builder.Property(r => r.TipoDiferencia).HasMaxLength(50);
+        builder.Property(r => r.ActaDiferencias).HasMaxLength(2000);
+        builder.Property(r => r.NumeroReclamo).HasMaxLength(100);
+        builder.Property(r => r.UbicacionCuarentena).HasMaxLength(200);
+        builder.Property(r => r.ResultadoControlCalidad).HasMaxLength(50);
         builder.Property(r => r.CreadoPor).HasMaxLength(100);
         builder.Property(r => r.ModificadoPor).HasMaxLength(100);
 

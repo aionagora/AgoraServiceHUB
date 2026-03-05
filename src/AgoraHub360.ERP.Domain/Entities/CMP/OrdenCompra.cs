@@ -7,7 +7,9 @@ using AgoraHub360.ERP.Domain.Enums;
 /// <summary>
 /// Orden de Compra (Purchase Order).
 /// Documento maestro con cabecera + líneas de detalle.
-/// Flujo: Borrador ? Confirmado ? Aprobado ? (Recepcionado parcial/total) ? Cerrado.
+/// Flujo: Borrador ? Confirmado ? PendienteAprobacion ? Aprobado
+///        ? EnviadaProveedor ? (EnNegociacion ? ajuste) ? ConfirmadaProveedor
+///        ? PagoProgramado ? EnTransito/Expediente ? RecepcionParcial ? Cerrado.
 /// </summary>
 public class OrdenCompra : TenantEntity
 {
@@ -40,20 +42,38 @@ public class OrdenCompra : TenantEntity
     /// <summary>Condición de pago (ej: Contado, 30 días, etc.).</summary>
     public string? CondicionPago { get; set; }
 
+    /// <summary>Incoterm negociado (FOB, CIF, EXW, DDP, etc.).</summary>
+    public string? Incoterm { get; set; }
+
     /// <summary>Observaciones generales de la OC.</summary>
     public string? Observaciones { get; set; }
 
     /// <summary>Referencia externa (ej: Nro. cotización del proveedor).</summary>
     public string? ReferenciaExterna { get; set; }
 
-    // ?? Totales (calculados desde las líneas) ??
+    /// <summary>Motivo de rechazo cuando Finanzas/Dirección no aprueba.</summary>
+    public string? MotivoRechazo { get; set; }
+
+    // ?? Totales (calculados desde las líneas) ??????????????????????????????
     public decimal Subtotal { get; set; }
     public decimal Descuento { get; set; }
     public decimal Impuesto { get; set; }
     public decimal Total { get; set; }
 
+    // ?? Vínculos de flujo ??????????????????????????????????????????????????
+
+    /// <summary>Orden de Pedido que originó esta OC (puede ser null si se creó directamente).</summary>
+    public long? OrdenPedidoId { get; set; }
+    public OrdenPedido? OrdenPedido { get; set; }
+
+    /// <summary>Expediente de importación al que pertenece esta OC.</summary>
+    public long? ExpedienteImportacionId { get; set; }
+    public ExpedienteImportacion? ExpedienteImportacion { get; set; }
+
     // Navegación
     public ICollection<OrdenCompraLinea> Lineas { get; set; } = new List<OrdenCompraLinea>();
+    public ICollection<ConfirmacionProveedor> ConfirmacionesProveedor { get; set; } = new List<ConfirmacionProveedor>();
+    public ICollection<PagoOrdenCompra> Pagos { get; set; } = new List<PagoOrdenCompra>();
 
     /// <summary>Recalcula los totales a partir de las líneas.</summary>
     public void RecalcularTotales()

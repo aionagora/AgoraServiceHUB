@@ -108,6 +108,66 @@ public class OrdenCompraHttpService
             ?? ApiResponse<OrdenCompraDto>.Fail("Error de comunicación.");
     }
 
+    public async Task<ApiResponse<OrdenCompraDto>> AprobarRechazarAsync(long id, AprobarRechazarOrdenCompraDto dto)
+    {
+        var response = await _http.PostAsJsonAsync($"{Base}/{id}/aprobar", dto);
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            return ApiResponse<OrdenCompraDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
+        }
+        return await response.Content.ReadFromJsonAsync<ApiResponse<OrdenCompraDto>>()
+            ?? ApiResponse<OrdenCompraDto>.Fail("Error de comunicación.");
+    }
+
+    public async Task<ApiResponse<ConfirmacionProveedorDto>> RegistrarConfirmacionProveedorAsync(long id, RegistrarConfirmacionProveedorDto dto)
+    {
+        var response = await _http.PostAsJsonAsync($"{Base}/{id}/confirmacion-proveedor", dto);
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            return ApiResponse<ConfirmacionProveedorDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
+        }
+        return await response.Content.ReadFromJsonAsync<ApiResponse<ConfirmacionProveedorDto>>()
+            ?? ApiResponse<ConfirmacionProveedorDto>.Fail("Error de comunicación.");
+    }
+
+    public async Task<List<ConfirmacionProveedorDto>> GetConfirmacionesAsync(long id)
+    {
+        var response = await _http.GetFromJsonAsync<ApiResponse<List<ConfirmacionProveedorDto>>>($"{Base}/{id}/confirmaciones");
+        return response?.Data ?? new List<ConfirmacionProveedorDto>();
+    }
+
+    public async Task<ApiResponse<PagoOrdenCompraDto>> ProgramarPagoAsync(long id, ProgramarPagoDto dto)
+    {
+        var response = await _http.PostAsJsonAsync($"{Base}/{id}/pagos", dto);
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            return ApiResponse<PagoOrdenCompraDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
+        }
+        return await response.Content.ReadFromJsonAsync<ApiResponse<PagoOrdenCompraDto>>()
+            ?? ApiResponse<PagoOrdenCompraDto>.Fail("Error de comunicación.");
+    }
+
+    public async Task<ApiResponse<PagoOrdenCompraDto>> EjecutarPagoAsync(long id, long pagoId, EjecutarPagoDto dto)
+    {
+        var response = await _http.PostAsJsonAsync($"{Base}/{id}/pagos/{pagoId}/ejecutar", dto);
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            return ApiResponse<PagoOrdenCompraDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
+        }
+        return await response.Content.ReadFromJsonAsync<ApiResponse<PagoOrdenCompraDto>>()
+            ?? ApiResponse<PagoOrdenCompraDto>.Fail("Error de comunicación.");
+    }
+
+    public async Task<List<PagoOrdenCompraDto>> GetPagosAsync(long id)
+    {
+        var response = await _http.GetFromJsonAsync<ApiResponse<List<PagoOrdenCompraDto>>>($"{Base}/{id}/pagos");
+        return response?.Data ?? new List<PagoOrdenCompraDto>();
+    }
+
     public async Task<ApiResponse<bool>> DeleteAsync(long id)
     {
         var response = await _http.DeleteAsync($"{Base}/{id}");
