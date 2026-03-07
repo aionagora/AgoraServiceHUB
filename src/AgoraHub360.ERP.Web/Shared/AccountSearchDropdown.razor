@@ -1,0 +1,312 @@
+@using System.Timers
+@implements IDisposable
+@inject IJSRuntime JS
+
+<div class="account-search-dropdown" @ref="_containerRef">
+
+    @* ?? Input ?? *@
+    <div class="input-group input-group-sm">
+        <span class="input-group-text bg-white border-end-0 pe-1">
+            <i class="bi bi-search text-secondary" style="font-size:.75rem"></i>
+        </span>
+        <input @ref="_inputRef"
+               type="text"
+               class="form-control form-control-sm border-start-0 border-end-0 ps-0"
+               placeholder="@Placeholder"
+               value="@_searchText"
+               @oninput="OnInput"
+               @onfocus="OnFocus"
+               autocomplete="off"
+               disabled="@Disabled"
+               style="min-width:0" />
+        @if (_selected is not null)
+        {
+            <button type="button"
+                    class="btn btn-sm btn-outline-secondary border-start-0"
+                    @onclick="ClearSelection"
+                    title="Limpiar selección"
+                    tabindex="-1">
+                <i class="bi bi-x" style="font-size:.85rem"></i>
+            </button>
+        }
+    </div>
+
+    @* ?? Pill de selección activa ?? *@
+    @if (_selected is not null)
+    {
+        <div class="mt-1 d-flex align-items-center gap-1">
+            <span class="badge rounded-pill"
+                  style="background:@GetTipoColor(_selected.Tipo);font-size:.7rem;letter-spacing:.02em">
+                @_selected.Tipo
+            </span>
+            <span class="text-secondary small" style="font-size:.75rem">
+                <code style="font-size:.72rem;color:#374151">@_selected.Codigo</code>
+                &nbsp;@_selected.Nombre
+            </span>
+        </div>
+    }
+
+    @* ?? Dropdown panel ?? *@
+    @if (_isOpen && _filtered.Count > 0)
+    {
+        <div class="account-dropdown-panel shadow-sm border rounded-2 bg-white mt-1"
+             style="position:absolute;z-index:1060;width:100%;max-height:280px;overflow-y:auto">
+
+            @* Header con contador *@
+            <div class="px-3 py-1 border-bottom d-flex justify-content-between align-items-center"
+                 style="background:#f8fafc;font-size:.7rem;color:#6b7280;position:sticky;top:0;z-index:1">
+                <span><i class="bi bi-list-ul me-1"></i>Resultados</span>
+                <span class="badge bg-secondary rounded-pill" style="font-size:.65rem">
+                    @_filtered.Count de @Cuentas.Count
+                </span>
+            </div>
+
+            @* Items *@
+            @foreach (var cuenta in _filtered)
+            {
+                var isActive = _selected?.CuentaContableId == cuenta.CuentaContableId;
+                <button type="button"
+                        class="dropdown-item d-flex align-items-start gap-2 py-2 px-3 border-0 w-100 text-start @(isActive ? "active" : "")"
+                        style="background:@(isActive ? GetTipoColor(cuenta.Tipo) + "18" : "transparent");cursor:pointer;transition:background .1s"
+                        @onclick="() => SelectItem(cuenta)"
+                        @onmouseover="e => OnItemHover(cuenta, true)"
+                        @onmouseout="e => OnItemHover(cuenta, false)">
+
+                    @* Código en monospace *@
+                    <code style="font-size:.72rem;min-width:60px;color:#374151;padding-top:1px;flex-shrink:0">
+                        @cuenta.Codigo
+                    </code>
+
+                    @* Nombre + badge tipo *@
+                    <span class="flex-grow-1 d-flex flex-column" style="min-width:0">
+                        <span style="font-size:.8rem;color:#111827;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+                              title="@cuenta.Nombre">
+                            @cuenta.Nombre
+                        </span>
+                        @if (cuenta.Nivel > 1 && cuenta.CuentaPadreCodigo is not null)
+                        {
+                            <span style="font-size:.65rem;color:#9ca3af">
+                                <i class="bi bi-diagram-2 me-1"></i>@cuenta.CuentaPadreCodigo
+                            </span>
+                        }
+                    </span>
+
+                    @* Badge de tipo *@
+                    <span class="badge rounded-pill ms-auto flex-shrink-0"
+                          style="background:@GetTipoColor(cuenta.Tipo);font-size:.65rem;padding:.2em .5em;align-self:center">
+                        @cuenta.Tipo
+                    </span>
+                </button>
+            }
+        </div>
+    }
+    else if (_isOpen && _filtered.Count == 0 && !string.IsNullOrEmpty(_searchText))
+    {
+        <div class="account-dropdown-panel shadow-sm border rounded-2 bg-white mt-1 p-3 text-center text-muted"
+             style="position:absolute;z-index:1060;width:100%;font-size:.8rem">
+            <i class="bi bi-search me-1"></i>
+            Sin resultados para <strong>"@_searchText"</strong>
+        </div>
+    }
+</div>
+
+@code {
+    // ?? Parameters ????????????????????????????????????????????????????????????
+
+    /// <summary>Lista completa de cuentas disponibles para buscar.</summary>
+    [Parameter, EditorRequired]
+    public List<CuentaContableDto> Cuentas { get; set; } = new();
+
+    /// <summary>Callback invocado al seleccionar una cuenta.</summary>
+    [Parameter, EditorRequired]
+    public EventCallback<CuentaContableDto> OnSelect { get; set; }
+
+    /// <summary>Cuenta actualmente seleccionada (two-way binding opcional).</summary>
+    [Parameter]
+    public CuentaContableDto? Value { get; set; }
+
+    [Parameter]
+    public EventCallback<CuentaContableDto?> ValueChanged { get; set; }
+
+    [Parameter]
+    public string Placeholder { get; set; } = "Buscar cuenta por código o nombre…";
+
+    [Parameter]
+    public bool Disabled { get; set; }
+
+    // ?? State ?????????????????????????????????????????????????????????????????
+
+    private ElementReference _containerRef;
+    private ElementReference _inputRef;
+
+    private string _searchText = string.Empty;
+    private List<CuentaContableDto> _filtered = new();
+    private CuentaContableDto? _selected;
+    private bool _isOpen;
+    private CuentaContableDto? _hoveredItem;
+
+    private Timer? _debounceTimer;
+    private const int DebounceMs = 250;
+    private const int MaxResults  = 50;
+
+    private DotNetObjectReference<AccountSearchDropdown>? _objRef;
+    private bool _clickOutsideRegistered;
+
+    // ?? Lifecycle ?????????????????????????????????????????????????????????????
+
+    protected override void OnParametersSet()
+    {
+        // Sincronizar Value ? _selected (two-way binding)
+        if (Value is not null && Value != _selected)
+        {
+            _selected    = Value;
+            _searchText  = string.Empty;
+        }
+        else if (Value is null && _selected is not null && ValueChanged.HasDelegate)
+        {
+            _selected   = null;
+            _searchText = string.Empty;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _objRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("accountDropdown.registerClickOutside",
+                _containerRef, _objRef, nameof(CloseDropdown));
+            _clickOutsideRegistered = true;
+        }
+    }
+
+    // ?? Input / Search ????????????????????????????????????????????????????????
+
+    private void OnInput(ChangeEventArgs e)
+    {
+        _searchText = e.Value?.ToString() ?? string.Empty;
+
+        // Limpiar selección si el usuario borra el texto
+        if (string.IsNullOrWhiteSpace(_searchText) && _selected is not null)
+        {
+            _selected = null;
+            _ = ValueChanged.InvokeAsync(null);
+        }
+
+        // Reiniciar debounce
+        _debounceTimer?.Dispose();
+        _debounceTimer = new Timer(DebounceMs);
+        _debounceTimer.Elapsed  += OnDebounceElapsed;
+        _debounceTimer.AutoReset = false;
+        _debounceTimer.Start();
+    }
+
+    private void OnDebounceElapsed(object? sender, ElapsedEventArgs e)
+    {
+        _debounceTimer?.Dispose();
+        _debounceTimer = null;
+        InvokeAsync(() =>
+        {
+            ApplyFilter();
+            StateHasChanged();
+        });
+    }
+
+    private void ApplyFilter()
+    {
+        if (string.IsNullOrWhiteSpace(_searchText))
+        {
+            _filtered = new();
+            _isOpen   = false;
+            return;
+        }
+
+        var term = _searchText.Trim().ToLowerInvariant();
+
+        _filtered = Cuentas
+            .Where(c => c.Activo &&
+                        (c.Codigo.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                         c.Nombre.Contains(term, StringComparison.OrdinalIgnoreCase)))
+            .OrderBy(c => c.Codigo.StartsWith(term, StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+            .ThenBy(c => c.Codigo)
+            .Take(MaxResults)
+            .ToList();
+
+        _isOpen = true;
+    }
+
+    private void OnFocus()
+    {
+        if (!string.IsNullOrWhiteSpace(_searchText))
+        {
+            ApplyFilter();
+            StateHasChanged();
+        }
+    }
+
+    // ?? Selection ?????????????????????????????????????????????????????????????
+
+    private async Task SelectItem(CuentaContableDto cuenta)
+    {
+        _selected   = cuenta;
+        _searchText = string.Empty;
+        _filtered   = new();
+        _isOpen     = false;
+
+        await OnSelect.InvokeAsync(cuenta);
+        await ValueChanged.InvokeAsync(cuenta);
+        StateHasChanged();
+    }
+
+    private async Task ClearSelection()
+    {
+        _selected   = null;
+        _searchText = string.Empty;
+        _filtered   = new();
+        _isOpen     = false;
+
+        await OnSelect.InvokeAsync(null!);
+        await ValueChanged.InvokeAsync(null);
+
+        // Devolver foco al input
+        await _inputRef.FocusAsync();
+        StateHasChanged();
+    }
+
+    // ?? Click outside ?????????????????????????????????????????????????????????
+
+    [JSInvokable]
+    public void CloseDropdown()
+    {
+        _isOpen = false;
+        InvokeAsync(StateHasChanged);
+    }
+
+    // ?? Hover state ???????????????????????????????????????????????????????????
+
+    private void OnItemHover(CuentaContableDto cuenta, bool enter)
+    {
+        _hoveredItem = enter ? cuenta : null;
+    }
+
+    // ?? Color by tipo ?????????????????????????????????????????????????????????
+
+    private static string GetTipoColor(string tipo) => tipo switch
+    {
+        "Activo"   => "#0284c7",
+        "Pasivo"   => "#7c3aed",
+        "Ingreso"  => "#059669",
+        "Egreso"   => "#dc2626",
+        "Ingresos" => "#059669",
+        "Egresos"  => "#dc2626",
+        _          => "#6b7280"
+    };
+
+    // ?? IDisposable ???????????????????????????????????????????????????????????
+
+    public void Dispose()
+    {
+        _debounceTimer?.Dispose();
+        _objRef?.Dispose();
+    }
+}

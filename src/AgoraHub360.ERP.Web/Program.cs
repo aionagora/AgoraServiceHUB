@@ -55,6 +55,14 @@ builder.Services.AddScoped<PriceListHttpService>();
 // ──── Servicios HTTP Inventario ────
 builder.Services.AddScoped<MovimientoInventarioHttpService>();
 
+// ──── Servicios HTTP Contabilidad ────
+builder.Services.AddScoped<CuentaContableHttpService>();
+builder.Services.AddScoped<AsientoContableHttpService>();
+builder.Services.AddScoped<PeriodoContableHttpService>();
+builder.Services.AddScoped<PlantillaContableHttpService>();
+builder.Services.AddScoped<EstadoFinancieroHttpService>();
+builder.Services.AddScoped<CentroCostoHttpService>();
+
 // ──── Servicios HTTP Compras ────
 builder.Services.AddScoped<OrdenPedidoHttpService>();
 builder.Services.AddScoped<OrdenCompraHttpService>();
@@ -65,11 +73,7 @@ builder.Services.AddScoped<ExpedienteImportacionHttpService>();
 // ──── Dashboard ────
 builder.Services.AddScoped<DashboardDataService>();
 
-// ──── Servicios HTTP Contabilidad ────
-builder.Services.AddScoped<CuentaContableHttpService>();
-builder.Services.AddScoped<AsientoContableHttpService>();
-builder.Services.AddScoped<PeriodoContableHttpService>();
-builder.Services.AddScoped<PlantillaContableHttpService>();
-builder.Services.AddScoped<EstadoFinancieroHttpService>();
+// ──── Demo Seed ────
+builder.Services.AddScoped<EmpresaDemoService>();
 
 await builder.Build().RunAsync();

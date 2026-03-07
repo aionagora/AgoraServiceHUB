@@ -15,10 +15,14 @@ using OfficeOpenXml;
 public class AsientosContablesController : ControllerBase
 {
     private readonly IAsientoContableService _service;
+    private readonly IComprobanteDocumentoService _docService;
 
-    public AsientosContablesController(IAsientoContableService service)
+    public AsientosContablesController(
+        IAsientoContableService service,
+        IComprobanteDocumentoService docService)
     {
-        _service = service;
+        _service    = service;
+        _docService = docService;
         // Configurar EPPlus para uso no comercial
         ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
     }
@@ -233,5 +237,44 @@ public class AsientosContablesController : ControllerBase
         {
             return StatusCode(500, ApiResponse<string>.Fail($"Error al generar Excel: {ex.Message}"));
         }
+    }
+
+    // ?? Documentos adjuntos ???????????????????????????????????????????????????
+
+    /// <summary>Lista los documentos adjuntos a un comprobante.</summary>
+    [HttpGet("{comprobanteId:long}/documentos")]
+    public async Task<IActionResult> GetDocumentos(long comprobanteId, CancellationToken ct)
+    {
+        var result = await _docService.GetByComprobanteAsync(comprobanteId, ct);
+        if (!result.IsSuccess)
+            return NotFound(ApiResponse<IReadOnlyList<ComprobanteDocumentoDto>>.Fail(result.Error!));
+
+        return Ok(ApiResponse<IReadOnlyList<ComprobanteDocumentoDto>>.Ok(result.Value!));
+    }
+
+    /// <summary>Adjunta un documento existente a un comprobante.</summary>
+    [HttpPost("{comprobanteId:long}/documentos")]
+    public async Task<IActionResult> AdjuntarDocumento(
+        long comprobanteId, [FromBody] AdjuntarDocumentoDto dto, CancellationToken ct)
+    {
+        var result = await _docService.AdjuntarAsync(comprobanteId, dto, ct);
+        if (!result.IsSuccess)
+            return BadRequest(ApiResponse<ComprobanteDocumentoDto>.Fail(result.Error!));
+
+        return CreatedAtAction(
+            nameof(GetDocumentos),
+            new { comprobanteId },
+            ApiResponse<ComprobanteDocumentoDto>.Ok(result.Value!, "Documento adjuntado."));
+    }
+
+    /// <summary>Elimina el vínculo entre un comprobante y un documento adjunto.</summary>
+    [HttpDelete("{comprobanteId:long}/documentos/{docId:int}")]
+    public async Task<IActionResult> RemoverDocumento(long comprobanteId, int docId, CancellationToken ct)
+    {
+        var result = await _docService.RemoverAsync(comprobanteId, docId, ct);
+        if (!result.IsSuccess)
+            return NotFound(ApiResponse<bool>.Fail(result.Error!));
+
+        return Ok(ApiResponse<bool>.Ok(true, "Documento removido del comprobante."));
     }
 }

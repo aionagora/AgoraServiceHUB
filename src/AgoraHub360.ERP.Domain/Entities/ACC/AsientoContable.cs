@@ -1,6 +1,7 @@
 namespace AgoraHub360.ERP.Domain.Entities.ACC;
 
 using AgoraHub360.ERP.Domain.Common;
+using AgoraHub360.ERP.Domain.Entities.DOC;
 
 /// <summary>
 /// Comprobante contable (journal entry).
@@ -78,4 +79,5 @@ public class AsientoContable : TenantEntity
 
     // Navegación
     public ICollection<AsientoContableLinea> Lineas { get; set; } = new List<AsientoContableLinea>();
+    public ICollection<ComprobanteDocumento> Documentos { get; set; } = new List<ComprobanteDocumento>();
 }

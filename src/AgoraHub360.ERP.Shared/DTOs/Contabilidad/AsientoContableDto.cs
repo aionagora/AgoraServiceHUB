@@ -58,6 +58,11 @@ public class AsientoContableLineaDto
     public decimal Haber { get; set; }
     public string? Glosa { get; set; }
     public string? Referencia { get; set; }
+
+    // Centro de costo analítico (nullable — compatible con datos existentes)
+    public int? CentroCostoId { get; set; }
+    public string? CentroCostoCodigo { get; set; }
+    public string? CentroCostoNombre { get; set; }
 }
 
 /// <summary>DTO para crear un comprobante contable.</summary>
@@ -97,6 +102,9 @@ public class CreateAsientoLineaDto
     public decimal Haber { get; set; }
     public string? Glosa { get; set; }
     public string? Referencia { get; set; }
+
+    /// <summary>Centro de costo analítico opcional. Null = sin centro de costo.</summary>
+    public int? CentroCostoId { get; set; }
 }
 
 // ?? DTOs para tablas de soporte ??

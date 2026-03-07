@@ -1,6 +1,7 @@
 namespace AgoraHub360.ERP.Domain.Entities.ACC;
 
 using AgoraHub360.ERP.Domain.Common;
+using AgoraHub360.ERP.Domain.Entities.CST;
 
 /// <summary>
 /// Línea de un asiento contable.
@@ -29,6 +30,10 @@ public class AsientoContableLinea : AuditableEntity
 
     /// <summary>Referencia adicional (ej: número de factura, proveedor).</summary>
     public string? Referencia { get; set; }
+
+    /// <summary>Centro de costo analítico opcional para la línea.</summary>
+    public int? CentroCostoId { get; set; }
+    public CentroCosto? CentroCosto { get; set; }
 
     // Navegación
     public AsientoContable? AsientoContable { get; set; }

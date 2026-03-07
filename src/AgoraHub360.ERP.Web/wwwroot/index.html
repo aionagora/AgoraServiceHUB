@@ -58,6 +58,35 @@
                 console.error('Error al descargar archivo:', error);
             }
         };
+
+        // ── accountDropdown: click-outside helper ─────────────────────────────
+        window.accountDropdown = {
+            _handlers: new Map(),
+
+            registerClickOutside(containerEl, dotnetObj, callbackMethod) {
+                // Eliminar listener previo si ya existía para este contenedor
+                if (this._handlers.has(containerEl)) {
+                    document.removeEventListener('click', this._handlers.get(containerEl));
+                    this._handlers.delete(containerEl);
+                }
+
+                const handler = (e) => {
+                    if (containerEl && !containerEl.contains(e.target)) {
+                        dotnetObj.invokeMethodAsync(callbackMethod);
+                    }
+                };
+
+                document.addEventListener('click', handler);
+                this._handlers.set(containerEl, handler);
+            },
+
+            unregister(containerEl) {
+                if (this._handlers.has(containerEl)) {
+                    document.removeEventListener('click', this._handlers.get(containerEl));
+                    this._handlers.delete(containerEl);
+                }
+            }
+        };
     </script>
 
     <script src="_framework/blazor.webassembly.js"></script>

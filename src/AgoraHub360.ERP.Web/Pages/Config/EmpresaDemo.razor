@@ -1,0 +1,360 @@
+@page "/config/empresa-demo"
+@attribute [Authorize(Roles = "Admin")]
+@inject EmpresaDemoService DemoSvc
+@inject NavigationManager Nav
+
+<PageTitle>Crear Empresa DEMO - AgoraHub360 ERP</PageTitle>
+
+<div class="page-header">
+    <div>
+        <h1><i class="bi bi-magic me-2" style="color:#8b5cf6"></i>Empresa DEMO</h1>
+        <p class="text-muted mb-0">Sistema &rsaquo; Crear Empresa Demo</p>
+    </div>
+</div>
+
+@* ?? Banner informativo ?? *@
+@if (!_iniciado)
+{
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm mb-4" style="border-top:4px solid #8b5cf6 !important">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center gap-3 mb-4">
+                        <div class="rounded-3 d-flex align-items-center justify-content-center text-white"
+                             style="width:52px;height:52px;background:linear-gradient(135deg,#8b5cf6,#6d28d9);flex-shrink:0">
+                            <i class="bi bi-building-add fs-4"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0 fw-bold">Muebles Andinos Import S.R.L.</h5>
+                            <span class="text-muted small">Empresa importadora de muebles — Datos de demostración completos</span>
+                        </div>
+                    </div>
+
+                    <p class="text-muted mb-4">
+                        Este asistente crea una empresa de ejemplo con <strong>datos reales de negocio</strong> para explorar todas las
+                        funcionalidades del sistema. El proceso toma aproximadamente <strong>30–60 segundos</strong>.
+                    </p>
+
+                    @* Resumen de lo que se creará *@
+                    <div class="row g-3 mb-4">
+                        @foreach (var (icon, titulo, detalle, color) in _resumenItems)
+                        {
+                            <div class="col-sm-6">
+                                <div class="d-flex align-items-start gap-2 p-3 rounded-2" style="background:var(--agora-surface)">
+                                    <i class="bi @icon mt-1" style="color:@color;font-size:1.1rem;flex-shrink:0"></i>
+                                    <div>
+                                        <div class="fw-semibold small">@titulo</div>
+                                        <div class="text-muted" style="font-size:.78rem">@detalle</div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="alert alert-warning d-flex gap-2 mb-4 py-2">
+                        <i class="bi bi-exclamation-triangle-fill mt-1 flex-shrink-0"></i>
+                        <div class="small">
+                            <strong>Aviso:</strong> Este proceso crea datos reales en la base de datos mediante la API.
+                            Solo ejecutar en ambientes de <strong>demostración o prueba</strong>.
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary px-4" @onclick="IniciarAsync">
+                            <i class="bi bi-play-circle-fill me-2"></i>Iniciar Creación DEMO
+                        </button>
+                        <button class="btn btn-outline-secondary" @onclick='() => Nav.NavigateTo("/config/empresas")'>
+                            <i class="bi bi-arrow-left me-1"></i>Volver
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* ?? Wizard de progreso ?? *@
+@if (_iniciado && !DemoSvc.Completado && !DemoSvc.HayError)
+{
+    <div class="row justify-content-center">
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center gap-3 mb-4">
+                        <div class="spinner-border text-primary" style="width:2.2rem;height:2.2rem" role="status"></div>
+                        <div>
+                            <div class="fw-bold">Creando empresa DEMO...</div>
+                            <div class="text-muted small">Por favor, no cierre esta ventana</div>
+                        </div>
+                    </div>
+
+                    @* Barra de progreso global *@
+                    @{ var pct = DemoSvc.TotalPasos > 0 ? (int)((double)DemoSvc.PasoActual / DemoSvc.TotalPasos * 100) : 0; }
+                    <div class="mb-1 d-flex justify-content-between">
+                        <span class="small fw-semibold">Progreso</span>
+                        <span class="small text-muted">@DemoSvc.PasoActual / @DemoSvc.TotalPasos</span>
+                    </div>
+                    <div class="progress mb-4" style="height:10px;border-radius:8px">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated"
+                             style="width:@pct%;background:#8b5cf6;transition:width .4s ease"></div>
+                    </div>
+
+                    @* Lista de pasos *@
+                    <div class="d-flex flex-column gap-2">
+                        @for (int i = 0; i < _nombresPasos.Count; i++)
+                        {
+                            var idx   = i + 1;
+                            var hecho = idx < DemoSvc.PasoActual;
+                            var activo= idx == DemoSvc.PasoActual;
+                            var pend  = idx > DemoSvc.PasoActual;
+                            <div class="d-flex align-items-center gap-3 py-2 @(activo ? "px-3 rounded-2" : "")"
+                                 style="@(activo ? "background:var(--agora-surface)" : "")">
+                                <div class="d-flex align-items-center justify-content-center rounded-circle fw-bold text-white"
+                                     style="width:28px;height:28px;flex-shrink:0;font-size:.8rem;
+                                            background:@(hecho ? "#22c55e" : activo ? "#8b5cf6" : "#e2e8f0");
+                                            color:@(pend ? "#94a3b8" : "white")">
+                                    @if (hecho) { <i class="bi bi-check2"></i> }
+                                    else if (activo) { <span class="spinner-border spinner-border-sm"></span> }
+                                    else { @idx }
+                                </div>
+                                <span class="small @(activo ? "fw-semibold" : hecho ? "text-muted" : "text-muted")">
+                                    @_nombresPasos[i]
+                                </span>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="mt-3 pt-3 border-top text-muted small">
+                        <i class="bi bi-arrow-right-circle me-1 text-primary"></i>@DemoSvc.MensajePaso
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* ?? Error ?? *@
+@if (DemoSvc.HayError)
+{
+    <div class="row justify-content-center">
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm border-danger" style="border-left:4px solid #ef4444 !important">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center gap-3 mb-3">
+                        <i class="bi bi-x-circle-fill text-danger fs-2"></i>
+                        <div>
+                            <div class="fw-bold text-danger">El proceso encontró un error</div>
+                            <div class="text-muted small">Algunos datos pueden haberse creado parcialmente</div>
+                        </div>
+                    </div>
+                    <div class="alert alert-danger py-2 small mb-3">
+                        <i class="bi bi-bug me-1"></i>@DemoSvc.MensajeError
+                    </div>
+                    <div class="small text-muted mb-3">
+                        Datos creados antes del error:
+                        @RenderResumenParcial()
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-warning btn-sm" @onclick="ReiniciarAsync">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Reintentar desde el inicio
+                        </button>
+                        <button class="btn btn-outline-secondary btn-sm" @onclick='() => Nav.NavigateTo("/config/empresas")'>
+                            <i class="bi bi-building me-1"></i>Ver Empresas
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* ?? Éxito ?? *@
+@if (DemoSvc.Completado)
+{
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm" style="border-top:4px solid #22c55e !important">
+                <div class="card-body p-4">
+                    @* Cabecera éxito *@
+                    <div class="d-flex align-items-center gap-3 mb-4">
+                        <div class="rounded-3 d-flex align-items-center justify-content-center text-white"
+                             style="width:52px;height:52px;background:#22c55e;flex-shrink:0">
+                            <i class="bi bi-check-circle fs-3"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0 fw-bold text-success">¡Empresa DEMO creada exitosamente!</h5>
+                            <span class="text-muted small">@DemoSvc.Resultado.EmpresaNombre</span>
+                        </div>
+                    </div>
+
+                    @* Tarjetas de resumen de resultados *@
+                    <div class="row g-3 mb-4">
+                        @foreach (var (icono, titulo, valor, color) in ResultadoTarjetas())
+                        {
+                            <div class="col-6 col-md-3">
+                                <div class="text-center p-3 rounded-2 border">
+                                    <i class="bi @icono fs-3 mb-1" style="color:@color"></i>
+                                    <div class="fw-bold fs-5" style="color:@color">@valor</div>
+                                    <div class="text-muted small">@titulo</div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    @* Detalle colapsable *@
+                    <details class="mb-4">
+                        <summary class="fw-semibold small mb-2" style="cursor:pointer;list-style:none">
+                            <i class="bi bi-chevron-right me-1"></i>Ver detalle completo de datos creados
+                        </summary>
+                        <div class="row g-3 mt-2">
+                            <div class="col-md-6">
+                                <div class="small fw-semibold mb-1"><i class="bi bi-person-gear me-1 text-primary"></i>Usuarios (contraseña: Demo2025!)</div>
+                                @foreach (var u in DemoSvc.Resultado.Usuarios)
+                                { <div class="text-muted small">• @u</div> }
+                            </div>
+                            <div class="col-md-6">
+                                <div class="small fw-semibold mb-1"><i class="bi bi-house-gear me-1 text-success"></i>Almacenes</div>
+                                @foreach (var a in DemoSvc.Resultado.Almacenes)
+                                { <div class="text-muted small">• @a.Nombre</div> }
+                            </div>
+                            <div class="col-md-6">
+                                <div class="small fw-semibold mb-1"><i class="bi bi-truck me-1 text-warning"></i>Proveedores</div>
+                                @foreach (var p in DemoSvc.Resultado.Proveedores)
+                                { <div class="text-muted small">• @p</div> }
+                            </div>
+                            <div class="col-md-6">
+                                <div class="small fw-semibold mb-1"><i class="bi bi-people me-1 text-info"></i>Clientes</div>
+                                @foreach (var c in DemoSvc.Resultado.Clientes)
+                                { <div class="text-muted small">• @c</div> }
+                            </div>
+                            <div class="col-md-6">
+                                <div class="small fw-semibold mb-1"><i class="bi bi-box-seam me-1" style="color:#8b5cf6"></i>Productos (primeros 5)</div>
+                                @foreach (var p in DemoSvc.Resultado.Productos.Take(5))
+                                { <div class="text-muted small">• [@p.Sku] @p.Nombre</div> }
+                                @if (DemoSvc.Resultado.Productos.Count > 5)
+                                { <div class="text-muted small">• ... y @(DemoSvc.Resultado.Productos.Count - 5) más</div> }
+                            </div>
+                            <div class="col-md-6">
+                                <div class="small fw-semibold mb-1"><i class="bi bi-journal-text me-1 text-danger"></i>Asientos contables</div>
+                                @foreach (var a in DemoSvc.Resultado.Asientos)
+                                { <div class="text-muted small">• @a</div> }
+                            </div>
+                        </div>
+                    </details>
+
+                    @* Acciones *@
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="/config/empresas" class="btn btn-success">
+                            <i class="bi bi-building me-1"></i>Ver Empresas
+                        </a>
+                        <a href="/contabilidad/asientos" class="btn btn-outline-primary">
+                            <i class="bi bi-journal-text me-1"></i>Asientos Contables
+                        </a>
+                        <a href="/inventario/stock" class="btn btn-outline-secondary">
+                            <i class="bi bi-box-seam me-1"></i>Ver Stock
+                        </a>
+                        <a href="/dashboard/contabilidad" class="btn btn-outline-secondary">
+                            <i class="bi bi-bar-chart me-1"></i>Dashboard Contabilidad
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool _iniciado;
+
+    // Pasos en el mismo orden que ConfigurarPasos()
+    private readonly List<string> _nombresPasos = new()
+    {
+        "Crear empresa",
+        "Usuarios y roles",
+        "Almacenes",
+        "Proveedores",
+        "Clientes",
+        "Plan de cuentas",
+        "Períodos contables 2025",
+        "Catálogo de productos",
+        "Stock inicial",
+        "Asientos contables demo",
+    };
+
+    // Tarjetas de info en la pantalla inicial
+    private readonly (string Icon, string Titulo, string Detalle, string Color)[] _resumenItems =
+    {
+        ("bi-person-badge-fill",    "5 Usuarios",                "Gerente, Contador, Compras, Almacén, Ventas",   "#3b82f6"),
+        ("bi-house-gear-fill",      "4 Almacenes",               "Central LP, Showroom, Santa Cruz, Tránsito",    "#22c55e"),
+        ("bi-truck",                "6 Proveedores",              "3 internacionales + 2 nacionales + 1 agencia", "#f59e0b"),
+        ("bi-people-fill",          "8 Clientes",                 "Hoteles, constructoras, distribuidoras...",    "#06b6d4"),
+        ("bi-box-seam-fill",        "20 Productos de mueblería",  "Sala, dormitorio, comedor, oficina",           "#8b5cf6"),
+        ("bi-journal-bookmark-fill","Plan de cuentas completo",   "50+ cuentas para importadora de muebles",     "#ef4444"),
+        ("bi-calendar3",            "12 Períodos contables 2025", "Enero–Diciembre aperturados",                  "#f97316"),
+        ("bi-journal-text",         "10 Asientos contables",      "Apertura, compras, ventas, planilla, más...", "#6366f1"),
+    };
+
+    protected override void OnInitialized()
+    {
+        DemoSvc.OnProgreso += () => InvokeAsync(StateHasChanged);
+    }
+
+    private async Task IniciarAsync()
+    {
+        _iniciado = true;
+        DemoSvc.ConfigurarPasos();
+        await DemoSvc.EjecutarAsync();
+    }
+
+    private async Task ReiniciarAsync()
+    {
+        _iniciado = false;
+        await Task.Delay(200);
+        _iniciado = true;
+        DemoSvc.ConfigurarPasos();
+        await DemoSvc.EjecutarAsync();
+    }
+
+    private IEnumerable<(string Icono, string Titulo, int Valor, string Color)> ResultadoTarjetas()
+    {
+        var r = DemoSvc.Resultado;
+        yield return ("bi-people-fill",          "Usuarios",           r.Usuarios.Count,            "#3b82f6");
+        yield return ("bi-house-gear-fill",       "Almacenes",          r.Almacenes.Count,           "#22c55e");
+        yield return ("bi-box-seam-fill",         "Productos",          r.Productos.Count,           "#8b5cf6");
+        yield return ("bi-journal-bookmark-fill", "Cuentas Contables",  r.Cuentas.Count,             "#ef4444");
+        yield return ("bi-arrow-left-right",      "Mov. Inventario",    r.MovimientosStock,          "#f59e0b");
+        yield return ("bi-journal-text",          "Asientos Contables", r.Asientos.Count,            "#6366f1");
+        yield return ("bi-truck",                 "Proveedores",        r.Proveedores.Count,         "#06b6d4");
+        yield return ("bi-people",                "Clientes",           r.Clientes.Count,            "#f97316");
+    }
+
+    private RenderFragment RenderResumenParcial() => __builder =>
+    {
+        var r = DemoSvc.Resultado;
+        if (r.EmpresaId > 0)
+        {
+            <span class="badge bg-success me-1">Empresa creada (ID: @r.EmpresaId)</span>
+        }
+        if (r.Usuarios.Count > 0)
+        {
+            <span class="badge bg-primary me-1">@r.Usuarios.Count usuario(s)</span>
+        }
+        if (r.Almacenes.Count > 0)
+        {
+            <span class="badge bg-secondary me-1">@r.Almacenes.Count almacén(es)</span>
+        }
+        if (r.Cuentas.Count > 0)
+        {
+            <span class="badge bg-danger me-1">@r.Cuentas.Count cuentas contables</span>
+        }
+        if (r.Productos.Count > 0)
+        {
+            <span class="badge bg-warning text-dark me-1">@r.Productos.Count producto(s)</span>
+        }
+    };
+
+    public void Dispose()
+    {
+        DemoSvc.OnProgreso -= () => InvokeAsync(StateHasChanged);
+    }
+}

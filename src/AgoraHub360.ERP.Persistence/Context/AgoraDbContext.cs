@@ -95,10 +95,12 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     // ── CST: Costing ──────────────────────────────────────────────────────────
     public DbSet<CostingRule> CostingRules => Set<CostingRule>();
     public DbSet<LandedCostProfile> LandedCostProfiles => Set<LandedCostProfile>();
+    public DbSet<CentroCosto> CentrosCosto => Set<CentroCosto>();
 
     // ── DOC: Media documents ──────────────────────────────────────────────────
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<ProductDocument> ProductDocuments => Set<ProductDocument>();
+    public DbSet<ComprobanteDocumento> ComprobanteDocumentos => Set<ComprobanteDocumento>();
 
     // ── INV: Inventory ────────────────────────────────────────────────────────
     public DbSet<MovimientoInventario> MovimientosInventario => Set<MovimientoInventario>();

@@ -1,0 +1,317 @@
+@inject IJSRuntime JS
+
+@if (_visible && Comprobante is not null)
+{
+    <div class="modal show d-block vp-backdrop"
+         tabindex="-1"
+         @onclick="OnBackdropClick"
+         style="background:rgba(0,0,0,.5)">
+
+        <div class="modal-dialog modal-dialog-scrollable modal-dialog-centered vp-dialog"
+             @onclick:stopPropagation>
+
+            <div class="modal-content vp-content">
+
+                @* ?? Barra de herramientas (solo pantalla) ?? *@
+                <div class="modal-header vp-toolbar d-print-none">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-file-text" style="color:#7c3aed;font-size:1.1rem"></i>
+                        <span class="fw-semibold" style="font-size:.95rem">Vista Previa del Comprobante</span>
+                        <span class="badge @GetEstadoBadge(Comprobante.Estado) ms-1">@Comprobante.Estado</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-sm btn-primary" @onclick="Imprimir">
+                            <i class="bi bi-printer-fill me-1"></i>Imprimir
+                        </button>
+                        <button type="button" class="btn-close" @onclick="Close"></button>
+                    </div>
+                </div>
+
+                @* ?? Cuerpo imprimible ?? *@
+                <div class="modal-body p-0 vp-body" id="vp-printable">
+
+                    @* ?????????????? CABECERA ?????????????? *@
+                    <div class="vp-header">
+
+                        @* Título de empresa y tipo *@
+                        <div class="vp-header-top">
+                            <div class="vp-company-block">
+                                <div class="vp-company-name">AgoraHub360 ERP</div>
+                                <div class="vp-doc-type">
+                                    @Comprobante.TipoComprobanteNombre
+                                </div>
+                            </div>
+                            <div class="vp-number-block">
+                                <div class="vp-number-label">Comprobante Nº</div>
+                                <div class="vp-number-value">@Comprobante.Numero</div>
+                            </div>
+                        </div>
+
+                        @* Fila de datos de cabecera *@
+                        <div class="vp-header-fields">
+                            <div class="vp-field">
+                                <span class="vp-field-label">Tipo</span>
+                                <span class="vp-field-value">@Comprobante.TipoComprobanteNombre</span>
+                            </div>
+                            <div class="vp-field">
+                                <span class="vp-field-label">Fecha</span>
+                                <span class="vp-field-value">@Comprobante.Fecha.ToString("dd/MM/yyyy")</span>
+                            </div>
+                            <div class="vp-field">
+                                <span class="vp-field-label">Gestión</span>
+                                <span class="vp-field-value">@Comprobante.Gestion</span>
+                            </div>
+                            <div class="vp-field">
+                                <span class="vp-field-label">Registro</span>
+                                <span class="vp-field-value">@Comprobante.TipoRegistro</span>
+                            </div>
+                            @if (Comprobante.ValorTipoCambio.HasValue)
+                            {
+                                <div class="vp-field">
+                                    <span class="vp-field-label">T/C @Comprobante.TipoCambioMoneda</span>
+                                    <span class="vp-field-value">@Comprobante.ValorTipoCambio.Value.ToString("N4")</span>
+                                </div>
+                            }
+                            @if (!string.IsNullOrEmpty(Comprobante.TipoPagoNombre) && Comprobante.TipoPagoCodigo != "S/D")
+                            {
+                                <div class="vp-field">
+                                    <span class="vp-field-label">Forma pago</span>
+                                    <span class="vp-field-value">@Comprobante.TipoPagoNombre</span>
+                                </div>
+                            }
+                            @if (!string.IsNullOrEmpty(Comprobante.NumeroDocumentoPago))
+                            {
+                                <div class="vp-field">
+                                    <span class="vp-field-label">Nro. Documento</span>
+                                    <span class="vp-field-value">@Comprobante.NumeroDocumentoPago</span>
+                                </div>
+                            }
+                            @if (!string.IsNullOrEmpty(Comprobante.RegistradoPor))
+                            {
+                                <div class="vp-field">
+                                    <span class="vp-field-label">Registrado por</span>
+                                    <span class="vp-field-value">@Comprobante.RegistradoPor</span>
+                                </div>
+                            }
+                        </div>
+
+                        @* Concepto *@
+                        @if (!string.IsNullOrWhiteSpace(Comprobante.Concepto))
+                        {
+                            <div class="vp-concepto">
+                                <span class="vp-field-label">Por concepto de:</span>
+                                <span class="ms-1">@Comprobante.Concepto</span>
+                            </div>
+                        }
+
+                        @* Glosa general resaltada *@
+                        <div class="vp-glosa-box">
+                            <span class="vp-glosa-label">GLOSA:</span>
+                            <span class="vp-glosa-text">@Comprobante.Glosa</span>
+                        </div>
+                    </div>
+
+                    @* ?????????????? TABLA DE LÍNEAS ?????????????? *@
+                    <div class="vp-table-wrap">
+                        <table class="vp-table">
+                            <thead>
+                                <tr>
+                                    <th class="vp-th-num">#</th>
+                                    <th class="vp-th-cod">Código</th>
+                                    <th class="vp-th-cuenta">Nombre de la Cuenta</th>
+                                    <th class="vp-th-cc">C. Costo</th>
+                                    <th class="vp-th-glosa">Glosa Detalle</th>
+                                    <th class="vp-th-monto">Debe</th>
+                                    <th class="vp-th-monto">Haber</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @{
+                                    var lineas = GetLineas();
+                                }
+                                @if (!lineas.Any())
+                                {
+                                    <tr>
+                                        <td colspan="7" class="text-center text-muted py-3" style="font-size:.8rem">
+                                            Sin líneas de detalle
+                                        </td>
+                                    </tr>
+                                }
+                                @foreach (var (linea, idx) in lineas.Select((l, i) => (l, i + 1)))
+                                {
+                                    <tr class="@(idx % 2 == 0 ? "vp-row-even" : "")">
+                                        <td class="vp-td-num">@idx</td>
+                                        <td class="vp-td-cod">
+                                            <code style="font-size:.78rem;color:#374151">@linea.CodCuenta</code>
+                                        </td>
+                                        <td class="vp-td-cuenta">@linea.NombreCuenta</td>
+                                        <td class="vp-td-cc">
+                                            @if (!string.IsNullOrEmpty(linea.CentroCostoCodigo))
+                                            {
+                                                <span class="vp-cc-badge">@linea.CentroCostoCodigo</span>
+                                            }
+                                        </td>
+                                        <td class="vp-td-glosa">@linea.Glosa</td>
+                                        <td class="vp-td-monto">
+                                            @if (linea.Debe > 0)
+                                            {
+                                                <span class="vp-debe">@linea.Debe.ToString("N2")</span>
+                                            }
+                                        </td>
+                                        <td class="vp-td-monto">
+                                            @if (linea.Haber > 0)
+                                            {
+                                                <span class="vp-haber">@linea.Haber.ToString("N2")</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot>
+                                <tr class="vp-totals-row">
+                                    <td colspan="5" class="vp-totals-label">TOTALES</td>
+                                    <td class="vp-td-monto vp-total-debe">@TotalDebe.ToString("N2")</td>
+                                    <td class="vp-td-monto vp-total-haber">@TotalHaber.ToString("N2")</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    @* ?????????????? INDICADOR DE CUADRE ?????????????? *@
+                    <div class="vp-cuadre-row">
+                        @if (EsCuadrado)
+                        {
+                            <div class="vp-cuadre-ok">
+                                <i class="bi bi-check-circle-fill me-1"></i>
+                                Comprobante <strong>cuadrado</strong> — Diferencia: 0.00
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="vp-cuadre-error">
+                                <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                Comprobante <strong>no cuadrado</strong> — Diferencia:
+                                <strong>@Diferencia.ToString("N2")</strong>
+                            </div>
+                        }
+                        <div class="vp-diferencia-block">
+                            <span class="vp-field-label">Diferencia:</span>
+                            <span class="@(EsCuadrado ? "text-success" : "text-danger") fw-semibold ms-1">
+                                @Diferencia.ToString("N2")
+                            </span>
+                        </div>
+                    </div>
+
+                    @* ?????????????? PIE DEL DOCUMENTO ?????????????? *@
+                    <div class="vp-footer">
+                        <div class="vp-firma-block">
+                            <div class="vp-firma-line"></div>
+                            <div class="vp-firma-label">Elaborado por</div>
+                        </div>
+                        <div class="vp-firma-block">
+                            <div class="vp-firma-line"></div>
+                            <div class="vp-firma-label">Revisado por</div>
+                        </div>
+                        <div class="vp-firma-block">
+                            <div class="vp-firma-line"></div>
+                            <div class="vp-firma-label">Autorizado por</div>
+                        </div>
+                    </div>
+
+                    <div class="vp-print-meta d-none d-print-block">
+                        Impreso el @DateTime.Now.ToString("dd/MM/yyyy HH:mm")
+                    </div>
+
+                </div>
+                @* fin #vp-printable *@
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    // ?? Parameters ????????????????????????????????????????????????????????????
+
+    /// <summary>Comprobante guardado (modo Ver/Contabilizado).</summary>
+    [Parameter]
+    public AsientoContableDto? Comprobante { get; set; }
+
+    /// <summary>Líneas temporales del editor (antes de guardar).</summary>
+    [Parameter]
+    public IReadOnlyList<PreviewLinea>? LineasTemp { get; set; }
+
+    // ?? Line projection shared with parent ???????????????????????????????????
+
+    /// <summary>Línea unificada para la vista previa (acepta ambas fuentes).</summary>
+    public record PreviewLinea(
+        int Num,
+        string CodCuenta,
+        string NombreCuenta,
+        string? CentroCostoCodigo,
+        string? Glosa,
+        decimal Debe,
+        decimal Haber);
+
+    // ?? Internal state ????????????????????????????????????????????????????????
+
+    private bool _visible;
+
+    private decimal TotalDebe  => GetLineas().Sum(l => l.Debe);
+    private decimal TotalHaber => GetLineas().Sum(l => l.Haber);
+    private decimal Diferencia => Math.Abs(TotalDebe - TotalHaber);
+    private bool    EsCuadrado => TotalDebe == TotalHaber && GetLineas().Any();
+
+    // ?? Public API ????????????????????????????????????????????????????????????
+
+    public void Open()
+    {
+        _visible = true;
+        StateHasChanged();
+    }
+
+    // ?? Internals ?????????????????????????????????????????????????????????????
+
+    private IReadOnlyList<PreviewLinea> GetLineas()
+    {
+        // Prioridad: LineasTemp (editor en vivo) ? Comprobante.Lineas (datos guardados)
+        if (LineasTemp is { Count: > 0 })
+            return LineasTemp;
+
+        if (Comprobante?.Lineas is { Count: > 0 })
+        {
+            return Comprobante.Lineas
+                .OrderBy(l => l.NumeroLinea)
+                .Select((l, i) => new PreviewLinea(
+                    i + 1,
+                    l.CuentaCodigo,
+                    l.CuentaNombre,
+                    l.CentroCostoCodigo,
+                    l.Glosa,
+                    l.Debe,
+                    l.Haber))
+                .ToList();
+        }
+
+        return Array.Empty<PreviewLinea>();
+    }
+
+    private async Task Imprimir()
+    {
+        await JS.InvokeVoidAsync("window.print");
+    }
+
+    private void Close()
+    {
+        _visible = false;
+    }
+
+    private void OnBackdropClick() => Close();
+
+    private static string GetEstadoBadge(string estado) => estado switch
+    {
+        "Borrador"      => "bg-warning text-dark",
+        "Contabilizado" => "bg-success",
+        "Anulado"       => "bg-danger",
+        _               => "bg-secondary"
+    };
+}
