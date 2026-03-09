@@ -17,6 +17,6 @@ public class BrandConfiguration : IEntityTypeConfiguration<Brand>
         builder.Property(b => b.CreadoPor).HasMaxLength(100);
         builder.Property(b => b.ModificadoPor).HasMaxLength(100);
 
-        builder.HasIndex(b => b.Name).IsUnique();
+        builder.HasIndex(b => new { b.EmpresaId, b.Name }).IsUnique();
     }
 }

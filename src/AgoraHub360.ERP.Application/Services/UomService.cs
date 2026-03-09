@@ -10,11 +10,13 @@ public class UomService : IUomService
 {
     private readonly IRepository<Uom> _repo;
     private readonly IUnitOfWork _uow;
+    private readonly ICurrentUserService _currentUser;
 
-    public UomService(IRepository<Uom> repo, IUnitOfWork uow)
+    public UomService(IRepository<Uom> repo, IUnitOfWork uow, ICurrentUserService currentUser)
     {
         _repo = repo;
         _uow = uow;
+        _currentUser = currentUser;
     }
 
     public async Task<Result<IReadOnlyList<UomDto>>> GetAllAsync(CancellationToken ct = default)
@@ -32,12 +34,16 @@ public class UomService : IUomService
 
     public async Task<Result<UomDto>> CreateAsync(CreateUomDto dto, CancellationToken ct = default)
     {
+        var empresaId = _currentUser.EmpresaId
+            ?? throw new InvalidOperationException("EmpresaId required.");
+
         var dup = await _repo.FindAsync(u => u.Code == dto.Code, ct);
         if (dup.Any())
             return Result<UomDto>.Failure($"A unit of measure with code '{dto.Code}' already exists.");
 
         var entity = new Uom
         {
+            EmpresaId = empresaId,
             Code = dto.Code,
             Name = dto.Name,
             Activo = true

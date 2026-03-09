@@ -21,8 +21,8 @@ public class AttributeDefinitionConfiguration : IEntityTypeConfiguration<Attribu
         builder.Property(a => a.CreadoPor).HasMaxLength(100);
         builder.Property(a => a.ModificadoPor).HasMaxLength(100);
 
-        // Código único por industria
-        builder.HasIndex(a => new { a.IndustryId, a.Code }).IsUnique();
+        // Código único por empresa + industria
+        builder.HasIndex(a => new { a.EmpresaId, a.IndustryId, a.Code }).IsUnique();
         builder.HasIndex(a => a.IsVariantAxis);
     }
 }

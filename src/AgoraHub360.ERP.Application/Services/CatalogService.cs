@@ -21,9 +21,8 @@ public class CatalogService : ICatalogService
 
     public async Task<Result<IReadOnlyList<CatalogDto>>> GetAllAsync(CancellationToken ct = default)
     {
-        var empresaId = _currentUser.EmpresaId;
-        var items = await _repo.FindAsync(
-            c => c.Scope == 1 || (c.Scope == 2 && c.EmpresaId == empresaId), ct);
+        // TenantEntity query filter handles empresa isolation automatically
+        var items = await _repo.FindAsync(_ => true, ct);
         return Result<IReadOnlyList<CatalogDto>>.Success(
             items.Select(Map).ToList().AsReadOnly());
     }
@@ -37,15 +36,18 @@ public class CatalogService : ICatalogService
 
     public async Task<Result<CatalogDto>> CreateAsync(CreateCatalogDto dto, CancellationToken ct = default)
     {
+        var empresaId = _currentUser.EmpresaId
+            ?? throw new InvalidOperationException("EmpresaId required.");
+
         var dup = await _repo.FindAsync(
-            c => c.Scope == dto.Scope && c.EmpresaId == dto.EmpresaId && c.Name == dto.Name, ct);
+            c => c.Name == dto.Name, ct);
         if (dup.Any())
-            return Result<CatalogDto>.Failure($"A catalog '{dto.Name}' with that scope already exists.");
+            return Result<CatalogDto>.Failure($"A catalog '{dto.Name}' already exists for this company.");
 
         var entity = new Catalog
         {
+            EmpresaId = empresaId,
             Scope = dto.Scope,
-            EmpresaId = dto.EmpresaId,
             Name = dto.Name,
             IsDefault = dto.IsDefault,
             Activo = true
@@ -79,5 +81,5 @@ public class CatalogService : ICatalogService
     }
 
     private static CatalogDto Map(Catalog c) => new(
-        c.CatalogId, c.Scope, c.EmpresaId, c.Name, c.IsDefault, c.Activo);
+        c.CatalogId, c.EmpresaId, c.Scope, c.Name, c.IsDefault, c.Activo);
 }

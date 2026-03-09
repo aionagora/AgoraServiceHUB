@@ -6,7 +6,7 @@ using AgoraHub360.ERP.Domain.Common;
 /// Valor de atributo dinámico asignado a un producto (EAV).
 /// Solo uno de los campos Value* estará activo según DataType del atributo.
 /// </summary>
-public class ProductAttribute : AuditableEntity
+public class ProductAttribute : TenantEntity
 {
     public long ProductAttributeId { get; set; }
     public long ProductId { get; set; }

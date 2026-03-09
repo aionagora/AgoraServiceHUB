@@ -6,7 +6,7 @@ using AgoraHub360.ERP.Domain.Common;
 /// Unidades de medida alternativas del producto con factor de conversión a base.
 /// Ejemplo: Caja (CJ) → 12 UND, FactorToBase=12.
 /// </summary>
-public class ProductUom : AuditableEntity
+public class ProductUom : TenantEntity
 {
     public long ProductUomId { get; set; }
     public long ProductId { get; set; }

@@ -10,11 +10,13 @@ public class BrandService : IBrandService
 {
     private readonly IRepository<Brand> _repo;
     private readonly IUnitOfWork _uow;
+    private readonly ICurrentUserService _currentUser;
 
-    public BrandService(IRepository<Brand> repo, IUnitOfWork uow)
+    public BrandService(IRepository<Brand> repo, IUnitOfWork uow, ICurrentUserService currentUser)
     {
         _repo = repo;
         _uow = uow;
+        _currentUser = currentUser;
     }
 
     public async Task<Result<IReadOnlyList<BrandDto>>> GetAllAsync(CancellationToken ct = default)
@@ -33,11 +35,15 @@ public class BrandService : IBrandService
 
     public async Task<Result<BrandDto>> CreateAsync(CreateBrandDto dto, CancellationToken ct = default)
     {
+        var empresaId = _currentUser.EmpresaId
+            ?? throw new InvalidOperationException("EmpresaId required.");
+
         var dup = await _repo.FindAsync(b => b.Name == dto.Name, ct);
         if (dup.Any()) return Result<BrandDto>.Failure($"Ya existe una marca con nombre '{dto.Name}'.");
 
         var entity = new Brand
         {
+            EmpresaId = empresaId,
             Name = dto.Name,
             LogoUrl = dto.LogoUrl,
             Activo = true

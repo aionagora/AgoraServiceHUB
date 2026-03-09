@@ -10,11 +10,13 @@ public class ManufacturerService : IManufacturerService
 {
     private readonly IRepository<Manufacturer> _repo;
     private readonly IUnitOfWork _uow;
+    private readonly ICurrentUserService _currentUser;
 
-    public ManufacturerService(IRepository<Manufacturer> repo, IUnitOfWork uow)
+    public ManufacturerService(IRepository<Manufacturer> repo, IUnitOfWork uow, ICurrentUserService currentUser)
     {
         _repo = repo;
         _uow = uow;
+        _currentUser = currentUser;
     }
 
     public async Task<Result<IReadOnlyList<ManufacturerDto>>> GetAllAsync(CancellationToken ct = default)
@@ -33,11 +35,15 @@ public class ManufacturerService : IManufacturerService
 
     public async Task<Result<ManufacturerDto>> CreateAsync(CreateManufacturerDto dto, CancellationToken ct = default)
     {
+        var empresaId = _currentUser.EmpresaId
+            ?? throw new InvalidOperationException("EmpresaId required.");
+
         var dup = await _repo.FindAsync(m => m.Name == dto.Name, ct);
         if (dup.Any()) return Result<ManufacturerDto>.Failure($"Ya existe un fabricante con nombre '{dto.Name}'.");
 
         var entity = new Manufacturer
         {
+            EmpresaId = empresaId,
             Name = dto.Name,
             Country = dto.Country,
             Activo = true

@@ -12,17 +12,20 @@ public class AttributeDefinitionService : IAttributeDefinitionService
     private readonly IRepository<AttributeOption> _optionRepo;
     private readonly IRepository<ProductAttribute> _paRepo;
     private readonly IUnitOfWork _uow;
+    private readonly ICurrentUserService _currentUser;
 
     public AttributeDefinitionService(
         IRepository<AttributeDefinition> repo,
         IRepository<AttributeOption> optionRepo,
         IRepository<ProductAttribute> paRepo,
-        IUnitOfWork uow)
+        IUnitOfWork uow,
+        ICurrentUserService currentUser)
     {
         _repo = repo;
         _optionRepo = optionRepo;
         _paRepo = paRepo;
         _uow = uow;
+        _currentUser = currentUser;
     }
 
     public async Task<Result<IReadOnlyList<AttributeDefinitionDto>>> GetByIndustryAsync(
@@ -49,12 +52,16 @@ public class AttributeDefinitionService : IAttributeDefinitionService
     public async Task<Result<AttributeDefinitionDto>> CreateAsync(
         CreateAttributeDefinitionDto dto, CancellationToken ct = default)
     {
+        var empresaId = _currentUser.EmpresaId
+            ?? throw new InvalidOperationException("EmpresaId required.");
+
         var dup = await _repo.FindAsync(a => a.IndustryId == dto.IndustryId && a.Code == dto.Code, ct);
         if (dup.Any())
             return Result<AttributeDefinitionDto>.Failure($"Ya existe el atributo '{dto.Code}' para esta industria.");
 
         var entity = new AttributeDefinition
         {
+            EmpresaId = empresaId,
             IndustryId = dto.IndustryId,
             Code = dto.Code,
             Name = dto.Name,
@@ -85,11 +92,15 @@ public class AttributeDefinitionService : IAttributeDefinitionService
     public async Task<Result<AttributeOptionDto>> AddOptionAsync(
         CreateAttributeOptionDto dto, CancellationToken ct = default)
     {
+        var empresaId = _currentUser.EmpresaId
+            ?? throw new InvalidOperationException("EmpresaId required.");
+
         var attr = await _repo.GetByIdAsync(dto.AttributeId, ct);
         if (attr is null) return Result<AttributeOptionDto>.Failure("Atributo no encontrado.");
 
         var option = new AttributeOption
         {
+            EmpresaId = empresaId,
             AttributeId = dto.AttributeId,
             Value = dto.Value,
             SortOrder = dto.SortOrder,
@@ -182,6 +193,7 @@ public class AttributeDefinitionService : IAttributeDefinitionService
 
         var pa = new ProductAttribute
         {
+            EmpresaId = _currentUser.EmpresaId ?? throw new InvalidOperationException("EmpresaId required."),
             ProductId = dto.ProductId,
             AttributeId = dto.AttributeId,
             ValueString = dto.ValueString,

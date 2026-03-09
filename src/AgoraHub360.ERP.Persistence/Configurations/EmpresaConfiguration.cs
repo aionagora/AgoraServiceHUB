@@ -38,5 +38,14 @@ public class EmpresaConfiguration : IEntityTypeConfiguration<Empresa>
 
         builder.HasIndex(e => e.NIT).IsUnique().HasFilter("[NIT] IS NOT NULL");
         builder.HasIndex(e => e.Nombre);
+
+        // ?? Configuración de productos ??????????????????????????????????????
+        builder.Property(e => e.IndustriaId).HasDefaultValue((byte)7);
+        builder.Property(e => e.MetodoCosteoDefault).HasDefaultValue((byte)1);
+        builder.Property(e => e.PermiteVariantes).HasDefaultValue(true);
+        builder.Property(e => e.PermiteLotes).HasDefaultValue(false);
+        builder.Property(e => e.PermiteServicios).HasDefaultValue(true);
+        builder.Property(e => e.AutoGeneraSku).HasDefaultValue(true);
+        builder.Property(e => e.PrefijoSku).HasMaxLength(20);
     }
 }

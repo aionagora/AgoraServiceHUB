@@ -16,7 +16,7 @@ public class EmpresaServiceTests
     {
         _repository = new FakeRepository();
         _unitOfWork = new FakeUnitOfWork();
-        _sut = new EmpresaService(_repository, _unitOfWork);
+        _sut = new EmpresaService(_repository, _unitOfWork, new FakeSeedService());
     }
 
     [Fact]
@@ -139,5 +139,11 @@ public class EmpresaServiceTests
         }
 
         public void Dispose() { }
+    }
+
+    private class FakeSeedService : AgoraHub360.ERP.Application.Interfaces.IEmpresaSeedService
+    {
+        public Task<AgoraHub360.ERP.Application.Common.Result<bool>> SeedDefaultDataAsync(int empresaId, CancellationToken ct = default)
+            => Task.FromResult(AgoraHub360.ERP.Application.Common.Result<bool>.Success(true));
     }
 }

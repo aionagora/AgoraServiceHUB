@@ -5,7 +5,7 @@ using AgoraHub360.ERP.Domain.Common;
 /// <summary>
 /// Opción de selección para atributos de tipo Select (DataType=7).
 /// </summary>
-public class AttributeOption : AuditableEntity
+public class AttributeOption : TenantEntity
 {
     public long OptionId { get; set; }
     public long AttributeId { get; set; }

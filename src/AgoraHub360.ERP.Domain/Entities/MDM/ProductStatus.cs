@@ -6,7 +6,7 @@ using AgoraHub360.ERP.Domain.Common;
 /// Estados de ciclo de vida del producto.
 /// Ejemplos: Borrador, Activo, Bloqueado, Descontinuado.
 /// </summary>
-public class ProductStatus : AuditableEntity
+public class ProductStatus : TenantEntity
 {
     public int ProductStatusId { get; set; }
     public string Code { get; set; } = string.Empty;

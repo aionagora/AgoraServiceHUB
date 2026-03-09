@@ -25,6 +25,7 @@ public class EmpresaDemoService
     private readonly MdmCompanyProductHttpService _companyProductSvc;
     private readonly MovimientoInventarioHttpService _movimientoSvc;
     private readonly CatalogoHttpService       _catalogoSvc;
+    private readonly UnidadMedidaHttpService    _unidadMedidaSvc;
 
     public EmpresaDemoService(
         EmpresaHttpService empresaSvc,
@@ -38,7 +39,8 @@ public class EmpresaDemoService
         MdmProductoGlobalHttpService productoGlobalSvc,
         MdmCompanyProductHttpService companyProductSvc,
         MovimientoInventarioHttpService movimientoSvc,
-        CatalogoHttpService catalogoSvc)
+        CatalogoHttpService catalogoSvc,
+        UnidadMedidaHttpService unidadMedidaSvc)
     {
         _empresaSvc       = empresaSvc;
         _usuarioSvc       = usuarioSvc;
@@ -52,6 +54,7 @@ public class EmpresaDemoService
         _companyProductSvc = companyProductSvc;
         _movimientoSvc    = movimientoSvc;
         _catalogoSvc      = catalogoSvc;
+        _unidadMedidaSvc  = unidadMedidaSvc;
     }
 
     // ?? Resultado público ????????????????????????????????????????????????????
@@ -318,38 +321,45 @@ public class EmpresaDemoService
     // ????????????????????????????????????????????????????????????????????????
     private async Task CrearProductosAsync()
     {
-        // Obtener catálogos disponibles para usar el primero
+        // Obtener catálogos disponibles para la empresa actual
         var catalogos = await _catalogoSvc.GetAllAsync();
-        var catalogoId = catalogos.FirstOrDefault()?.CatalogId ?? 1L;
+        if (!catalogos.Any())
+            throw new Exception("No hay catálogos configurados. El seed de empresa debería haberlos creado.");
+        var catalogoId = catalogos.First().CatalogId;
 
-        // Obtener UOMs (unidades de medida), usar ID 1 = Unidad por defecto
+        // Obtener UOMs — usar la primera (UND) creada por el seed
+        var uoms = await _unidadMedidaSvc.GetAllAsync();
+        if (!uoms.Any())
+            throw new Exception("No hay unidades de medida configuradas. El seed de empresa debería haberlas creado.");
+        var defaultUomId = uoms.FirstOrDefault(u => u.Code == "UND")?.UomId ?? uoms.First().UomId;
+
         var productos = new[]
         {
             // Sala
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Sofá 3 Cuerpos",               CommercialName="Sofá Malibu 3C",             ShortDescription="Sofá tapizado en tela importada, 3 cuerpos",        DefaultUomId=1, IsStockable=true, IsSellable=true, IsPurchasable=true, LifecycleStatusId=1 },
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Sofá 2 Cuerpos",               CommercialName="Sofá Malibu 2C",             ShortDescription="Sofá tapizado en tela importada, 2 cuerpos",        DefaultUomId=1, IsStockable=true, IsSellable=true, IsPurchasable=true, LifecycleStatusId=1 },
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Sillón Individual",            CommercialName="Sillón Malibu 1C",           ShortDescription="Sillón tapizado a juego con sofá",                  DefaultUomId=1, IsStockable=true, IsSellable=true, IsPurchasable=true, LifecycleStatusId=1 },
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Mesa de Centro",               CommercialName="Mesa Centro Roble",          ShortDescription="Mesa de centro en madera roble 120x60 cm",          DefaultUomId=1, IsStockable=true, IsSellable=true, IsPurchasable=true, LifecycleStatusId=1 },
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Mueble TV",                    CommercialName="Mueble TV Milano 160",        ShortDescription="Mueble para televisor hasta 65 pulgadas",           DefaultUomId=1, IsStockable=true, IsSellable=true, IsPurchasable=true, LifecycleStatusId=1 },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Sofá 3 Cuerpos",               CommercialName="Sofá Malibu 3C",             ShortDescription="Sofá tapizado en tela importada, 3 cuerpos",        DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Sofá 2 Cuerpos",               CommercialName="Sofá Malibu 2C",             ShortDescription="Sofá tapizado en tela importada, 2 cuerpos",        DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Sillón Individual",            CommercialName="Sillón Malibu 1C",           ShortDescription="Sillón tapizado a juego con sofá",                  DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Mesa de Centro",               CommercialName="Mesa Centro Roble",          ShortDescription="Mesa de centro en madera roble 120x60 cm",          DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Mueble TV",                    CommercialName="Mueble TV Milano 160",        ShortDescription="Mueble para televisor hasta 65 pulgadas",           DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
             // Dormitorio
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Cama King Size",               CommercialName="Cama Venecia King",          ShortDescription="Cama King con cabecero tapizado, incluye tarima",    DefaultUomId=1, IsStockable=true, IsSellable=true, IsPurchasable=true, LifecycleStatusId=1 },
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Cama Queen Size",              CommercialName="Cama Venecia Queen",         ShortDescription="Cama Queen con cabecero tapizado, incluye tarima",  DefaultUomId=1, IsStockable=true, IsSellable=true, IsPurchasable=true, LifecycleStatusId=1 },
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Cómoda 6 Cajones",             CommercialName="Cómoda Roma 6C",             ShortDescription="Cómoda en MDF laqueado, 6 cajones con rieles",      DefaultUomId=1, IsStockable=true, IsSellable=true, IsPurchasable=true, LifecycleStatusId=1 },
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Ropero 4 Puertas",             CommercialName="Ropero Classic 4P",          ShortDescription="Armario con espejos y organizador interior",        DefaultUomId=1, IsStockable=true, IsSellable=true, IsPurchasable=true, LifecycleStatusId=1 },
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Mesa de Noche",                CommercialName="Nochero Roma",               ShortDescription="Mesa de noche a juego con dormitorio Roma",         DefaultUomId=1, IsStockable=true, IsSellable=true, IsPurchasable=true, LifecycleStatusId=1 },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Cama King Size",               CommercialName="Cama Venecia King",          ShortDescription="Cama King con cabecero tapizado, incluye tarima",    DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Cama Queen Size",              CommercialName="Cama Venecia Queen",         ShortDescription="Cama Queen con cabecero tapizado, incluye tarima",  DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Cómoda 6 Cajones",             CommercialName="Cómoda Roma 6C",             ShortDescription="Cómoda en MDF laqueado, 6 cajones con rieles",      DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Ropero 4 Puertas",             CommercialName="Ropero Classic 4P",          ShortDescription="Armario con espejos y organizador interior",        DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Mesa de Noche",                CommercialName="Nochero Roma",               ShortDescription="Mesa de noche a juego con dormitorio Roma",         DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
             // Comedor
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Mesa Comedor 6 Personas",      CommercialName="Mesa Comedor Teka 6P",        ShortDescription="Mesa de teca sólida 160x90 cm, 6 personas",         DefaultUomId=1, IsStockable=true, IsSellable=true, IsPurchasable=true, LifecycleStatusId=1 },
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Silla Comedor",                CommercialName="Silla Teka Tapizada",        ShortDescription="Silla con asiento tapizado, pata de teka",          DefaultUomId=1, IsStockable=true, IsSellable=true, IsPurchasable=true, LifecycleStatusId=1 },
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Aparador / Buffet",            CommercialName="Buffet Colonial 3P",         ShortDescription="Aparador colonial 3 puertas madera sólida",         DefaultUomId=1, IsStockable=true, IsSellable=true, IsPurchasable=true, LifecycleStatusId=1 },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Mesa Comedor 6 Personas",      CommercialName="Mesa Comedor Teka 6P",        ShortDescription="Mesa de teca sólida 160x90 cm, 6 personas",         DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Silla Comedor",                CommercialName="Silla Teka Tapizada",        ShortDescription="Silla con asiento tapizado, pata de teka",          DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Aparador / Buffet",            CommercialName="Buffet Colonial 3P",         ShortDescription="Aparador colonial 3 puertas madera sólida",         DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
             // Oficina
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Escritorio Ejecutivo",         CommercialName="Escritorio Exec. Pro",       ShortDescription="Escritorio en L con cajones y porta CPU",           DefaultUomId=1, IsStockable=true, IsSellable=true, IsPurchasable=true, LifecycleStatusId=1 },
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Silla Ergonómica Ejecutiva",   CommercialName="Silla Ergo Elite",           ShortDescription="Silla con soporte lumbar y apoyabrazos ajustables",  DefaultUomId=1, IsStockable=true, IsSellable=true, IsPurchasable=true, LifecycleStatusId=1 },
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Estantería Modular",           CommercialName="Estante Modular 5N",         ShortDescription="Estantería 5 niveles, armable, carga 50kg/nivel",   DefaultUomId=1, IsStockable=true, IsSellable=true, IsPurchasable=true, LifecycleStatusId=1 },
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Mesa de Reuniones 8 Pers.",    CommercialName="Mesa Reunión Oval 8P",       ShortDescription="Mesa ovalada para sala de reuniones",               DefaultUomId=1, IsStockable=true, IsSellable=true, IsPurchasable=true, LifecycleStatusId=1 },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Escritorio Ejecutivo",         CommercialName="Escritorio Exec. Pro",       ShortDescription="Escritorio en L con cajones y porta CPU",           DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Silla Ergonómica Ejecutiva",   CommercialName="Silla Ergo Elite",           ShortDescription="Silla con soporte lumbar y apoyabrazos ajustables",  DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Estantería Modular",           CommercialName="Estante Modular 5N",         ShortDescription="Estantería 5 niveles, armable, carga 50kg/nivel",   DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Mesa de Reuniones 8 Pers.",    CommercialName="Mesa Reunión Oval 8P",       ShortDescription="Mesa ovalada para sala de reuniones",               DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
             // Accesorios
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Espejo Decorativo",            CommercialName="Espejo Marco Dorado",        ShortDescription="Espejo con marco decorativo 80x120 cm",             DefaultUomId=1, IsStockable=true, IsSellable=true, IsPurchasable=true, LifecycleStatusId=1 },
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Alfombra Importada",           CommercialName="Alfombra Persa 200x300",     ShortDescription="Alfombra 100% lana, diseño persa 200x300 cm",       DefaultUomId=1, IsStockable=true, IsSellable=true, IsPurchasable=true, LifecycleStatusId=1 },
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Lámpara de Pie",               CommercialName="Lámpara Arc Premium",        ShortDescription="Lámpara de pie arco, base mármol, altura 180 cm",   DefaultUomId=1, IsStockable=true, IsSellable=true, IsPurchasable=true, LifecycleStatusId=1 },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Espejo Decorativo",            CommercialName="Espejo Marco Dorado",        ShortDescription="Espejo con marco decorativo 80x120 cm",             DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Alfombra Importada",           CommercialName="Alfombra Persa 200x300",     ShortDescription="Alfombra 100% lana, diseño persa 200x300 cm",       DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Lámpara de Pie",               CommercialName="Lámpara Arc Premium",        ShortDescription="Lámpara de pie arco, base mármol, altura 180 cm",   DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
         };
 
         foreach (var p in productos)

@@ -15,6 +15,7 @@ public class ProductService : IProductService
     private readonly IRepository<Uom> _uomRepo;
     private readonly IRepository<ProductStatus> _statusRepo;
     private readonly IUnitOfWork _uow;
+    private readonly ICurrentUserService _currentUser;
 
     public ProductService(
         IRepository<Product> repo,
@@ -23,16 +24,18 @@ public class ProductService : IProductService
         IRepository<Manufacturer> manufacturerRepo,
         IRepository<Uom> uomRepo,
         IRepository<ProductStatus> statusRepo,
-        IUnitOfWork uow)
+        IUnitOfWork uow,
+        ICurrentUserService currentUser)
     {
         _repo = repo; _catalogRepo = catalogRepo; _brandRepo = brandRepo;
         _manufacturerRepo = manufacturerRepo; _uomRepo = uomRepo;
-        _statusRepo = statusRepo; _uow = uow;
+        _statusRepo = statusRepo; _uow = uow; _currentUser = currentUser;
     }
 
     public async Task<Result<IReadOnlyList<ProductDto2>>> GetAllAsync(
         long? catalogId = null, CancellationToken ct = default)
     {
+        // TenantEntity query filter isolates by empresa automatically
         var items = await _repo.FindAsync(
             p => catalogId == null || p.CatalogId == catalogId, ct);
         return Result<IReadOnlyList<ProductDto2>>.Success(
@@ -48,6 +51,9 @@ public class ProductService : IProductService
 
     public async Task<Result<ProductDto2>> CreateAsync(CreateProductDto2 dto, CancellationToken ct = default)
     {
+        var empresaId = _currentUser.EmpresaId
+            ?? throw new InvalidOperationException("EmpresaId required.");
+
         var catalog = await _catalogRepo.GetByIdAsync(dto.CatalogId, ct);
         if (catalog is null) return Result<ProductDto2>.Failure("Catálogo no encontrado.");
 
@@ -60,12 +66,13 @@ public class ProductService : IProductService
             var allStatuses = await _statusRepo.FindAsync(_ => true, ct);
             var defStatus = allStatuses.FirstOrDefault(s => s.IsDefault)
                          ?? allStatuses.FirstOrDefault();
-            if (defStatus is null) return Result<ProductDto2>.Failure("No hay estados de producto configurados. Configure al menos un estado en ProductStatuses.");
+            if (defStatus is null) return Result<ProductDto2>.Failure("No hay estados de producto configurados para esta empresa. Cree los estados de producto primero.");
             statusId = defStatus.ProductStatusId;
         }
 
         var entity = new Product
         {
+            EmpresaId = empresaId,
             CatalogId = dto.CatalogId,
             ProductKind = dto.ProductKind,
             GenericName = dto.GenericName,

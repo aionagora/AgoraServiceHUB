@@ -7,10 +7,9 @@ using AgoraHub360.ERP.Domain.Common;
 /// EmpresaId puede ser null si el código es global.
 /// CodeType: 1=SKU, 2=Barra, 3=QR, 4=ExternoProveedor, 5=ExternoCliente, 6=Canal, 7=InternoAlterno
 /// </summary>
-public class ProductCode : AuditableEntity
+public class ProductCode : TenantEntity
 {
     public long ProductCodeId { get; set; }
-    public int? EmpresaId { get; set; }
     public long ProductId { get; set; }
 
     public byte CodeType { get; set; }

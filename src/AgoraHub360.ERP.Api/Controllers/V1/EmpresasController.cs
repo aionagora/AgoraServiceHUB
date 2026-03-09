@@ -16,15 +16,18 @@ public class EmpresasController : ControllerBase
     private readonly IEmpresaService _empresaService;
     private readonly ICurrentUserService _currentUserService;
     private readonly IUsuarioService _usuarioService;
+    private readonly IEmpresaSeedService _seedService;
 
     public EmpresasController(
         IEmpresaService empresaService,
         ICurrentUserService currentUserService,
-        IUsuarioService usuarioService)
+        IUsuarioService usuarioService,
+        IEmpresaSeedService seedService)
     {
         _empresaService = empresaService;
         _currentUserService = currentUserService;
         _usuarioService = usuarioService;
+        _seedService = seedService;
     }
 
     [HttpGet]
@@ -102,5 +105,40 @@ public class EmpresasController : ControllerBase
             return NotFound(ApiResponse<bool>.Fail(result.Error!));
 
         return Ok(ApiResponse<bool>.Ok(true, "Empresa eliminada exitosamente."));
+    }
+
+    /// <summary>
+    /// Seeds default MDM data (catalog, UoMs, statuses) for a given company.
+    /// Idempotent — skips if data already exists.
+    /// </summary>
+    [HttpPost("{id:int}/seed")]
+    public async Task<IActionResult> SeedDefaultData(int id, CancellationToken ct)
+    {
+        var empresa = await _empresaService.GetByIdAsync(id, ct);
+        if (!empresa.IsSuccess)
+            return NotFound(ApiResponse<bool>.Fail(empresa.Error!));
+
+        var result = await _seedService.SeedDefaultDataAsync(id, ct);
+        if (!result.IsSuccess)
+            return BadRequest(ApiResponse<bool>.Fail(result.Error!));
+
+        return Ok(ApiResponse<bool>.Ok(true, "Datos base creados exitosamente."));
+    }
+
+    /// <summary>
+    /// Seeds default MDM data for the current user's company.
+    /// </summary>
+    [HttpPost("mi-empresa/seed")]
+    public async Task<IActionResult> SeedMyCompanyData(CancellationToken ct)
+    {
+        var empresaId = _currentUserService.EmpresaId;
+        if (!empresaId.HasValue)
+            return Unauthorized(ApiResponse<bool>.Fail("No se pudo determinar la empresa activa."));
+
+        var result = await _seedService.SeedDefaultDataAsync(empresaId.Value, ct);
+        if (!result.IsSuccess)
+            return BadRequest(ApiResponse<bool>.Fail(result.Error!));
+
+        return Ok(ApiResponse<bool>.Ok(true, "Datos base creados exitosamente."));
     }
 }
