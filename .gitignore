@@ -35,3 +35,7 @@ publish/
 **/*.sln.docstates
 /src/AgoraHub360.ERP.Api/Properties/PublishProfiles/FolderProfile.pubxml
 /src/AgoraHub360.ERP.Web/Properties/PublishProfiles/FolderProfile.pubxml
+/src/AgoraHub360.ERP.Web/Services/BreadcrumbService.cs
+/src/AgoraHub360.ERP.Web/Shared/SchemaColors.cs
+/src/AgoraHub360.ERP.Web/Pages/MDM/GestionProductos.razor
+/src/AgoraHub360.ERP.Web/Pages/MDM/GestionProductos.razor.css
