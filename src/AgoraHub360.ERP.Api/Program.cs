@@ -28,7 +28,7 @@ builder.Services.AddPersistence(connectionString);
 builder.Services.AddInfrastructure();
 
 // ──── Autenticación JWT + Stub (desarrollo) ────
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "AgoraHub360-ERP-Dev-Secret-Key-2024-MinLength32!";
+var jwtKey = builder.Configuration["Jwt:Key"] ?? "AgoraHub360-ERP-Dev-Secret-Key-2026-MinLength32!";
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "AgoraHub360.ERP";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "AgoraHub360.ERP.Web";
 
@@ -83,8 +83,8 @@ builder.Services.AddSwaggerGen(options =>
     options.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "AgoraHub360 ERP API",
-        Version = "v1",
-        Description = "API del sistema ERP multi-empresa AgoraHub360",
+        Version = "v1.0.0",
+        Description = "API del sistema ERP multi-empresa AgoraHub360 — Gestión 2026",
         Contact = new OpenApiContact
         {
             Name = "AgoraHub360",

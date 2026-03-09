@@ -146,6 +146,15 @@
     background: var(--agora-bg);
 }
 
+.app-footer {
+    text-align: center;
+    padding: 0.6rem 1rem;
+    font-size: 0.75rem;
+    color: var(--agora-text-muted);
+    border-top: 1px solid var(--agora-border);
+    background: var(--agora-surface);
+}
+
 @media (max-width: 768px) {
     .sidebar {
         transform: translateX(calc(-1 * var(--sidebar-width)));

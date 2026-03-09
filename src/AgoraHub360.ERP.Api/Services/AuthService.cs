@@ -81,7 +81,7 @@ public class AuthService : IAuthService
 
     private string GenerateJwtToken(Usuario user, int? empresaId, string rol)
     {
-        var key = _config["Jwt:Key"] ?? "AgoraHub360-ERP-Dev-Secret-Key-2024-MinLength32!";
+        var key = _config["Jwt:Key"] ?? "AgoraHub360-ERP-Dev-Secret-Key-2026-MinLength32!";
         var issuer = _config["Jwt:Issuer"] ?? "AgoraHub360.ERP";
         var audience = _config["Jwt:Audience"] ?? "AgoraHub360.ERP.Web";
         var hours = _config.GetValue<int>("Jwt:ExpirationHours", 8);
