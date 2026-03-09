@@ -303,7 +303,7 @@
                             <datalist id="cuentasList">
                                 @foreach (var c in cuentasFiltradas)
                                 {
-                                    <option value="@c.Codigo – @c.Nombre" />
+                                    <option value="@c.Codigo - @c.Nombre" data-id="@c.CuentaContableId" />
                                 }
                             </datalist>
                         </div>
@@ -838,8 +838,11 @@
 
     private IEnumerable<CuentaContableDto> cuentasFiltradas =>
         string.IsNullOrWhiteSpace(searchCuenta) ? cuentasMov :
-        cuentasMov.Where(c => c.Codigo.Contains(searchCuenta, StringComparison.OrdinalIgnoreCase)
-            || c.Nombre.Contains(searchCuenta, StringComparison.OrdinalIgnoreCase)).Take(20);
+        cuentasMov.Where(c =>
+            c.Codigo.Contains(searchCuenta, StringComparison.OrdinalIgnoreCase)
+            || c.Nombre.Contains(searchCuenta, StringComparison.OrdinalIgnoreCase)
+            || $"{c.Codigo} - {c.Nombre}".Contains(searchCuenta, StringComparison.OrdinalIgnoreCase))
+        .Take(20);
 
     private record TempLinea(
         int CuentaId, string CuentaCodigo, string CuentaNombre,
@@ -935,8 +938,21 @@
     // ?? Líneas ?????????????????????????????????????????????????????????????????
     private void OnCuentaSelected(ChangeEventArgs e)
     {
-        var val = e.Value?.ToString() ?? "";
-        var match = cuentasMov.FirstOrDefault(c => $"{c.Codigo} — {c.Nombre}" == val);
+        var val = (e.Value?.ToString() ?? "").Trim();
+        if (string.IsNullOrEmpty(val)) { newCuentaId = 0; return; }
+
+        // Estrategia 1: el valor coincide exactamente con "CODIGO - Nombre"
+        var match = cuentasMov.FirstOrDefault(c =>
+            string.Equals($"{c.Codigo} - {c.Nombre}", val, StringComparison.OrdinalIgnoreCase));
+
+        // Estrategia 2: el valor empieza con el código (el usuario escribió solo el código)
+        match ??= cuentasMov.FirstOrDefault(c =>
+            val.StartsWith(c.Codigo, StringComparison.OrdinalIgnoreCase));
+
+        // Estrategia 3: el código está contenido en el valor seleccionado
+        match ??= cuentasMov.FirstOrDefault(c =>
+            val.Contains(c.Codigo, StringComparison.OrdinalIgnoreCase));
+
         newCuentaId = match?.CuentaContableId ?? 0;
     }
 
