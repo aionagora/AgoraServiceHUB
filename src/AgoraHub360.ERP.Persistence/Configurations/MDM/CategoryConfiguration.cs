@@ -27,6 +27,6 @@ public class CategoryConfiguration : IEntityTypeConfiguration<Category>
             .HasForeignKey(c => c.ParentCategoryId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasIndex(c => new { c.CatalogId, c.ParentCategoryId, c.Name }).IsUnique();
+        builder.HasIndex(c => new { c.EmpresaId, c.CatalogId, c.ParentCategoryId, c.Name }).IsUnique();
     }
 }

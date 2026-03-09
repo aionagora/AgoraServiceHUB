@@ -155,6 +155,9 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Property<long>("AsientoContableId")
                         .HasColumnType("bigint");
 
+                    b.Property<int?>("CentroCostoId")
+                        .HasColumnType("int");
+
                     b.Property<string>("CreadoPor")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
@@ -192,6 +195,8 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.HasKey("AsientoContableLineaId");
 
                     b.HasIndex("AsientoContableId");
+
+                    b.HasIndex("CentroCostoId");
 
                     b.HasIndex("CuentaContableId");
 
@@ -632,6 +637,197 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.ToTable("TiposPago", "acc");
                 });
 
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CMP.ConfirmacionProveedor", b =>
+                {
+                    b.Property<long>("ConfirmacionProveedorId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("ConfirmacionProveedorId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("CondicionesOK")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("EmpresaId")
+                        .HasColumnType("int");
+
+                    b.Property<byte>("Estado")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime>("FechaConfirmacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaEntregaComprometida")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("IteracionNegociacion")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NumeroProforma")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Observaciones")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("ObservacionesProveedor")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<long>("OrdenCompraId")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("ConfirmacionProveedorId");
+
+                    b.HasIndex("EmpresaId");
+
+                    b.HasIndex("OrdenCompraId", "IteracionNegociacion");
+
+                    b.ToTable("ConfirmacionesProveedor", "cmp");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CMP.ExpedienteImportacion", b =>
+                {
+                    b.Property<long>("ExpedienteImportacionId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("ExpedienteImportacionId"));
+
+                    b.Property<DateTime?>("ATA")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ATD")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Aseguradora")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Despachante")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("DetalleObservacionAduana")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime?>("ETA")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ETD")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("EmpresaId")
+                        .HasColumnType("int");
+
+                    b.Property<byte>("Estado")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaLevante")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaPresentacionAduana")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Forwarder")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Incoterm")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("ModalidadTransporte")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Numero")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("NumeroBLAWB")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NumeroDUIDIM")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NumeroPólizaSeguro")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Observaciones")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("PaisOrigen")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("PuertoDestino")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("PuertoOrigen")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<decimal?>("TotalTributos")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<bool>("TuvoObservacionAduana")
+                        .HasColumnType("bit");
+
+                    b.HasKey("ExpedienteImportacionId");
+
+                    b.HasIndex("EmpresaId");
+
+                    b.HasIndex("EmpresaId", "Estado");
+
+                    b.HasIndex("EmpresaId", "Numero")
+                        .IsUnique();
+
+                    b.ToTable("ExpedientesImportacion", "cmp");
+                });
+
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CMP.GastoImportacion", b =>
                 {
                     b.Property<long>("GastoImportacionId")
@@ -694,6 +890,57 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.ToTable("GastosImportacion", "cmp");
                 });
 
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CMP.HitoExpediente", b =>
+                {
+                    b.Property<long>("HitoExpedienteId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("HitoExpedienteId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<long>("ExpedienteImportacionId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaHito")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ReferenciaDocumento")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("TipoHito")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("HitoExpedienteId");
+
+                    b.HasIndex("ExpedienteImportacionId", "FechaHito");
+
+                    b.ToTable("HitosExpediente", "cmp");
+                });
+
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CMP.HojaImportacion", b =>
                 {
                     b.Property<long>("HojaImportacionId")
@@ -711,6 +958,9 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
                     b.Property<int>("EmpresaId")
                         .HasColumnType("int");
+
+                    b.Property<long?>("ExpedienteImportacionId")
+                        .HasColumnType("bigint");
 
                     b.Property<DateTime>("Fecha")
                         .HasColumnType("datetime2");
@@ -740,7 +990,7 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
-                    b.Property<long>("OrdenCompraId")
+                    b.Property<long?>("OrdenCompraId")
                         .HasColumnType("bigint");
 
                     b.Property<string>("ReferenciaAduanera")
@@ -754,7 +1004,11 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
                     b.HasIndex("EmpresaId");
 
+                    b.HasIndex("ExpedienteImportacionId");
+
                     b.HasIndex("OrdenCompraId");
+
+                    b.HasIndex("EmpresaId", "ExpedienteImportacionId");
 
                     b.HasIndex("EmpresaId", "Numero")
                         .IsUnique();
@@ -853,6 +1107,9 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Property<byte>("Estado")
                         .HasColumnType("tinyint");
 
+                    b.Property<long?>("ExpedienteImportacionId")
+                        .HasColumnType("bigint");
+
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime2");
 
@@ -868,6 +1125,10 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Property<decimal>("Impuesto")
                         .HasColumnType("decimal(18,4)");
 
+                    b.Property<string>("Incoterm")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
                     b.Property<string>("ModificadoPor")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
@@ -877,6 +1138,10 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasMaxLength(3)
                         .HasColumnType("nvarchar(3)");
 
+                    b.Property<string>("MotivoRechazo")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<string>("Numero")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -885,6 +1150,9 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Property<string>("Observaciones")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
+
+                    b.Property<long?>("OrdenPedidoId")
+                        .HasColumnType("bigint");
 
                     b.Property<int>("ProveedorId")
                         .HasColumnType("int");
@@ -908,14 +1176,22 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
                     b.HasIndex("EmpresaId");
 
+                    b.HasIndex("ExpedienteImportacionId");
+
+                    b.HasIndex("OrdenPedidoId");
+
                     b.HasIndex("ProveedorId");
 
                     b.HasIndex("EmpresaId", "Estado");
+
+                    b.HasIndex("EmpresaId", "ExpedienteImportacionId");
 
                     b.HasIndex("EmpresaId", "FechaEmision");
 
                     b.HasIndex("EmpresaId", "Numero")
                         .IsUnique();
+
+                    b.HasIndex("EmpresaId", "OrdenPedidoId");
 
                     b.HasIndex("EmpresaId", "ProveedorId");
 
@@ -1003,6 +1279,242 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.ToTable("OrdenCompraLineas", "cmp");
                 });
 
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CMP.OrdenPedido", b =>
+                {
+                    b.Property<long>("OrdenPedidoId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("OrdenPedidoId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("AlmacenDestinoId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CentroCosto")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("EmpresaId")
+                        .HasColumnType("int");
+
+                    b.Property<byte>("Estado")
+                        .HasColumnType("tinyint");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaEmision")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaRequerida")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("MotivoRechazo")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Numero")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Observaciones")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("ObservacionesRevisionStock")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("Solicitante")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool?>("StockCubre")
+                        .HasColumnType("bit");
+
+                    b.Property<byte>("Urgencia")
+                        .HasColumnType("tinyint");
+
+                    b.HasKey("OrdenPedidoId");
+
+                    b.HasIndex("AlmacenDestinoId");
+
+                    b.HasIndex("EmpresaId");
+
+                    b.HasIndex("EmpresaId", "Estado");
+
+                    b.HasIndex("EmpresaId", "FechaEmision");
+
+                    b.HasIndex("EmpresaId", "Numero")
+                        .IsUnique();
+
+                    b.ToTable("OrdenesPedido", "cmp");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CMP.OrdenPedidoLinea", b =>
+                {
+                    b.Property<long>("OrdenPedidoLineaId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("OrdenPedidoLineaId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("CantidadAComprar")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal?>("CantidadEnTransito")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("CantidadSolicitada")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal?>("CantidadStockDisponible")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<long>("CompanyProductId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Descripcion")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Notas")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("NumeroLinea")
+                        .HasColumnType("int");
+
+                    b.Property<long>("OrdenPedidoId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("UnidadMedida")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("OrdenPedidoLineaId");
+
+                    b.HasIndex("CompanyProductId");
+
+                    b.HasIndex("OrdenPedidoId", "NumeroLinea")
+                        .IsUnique();
+
+                    b.ToTable("OrdenPedidoLineas", "cmp");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CMP.PagoOrdenCompra", b =>
+                {
+                    b.Property<long>("PagoOrdenCompraId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("PagoOrdenCompraId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool>("Ejecutado")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("EmpresaId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaEjecucion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaProgramada")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("MonedaId")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<decimal?>("MontoEjecutado")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("MontoProgramado")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<string>("Observaciones")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<long>("OrdenCompraId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ReferenciaTransferencia")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<decimal>("TasaCambio")
+                        .HasColumnType("decimal(18,6)");
+
+                    b.Property<byte>("TipoPago")
+                        .HasColumnType("tinyint");
+
+                    b.HasKey("PagoOrdenCompraId");
+
+                    b.HasIndex("EmpresaId");
+
+                    b.HasIndex("OrdenCompraId");
+
+                    b.HasIndex("EmpresaId", "Ejecutado");
+
+                    b.HasIndex("EmpresaId", "OrdenCompraId");
+
+                    b.ToTable("PagosOrdenCompra", "cmp");
+                });
+
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CMP.RecepcionCompra", b =>
                 {
                     b.Property<long>("RecepcionCompraId")
@@ -1010,6 +1522,10 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasColumnType("bigint");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("RecepcionCompraId"));
+
+                    b.Property<string>("ActaDiferencias")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
 
                     b.Property<bool>("Activo")
                         .HasColumnType("bit");
@@ -1031,6 +1547,9 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Property<int>("EmpresaId")
                         .HasColumnType("int");
 
+                    b.Property<bool>("EnCuarentena")
+                        .HasColumnType("bit");
+
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime2");
 
@@ -1049,12 +1568,31 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
+                    b.Property<string>("NumeroReclamo")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<string>("Observaciones")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
                     b.Property<long>("OrdenCompraId")
                         .HasColumnType("bigint");
+
+                    b.Property<string>("ResultadoControlCalidad")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("TieneDiferencias")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("TipoDiferencia")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("UbicacionCuarentena")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.HasKey("RecepcionCompraId");
 
@@ -1083,7 +1621,16 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Property<bool>("Activo")
                         .HasColumnType("bit");
 
+                    b.Property<decimal>("CantidadDañada")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("CantidadFaltante")
+                        .HasColumnType("decimal(18,4)");
+
                     b.Property<decimal>("CantidadRecibida")
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("CantidadSobrante")
                         .HasColumnType("decimal(18,4)");
 
                     b.Property<decimal>("CostoUnitario")
@@ -1120,6 +1667,63 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.HasIndex("RecepcionCompraId");
 
                     b.ToTable("RecepcionCompraLineas", "cmp");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CST.CentroCosto", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("EmpresaId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<int?>("ParentId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmpresaId");
+
+                    b.HasIndex("ParentId");
+
+                    b.HasIndex("EmpresaId", "Codigo")
+                        .IsUnique();
+
+                    b.ToTable("CentrosCosto", "cst");
                 });
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CST.CostingRule", b =>
@@ -1270,6 +1874,11 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Property<bool>("Activo")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("AutoGeneraSku")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
                     b.Property<string>("CreadoPor")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
@@ -1288,6 +1897,16 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Property<DateTime?>("FechaModificacion")
                         .HasColumnType("datetime2");
 
+                    b.Property<byte>("IndustriaId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint")
+                        .HasDefaultValue((byte)7);
+
+                    b.Property<byte>("MetodoCosteoDefault")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("tinyint")
+                        .HasDefaultValue((byte)1);
+
                     b.Property<string>("ModificadoPor")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
@@ -1303,6 +1922,25 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
+
+                    b.Property<bool>("PermiteLotes")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("PermiteServicios")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("PermiteVariantes")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("PrefijoSku")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("Telefono")
                         .HasMaxLength(50)
@@ -1671,6 +2309,55 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.ToTable("UsuarioEmpresas", "core");
                 });
 
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.DOC.ComprobanteDocumento", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<long>("ComprobanteId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<long>("DocumentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("EmpresaId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ComprobanteId");
+
+                    b.HasIndex("DocumentId");
+
+                    b.HasIndex("EmpresaId");
+
+                    b.ToTable("ComprobanteDocumentos", "doc");
+                });
+
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.DOC.Document", b =>
                 {
                     b.Property<long>("DocumentId")
@@ -1980,6 +2667,9 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Property<byte>("DataType")
                         .HasColumnType("tinyint");
 
+                    b.Property<int>("EmpresaId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime2");
 
@@ -2025,9 +2715,11 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
                     b.HasKey("AttributeId");
 
+                    b.HasIndex("EmpresaId");
+
                     b.HasIndex("IsVariantAxis");
 
-                    b.HasIndex("IndustryId", "Code")
+                    b.HasIndex("EmpresaId", "IndustryId", "Code")
                         .IsUnique();
 
                     b.ToTable("AttributeDefinitions", "mdm");
@@ -2051,6 +2743,9 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int>("EmpresaId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime2");
 
@@ -2070,6 +2765,8 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasColumnType("nvarchar(120)");
 
                     b.HasKey("OptionId");
+
+                    b.HasIndex("EmpresaId");
 
                     b.HasIndex("AttributeId", "Value")
                         .IsUnique();
@@ -2092,6 +2789,9 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int>("EmpresaId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime2");
 
@@ -2113,7 +2813,9 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
                     b.HasKey("BrandId");
 
-                    b.HasIndex("Name")
+                    b.HasIndex("EmpresaId");
+
+                    b.HasIndex("EmpresaId", "Name")
                         .IsUnique();
 
                     b.ToTable("Brands", "mdm");
@@ -2134,7 +2836,7 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<int?>("EmpresaId")
+                    b.Property<int>("EmpresaId")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("FechaCreacion")
@@ -2160,22 +2862,12 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
                     b.HasKey("CatalogId");
 
-                    b.HasIndex("Scope", "EmpresaId", "Name")
-                        .IsUnique()
-                        .HasFilter("[EmpresaId] IS NOT NULL");
+                    b.HasIndex("EmpresaId");
+
+                    b.HasIndex("EmpresaId", "Name")
+                        .IsUnique();
 
                     b.ToTable("Catalogs", "mdm");
-
-                    b.HasData(
-                        new
-                        {
-                            CatalogId = 1L,
-                            Activo = true,
-                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            IsDefault = true,
-                            Name = "Catálogo General",
-                            Scope = (byte)1
-                        });
                 });
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.Category", b =>
@@ -2195,6 +2887,9 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Property<string>("CreadoPor")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("EmpresaId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime2");
@@ -2223,9 +2918,13 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
                     b.HasKey("CategoryId");
 
+                    b.HasIndex("CatalogId");
+
+                    b.HasIndex("EmpresaId");
+
                     b.HasIndex("ParentCategoryId");
 
-                    b.HasIndex("CatalogId", "ParentCategoryId", "Name")
+                    b.HasIndex("EmpresaId", "CatalogId", "ParentCategoryId", "Name")
                         .IsUnique()
                         .HasFilter("[ParentCategoryId] IS NOT NULL");
 
@@ -2440,6 +3139,9 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int>("EmpresaId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime2");
 
@@ -2457,7 +3159,10 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
                     b.HasKey("ManufacturerId");
 
-                    b.HasIndex("Name");
+                    b.HasIndex("EmpresaId");
+
+                    b.HasIndex("EmpresaId", "Name")
+                        .IsUnique();
 
                     b.ToTable("Manufacturers", "mdm");
                 });
@@ -2489,6 +3194,9 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<int>("DefaultUomId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("EmpresaId")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("FechaCreacion")
@@ -2537,6 +3245,8 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
                     b.HasIndex("DefaultUomId");
 
+                    b.HasIndex("EmpresaId");
+
                     b.HasIndex("LifecycleStatusId");
 
                     b.HasIndex("ManufacturerId");
@@ -2565,6 +3275,9 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Property<string>("CreadoPor")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("EmpresaId")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime2");
@@ -2611,6 +3324,8 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
                     b.HasIndex("AttributeId");
 
+                    b.HasIndex("EmpresaId");
+
                     b.HasIndex("OptionId");
 
                     b.HasIndex("ProductId", "AttributeId", "ValidFrom")
@@ -2656,6 +3371,9 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int>("EmpresaId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime2");
 
@@ -2678,6 +3396,8 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasColumnType("tinyint");
 
                     b.HasKey("ClassificationId");
+
+                    b.HasIndex("EmpresaId");
 
                     b.HasIndex("ParentId");
 
@@ -2725,7 +3445,7 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Property<long?>("CustomerId")
                         .HasColumnType("bigint");
 
-                    b.Property<int?>("EmpresaId")
+                    b.Property<int>("EmpresaId")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("FechaCreacion")
@@ -2763,6 +3483,8 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
                     b.HasKey("ProductCodeId");
 
+                    b.HasIndex("EmpresaId");
+
                     b.HasIndex("EmpresaId", "CodeType", "Valor");
 
                     b.HasIndex("ProductId", "CodeType", "IsPrimary");
@@ -2790,6 +3512,9 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int>("EmpresaId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime2");
 
@@ -2810,48 +3535,12 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
                     b.HasKey("ProductStatusId");
 
-                    b.HasIndex("Code")
+                    b.HasIndex("EmpresaId");
+
+                    b.HasIndex("EmpresaId", "Code")
                         .IsUnique();
 
                     b.ToTable("ProductStatuses", "mdm");
-
-                    b.HasData(
-                        new
-                        {
-                            ProductStatusId = 1,
-                            Activo = true,
-                            Code = "ACTIVE",
-                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            IsDefault = true,
-                            Name = "Activo"
-                        },
-                        new
-                        {
-                            ProductStatusId = 2,
-                            Activo = true,
-                            Code = "INACTIVE",
-                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            IsDefault = false,
-                            Name = "Inactivo"
-                        },
-                        new
-                        {
-                            ProductStatusId = 3,
-                            Activo = true,
-                            Code = "DRAFT",
-                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            IsDefault = false,
-                            Name = "Borrador"
-                        },
-                        new
-                        {
-                            ProductStatusId = 4,
-                            Activo = true,
-                            Code = "DISCONTINUED",
-                            FechaCreacion = new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified),
-                            IsDefault = false,
-                            Name = "Descontinuado"
-                        });
                 });
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.ProductUom", b =>
@@ -2872,6 +3561,9 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Property<string>("CreadoPor")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("EmpresaId")
+                        .HasColumnType("int");
 
                     b.Property<decimal>("FactorToBase")
                         .HasPrecision(18, 6)
@@ -2897,6 +3589,8 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("ProductUomId");
+
+                    b.HasIndex("EmpresaId");
 
                     b.HasIndex("UomId");
 
@@ -3120,6 +3814,9 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int>("EmpresaId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime2");
 
@@ -3137,7 +3834,9 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
                     b.HasKey("UomId");
 
-                    b.HasIndex("Code")
+                    b.HasIndex("EmpresaId");
+
+                    b.HasIndex("EmpresaId", "Code")
                         .IsUnique();
 
                     b.ToTable("Uoms", "mdm");
@@ -3466,6 +4165,11 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.CST.CentroCosto", "CentroCosto")
+                        .WithMany()
+                        .HasForeignKey("CentroCostoId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("AgoraHub360.ERP.Domain.Entities.ACC.CuentaContable", "CuentaContable")
                         .WithMany()
                         .HasForeignKey("CuentaContableId")
@@ -3473,6 +4177,8 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("AsientoContable");
+
+                    b.Navigation("CentroCosto");
 
                     b.Navigation("CuentaContable");
                 });
@@ -3506,6 +4212,17 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Navigation("PlantillaContable");
                 });
 
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CMP.ConfirmacionProveedor", b =>
+                {
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.CMP.OrdenCompra", "OrdenCompra")
+                        .WithMany("ConfirmacionesProveedor")
+                        .HasForeignKey("OrdenCompraId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("OrdenCompra");
+                });
+
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CMP.GastoImportacion", b =>
                 {
                     b.HasOne("AgoraHub360.ERP.Domain.Entities.CMP.HojaImportacion", "HojaImportacion")
@@ -3517,13 +4234,30 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Navigation("HojaImportacion");
                 });
 
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CMP.HitoExpediente", b =>
+                {
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.CMP.ExpedienteImportacion", "ExpedienteImportacion")
+                        .WithMany("Hitos")
+                        .HasForeignKey("ExpedienteImportacionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ExpedienteImportacion");
+                });
+
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CMP.HojaImportacion", b =>
                 {
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.CMP.ExpedienteImportacion", "ExpedienteImportacion")
+                        .WithMany("HojasImportacion")
+                        .HasForeignKey("ExpedienteImportacionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("AgoraHub360.ERP.Domain.Entities.CMP.OrdenCompra", "OrdenCompra")
                         .WithMany()
                         .HasForeignKey("OrdenCompraId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ExpedienteImportacion");
 
                     b.Navigation("OrdenCompra");
                 });
@@ -3555,6 +4289,16 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.CMP.ExpedienteImportacion", "ExpedienteImportacion")
+                        .WithMany("OrdenesCompra")
+                        .HasForeignKey("ExpedienteImportacionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.CMP.OrdenPedido", "OrdenPedido")
+                        .WithMany("OrdenesCompra")
+                        .HasForeignKey("OrdenPedidoId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.Proveedor", "Proveedor")
                         .WithMany()
                         .HasForeignKey("ProveedorId")
@@ -3562,6 +4306,10 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("AlmacenDestino");
+
+                    b.Navigation("ExpedienteImportacion");
+
+                    b.Navigation("OrdenPedido");
 
                     b.Navigation("Proveedor");
                 });
@@ -3581,6 +4329,47 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("CompanyProduct");
+
+                    b.Navigation("OrdenCompra");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CMP.OrdenPedido", b =>
+                {
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.Almacen", "AlmacenDestino")
+                        .WithMany()
+                        .HasForeignKey("AlmacenDestinoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("AlmacenDestino");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CMP.OrdenPedidoLinea", b =>
+                {
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.CompanyProduct", "CompanyProduct")
+                        .WithMany()
+                        .HasForeignKey("CompanyProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.CMP.OrdenPedido", "OrdenPedido")
+                        .WithMany("Lineas")
+                        .HasForeignKey("OrdenPedidoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CompanyProduct");
+
+                    b.Navigation("OrdenPedido");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CMP.PagoOrdenCompra", b =>
+                {
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.CMP.OrdenCompra", "OrdenCompra")
+                        .WithMany("Pagos")
+                        .HasForeignKey("OrdenCompraId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("OrdenCompra");
                 });
@@ -3623,6 +4412,24 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Navigation("RecepcionCompra");
                 });
 
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CST.CentroCosto", b =>
+                {
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.Core.Empresa", "Empresa")
+                        .WithMany()
+                        .HasForeignKey("EmpresaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.CST.CentroCosto", "Parent")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Empresa");
+
+                    b.Navigation("Parent");
+                });
+
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Core.Empresa", b =>
                 {
                     b.HasOne("AgoraHub360.ERP.Domain.Entities.Core.Moneda", "MonedaBase")
@@ -3660,6 +4467,25 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Navigation("Empresa");
 
                     b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.DOC.ComprobanteDocumento", b =>
+                {
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.ACC.AsientoContable", "Comprobante")
+                        .WithMany("Documentos")
+                        .HasForeignKey("ComprobanteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.DOC.Document", "Document")
+                        .WithMany()
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Comprobante");
+
+                    b.Navigation("Document");
                 });
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.DOC.ProductDocument", b =>
@@ -3975,6 +4801,8 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.ACC.AsientoContable", b =>
                 {
+                    b.Navigation("Documentos");
+
                     b.Navigation("Lineas");
                 });
 
@@ -3988,6 +4816,15 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Navigation("Lineas");
                 });
 
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CMP.ExpedienteImportacion", b =>
+                {
+                    b.Navigation("Hitos");
+
+                    b.Navigation("HojasImportacion");
+
+                    b.Navigation("OrdenesCompra");
+                });
+
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CMP.HojaImportacion", b =>
                 {
                     b.Navigation("Gastos");
@@ -3997,12 +4834,28 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CMP.OrdenCompra", b =>
                 {
+                    b.Navigation("ConfirmacionesProveedor");
+
                     b.Navigation("Lineas");
+
+                    b.Navigation("Pagos");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CMP.OrdenPedido", b =>
+                {
+                    b.Navigation("Lineas");
+
+                    b.Navigation("OrdenesCompra");
                 });
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CMP.RecepcionCompra", b =>
                 {
                     b.Navigation("Lineas");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CST.CentroCosto", b =>
+                {
+                    b.Navigation("Children");
                 });
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Core.Usuario", b =>

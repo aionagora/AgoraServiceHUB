@@ -13,6 +13,13 @@ public record RecepcionCompraDto(
     string? DocumentoProveedor,
     string? Observaciones,
     bool Confirmada,
+    bool TieneDiferencias,
+    string? TipoDiferencia,
+    string? ActaDiferencias,
+    string? NumeroReclamo,
+    bool EnCuarentena,
+    string? UbicacionCuarentena,
+    string? ResultadoControlCalidad,
     List<RecepcionCompraLineaDto> Lineas);
 
 /// <summary>DTO de lectura para línea de recepción.</summary>
@@ -26,6 +33,10 @@ public record RecepcionCompraLineaDto(
     decimal CantidadOrdenada,
     decimal CantidadPendiente,
     decimal CantidadRecibida,
+    decimal CantidadDañada,
+    decimal CantidadSobrante,
+    decimal CantidadFaltante,
+    decimal CantidadAceptada,
     decimal CostoUnitario,
     string? Notas);
 
@@ -36,11 +47,21 @@ public record CreateRecepcionCompraDto(
     int? AlmacenId = null,
     string? DocumentoProveedor = null,
     string? Observaciones = null,
+    bool TieneDiferencias = false,
+    string? TipoDiferencia = null,
+    string? ActaDiferencias = null,
+    string? NumeroReclamo = null,
+    bool EnCuarentena = false,
+    string? UbicacionCuarentena = null,
+    string? ResultadoControlCalidad = null,
     List<CreateRecepcionCompraLineaDto>? Lineas = null);
 
 /// <summary>DTO para crear una línea de recepción.</summary>
 public record CreateRecepcionCompraLineaDto(
     long OrdenCompraLineaId,
     decimal CantidadRecibida,
+    decimal CantidadDañada = 0,
+    decimal CantidadSobrante = 0,
+    decimal CantidadFaltante = 0,
     decimal? CostoUnitario = null,
     string? Notas = null);

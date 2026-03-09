@@ -1,0 +1,188 @@
+@page "/dashboard/inventario"
+@attribute [Authorize]
+@inject DashboardDataService DashSvc
+
+<PageTitle>Dashboard Inventario - AgoraHub360 ERP</PageTitle>
+
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h1><i class="bi bi-box-seam-fill me-2 text-success"></i>Dashboard — Inventario</h1>
+        <p class="text-muted mb-0">Stock, movimientos y alertas del mes en curso</p>
+    </div>
+    <button class="btn btn-sm btn-outline-secondary" @onclick="Refresh" disabled="@loading">
+        <i class="bi bi-arrow-clockwise"></i> Actualizar
+    </button>
+</div>
+
+@if (loading)
+{
+    <div class="text-center py-5"><div class="spinner-border text-success"></div></div>
+}
+else
+{
+    @* KPIs *@
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card text-center">
+                <div class="stat-label">Productos Activos</div>
+                <div class="stat-value text-success">@kpis.ProductosActivos</div>
+                <a href="/mdm/productos-empresa" class="small text-muted">Ver catálogo</a>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card text-center">
+                <div class="stat-label">Movimientos del Mes</div>
+                <div class="stat-value">@kpis.MovimientosMes</div>
+                <small class="text-muted">Total registrados</small>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card text-center">
+                <div class="stat-label">Entradas</div>
+                <div class="stat-value text-success">@kpis.EntradaMes</div>
+                <small class="text-muted">Este mes</small>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="stat-card text-center">
+                <div class="stat-label">Salidas</div>
+                <div class="stat-value text-danger">@kpis.SalidaMes</div>
+                <small class="text-muted">Este mes</small>
+            </div>
+        </div>
+    </div>
+
+    @* Resumen visual entrada vs salida *@
+    <div class="row g-3 mb-4">
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header py-3"><i class="bi bi-bar-chart-fill me-1"></i>Entradas vs Salidas</div>
+                <div class="card-body d-flex flex-column justify-content-center">
+                    @{
+                        var total = kpis.EntradaMes + kpis.SalidaMes;
+                        var pctEnt = total > 0 ? kpis.EntradaMes * 100 / total : 0;
+                        var pctSal = total > 0 ? kpis.SalidaMes * 100 / total : 0;
+                    }
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="small text-success fw-semibold"><i class="bi bi-arrow-down-circle me-1"></i>Entradas</span>
+                            <span class="small fw-bold">@kpis.EntradaMes</span>
+                        </div>
+                        <div class="progress" style="height:12px">
+                            <div class="progress-bar bg-success" style="width:@(pctEnt)%"></div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="small text-danger fw-semibold"><i class="bi bi-arrow-up-circle me-1"></i>Salidas</span>
+                            <span class="small fw-bold">@kpis.SalidaMes</span>
+                        </div>
+                        <div class="progress" style="height:12px">
+                            <div class="progress-bar bg-danger" style="width:@(pctSal)%"></div>
+                        </div>
+                    </div>
+                    @if (total == 0)
+                    {
+                        <p class="text-muted small text-center mt-2">Sin movimientos este mes.</p>
+                    }
+                    <div class="d-grid gap-2 mt-3">
+                        <a href="/inventario/movimientos" class="btn btn-sm btn-outline-success text-start">
+                            <i class="bi bi-plus-circle me-2"></i>Registrar Movimiento
+                        </a>
+                        <a href="/inventario/kardex" class="btn btn-sm btn-outline-secondary text-start">
+                            <i class="bi bi-journal-text me-2"></i>Ver Kardex
+                        </a>
+                        <a href="/inventario/stock" class="btn btn-sm btn-outline-secondary text-start">
+                            <i class="bi bi-box-seam-fill me-2"></i>Stock Actual
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card h-100">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-clock-history me-1"></i>Últimos Movimientos del Mes</span>
+                    <a href="/inventario/movimientos" class="btn btn-sm btn-link py-0">Ver todos</a>
+                </div>
+                <div class="card-body p-0">
+                    @if (kpis.UltimosMovimientos.Count == 0)
+                    {
+                        <div class="text-center text-muted py-4 small">
+                            <i class="bi bi-inbox fs-4 d-block mb-2"></i>Sin movimientos este mes
+                        </div>
+                    }
+                    else
+                    {
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Nº</th>
+                                    <th>Fecha</th>
+                                    <th>Tipo</th>
+                                    <th>Producto</th>
+                                    <th>Almacén</th>
+                                    <th class="text-end">Cantidad</th>
+                                    <th class="text-end">Costo Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var m in kpis.UltimosMovimientos)
+                                {
+                                    <tr>
+                                        <td class="small"><strong>@m.Number</strong></td>
+                                        <td class="small">@m.MovementDate.ToString("dd/MM/yy")</td>
+                                        <td>
+                                            <span class="badge @(m.MovementType == "Entrada" ? "bg-success" : m.MovementType == "Salida" ? "bg-danger" : "bg-secondary")"
+                                                  style="font-size:.7rem">@m.MovementType</span>
+                                        </td>
+                                        <td class="small">
+                                            <span title="@m.ProductName"><code>@m.ProductSku</code></span>
+                                        </td>
+                                        <td class="small">@m.WarehouseName</td>
+                                        <td class="text-end small">@m.Quantity.ToString("N2")</td>
+                                        <td class="text-end small">@m.TotalCost.ToString("N2")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* Links rápidos módulos relacionados *@
+    <div class="row g-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body py-3">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-auto text-muted small fw-semibold">Módulos relacionados:</div>
+                        <div class="col-auto"><a href="/inventario/almacenes" class="btn btn-sm btn-outline-secondary"><i class="bi bi-house-gear-fill me-1"></i>Almacenes</a></div>
+                        <div class="col-auto"><a href="/inventario/stock" class="btn btn-sm btn-outline-secondary"><i class="bi bi-box-seam-fill me-1"></i>Stock Actual</a></div>
+                        <div class="col-auto"><a href="/inventario/kardex" class="btn btn-sm btn-outline-secondary"><i class="bi bi-journal-text me-1"></i>Kardex</a></div>
+                        <div class="col-auto"><a href="/compras/recepciones" class="btn btn-sm btn-outline-primary"><i class="bi bi-box-seam me-1"></i>Recepciones</a></div>
+                        <div class="col-auto"><a href="/mdm/productos-empresa" class="btn btn-sm btn-outline-warning"><i class="bi bi-database me-1"></i>Productos Empresa</a></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool loading = true;
+    private InventarioKpis kpis = new();
+
+    protected override async Task OnInitializedAsync() => await Refresh();
+
+    private async Task Refresh()
+    {
+        loading = true;
+        try { kpis = await DashSvc.GetInventarioKpisAsync(); }
+        catch { }
+        finally { loading = false; }
+    }
+}

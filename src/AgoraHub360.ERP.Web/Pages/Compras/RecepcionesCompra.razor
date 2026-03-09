@@ -392,10 +392,10 @@
             var lineas = lineasPendientes
                 .Where(l => l.CantidadARecibir > 0)
                 .Select(l => new CreateRecepcionCompraLineaDto(
-                    l.OrdenCompraLineaId,
-                    l.CantidadARecibir,
-                    l.CostoUnitario,
-                    l.Notas))
+                    OrdenCompraLineaId: l.OrdenCompraLineaId,
+                    CantidadRecibida: l.CantidadARecibir,
+                    CostoUnitario: l.CostoUnitario,
+                    Notas: l.Notas))
                 .ToList();
 
             if (lineas.Count == 0)
@@ -405,12 +405,12 @@
             }
 
             var dto = new CreateRecepcionCompraDto(
-                selectedOcId,
-                formFecha,
-                formAlmacenId,
-                formDocProv,
-                formObs,
-                lineas);
+                OrdenCompraId: selectedOcId,
+                FechaRecepcion: formFecha,
+                AlmacenId: formAlmacenId,
+                DocumentoProveedor: formDocProv,
+                Observaciones: formObs,
+                Lineas: lineas);
 
             var result = await RecService.CreateAsync(dto);
             if (result.Success)

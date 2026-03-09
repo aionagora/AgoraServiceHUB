@@ -3,10 +3,10 @@ namespace AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Common;
 
 /// <summary>
-/// Global product template / master catalog entry.
-/// Not tenant-aware: company binding is done via CompanyProduct.
+/// Product master record — tenant-scoped.
+/// Each product belongs to a specific company and catalog.
 /// </summary>
-public class Product : AuditableEntity
+public class Product : TenantEntity
 {
     public long ProductId { get; set; }
     public long CatalogId { get; set; }

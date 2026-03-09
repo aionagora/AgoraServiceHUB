@@ -2,7 +2,7 @@ namespace AgoraHub360.ERP.Shared.DTOs.MDM;
 
 public record ProductCodeDto(
     long ProductCodeId,
-    int? EmpresaId,
+    int EmpresaId,
     long ProductId,
     byte CodeType,
     string Valor,
@@ -18,7 +18,6 @@ public record CreateProductCodeDto(
     long ProductId,
     byte CodeType,
     string Valor,
-    int? EmpresaId = null,
     long? ProviderId = null,
     long? CustomerId = null,
     int? ChannelId = null,

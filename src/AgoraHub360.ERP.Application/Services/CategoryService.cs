@@ -10,11 +10,13 @@ public class CategoryService : ICategoryService
 {
     private readonly IRepository<Category> _repo;
     private readonly IUnitOfWork _uow;
+    private readonly ICurrentUserService _currentUser;
 
-    public CategoryService(IRepository<Category> repo, IUnitOfWork uow)
+    public CategoryService(IRepository<Category> repo, IUnitOfWork uow, ICurrentUserService currentUser)
     {
         _repo = repo;
         _uow = uow;
+        _currentUser = currentUser;
     }
 
     public async Task<Result<IReadOnlyList<CategoryDto>>> GetAllAsync(long? catalogId = null, CancellationToken ct = default)
@@ -39,6 +41,9 @@ public class CategoryService : ICategoryService
 
     public async Task<Result<CategoryDto>> CreateAsync(CreateCategoryDto dto, CancellationToken ct = default)
     {
+        var empresaId = _currentUser.EmpresaId
+            ?? throw new InvalidOperationException("EmpresaId required.");
+
         var dup = await _repo.FindAsync(
             c => c.CatalogId == dto.CatalogId
               && c.ParentCategoryId == dto.ParentCategoryId
@@ -48,6 +53,7 @@ public class CategoryService : ICategoryService
 
         var entity = new Category
         {
+            EmpresaId = empresaId,
             CatalogId = dto.CatalogId,
             ParentCategoryId = dto.ParentCategoryId,
             Name = dto.Name,

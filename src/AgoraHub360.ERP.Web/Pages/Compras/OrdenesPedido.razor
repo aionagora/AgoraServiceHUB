@@ -1,0 +1,801 @@
+@page "/compras/pedidos"
+@attribute [Authorize]
+@inject OrdenPedidoHttpService OpService
+@inject AlmacenHttpService AlmacenService
+@inject MdmCompanyProductHttpService CompanyProductService
+
+<PageTitle>Órdenes de Pedido - AgoraHub360 ERP</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3><i class="bi bi-clipboard2-check-fill"></i> Órdenes de Pedido</h3>
+            <p class="text-muted mb-0">Solicitudes internas de compra (paso 1 del flujo)</p>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="ShowCreateModal">
+                <i class="bi bi-plus-circle"></i> Nueva OP
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle-fill"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @* ?? Filtros ?? *@
+    <div class="card mb-3">
+        <div class="card-body py-2">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-2">
+                    <label class="form-label mb-1 small">Estado</label>
+                    <select class="form-select form-select-sm" @bind="filtroEstado">
+                        <option value="">Todos</option>
+                        <option value="Borrador">Borrador</option>
+                        <option value="EnRevision">En Revisión</option>
+                        <option value="AbastecidoConStock">Stock Disponible</option>
+                        <option value="PendienteAprobacion">Pte. Aprobación</option>
+                        <option value="Aprobado">Aprobado</option>
+                        <option value="Rechazado">Rechazado</option>
+                        <option value="Anulado">Anulado</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label mb-1 small">Desde</label>
+                    <input type="date" class="form-control form-control-sm" @bind="filtroDesde" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label mb-1 small">Hasta</label>
+                    <input type="date" class="form-control form-control-sm" @bind="filtroHasta" />
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="LoadData">
+                        <i class="bi bi-funnel"></i> Filtrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ?? Tabla ?? *@
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center py-3">
+            <span>Pedidos <span class="badge bg-secondary ms-1">@pedidos.Count</span></span>
+        </div>
+        <div class="card-body p-0">
+            @if (loading)
+            {
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary"></div>
+                    <p class="mt-2">Cargando...</p>
+                </div>
+            }
+            else if (pedidos.Count == 0)
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox" style="font-size:2.5rem;"></i>
+                    <p class="text-muted mt-3">No hay órdenes de pedido registradas.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:40px"></th>
+                                <th>Número</th>
+                                <th>Fecha</th>
+                                <th>Solicitante</th>
+                                <th>Almacén</th>
+                                <th>Urgencia</th>
+                                <th>Estado</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var op in pedidos)
+                            {
+                                <tr>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => ToggleDetail(op.OrdenPedidoId)" title="Ver líneas">
+                                            <i class="bi @(expandedId == op.OrdenPedidoId ? "bi-chevron-up" : "bi-chevron-down")"></i>
+                                        </button>
+                                    </td>
+                                    <td><strong>@op.Numero</strong></td>
+                                    <td>@op.FechaEmision.ToString("dd/MM/yyyy")</td>
+                                    <td>@op.Solicitante</td>
+                                    <td>@op.AlmacenDestinoNombre</td>
+                                    <td>
+                                        <span class="badge @GetUrgenciaBadge(op.Urgencia)">@op.Urgencia</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge @GetEstadoBadge(op.Estado)">@op.Estado</span>
+                                    </td>
+                                    <td class="text-end">
+                                        @if (op.Estado == "Borrador")
+                                        {
+                                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => ShowEditModal(op)" title="Editar">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-success me-1" @onclick="() => EnviarRevision(op)" title="Enviar a revisión">
+                                                <i class="bi bi-send"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeletePedido(op)" title="Eliminar">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        }
+                                        @if (op.Estado == "EnRevision")
+                                        {
+                                            <button class="btn btn-sm btn-outline-info me-1" @onclick="() => ShowRevisarStockModal(op)" title="Revisar stock">
+                                                <i class="bi bi-boxes"></i> Stock
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-warning" @onclick="() => AnularPedido(op)" title="Anular">
+                                                <i class="bi bi-x-circle"></i>
+                                            </button>
+                                        }
+                                        @if (op.Estado == "PendienteAprobacion")
+                                        {
+                                            <button class="btn btn-sm btn-outline-success me-1" @onclick="() => ShowAprobarModal(op, true)" title="Aprobar">
+                                                <i class="bi bi-hand-thumbs-up"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => ShowAprobarModal(op, false)" title="Rechazar">
+                                                <i class="bi bi-hand-thumbs-down"></i>
+                                            </button>
+                                        }
+                                        @if (op.Estado == "Aprobado")
+                                        {
+                                            <a href="/compras/ordenes" class="btn btn-sm btn-outline-primary" title="Ir a crear OC">
+                                                <i class="bi bi-cart-plus"></i> Crear OC
+                                            </a>
+                                        }
+                                    </td>
+                                </tr>
+                                @if (expandedId == op.OrdenPedidoId)
+                                {
+                                    <tr>
+                                        <td colspan="8" class="bg-light p-0">
+                                            <div class="p-3">
+                                                <strong><i class="bi bi-list-ol"></i> Líneas — @op.Numero</strong>
+                                                @if (op.Lineas.Count == 0)
+                                                {
+                                                    <p class="text-muted small mt-2">Sin líneas.</p>
+                                                }
+                                                else
+                                                {
+                                                    <table class="table table-sm table-bordered mt-2 mb-1">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>#</th>
+                                                                <th>SKU</th>
+                                                                <th>Descripción</th>
+                                                                <th>UdM</th>
+                                                                <th class="text-end">Cant. Solic.</th>
+                                                                <th class="text-end">Stock Disp.</th>
+                                                                <th class="text-end">En Tránsito</th>
+                                                                <th class="text-end">A Comprar</th>
+                                                                <th>Notas</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @foreach (var l in op.Lineas)
+                                                            {
+                                                                <tr>
+                                                                    <td>@l.NumeroLinea</td>
+                                                                    <td><code>@l.ProductoSku</code></td>
+                                                                    <td>@l.Descripcion</td>
+                                                                    <td>@l.UnidadMedida</td>
+                                                                    <td class="text-end">@l.CantidadSolicitada.ToString("N2")</td>
+                                                                    <td class="text-end">@(l.CantidadStockDisponible?.ToString("N2") ?? "—")</td>
+                                                                    <td class="text-end">@(l.CantidadEnTransito?.ToString("N2") ?? "—")</td>
+                                                                    <td class="text-end">@(l.CantidadAComprar?.ToString("N2") ?? "—")</td>
+                                                                    <td class="small text-muted">@l.Notas</td>
+                                                                </tr>
+                                                            }
+                                                        </tbody>
+                                                    </table>
+                                                }
+                                                @if (!string.IsNullOrEmpty(op.ObservacionesRevisionStock))
+                                                {
+                                                    <div class="alert alert-info py-1 px-2 small mt-1">
+                                                        <i class="bi bi-info-circle"></i> <strong>Obs. stock:</strong> @op.ObservacionesRevisionStock
+                                                    </div>
+                                                }
+                                                @if (!string.IsNullOrEmpty(op.MotivoRechazo))
+                                                {
+                                                    <div class="alert alert-danger py-1 px-2 small mt-1">
+                                                        <i class="bi bi-x-circle"></i> <strong>Motivo rechazo:</strong> @op.MotivoRechazo
+                                                    </div>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@* ???????????????????????????????????????????????????????????????????????
+   MODAL: Crear / Editar OP
+?????????????????????????????????????????????????????????????????????? *@
+@if (showFormModal)
+{
+    <div class="modal fade show d-block" style="background:rgba(0,0,0,.5)">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-clipboard2-plus"></i> @(isEditing ? "Editar Orden de Pedido" : "Nueva Orden de Pedido")
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (!string.IsNullOrEmpty(modalError))
+                    {
+                        <div class="alert alert-danger py-2">@modalError</div>
+                    }
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Fecha Emisión <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" @bind="formFechaEmision" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Fecha Requerida</label>
+                            <input type="date" class="form-control" @bind="formFechaRequerida" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Solicitante <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" @bind="formSolicitante" placeholder="Nombre o departamento" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Centro de Costo</label>
+                            <input type="text" class="form-control" @bind="formCentroCosto" placeholder="Opcional" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Urgencia <span class="text-danger">*</span></label>
+                            <select class="form-select" @bind="formUrgencia">
+                                <option value="Normal">Normal</option>
+                                <option value="Urgente">Urgente</option>
+                                <option value="Critico">Crítico</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Almacén Destino <span class="text-danger">*</span></label>
+                            <select class="form-select" @bind="formAlmacenId">
+                                <option value="0">— Seleccionar —</option>
+                                @foreach (var a in almacenes)
+                                {
+                                    <option value="@a.Id">@a.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Observaciones</label>
+                            <textarea class="form-control" rows="2" @bind="formObservaciones"></textarea>
+                        </div>
+                    </div>
+
+                    @* ?? Líneas ?? *@
+                    <hr />
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <strong><i class="bi bi-list-ol"></i> Líneas del Pedido</strong>
+                        <button type="button" class="btn btn-sm btn-outline-success" @onclick="AddLinea">
+                            <i class="bi bi-plus"></i> Agregar línea
+                        </button>
+                    </div>
+                    @if (tempLineas.Count == 0)
+                    {
+                        <p class="text-muted small">Sin líneas. Agregue al menos una.</p>
+                    }
+                    else
+                    {
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th>Descripción</th>
+                                    <th>UdM</th>
+                                    <th class="text-end" style="width:120px">Cantidad</th>
+                                    <th>Notas</th>
+                                    <th style="width:50px"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (int i = 0; i < tempLineas.Count; i++)
+                                {
+                                    var idx = i;
+                                    <tr>
+                                        <td>
+                                            <select class="form-select form-select-sm" value="@tempLineas[idx].CompanyProductId"
+                                                    @onchange="e => OnProductoChange(idx, e)">
+                                                <option value="0">— Producto —</option>
+                                                @foreach (var cp in companyProducts)
+                                                {
+                                                    <option value="@cp.CompanyProductId">[@cp.Sku] @cp.NombreComercial</option>
+                                                }
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control form-control-sm"
+                                                   value="@tempLineas[idx].Descripcion"
+                                                   @onchange="e => { tempLineas[idx] = tempLineas[idx] with { Descripcion = e.Value?.ToString() ?? string.Empty }; }" />
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control form-control-sm" style="width:80px"
+                                                   value="@tempLineas[idx].UnidadMedida"
+                                                   @onchange="e => { tempLineas[idx] = tempLineas[idx] with { UnidadMedida = e.Value?.ToString() ?? string.Empty }; }" />
+                                        </td>
+                                        <td>
+                                            <input type="number" class="form-control form-control-sm text-end" min="0.01" step="0.01"
+                                                   value="@tempLineas[idx].CantidadSolicitada"
+                                                   @onchange="e => tempLineas[idx] = tempLineas[idx] with { CantidadSolicitada = decimal.TryParse(e.Value?.ToString(), out var v) ? v : 1 }" />
+                                        </td>
+                                        <td>
+                                            <input type="text" class="form-control form-control-sm"
+                                                   value="@tempLineas[idx].Notas"
+                                                   @onchange="e => tempLineas[idx] = tempLineas[idx] with { Notas = e.Value?.ToString() }" />
+                                        </td>
+                                        <td class="text-center">
+                                            <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => RemoveLinea(idx)">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseModal" disabled="@saving">Cancelar</button>
+                    <button class="btn btn-primary" @onclick="SavePedido" disabled="@saving">
+                        @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        @(isEditing ? "Guardar Cambios" : "Crear Pedido")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* ?? Modal: Revisar Stock ?? *@
+@if (showStockModal && selectedOp is not null)
+{
+    <div class="modal fade show d-block" style="background:rgba(0,0,0,.5)">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-boxes"></i> Revisión de Stock — @selectedOp.Numero</h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (!string.IsNullOrEmpty(modalError))
+                    {
+                        <div class="alert alert-danger py-2">@modalError</div>
+                    }
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">¿El stock cubre el pedido?</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" id="stockSi" name="stockCubre"
+                                   checked="@stockCubre" @onchange="() => stockCubre = true" />
+                            <label class="form-check-label" for="stockSi">Sí — Abastecer con stock disponible</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" id="stockNo" name="stockCubre"
+                                   checked="@(!stockCubre)" @onchange="() => stockCubre = false" />
+                            <label class="form-check-label" for="stockNo">No — Enviar a aprobación para compra</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Observaciones</label>
+                        <textarea class="form-control" rows="2" @bind="stockObservaciones"></textarea>
+                    </div>
+                    <hr />
+                    <strong>Líneas del pedido:</strong>
+                    <table class="table table-sm table-bordered mt-2">
+                        <thead>
+                            <tr>
+                                <th>SKU</th>
+                                <th>Descripción</th>
+                                <th class="text-end">Solic.</th>
+                                <th class="text-end">Stock Disp.</th>
+                                <th class="text-end">En Tránsito</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var l in stockLineas)
+                            {
+                                <tr>
+                                    <td><code>@l.ProductoSku</code></td>
+                                    <td>@l.Descripcion</td>
+                                    <td class="text-end">@l.CantidadSolicitada.ToString("N2")</td>
+                                    <td class="text-end">
+                                        <input type="number" class="form-control form-control-sm text-end" min="0" step="0.01"
+                                               style="width:90px"
+                                               value="@l.CantidadStockDisponible"
+                                               @onchange="e => UpdateStockLinea(l, e, isStock: true)" />
+                                    </td>
+                                    <td class="text-end">
+                                        <input type="number" class="form-control form-control-sm text-end" min="0" step="0.01"
+                                               style="width:90px"
+                                               value="@l.CantidadEnTransito"
+                                               @onchange="e => UpdateStockLinea(l, e, isStock: false)" />
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseModal" disabled="@saving">Cancelar</button>
+                    <button class="btn btn-primary" @onclick="ConfirmarStock" disabled="@saving">
+                        @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        Confirmar Revisión de Stock
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* ?? Modal: Aprobar / Rechazar ?? *@
+@if (showAprobarModal && selectedOp is not null)
+{
+    <div class="modal fade show d-block" style="background:rgba(0,0,0,.5)">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        @if (aprobando)
+                        {
+                            <><i class="bi bi-hand-thumbs-up text-success"></i> Aprobar Pedido</>
+                        }
+                        else
+                        {
+                            <><i class="bi bi-hand-thumbs-down text-danger"></i> Rechazar Pedido</>
+                        }
+                        — @selectedOp.Numero
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (!string.IsNullOrEmpty(modalError))
+                    {
+                        <div class="alert alert-danger py-2">@modalError</div>
+                    }
+                    @if (!aprobando)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label">Motivo del Rechazo <span class="text-danger">*</span></label>
+                            <textarea class="form-control" rows="3" @bind="motivoRechazo"
+                                      placeholder="Indique el motivo del rechazo..."></textarea>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-success py-2">
+                            <i class="bi bi-check-circle-fill"></i>
+                            Se aprobará el pedido <strong>@selectedOp.Numero</strong>. Se podrá generar una Orden de Compra.
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseModal" disabled="@saving">Cancelar</button>
+                    <button class="btn @(aprobando ? "btn-success" : "btn-danger")" @onclick="ConfirmarAprobar" disabled="@saving">
+                        @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        @(aprobando ? "Aprobar" : "Rechazar")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    // ?? Estado general ??????????????????????????????????????????????????????
+    private List<OrdenPedidoDto> pedidos = new();
+    private List<AlmacenDto> almacenes = new();
+    private List<CompanyProductDto> companyProducts = new();
+
+    private bool loading = true;
+    private bool saving = false;
+    private string? successMessage;
+    private string? errorMessage;
+    private string? modalError;
+    private long? expandedId;
+
+    // ?? Filtros ?????????????????????????????????????????????????????????????
+    private string filtroEstado = "";
+    private DateTime? filtroDesde;
+    private DateTime? filtroHasta;
+
+    // ?? Form Create/Edit ????????????????????????????????????????????????????
+    private bool showFormModal;
+    private bool isEditing;
+    private long editingOpId;
+    private DateTime formFechaEmision = DateTime.Today;
+    private DateTime? formFechaRequerida;
+    private string formSolicitante = "";
+    private string? formCentroCosto;
+    private string formUrgencia = "Normal";
+    private int formAlmacenId;
+    private string? formObservaciones;
+    private List<CreateOrdenPedidoLineaDto> tempLineas = new();
+
+    // ?? Stock modal ??????????????????????????????????????????????????????????
+    private bool showStockModal;
+    private OrdenPedidoDto? selectedOp;
+    private bool stockCubre = true;
+    private string? stockObservaciones;
+    private List<StockLineaVm> stockLineas = new();
+
+    // ?? Aprobar modal ????????????????????????????????????????????????????????
+    private bool showAprobarModal;
+    private bool aprobando;
+    private string? motivoRechazo;
+
+    // ?? Init ?????????????????????????????????????????????????????????????????
+    protected override async Task OnInitializedAsync()
+    {
+        var a = await AlmacenService.GetAllAsync();
+        var cp = await CompanyProductService.GetAllAsync();
+        almacenes = a;
+        companyProducts = cp;
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        loading = true;
+        pedidos = await OpService.GetAllAsync(
+            string.IsNullOrEmpty(filtroEstado) ? null : filtroEstado,
+            filtroDesde, filtroHasta);
+        loading = false;
+    }
+
+    private void ToggleDetail(long id) =>
+        expandedId = expandedId == id ? null : id;
+
+    // ?? Modales ??????????????????????????????????????????????????????????????
+    private void ShowCreateModal()
+    {
+        isEditing = false;
+        editingOpId = 0;
+        formFechaEmision = DateTime.Today;
+        formFechaRequerida = null;
+        formSolicitante = "";
+        formCentroCosto = null;
+        formUrgencia = "Normal";
+        formAlmacenId = 0;
+        formObservaciones = null;
+        tempLineas = new();
+        modalError = null;
+        showFormModal = true;
+    }
+
+    private void ShowEditModal(OrdenPedidoDto op)
+    {
+        isEditing = true;
+        editingOpId = op.OrdenPedidoId;
+        formFechaEmision = op.FechaEmision;
+        formFechaRequerida = op.FechaRequerida;
+        formSolicitante = op.Solicitante;
+        formCentroCosto = op.CentroCosto;
+        formUrgencia = op.Urgencia;
+        formAlmacenId = op.AlmacenDestinoId;
+        formObservaciones = op.Observaciones;
+        tempLineas = op.Lineas.Select(l => new CreateOrdenPedidoLineaDto(
+            l.CompanyProductId, l.Descripcion, l.UnidadMedida, l.CantidadSolicitada, l.Notas)).ToList();
+        modalError = null;
+        showFormModal = true;
+    }
+
+    private void ShowRevisarStockModal(OrdenPedidoDto op)
+    {
+        selectedOp = op;
+        stockCubre = true;
+        stockObservaciones = null;
+        stockLineas = op.Lineas.Select(l => new StockLineaVm
+        {
+            OrdenPedidoLineaId = l.OrdenPedidoLineaId,
+            ProductoSku = l.ProductoSku,
+            Descripcion = l.Descripcion,
+            CantidadSolicitada = l.CantidadSolicitada,
+            CantidadStockDisponible = 0,
+            CantidadEnTransito = 0
+        }).ToList();
+        modalError = null;
+        showStockModal = true;
+    }
+
+    private void ShowAprobarModal(OrdenPedidoDto op, bool aprobar)
+    {
+        selectedOp = op;
+        aprobando = aprobar;
+        motivoRechazo = null;
+        modalError = null;
+        showAprobarModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showFormModal = false;
+        showStockModal = false;
+        showAprobarModal = false;
+        selectedOp = null;
+    }
+
+    // ?? Líneas form ??????????????????????????????????????????????????????????
+    private void AddLinea() =>
+        tempLineas.Add(new CreateOrdenPedidoLineaDto(0, "", "UND", 1));
+
+    private void RemoveLinea(int idx) =>
+        tempLineas.RemoveAt(idx);
+
+    private void OnProductoChange(int idx, ChangeEventArgs e)
+    {
+        if (!long.TryParse(e.Value?.ToString(), out var cpId)) return;
+        var cp = companyProducts.FirstOrDefault(p => p.CompanyProductId == cpId);
+        if (cp is null) return;
+        tempLineas[idx] = tempLineas[idx] with
+        {
+            CompanyProductId = cpId,
+            Descripcion = cp.NombreComercial,
+            UnidadMedida = "UND"
+        };
+    }
+
+    // ?? Acciones ?????????????????????????????????????????????????????????????
+    private async Task SavePedido()
+    {
+        saving = true; modalError = null;
+        try
+        {
+            if (string.IsNullOrWhiteSpace(formSolicitante)) { modalError = "El solicitante es requerido."; return; }
+            if (formAlmacenId == 0) { modalError = "Seleccione un almacén destino."; return; }
+            if (tempLineas.Count == 0) { modalError = "Agregue al menos una línea."; return; }
+
+            if (isEditing)
+            {
+                var dto = new UpdateOrdenPedidoDto(formFechaEmision, formFechaRequerida, formSolicitante,
+                    formCentroCosto, formUrgencia, formAlmacenId, formObservaciones);
+                var r = await OpService.UpdateAsync(editingOpId, dto);
+                if (r.Success) { successMessage = "Pedido actualizado."; CloseModal(); await LoadData(); }
+                else modalError = r.Message;
+            }
+            else
+            {
+                var dto = new CreateOrdenPedidoDto(formFechaEmision, formFechaRequerida, formSolicitante,
+                    formCentroCosto, formUrgencia, formAlmacenId, formObservaciones,
+                    tempLineas.Count > 0 ? tempLineas : null);
+                var r = await OpService.CreateAsync(dto);
+                if (r.Success) { successMessage = $"Pedido {r.Data?.Numero} creado."; CloseModal(); await LoadData(); }
+                else modalError = r.Message;
+            }
+        }
+        catch (Exception ex) { modalError = ex.Message; }
+        finally { saving = false; }
+    }
+
+    private async Task EnviarRevision(OrdenPedidoDto op)
+    {
+        var r = await OpService.EnviarRevisionAsync(op.OrdenPedidoId);
+        if (r.Success) { successMessage = $"Pedido {op.Numero} enviado a revisión."; await LoadData(); }
+        else errorMessage = r.Message;
+    }
+
+    private async Task ConfirmarStock()
+    {
+        saving = true; modalError = null;
+        try
+        {
+            var dto = new RevisarStockOrdenPedidoDto(
+                stockCubre, stockObservaciones,
+                stockLineas.Select(l => new RevisionStockLineaDto(
+                    l.OrdenPedidoLineaId, l.CantidadStockDisponible, l.CantidadEnTransito)).ToList());
+            var r = await OpService.RevisarStockAsync(selectedOp!.OrdenPedidoId, dto);
+            if (r.Success)
+            {
+                successMessage = stockCubre
+                    ? $"Pedido {selectedOp.Numero} abastecido con stock."
+                    : $"Pedido {selectedOp.Numero} enviado a aprobación.";
+                CloseModal(); await LoadData();
+            }
+            else modalError = r.Message;
+        }
+        catch (Exception ex) { modalError = ex.Message; }
+        finally { saving = false; }
+    }
+
+    private async Task ConfirmarAprobar()
+    {
+        if (!aprobando && string.IsNullOrWhiteSpace(motivoRechazo))
+        {
+            modalError = "Indique el motivo del rechazo."; return;
+        }
+        saving = true; modalError = null;
+        try
+        {
+            var dto = new AprobarRechazarOrdenPedidoDto(aprobando, motivoRechazo);
+            var r = await OpService.AprobarRechazarAsync(selectedOp!.OrdenPedidoId, dto);
+            if (r.Success)
+            {
+                successMessage = aprobando
+                    ? $"Pedido {selectedOp.Numero} aprobado. Se puede generar la OC."
+                    : $"Pedido {selectedOp.Numero} rechazado.";
+                CloseModal(); await LoadData();
+            }
+            else modalError = r.Message;
+        }
+        catch (Exception ex) { modalError = ex.Message; }
+        finally { saving = false; }
+    }
+
+    private async Task AnularPedido(OrdenPedidoDto op)
+    {
+        var r = await OpService.AnularAsync(op.OrdenPedidoId);
+        if (r.Success) { successMessage = $"Pedido {op.Numero} anulado."; await LoadData(); }
+        else errorMessage = r.Message;
+    }
+
+    private async Task DeletePedido(OrdenPedidoDto op)
+    {
+        var r = await OpService.DeleteAsync(op.OrdenPedidoId);
+        if (r.Success) { successMessage = $"Pedido {op.Numero} eliminado."; await LoadData(); }
+        else errorMessage = r.Message;
+    }
+
+    private void UpdateStockLinea(StockLineaVm l, ChangeEventArgs e, bool isStock)
+    {
+        if (!decimal.TryParse(e.Value?.ToString(), out var v)) return;
+        if (isStock) l.CantidadStockDisponible = v;
+        else l.CantidadEnTransito = v;
+    }
+
+    // ?? Helpers ??????????????????????????????????????????????????????????????
+    private static string GetEstadoBadge(string estado) => estado switch
+    {
+        "Borrador"            => "bg-secondary",
+        "EnRevision"          => "bg-info text-dark",
+        "AbastecidoConStock"  => "bg-success",
+        "PendienteAprobacion" => "bg-warning text-dark",
+        "Aprobado"            => "bg-primary",
+        "Rechazado"           => "bg-danger",
+        "Anulado"             => "bg-dark",
+        _                     => "bg-secondary"
+    };
+
+    private static string GetUrgenciaBadge(string urgencia) => urgencia switch
+    {
+        "Urgente" => "bg-warning text-dark",
+        "Critico" => "bg-danger",
+        _         => "bg-light text-dark border"
+    };
+
+    // ?? ViewModels ????????????????????????????????????????????????????????????
+    private class StockLineaVm
+    {
+        public long OrdenPedidoLineaId { get; set; }
+        public string ProductoSku { get; set; } = "";
+        public string Descripcion { get; set; } = "";
+        public decimal CantidadSolicitada { get; set; }
+        public decimal CantidadStockDisponible { get; set; }
+        public decimal CantidadEnTransito { get; set; }
+    }
+}

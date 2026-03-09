@@ -27,9 +27,12 @@ public class ProductCodeService : IProductCodeService
 
     public async Task<Result<ProductCodeDto>> CreateAsync(CreateProductCodeDto dto, CancellationToken ct = default)
     {
+        var empresaId = _currentUser.EmpresaId
+            ?? throw new InvalidOperationException("EmpresaId required.");
+
         var entity = new ProductCode
         {
-            EmpresaId = dto.EmpresaId,
+            EmpresaId = empresaId,
             ProductId = dto.ProductId,
             CodeType = dto.CodeType,
             Valor = dto.Valor,

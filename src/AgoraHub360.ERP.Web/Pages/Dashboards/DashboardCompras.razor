@@ -1,0 +1,278 @@
+@page "/dashboard/compras"
+@attribute [Authorize]
+@inject DashboardDataService DashSvc
+
+<PageTitle>Dashboard Compras - AgoraHub360 ERP</PageTitle>
+
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h1><i class="bi bi-cart-check-fill me-2 text-primary"></i>Dashboard — Compras</h1>
+        <p class="text-muted mb-0">Flujo completo: Pedido Interno ? OC ? Recepción ? Expediente ? Liquidación</p>
+    </div>
+    <button class="btn btn-sm btn-outline-secondary" @onclick="Refresh" disabled="@loading">
+        <i class="bi bi-arrow-clockwise"></i> Actualizar
+    </button>
+</div>
+
+@if (loading)
+{
+    <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+}
+else
+{
+    @* ?? Fila 1: KPIs ?? *@
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-2">
+            <div class="stat-card text-center">
+                <div class="stat-label">Pedidos Activos</div>
+                <div class="stat-value">@(kpis.OpBorrador + kpis.OpEnRevision + kpis.OpPendienteAprobacion + kpis.OpAprobadas)</div>
+                <div class="mt-1">
+                    @if (kpis.OpPendienteAprobacion > 0) { <span class="badge bg-warning text-dark">@kpis.OpPendienteAprobacion pte. aprob.</span> }
+                    @if (kpis.OpAprobadas > 0) { <span class="badge bg-success ms-1">@kpis.OpAprobadas aprobados</span> }
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-2">
+            <div class="stat-card text-center">
+                <div class="stat-label">Órdenes de Compra</div>
+                <div class="stat-value text-primary">@kpis.OcTotal</div>
+                <div class="mt-1">
+                    @if (kpis.OcAprobadas > 0) { <span class="badge bg-primary">@kpis.OcAprobadas aprob.</span> }
+                    @if (kpis.OcEnProceso > 0) { <span class="badge bg-info text-dark ms-1">@kpis.OcEnProceso en proceso</span> }
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-2">
+            <div class="stat-card text-center">
+                <div class="stat-label">Total Compras Mes</div>
+                <div class="stat-value" style="font-size:1.3rem">@kpis.TotalComprasMes.ToString("N2")</div>
+                <small class="text-muted">@kpis.OcCerradas OC cerradas</small>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-2">
+            <div class="stat-card text-center">
+                <div class="stat-label">Recepciones (mes)</div>
+                <div class="stat-value text-info">@kpis.RecepcionesMes</div>
+                @if (kpis.RecepcionesConDif > 0) { <span class="badge bg-danger">@kpis.RecepcionesConDif con diferencias</span> }
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-2">
+            <div class="stat-card text-center">
+                <div class="stat-label">Expedientes</div>
+                <div class="stat-value @(kpis.ExpEnAduana > 0 ? "text-warning" : "text-muted")">@(kpis.ExpEnTransito + kpis.ExpEnAduana + kpis.ExpLiberados)</div>
+                <div>
+                    @if (kpis.ExpEnTransito > 0) { <span class="badge bg-info text-dark" style="font-size:.65rem">@kpis.ExpEnTransito tráns.</span> }
+                    @if (kpis.ExpEnAduana > 0) { <span class="badge bg-warning text-dark ms-1" style="font-size:.65rem">@kpis.ExpEnAduana aduana</span> }
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-2">
+            <div class="stat-card text-center">
+                <div class="stat-label">Hojas sin liquidar</div>
+                <div class="stat-value @(kpis.HojasNoLiquidadas > 0 ? "text-danger" : "text-muted")">@kpis.HojasNoLiquidadas</div>
+                @if (kpis.HojasNoLiquidadas > 0) { <span class="badge bg-danger">Requieren acción</span> }
+            </div>
+        </div>
+    </div>
+
+    @* ?? Fila 2: Embudo visual + OCs pendientes ?? *@
+    <div class="row g-3 mb-4">
+        <div class="col-lg-8">
+            <div class="card h-100">
+                <div class="card-header py-3"><i class="bi bi-funnel me-1"></i>Pipeline del Flujo de Compras</div>
+                <div class="card-body">
+                    <div class="d-flex flex-column gap-2">
+                        @RenderFunnelStep("1. Pedido Interno", kpis.OpBorrador + kpis.OpEnRevision + kpis.OpPendienteAprobacion + kpis.OpAprobadas, kpis.OpPendienteAprobacion, "bi-clipboard2-check-fill", "bg-secondary", "/compras/pedidos",
+                            kpis.OpPendienteAprobacion > 0 ? $"{kpis.OpPendienteAprobacion} requieren aprobación" : null)
+                        @RenderFunnelStep("2. Órdenes de Compra", kpis.OcTotal, kpis.OcBorrador, "bi-cart-fill", "bg-primary", "/compras/ordenes",
+                            kpis.OcBorrador > 0 ? $"{kpis.OcBorrador} en borrador" : null)
+                        @RenderFunnelStep("3. Recepciones (mes)", kpis.RecepcionesMes, kpis.RecepcionesConDif, "bi-box-seam", "bg-info", "/compras/recepciones",
+                            kpis.RecepcionesConDif > 0 ? $"{kpis.RecepcionesConDif} con diferencias" : null)
+                        @RenderFunnelStep("4. Expedientes activos", kpis.ExpEnTransito + kpis.ExpEnAduana + kpis.ExpLiberados, kpis.ExpEnAduana, "bi-globe-americas", "bg-warning text-dark", "/compras/expedientes",
+                            kpis.ExpEnAduana > 0 ? $"{kpis.ExpEnAduana} en aduana" : null)
+                        @RenderFunnelStep("5. Hojas importación pendientes", kpis.HojasNoLiquidadas, kpis.HojasNoLiquidadas, "bi-receipt-cutoff", "bg-danger", "/compras/importaciones",
+                            kpis.HojasNoLiquidadas > 0 ? "Pendientes de liquidar" : null)
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card h-100">
+                <div class="card-header py-3"><i class="bi bi-bell-fill text-warning me-1"></i>OC que requieren acción</div>
+                <div class="card-body p-0">
+                    @if (kpis.OcPendientesAccion.Count == 0)
+                    {
+                        <div class="text-center text-muted py-4 small">
+                            <i class="bi bi-check-circle-fill text-success fs-3 d-block mb-2"></i>Ninguna OC pendiente de acción
+                        </div>
+                    }
+                    else
+                    {
+                        <ul class="list-group list-group-flush">
+                            @foreach (var oc in kpis.OcPendientesAccion.Take(6))
+                            {
+                                <li class="list-group-item px-3 py-2">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <strong class="small">@oc.Numero</strong>
+                                            <div class="text-muted" style="font-size:.75rem">@oc.ProveedorNombre · @oc.FechaEmision.ToString("dd/MM/yyyy")</div>
+                                        </div>
+                                        <div class="text-end">
+                                            <span class="badge @GetOcBadge(oc.Estado)">@oc.Estado</span>
+                                            <div class="small text-muted">@oc.MonedaId @oc.Total.ToString("N2")</div>
+                                        </div>
+                                    </div>
+                                </li>
+                            }
+                        </ul>
+                        @if (kpis.OcPendientesAccion.Count > 6)
+                        {
+                            <div class="text-center py-2">
+                                <a href="/compras/ordenes" class="btn btn-sm btn-link">Ver @(kpis.OcPendientesAccion.Count - 6) más</a>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ?? Fila 3: Expedientes activos + Recepciones recientes ?? *@
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-ship me-1"></i>Expedientes en Curso</span>
+                    <a href="/compras/expedientes" class="btn btn-sm btn-link py-0">Ver todos</a>
+                </div>
+                <div class="card-body p-0">
+                    @if (kpis.ExpedientesActivos.Count == 0)
+                    {
+                        <div class="text-center text-muted py-4 small"><i class="bi bi-ship fs-4 d-block mb-2"></i>Sin expedientes activos</div>
+                    }
+                    else
+                    {
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light">
+                                <tr><th>Nº</th><th>Origen ? Destino</th><th>ETD</th><th>ETA</th><th>Estado</th></tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var e in kpis.ExpedientesActivos)
+                                {
+                                    <tr>
+                                        <td><strong>@e.Numero</strong></td>
+                                        <td class="small">@(e.PaisOrigen ?? "—") ? @(e.PuertoDestino ?? "—")</td>
+                                        <td class="small">@(e.ETD?.ToString("dd/MM") ?? "—")</td>
+                                        <td class="small @(e.ETA < DateTime.Today && e.Estado != "Liberado" ? "text-danger fw-bold" : "")">@(e.ETA?.ToString("dd/MM") ?? "—")</td>
+                                        <td><span class="badge @GetExpBadge(e.Estado)" style="font-size:.7rem">@GetExpLabel(e.Estado)</span></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-box-seam me-1"></i>Últimas Recepciones</span>
+                    <a href="/compras/recepciones" class="btn btn-sm btn-link py-0">Ver todas</a>
+                </div>
+                <div class="card-body p-0">
+                    @if (kpis.UltimasRecepciones.Count == 0)
+                    {
+                        <div class="text-center text-muted py-4 small"><i class="bi bi-inbox fs-4 d-block mb-2"></i>Sin recepciones recientes</div>
+                    }
+                    else
+                    {
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light">
+                                <tr><th>Nº</th><th>Fecha</th><th>OC</th><th>Almacén</th><th>Estado</th></tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var r in kpis.UltimasRecepciones)
+                                {
+                                    <tr>
+                                        <td><strong>@r.Numero</strong></td>
+                                        <td class="small">@r.FechaRecepcion.ToString("dd/MM/yy")</td>
+                                        <td class="small">@r.OrdenCompraNumero</td>
+                                        <td class="small">@r.AlmacenNombre</td>
+                                        <td>
+                                            @if (r.TieneDiferencias) { <span class="badge bg-danger" style="font-size:.7rem">Diferencias</span> }
+                                            else if (r.EnCuarentena) { <span class="badge bg-warning text-dark" style="font-size:.7rem">Cuarentena</span> }
+                                            else { <span class="badge bg-success" style="font-size:.7rem">OK</span> }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool loading = true;
+    private ComprasKpis kpis = new();
+
+    protected override async Task OnInitializedAsync() => await Refresh();
+
+    private async Task Refresh()
+    {
+        loading = true;
+        try { kpis = await DashSvc.GetComprasKpisAsync(); }
+        catch { }
+        finally { loading = false; }
+    }
+
+    private RenderFragment RenderFunnelStep(string label, int total, int alerta, string icon, string badgeClass, string href, string? alertaMsg) => __builder =>
+    {
+        var pct = kpis.OcTotal > 0 ? Math.Min(100, total * 100 / Math.Max(1, kpis.OcTotal + kpis.OpBorrador)) : (total > 0 ? 60 : 0);
+        <div class="d-flex align-items-center gap-3 p-2 border rounded @(alerta > 0 ? "border-warning bg-warning bg-opacity-10" : "")">
+            <div style="width:36px;height:36px;" class="rounded d-flex align-items-center justify-content-center @badgeClass">
+                <i class="bi @icon text-white"></i>
+            </div>
+            <div class="flex-grow-1">
+                <div class="d-flex justify-content-between mb-1">
+                    <a href="@href" class="small fw-semibold text-decoration-none text-dark">@label</a>
+                    <span class="small fw-bold">@total</span>
+                </div>
+                <div class="progress" style="height:6px">
+                    <div class="progress-bar @(alerta > 0 ? "bg-warning" : "bg-primary")" style="width:@(pct)%"></div>
+                </div>
+                @if (!string.IsNullOrEmpty(alertaMsg))
+                {
+                    <span class="text-warning small"><i class="bi bi-exclamation-triangle me-1"></i>@alertaMsg</span>
+                }
+            </div>
+        </div>
+    };
+
+    private static string GetOcBadge(string estado) => estado switch
+    {
+        "Borrador"   => "bg-secondary",
+        "Confirmado" => "bg-info text-dark",
+        "Aprobado"   => "bg-primary",
+        _            => "bg-secondary"
+    };
+
+    private static string GetExpBadge(string estado) => estado switch
+    {
+        "EnTransito"        => "bg-info text-dark",
+        "Arribado"          => "bg-primary",
+        "EnAduana"          => "bg-warning text-dark",
+        "ObservacionAduana" => "bg-danger",
+        _                   => "bg-secondary"
+    };
+
+    private static string GetExpLabel(string estado) => estado switch
+    {
+        "EnTransito"        => "En Tránsito",
+        "EnAduana"          => "En Aduana",
+        "ObservacionAduana" => "Obs. Aduana",
+        _                   => estado
+    };
+}

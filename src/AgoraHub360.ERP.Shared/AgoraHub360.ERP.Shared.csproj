@@ -10,6 +10,7 @@
     <Folder Include="DTOs\CategoriaProducto\" />
     <Folder Include="DTOs\Producto\" />
     <Folder Include="DTOs\UnidadMedida\" />
+    <Folder Include="Enums\" />
   </ItemGroup>
 
 </Project>

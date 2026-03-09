@@ -17,6 +17,6 @@ public class ManufacturerConfiguration : IEntityTypeConfiguration<Manufacturer>
         builder.Property(m => m.CreadoPor).HasMaxLength(100);
         builder.Property(m => m.ModificadoPor).HasMaxLength(100);
 
-        builder.HasIndex(m => m.Name);
+        builder.HasIndex(m => new { m.EmpresaId, m.Name }).IsUnique();
     }
 }

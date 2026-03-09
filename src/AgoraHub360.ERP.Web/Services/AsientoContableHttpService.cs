@@ -3,6 +3,7 @@ namespace AgoraHub360.ERP.Web.Services;
 using System.Net.Http.Json;
 using AgoraHub360.ERP.Shared.DTOs;
 using AgoraHub360.ERP.Shared.DTOs.Contabilidad;
+using AgoraHub360.ERP.Shared.DTOs.DOC;
 
 public class AsientoContableHttpService
 {
@@ -124,6 +125,52 @@ public class AsientoContableHttpService
         {
             return null;
         }
+    }
+
+    // ?? Documentos adjuntos ???????????????????????????????????????????????????
+
+    /// <summary>Lista los documentos adjuntos a un comprobante.</summary>
+    public async Task<List<ComprobanteDocumentoDto>> GetDocumentosAsync(long comprobanteId)
+    {
+        var r = await _http.GetFromJsonAsync<ApiResponse<List<ComprobanteDocumentoDto>>>(
+            $"{Base}/{comprobanteId}/documentos");
+        return r?.Data ?? new();
+    }
+
+    /// <summary>
+    /// Sube un archivo a api/v1/documentos y luego lo vincula al comprobante.
+    /// Devuelve el DTO del adjunto creado.
+    /// </summary>
+    public async Task<ApiResponse<ComprobanteDocumentoDto>> SubirYAdjuntarAsync(
+        long comprobanteId, Stream fileStream, string fileName, string mimeType, string? descripcion = null)
+    {
+        // 1) Upload del archivo
+        using var content   = new MultipartFormDataContent();
+        using var sc        = new StreamContent(fileStream);
+        sc.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(mimeType);
+        content.Add(sc, "file", fileName);
+
+        var uploadResp = await _http.PostAsync("api/v1/documentos", content);
+        var uploadResult = await ParseResponse<DocumentUploadResultDto>(uploadResp);
+        if (!uploadResult.Success || uploadResult.Data is null)
+            return ApiResponse<ComprobanteDocumentoDto>.Fail(uploadResult.Message ?? "Error al subir el archivo.");
+
+        // 2) Vincular al comprobante
+        var adjunto = new AdjuntarDocumentoDto
+        {
+            DocumentId  = uploadResult.Data.DocumentId,
+            Descripcion = descripcion
+        };
+
+        var adjResponse = await _http.PostAsJsonAsync($"{Base}/{comprobanteId}/documentos", adjunto);
+        return await ParseResponse<ComprobanteDocumentoDto>(adjResponse);
+    }
+
+    /// <summary>Elimina el vínculo de un documento adjunto a un comprobante.</summary>
+    public async Task<ApiResponse<bool>> RemoverDocumentoAsync(long comprobanteId, int docId)
+    {
+        var response = await _http.DeleteAsync($"{Base}/{comprobanteId}/documentos/{docId}");
+        return await ParseResponse<bool>(response);
     }
 
     private static async Task<ApiResponse<T>> ParseResponse<T>(HttpResponseMessage response)

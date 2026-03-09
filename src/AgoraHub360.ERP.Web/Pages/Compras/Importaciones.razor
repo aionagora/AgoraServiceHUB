@@ -449,7 +449,13 @@
         saving = true; errorMessage = null;
         try
         {
-            var dto = new CreateHojaImportacionDto(formOcId, formFecha, formRefAduanera, formObs, formMetodo, tempGastos.Count > 0 ? tempGastos : null);
+            var dto = new CreateHojaImportacionDto(
+                OrdenCompraId: formOcId,
+                Fecha: formFecha,
+                ReferenciaAduanera: formRefAduanera,
+                Observaciones: formObs,
+                MetodoDistribucion: formMetodo,
+                Gastos: tempGastos.Count > 0 ? tempGastos : null);
             var r = await ImpService.CreateAsync(dto);
             if (r.Success) { successMessage = $"Hoja {r.Data?.Numero} creada. Puede agregar más gastos o liquidar."; showCreateModal = false; await LoadData(); }
             else errorMessage = r.Message;

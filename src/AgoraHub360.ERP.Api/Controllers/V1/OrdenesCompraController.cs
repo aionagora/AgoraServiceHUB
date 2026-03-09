@@ -108,6 +108,66 @@ public class OrdenesCompraController : ControllerBase
         return Ok(ApiResponse<OrdenCompraDto>.Ok(result.Value!, $"Estado cambiado a {nuevoEstado}."));
     }
 
+    /// <summary>Gate [Finanzas]: aprueba o rechaza la OC.</summary>
+    [HttpPost("{id:long}/aprobar")]
+    public async Task<IActionResult> AprobarRechazar(long id, [FromBody] AprobarRechazarOrdenCompraDto dto, CancellationToken ct)
+    {
+        var result = await _service.AprobarRechazarAsync(id, dto, ct);
+        if (!result.IsSuccess)
+            return BadRequest(ApiResponse<OrdenCompraDto>.Fail(result.Error!));
+        return Ok(ApiResponse<OrdenCompraDto>.Ok(result.Value!, dto.Aprobado ? "OC aprobada." : "OC rechazada."));
+    }
+
+    /// <summary>Gate [4]: registra confirmación o negociación del proveedor (PI).</summary>
+    [HttpPost("{id:long}/confirmacion-proveedor")]
+    public async Task<IActionResult> RegistrarConfirmacionProveedor(long id, [FromBody] RegistrarConfirmacionProveedorDto dto, CancellationToken ct)
+    {
+        var result = await _service.RegistrarConfirmacionProveedorAsync(id, dto, ct);
+        if (!result.IsSuccess)
+            return BadRequest(ApiResponse<ConfirmacionProveedorDto>.Fail(result.Error!));
+        return Ok(ApiResponse<ConfirmacionProveedorDto>.Ok(result.Value!, "Confirmación del proveedor registrada."));
+    }
+
+    /// <summary>Historial de confirmaciones/negociaciones del proveedor.</summary>
+    [HttpGet("{id:long}/confirmaciones")]
+    public async Task<IActionResult> GetConfirmaciones(long id, CancellationToken ct)
+    {
+        var result = await _service.GetConfirmacionesAsync(id, ct);
+        if (!result.IsSuccess)
+            return BadRequest(ApiResponse<IReadOnlyList<ConfirmacionProveedorDto>>.Fail(result.Error!));
+        return Ok(ApiResponse<IReadOnlyList<ConfirmacionProveedorDto>>.Ok(result.Value!));
+    }
+
+    /// <summary>Gate [5]: programa un pago (anticipo/saldo) para la OC.</summary>
+    [HttpPost("{id:long}/pagos")]
+    public async Task<IActionResult> ProgramarPago(long id, [FromBody] ProgramarPagoDto dto, CancellationToken ct)
+    {
+        var result = await _service.ProgramarPagoAsync(id, dto, ct);
+        if (!result.IsSuccess)
+            return BadRequest(ApiResponse<PagoOrdenCompraDto>.Fail(result.Error!));
+        return Ok(ApiResponse<PagoOrdenCompraDto>.Ok(result.Value!, "Pago programado."));
+    }
+
+    /// <summary>Registra la ejecución de un pago programado.</summary>
+    [HttpPost("{id:long}/pagos/{pagoId:long}/ejecutar")]
+    public async Task<IActionResult> EjecutarPago(long id, long pagoId, [FromBody] EjecutarPagoDto dto, CancellationToken ct)
+    {
+        var result = await _service.EjecutarPagoAsync(id, pagoId, dto, ct);
+        if (!result.IsSuccess)
+            return BadRequest(ApiResponse<PagoOrdenCompraDto>.Fail(result.Error!));
+        return Ok(ApiResponse<PagoOrdenCompraDto>.Ok(result.Value!, "Pago ejecutado."));
+    }
+
+    /// <summary>Lista pagos programados/ejecutados de la OC.</summary>
+    [HttpGet("{id:long}/pagos")]
+    public async Task<IActionResult> GetPagos(long id, CancellationToken ct)
+    {
+        var result = await _service.GetPagosAsync(id, ct);
+        if (!result.IsSuccess)
+            return BadRequest(ApiResponse<IReadOnlyList<PagoOrdenCompraDto>>.Fail(result.Error!));
+        return Ok(ApiResponse<IReadOnlyList<PagoOrdenCompraDto>>.Ok(result.Value!));
+    }
+
     /// <summary>Elimina (soft-delete) una OC en Borrador.</summary>
     [HttpDelete("{id:long}")]
     public async Task<IActionResult> Delete(long id, CancellationToken ct)

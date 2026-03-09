@@ -41,6 +41,9 @@ public static class DependencyInjection
         // Servicio de consulta de AuditLog (implementación en Persistence por acceso IQueryable)
         services.AddScoped<IAuditLogService, AuditLogService>();
 
+        // Seed de datos base para nuevas empresas
+        services.AddScoped<IEmpresaSeedService, EmpresaSeedService>();
+
         return services;
     }
 }

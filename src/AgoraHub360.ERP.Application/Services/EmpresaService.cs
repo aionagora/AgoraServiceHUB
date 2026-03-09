@@ -10,11 +10,13 @@ public class EmpresaService : IEmpresaService
 {
     private readonly IRepository<Empresa> _repository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IEmpresaSeedService _seedService;
 
-    public EmpresaService(IRepository<Empresa> repository, IUnitOfWork unitOfWork)
+    public EmpresaService(IRepository<Empresa> repository, IUnitOfWork unitOfWork, IEmpresaSeedService seedService)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
+        _seedService = seedService;
     }
 
     public async Task<Result<IReadOnlyList<EmpresaDto>>> GetAllAsync(CancellationToken ct = default)
@@ -55,6 +57,9 @@ public class EmpresaService : IEmpresaService
 
         await _repository.AddAsync(empresa, ct);
         await _unitOfWork.SaveChangesAsync(ct);
+
+        // Seed default MDM data for the new company
+        await _seedService.SeedDefaultDataAsync(empresa.Id, ct);
 
         return Result<EmpresaDto>.Success(MapToDto(empresa));
     }

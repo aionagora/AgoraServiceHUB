@@ -5,8 +5,9 @@ using AgoraHub360.ERP.Domain.Entities.MDM;
 
 /// <summary>
 /// Hoja de Importación (Landed Cost Sheet).
-/// Agrupa gastos de importación y los distribuye sobre las líneas de una OC recepcionada
+/// Agrupa gastos de importación y los distribuye sobre las líneas de OC(s) recepcionadas
 /// para calcular el costo real unitario (Landed Cost).
+/// Puede estar vinculada directamente a una OC o a un Expediente de Importación.
 /// </summary>
 public class HojaImportacion : TenantEntity
 {
@@ -15,8 +16,13 @@ public class HojaImportacion : TenantEntity
     /// <summary>Número único (ej: IMP-000001).</summary>
     public string Numero { get; set; } = string.Empty;
 
-    public long OrdenCompraId { get; set; }
+    /// <summary>OC directa (flujo sin expediente). Null si viene de un expediente.</summary>
+    public long? OrdenCompraId { get; set; }
     public OrdenCompra? OrdenCompra { get; set; }
+
+    /// <summary>Expediente de importación al que pertenece (puede cubrir N OCs).</summary>
+    public long? ExpedienteImportacionId { get; set; }
+    public ExpedienteImportacion? ExpedienteImportacion { get; set; }
 
     public DateTime Fecha { get; set; }
 

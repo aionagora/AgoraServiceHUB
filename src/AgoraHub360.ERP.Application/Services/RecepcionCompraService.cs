@@ -145,6 +145,13 @@ public class RecepcionCompraService : IRecepcionCompraService
             AlmacenId = almacenId,
             DocumentoProveedor = dto.DocumentoProveedor,
             Observaciones = dto.Observaciones,
+            TieneDiferencias = dto.TieneDiferencias,
+            TipoDiferencia = dto.TipoDiferencia,
+            ActaDiferencias = dto.ActaDiferencias,
+            NumeroReclamo = dto.NumeroReclamo,
+            EnCuarentena = dto.EnCuarentena,
+            UbicacionCuarentena = dto.UbicacionCuarentena,
+            ResultadoControlCalidad = dto.ResultadoControlCalidad,
             Confirmada = true,
             Activo = true
         };
@@ -164,6 +171,9 @@ public class RecepcionCompraService : IRecepcionCompraService
                 RecepcionCompraId = recepcion.RecepcionCompraId,
                 OrdenCompraLineaId = lineaDto.OrdenCompraLineaId,
                 CantidadRecibida = lineaDto.CantidadRecibida,
+                CantidadDañada = lineaDto.CantidadDañada,
+                CantidadSobrante = lineaDto.CantidadSobrante,
+                CantidadFaltante = lineaDto.CantidadFaltante,
                 CostoUnitario = costoUnit,
                 Notas = lineaDto.Notas,
                 Activo = true
@@ -206,7 +216,11 @@ public class RecepcionCompraService : IRecepcionCompraService
         var todasOcLineas = await _ocLineaRepo.FindAsync(l => l.OrdenCompraId == dto.OrdenCompraId, ct);
         var todasCompletas = todasOcLineas.All(l => l.CantidadRecepcionada >= l.Cantidad);
 
-        oc.Estado = todasCompletas ? EstadoDocumento.Cerrado : EstadoDocumento.RecepcionParcial;
+        if (todasCompletas)
+            oc.Estado = dto.TieneDiferencias ? EstadoDocumento.RecepcionConDiferencias : EstadoDocumento.Cerrado;
+        else
+            oc.Estado = EstadoDocumento.RecepcionParcial;
+
         await _ocRepo.UpdateAsync(oc, ct);
 
         await _unitOfWork.SaveChangesAsync(ct);
@@ -348,6 +362,13 @@ public class RecepcionCompraService : IRecepcionCompraService
             rec.DocumentoProveedor,
             rec.Observaciones,
             rec.Confirmada,
+            rec.TieneDiferencias,
+            rec.TipoDiferencia,
+            rec.ActaDiferencias,
+            rec.NumeroReclamo,
+            rec.EnCuarentena,
+            rec.UbicacionCuarentena,
+            rec.ResultadoControlCalidad,
             recLineas.Select(l =>
             {
                 var ocl = ocLineaMap.GetValueOrDefault(l.OrdenCompraLineaId);
@@ -361,6 +382,10 @@ public class RecepcionCompraService : IRecepcionCompraService
                     ocl?.Cantidad ?? 0,
                     ocl?.CantidadPendiente ?? 0,
                     l.CantidadRecibida,
+                    l.CantidadDañada,
+                    l.CantidadSobrante,
+                    l.CantidadFaltante,
+                    l.CantidadAceptada,
                     l.CostoUnitario,
                     l.Notas);
             }).ToList());

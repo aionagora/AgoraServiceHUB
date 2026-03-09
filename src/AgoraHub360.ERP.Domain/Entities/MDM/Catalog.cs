@@ -3,18 +3,15 @@ namespace AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Common;
 
 /// <summary>
-/// Catalog. Can be global (Scope=1) or company-specific (Scope=2).
-/// All products belong to a catalog.
+/// Catalog — tenant-scoped.
+/// Each company has its own catalogs. Scope field is kept for backward compat.
 /// </summary>
-public class Catalog : AuditableEntity
+public class Catalog : TenantEntity
 {
     public long CatalogId { get; set; }
 
-    /// <summary>1=Global, 2=Company</summary>
+    /// <summary>1=General, 2=Specific. All catalogs belong to the company now.</summary>
     public byte Scope { get; set; } = 1;
-
-    /// <summary>Only applies when Scope=Company.</summary>
-    public int? EmpresaId { get; set; }
 
     public string Name { get; set; } = string.Empty;
     public bool IsDefault { get; set; }

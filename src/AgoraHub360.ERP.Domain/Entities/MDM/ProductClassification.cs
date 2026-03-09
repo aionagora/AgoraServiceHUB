@@ -6,7 +6,7 @@ using AgoraHub360.ERP.Domain.Common;
 /// Classification node: Family, SubFamily, Line, Segment, etc.
 /// Type: 1=Family, 2=SubFamily, 3=Line, 4=Segment, 5=Other
 /// </summary>
-public class ProductClassification : AuditableEntity
+public class ProductClassification : TenantEntity
 {
     public long ClassificationId { get; set; }
     public long CatalogId { get; set; }

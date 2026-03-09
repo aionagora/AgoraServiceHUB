@@ -6,7 +6,7 @@ using AgoraHub360.ERP.Domain.Common;
 /// Definición de atributo dinámico por industria.
 /// DataType: 1=String, 2=Int, 3=Decimal, 4=Bool, 5=Date, 6=Json, 7=Select
 /// </summary>
-public class AttributeDefinition : AuditableEntity
+public class AttributeDefinition : TenantEntity
 {
     public long AttributeId { get; set; }
     public int IndustryId { get; set; }

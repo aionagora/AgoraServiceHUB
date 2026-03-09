@@ -95,18 +95,26 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     // ── CST: Costing ──────────────────────────────────────────────────────────
     public DbSet<CostingRule> CostingRules => Set<CostingRule>();
     public DbSet<LandedCostProfile> LandedCostProfiles => Set<LandedCostProfile>();
+    public DbSet<CentroCosto> CentrosCosto => Set<CentroCosto>();
 
     // ── DOC: Media documents ──────────────────────────────────────────────────
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<ProductDocument> ProductDocuments => Set<ProductDocument>();
+    public DbSet<ComprobanteDocumento> ComprobanteDocumentos => Set<ComprobanteDocumento>();
 
     // ── INV: Inventory ────────────────────────────────────────────────────────
     public DbSet<MovimientoInventario> MovimientosInventario => Set<MovimientoInventario>();
     public DbSet<StockProducto> StockProductos => Set<StockProducto>();
 
     // ── CMP: Compras ──────────────────────────────────────────────────────────
+    public DbSet<OrdenPedido> OrdenesPedido => Set<OrdenPedido>();
+    public DbSet<OrdenPedidoLinea> OrdenPedidoLineas => Set<OrdenPedidoLinea>();
     public DbSet<OrdenCompra> OrdenesCompra => Set<OrdenCompra>();
     public DbSet<OrdenCompraLinea> OrdenCompraLineas => Set<OrdenCompraLinea>();
+    public DbSet<ConfirmacionProveedor> ConfirmacionesProveedor => Set<ConfirmacionProveedor>();
+    public DbSet<PagoOrdenCompra> PagosOrdenCompra => Set<PagoOrdenCompra>();
+    public DbSet<ExpedienteImportacion> ExpedientesImportacion => Set<ExpedienteImportacion>();
+    public DbSet<HitoExpediente> HitosExpediente => Set<HitoExpediente>();
     public DbSet<RecepcionCompra> RecepcionesCompra => Set<RecepcionCompra>();
     public DbSet<RecepcionCompraLinea> RecepcionCompraLineas => Set<RecepcionCompraLinea>();
     public DbSet<HojaImportacion> HojasImportacion => Set<HojaImportacion>();

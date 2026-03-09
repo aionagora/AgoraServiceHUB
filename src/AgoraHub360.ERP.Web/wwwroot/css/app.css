@@ -436,3 +436,291 @@ code { color: #c02d76; font-family: var(--font-mono); }
 .loading-progress-text:after {
     content: var(--blazor-load-percentage-text, "Cargando AgoraHub360...");
 }
+
+/* ── Accesibilidad: focus-visible global ────────────────────────────────────── */
+
+/* Anillo de foco nítido para teclado — se suprime con ratón gracias a :focus-visible */
+*:focus-visible {
+    outline: 2px solid #1d4ed8;
+    outline-offset: 2px;
+    border-radius: 3px;
+}
+
+/* Botones Bootstrap ya tienen su propio focus; reforzamos el anillo */
+.btn:focus-visible {
+    outline: 2px solid #1d4ed8;
+    outline-offset: 3px;
+    box-shadow: 0 0 0 3px rgba(29, 78, 216, .25);
+}
+
+/* Inputs y selects */
+.form-control:focus-visible,
+.form-select:focus-visible {
+    outline: 2px solid #1d4ed8;
+    outline-offset: 0;
+}
+
+/* Celdas de tabla con foco (edición inline) */
+.table td:focus-within {
+    background: #eff6ff;
+}
+
+/* ── Hint de atajos de teclado ──────────────────────────────────────────────── */
+
+kbd {
+    display: inline-block;
+    padding: .1em .4em;
+    font-size: .75em;
+    font-family: ui-monospace, monospace;
+    color: #374151;
+    background: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-bottom-width: 2px;
+    border-radius: 4px;
+    line-height: 1.4;
+    white-space: nowrap;
+}
+
+/* Contenedor del hint */
+.shortcut-hint {
+    font-size: .72rem;
+    color: #9ca3af;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem 1.25rem;
+    align-items: center;
+}
+.shortcut-hint span {
+    white-space: nowrap;
+}
+
+/* ── VistaPreviewComprobante ───────────────────────────────────────────────── */
+
+/* Modal */
+.vp-backdrop   { }
+.vp-dialog     { max-width: 780px; width: 100%; }
+.vp-content    { border: none; border-radius: 4px; box-shadow: 0 8px 32px rgba(0,0,0,.25); }
+
+/* Toolbar (solo pantalla) */
+.vp-toolbar {
+    background: #f8fafc;
+    border-bottom: 2px solid #7c3aed;
+    padding: .6rem 1rem;
+}
+
+/* Cuerpo del documento */
+.vp-body { background: #fff; padding: 0; }
+
+/* Cabecera */
+.vp-header {
+    padding: 1.25rem 1.5rem .75rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+.vp-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: .75rem;
+}
+.vp-company-name {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #111827;
+    letter-spacing: .01em;
+}
+.vp-doc-type {
+    font-size: .78rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-top: 2px;
+}
+.vp-number-block {
+    text-align: right;
+}
+.vp-number-label {
+    font-size: .68rem;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+}
+.vp-number-value {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #1d4ed8;
+    font-family: ui-monospace, monospace;
+}
+
+/* Campos de cabecera */
+.vp-header-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .35rem 1.5rem;
+    margin-bottom: .6rem;
+}
+.vp-field        { display: flex; align-items: baseline; gap: .3rem; }
+.vp-field-label  { font-size: .68rem; color: #9ca3af; text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; }
+.vp-field-value  { font-size: .82rem; color: #111827; font-weight: 500; }
+
+/* Concepto */
+.vp-concepto {
+    font-size: .8rem;
+    color: #374151;
+    margin-bottom: .5rem;
+}
+
+/* Glosa resaltada */
+.vp-glosa-box {
+    background: #eff6ff;
+    border-left: 4px solid #1d4ed8;
+    padding: .45rem .85rem;
+    border-radius: 0 4px 4px 0;
+    display: flex;
+    align-items: baseline;
+    gap: .4rem;
+}
+.vp-glosa-label { font-size: .68rem; color: #1d4ed8; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+.vp-glosa-text  { font-size: .88rem; color: #1e40af; font-style: italic; font-weight: 500; }
+
+/* Tabla de líneas */
+.vp-table-wrap { overflow-x: auto; }
+.vp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .8rem;
+}
+.vp-table th, .vp-table td { padding: .35rem .6rem; }
+.vp-table thead { background: #1a3a5c; color: #fff; }
+.vp-table th    { font-size: .68rem; text-transform: uppercase; letter-spacing: .05em; font-weight: 600; white-space: nowrap; }
+
+.vp-th-num      { width: 32px; text-align: center; }
+.vp-th-cod      { width: 90px; }
+.vp-th-cuenta   { }
+.vp-th-cc       { width: 80px; }
+.vp-th-glosa    { width: 160px; }
+.vp-th-monto    { width: 100px; text-align: right; }
+
+.vp-td-num      { text-align: center; color: #9ca3af; font-size: .72rem; }
+.vp-td-cod      { font-family: ui-monospace, monospace; }
+.vp-td-cuenta   { color: #111827; }
+.vp-td-cc       { }
+.vp-td-glosa    { color: #6b7280; font-size: .76rem; }
+.vp-td-monto    { text-align: right; }
+
+.vp-debe        { color: #1d4ed8; font-weight: 600; }
+.vp-haber       { color: #15803d; font-weight: 600; }
+
+.vp-row-even    { background: #f9fafb; }
+.vp-table tbody tr:hover { background: #eff6ff; }
+
+/* Badge centro de costo */
+.vp-cc-badge {
+    background: #ede9fe;
+    color: #7c3aed;
+    font-size: .62rem;
+    padding: .1em .4em;
+    border-radius: 3px;
+    font-weight: 600;
+    font-family: ui-monospace, monospace;
+}
+
+/* Totales */
+.vp-totals-row         { background: #f1f5f9; font-weight: 700; }
+.vp-totals-label       { text-align: right; color: #374151; font-size: .78rem; letter-spacing: .04em; text-transform: uppercase; }
+.vp-total-debe         { color: #1d4ed8; font-size: .9rem; }
+.vp-total-haber        { color: #15803d; font-size: .9rem; }
+
+/* Indicador de cuadre */
+.vp-cuadre-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: .5rem 1.5rem;
+    border-top: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e5e7eb;
+}
+.vp-cuadre-ok {
+    color: #15803d;
+    font-size: .8rem;
+    font-weight: 500;
+}
+.vp-cuadre-error {
+    color: #b91c1c;
+    font-size: .8rem;
+    font-weight: 500;
+}
+.vp-diferencia-block { font-size: .78rem; }
+
+/* Pie con firmas */
+.vp-footer {
+    display: flex;
+    justify-content: space-around;
+    padding: 2rem 1.5rem 1rem;
+    gap: 1rem;
+}
+.vp-firma-block  { flex: 1; text-align: center; }
+.vp-firma-line   { border-bottom: 1px solid #374151; margin-bottom: .3rem; height: 2rem; }
+.vp-firma-label  { font-size: .68rem; color: #6b7280; text-transform: uppercase; letter-spacing: .05em; }
+
+/* Meta de impresión */
+.vp-print-meta { font-size: .65rem; color: #9ca3af; text-align: right; padding: .4rem 1.5rem .6rem; }
+
+/* ══════════════ @media print ══════════════ */
+@media print {
+    /* Ocultar todo excepto el documento */
+    body > *               { display: none !important; }
+    .vp-backdrop           { display: block !important; position: static !important; background: none !important; }
+    .vp-dialog             { max-width: 100% !important; margin: 0 !important; box-shadow: none !important; }
+    .vp-content            { box-shadow: none !important; border: none !important; }
+    .vp-toolbar            { display: none !important; }
+    .vp-body               { padding: 0 !important; }
+
+    /* Fuente más pequeña para encajar en A4 */
+    .vp-table              { font-size: .72rem; }
+    .vp-company-name       { font-size: .95rem; }
+    .vp-number-value       { font-size: 1.1rem; }
+
+    /* Evitar cortes en las filas */
+    .vp-table tr           { page-break-inside: avoid; }
+    .vp-footer             { page-break-inside: avoid; }
+
+    /* Colores forzados para impresoras B/N */
+    .vp-debe, .vp-total-debe   { color: #000 !important; }
+    .vp-haber, .vp-total-haber { color: #000 !important; }
+    .vp-table thead            { background: #000 !important; }
+    .vp-glosa-box              { background: #f0f0f0 !important; border-left-color: #000 !important; }
+    .vp-glosa-text             { color: #000 !important; }
+    .vp-cuadre-ok              { color: #000 !important; }
+    .vp-cuadre-error           { color: #000 !important; }
+    .vp-cc-badge               { background: #e0e0e0 !important; color: #000 !important; }
+}
+
+/* ── AccountSearchDropdown ─────────────────────────────────────────────────── */
+.account-search-dropdown {
+    position: relative;
+    width: 100%;
+}
+
+.account-dropdown-panel {
+    top: 100%;
+    left: 0;
+}
+
+.account-dropdown-panel .dropdown-item {
+    border-radius: 0;
+    line-height: 1.35;
+}
+
+.account-dropdown-panel .dropdown-item:hover,
+.account-dropdown-panel .dropdown-item:focus {
+    background-color: #f0f9ff !important;
+    outline: none;
+}
+
+.account-dropdown-panel .dropdown-item.active {
+    color: inherit;
+}
+
+.account-dropdown-panel .dropdown-item code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}

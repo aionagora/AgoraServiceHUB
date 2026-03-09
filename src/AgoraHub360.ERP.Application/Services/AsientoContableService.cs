@@ -4,6 +4,7 @@ using AgoraHub360.ERP.Application.Common;
 using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Domain.Entities.ACC;
 using AgoraHub360.ERP.Domain.Entities.Core;
+using AgoraHub360.ERP.Domain.Entities.CST;
 using AgoraHub360.ERP.Domain.Enums;
 using AgoraHub360.ERP.Domain.Interfaces;
 using AgoraHub360.ERP.Shared.DTOs.Contabilidad;
@@ -18,6 +19,7 @@ public class AsientoContableService : IAsientoContableService
     private readonly IRepository<TipoCambio> _tipoCambioRepo;
     private readonly IRepository<TipoPago> _tipoPagoRepo;
     private readonly IRepository<NumeracionDocumento> _numRepo;
+    private readonly IRepository<CentroCosto> _centroCostoRepo;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
 
@@ -30,19 +32,21 @@ public class AsientoContableService : IAsientoContableService
         IRepository<TipoCambio> tipoCambioRepo,
         IRepository<TipoPago> tipoPagoRepo,
         IRepository<NumeracionDocumento> numRepo,
+        IRepository<CentroCosto> centroCostoRepo,
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUser)
     {
-        _asientoRepo = asientoRepo;
-        _lineaRepo = lineaRepo;
-        _cuentaRepo = cuentaRepo;
-        _periodoRepo = periodoRepo;
-        _tipoCompRepo = tipoCompRepo;
-        _tipoCambioRepo = tipoCambioRepo;
-        _tipoPagoRepo = tipoPagoRepo;
-        _numRepo = numRepo;
-        _unitOfWork = unitOfWork;
-        _currentUser = currentUser;
+        _asientoRepo     = asientoRepo;
+        _lineaRepo       = lineaRepo;
+        _cuentaRepo      = cuentaRepo;
+        _periodoRepo     = periodoRepo;
+        _tipoCompRepo    = tipoCompRepo;
+        _tipoCambioRepo  = tipoCambioRepo;
+        _tipoPagoRepo    = tipoPagoRepo;
+        _numRepo         = numRepo;
+        _centroCostoRepo = centroCostoRepo;
+        _unitOfWork      = unitOfWork;
+        _currentUser     = currentUser;
     }
 
     // ??????????????????????????????????????????????????????????????????
@@ -119,7 +123,15 @@ public class AsientoContableService : IAsientoContableService
             if (cuenta is null || cuenta.EmpresaId != empresaId.Value || !cuenta.Activo)
                 return Result<AsientoContableDto>.Failure($"Cuenta {l.CuentaContableId} no encontrada.");
             if (!cuenta.PermiteMovimientos)
-                return Result<AsientoContableDto>.Failure($"La cuenta '{cuenta.Codigo} — {cuenta.Nombre}' no permite movimientos (cuenta agrupadora).");
+                return Result<AsientoContableDto>.Failure($"La cuenta '{cuenta.Codigo} – {cuenta.Nombre}' no permite movimientos (cuenta agrupadora).");
+
+            // Validate centro de costo (nullable — no rompe datos existentes)
+            if (l.CentroCostoId.HasValue)
+            {
+                var cc = await _centroCostoRepo.GetByIdAsync(l.CentroCostoId.Value, ct);
+                if (cc is null || cc.EmpresaId != empresaId.Value || !cc.Activo)
+                    return Result<AsientoContableDto>.Failure($"Centro de costo {l.CentroCostoId} no encontrado o no pertenece a la empresa.");
+            }
         }
 
         // Validate balanced
@@ -208,6 +220,13 @@ public class AsientoContableService : IAsientoContableService
                 return Result<AsientoContableDto>.Failure($"Cuenta {l.CuentaContableId} no encontrada.");
             if (!cuenta.PermiteMovimientos)
                 return Result<AsientoContableDto>.Failure($"La cuenta '{cuenta.Codigo}' no permite movimientos.");
+
+            if (l.CentroCostoId.HasValue)
+            {
+                var cc = await _centroCostoRepo.GetByIdAsync(l.CentroCostoId.Value, ct);
+                if (cc is null || cc.EmpresaId != empresaId.Value || !cc.Activo)
+                    return Result<AsientoContableDto>.Failure($"Centro de costo {l.CentroCostoId} no encontrado o no pertenece a la empresa.");
+            }
         }
 
         var totalDebe = dto.Lineas.Sum(l => l.Debe);
@@ -310,13 +329,14 @@ public class AsientoContableService : IAsientoContableService
             await _lineaRepo.AddAsync(new AsientoContableLinea
             {
                 AsientoContableId = copia.AsientoContableId,
-                NumeroLinea = lineNum++,
-                CuentaContableId = ol.CuentaContableId,
-                Debe = ol.Debe,
-                Haber = ol.Haber,
-                Glosa = ol.Glosa,
-                Referencia = ol.Referencia,
-                Activo = true
+                NumeroLinea       = lineNum++,
+                CuentaContableId  = ol.CuentaContableId,
+                Debe              = ol.Debe,
+                Haber             = ol.Haber,
+                Glosa             = ol.Glosa,
+                Referencia        = ol.Referencia,
+                CentroCostoId     = ol.CentroCostoId,
+                Activo            = true
             }, ct);
         }
 
@@ -610,13 +630,14 @@ public class AsientoContableService : IAsientoContableService
             await _lineaRepo.AddAsync(new AsientoContableLinea
             {
                 AsientoContableId = asientoId,
-                NumeroLinea = lineNum++,
-                CuentaContableId = l.CuentaContableId,
-                Debe = l.Debe,
-                Haber = l.Haber,
-                Glosa = l.Glosa,
-                Referencia = l.Referencia,
-                Activo = true
+                NumeroLinea       = lineNum++,
+                CuentaContableId  = l.CuentaContableId,
+                Debe              = l.Debe,
+                Haber             = l.Haber,
+                Glosa             = l.Glosa,
+                Referencia        = l.Referencia,
+                CentroCostoId     = l.CentroCostoId,
+                Activo            = true
             }, ct);
         }
     }
@@ -624,11 +645,23 @@ public class AsientoContableService : IAsientoContableService
     private async Task<AsientoContableDto> BuildDto(AsientoContable asiento, CancellationToken ct)
     {
         var lineas = await _lineaRepo.FindAsync(l => l.AsientoContableId == asiento.AsientoContableId && l.Activo, ct);
+
         var cuentaIds = lineas.Select(l => l.CuentaContableId).Distinct().ToList();
         var cuentas = cuentaIds.Count > 0
             ? await _cuentaRepo.FindAsync(c => cuentaIds.Contains(c.CuentaContableId), ct)
             : new List<CuentaContable>();
         var cuentaMap = cuentas.ToDictionary(c => c.CuentaContableId);
+
+        // Cargar centros de costo referenciados en las líneas
+        var ccIds = lineas
+            .Where(l => l.CentroCostoId.HasValue)
+            .Select(l => l.CentroCostoId!.Value)
+            .Distinct()
+            .ToList();
+        var centrosCosto = ccIds.Count > 0
+            ? await _centroCostoRepo.FindAsync(c => ccIds.Contains(c.Id), ct)
+            : new List<CentroCosto>();
+        var ccMap = centrosCosto.ToDictionary(c => c.Id);
 
         TipoComprobante? tipoComp = asiento.TipoComprobanteId.HasValue
             ? await _tipoCompRepo.GetByIdAsync(asiento.TipoComprobanteId.Value, ct) : null;
@@ -668,17 +701,21 @@ public class AsientoContableService : IAsientoContableService
             Lineas = lineas.OrderBy(l => l.NumeroLinea).Select(l =>
             {
                 cuentaMap.TryGetValue(l.CuentaContableId, out var cuenta);
+                ccMap.TryGetValue(l.CentroCostoId ?? 0, out var cc);
                 return new AsientoContableLineaDto
                 {
                     AsientoContableLineaId = l.AsientoContableLineaId,
-                    NumeroLinea = l.NumeroLinea,
-                    CuentaContableId = l.CuentaContableId,
-                    CuentaCodigo = cuenta?.Codigo ?? "—",
-                    CuentaNombre = cuenta?.Nombre ?? "—",
-                    Debe = l.Debe,
-                    Haber = l.Haber,
-                    Glosa = l.Glosa,
-                    Referencia = l.Referencia
+                    NumeroLinea            = l.NumeroLinea,
+                    CuentaContableId       = l.CuentaContableId,
+                    CuentaCodigo           = cuenta?.Codigo ?? "–",
+                    CuentaNombre           = cuenta?.Nombre ?? "–",
+                    Debe                   = l.Debe,
+                    Haber                  = l.Haber,
+                    Glosa                  = l.Glosa,
+                    Referencia             = l.Referencia,
+                    CentroCostoId          = l.CentroCostoId,
+                    CentroCostoCodigo      = cc?.Codigo,
+                    CentroCostoNombre      = cc?.Nombre
                 };
             }).ToList()
         };

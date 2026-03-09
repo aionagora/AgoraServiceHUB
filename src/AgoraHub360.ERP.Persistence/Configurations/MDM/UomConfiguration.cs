@@ -17,6 +17,6 @@ public class UomConfiguration : IEntityTypeConfiguration<Uom>
         builder.Property(u => u.CreadoPor).HasMaxLength(100);
         builder.Property(u => u.ModificadoPor).HasMaxLength(100);
 
-        builder.HasIndex(u => u.Code).IsUnique();
+        builder.HasIndex(u => new { u.EmpresaId, u.Code }).IsUnique();
     }
 }

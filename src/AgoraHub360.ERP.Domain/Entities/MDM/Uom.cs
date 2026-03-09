@@ -3,10 +3,10 @@ namespace AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Common;
 
 /// <summary>
-/// Global unit of measure (UND, BOX, KG, G, L, ML, etc.).
-/// Replaces the legacy tenant-scoped UnidadMedida.
+/// Unit of measure — tenant-scoped per company.
+/// Each company can define its own UOM codes and conversions.
 /// </summary>
-public class Uom : AuditableEntity
+public class Uom : TenantEntity
 {
     public int UomId { get; set; }
     public string Code { get; set; } = string.Empty;

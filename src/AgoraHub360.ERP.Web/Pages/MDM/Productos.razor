@@ -10,6 +10,7 @@
 @inject ProductCodeHttpService ProductCodeService
 @inject MdmAttributeHttpService AttributeService
 @inject MdmCompanyProductHttpService CompanyProductService
+@inject EmpresaHttpService EmpresaSvc
 @inject IJSRuntime JS
 
 <PageTitle>Productos</PageTitle>
@@ -273,7 +274,7 @@
                                                     {
                                                         <div class="d-flex justify-content-between align-items-center mb-2">
                                                             <strong>Activaciones por Empresa</strong>
-                                                            <a href="mdm/productos-empresa" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil-square"></i> Gestionar</a>
+                                                            <a href="mdm/productos-empresa" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil-square"></i>Gestionar</a>
                                                         </div>
                                                         @if (detailCompany.Count == 0) { <p class="text-muted small">No activado en ninguna empresa.</p> }
                                                         else
@@ -419,7 +420,7 @@
                                 <div class="col-md-2"><label class="form-label small">Factor *</label><input type="number" step="0.000001" class="form-control form-control-sm" @bind="wUomForm.FactorToBase" /></div>
                                 <div class="col-md-3"><label class="form-label small">Cód. Barras</label><input class="form-control form-control-sm" @bind="wUomForm.Barcode" /></div>
                                 <div class="col-md-2"><div class="form-check form-check-inline mt-3"><input class="form-check-input" type="checkbox" @bind="wUomForm.IsBase" id="wuBase" /><label class="form-check-label" for="wuBase">Base</label></div></div>
-                                <div class="col-md-2"><button class="btn btn-success btn-sm w-100" @onclick="WizardAddUom" disabled="@(saving || wUomForm.UomId == 0)"><i class="bi bi-plus"></i> Agregar</button></div>
+                                <div class="col-md-2"><button class="btn btn-success btn-sm w-100" @onclick="() => WizardAddUom()" disabled="@(saving || wUomForm.UomId == 0)"><i class="bi bi-plus"></i> Agregar</button></div>
                             </div>
                             @if (wizardUoms.Count == 0) { <p class="text-muted small">Sin UdM alternativas agregadas.</p> }
                             else
@@ -723,6 +724,14 @@
             await Task.WhenAll(t1, t2, t3, t4, t5, t6);
             productos = await t1; unidades = await t2; catalogos = await t3;
             brands = await t4; manufacturers = await t5; allAttributes = await t6;
+
+            // Auto-seed: if no catalogs or UoMs exist, create default data for the company
+            if (!catalogos.Any() || !unidades.Any())
+            {
+                await EmpresaSvc.SeedMyCompanyAsync();
+                unidades = await UnidadMedidaService.GetAllAsync();
+                catalogos = await CatalogoService.GetAllAsync();
+            }
         }
         catch (Exception ex) { errorMessage = $"Error: {ex.Message}"; }
         finally { loading = false; }
@@ -812,11 +821,11 @@
         saving = true; wizardError = null;
         try
         {
-            var r = await ProductCodeService.CreateAsync(new CreateProductCodeDto(createdProductId, wCodeForm.CodeType, wCodeForm.Valor, null, null, null, null, wCodeForm.ValidFrom, wCodeForm.ValidTo, wCodeForm.IsPrimary));
-            if (r.Success) { wizardSuccess = "Código agregado."; wCodeForm = new(); wizardCodes = await ProductCodeService.GetByProductAsync(createdProductId); }
-            else wizardError = r.Message;
+            var r = await ProductCodeService.CreateAsync(new CreateProductCodeDto(modalProductId, addCodeForm.CodeType, addCodeForm.Valor, ValidFrom: addCodeForm.ValidFrom, ValidTo: addCodeForm.ValidTo, IsPrimary: addCodeForm.IsPrimary));
+            if (r.Success) { successMessage = "Código asignado."; showAddCodeModal = false; expandedId = 0; await ToggleDetail(modalProductId); }
+            else errorMessage = r.Message;
         }
-        catch (Exception ex) { wizardError = ex.Message; }
+        catch (Exception ex) { errorMessage = ex.Message; }
         finally { saving = false; }
     }
     private async Task WizardDeleteCode(long id)
@@ -948,7 +957,7 @@
     private async Task AddCode()
     {
         saving = true; errorMessage = null;
-        try { var r = await ProductCodeService.CreateAsync(new CreateProductCodeDto(modalProductId, addCodeForm.CodeType, addCodeForm.Valor, null, null, null, null, addCodeForm.ValidFrom, addCodeForm.ValidTo, addCodeForm.IsPrimary)); if (r.Success) { successMessage = "Código asignado."; showAddCodeModal = false; expandedId = 0; await ToggleDetail(modalProductId); } else errorMessage = r.Message; }
+        try { var r = await ProductCodeService.CreateAsync(new CreateProductCodeDto(modalProductId, addCodeForm.CodeType, addCodeForm.Valor, ValidFrom: addCodeForm.ValidFrom, ValidTo: addCodeForm.ValidTo, IsPrimary: addCodeForm.IsPrimary)); if (r.Success) { successMessage = "Código asignado."; showAddCodeModal = false; expandedId = 0; await ToggleDetail(modalProductId); } else errorMessage = r.Message; }
         catch (Exception ex) { errorMessage = ex.Message; } finally { saving = false; }
     }
     private async Task DeleteCode(long productId, long id)

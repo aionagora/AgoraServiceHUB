@@ -96,20 +96,37 @@ public class HojaImportacionService : IHojaImportacionService
         if (!empresaId.HasValue)
             return Result<HojaImportacionDto>.Failure("No active company.");
 
-        // Validate OC — must be recepcionada (parcial o cerrada)
-        var oc = await _ocRepo.GetByIdAsync(dto.OrdenCompraId, ct);
-        if (oc is null || oc.EmpresaId != empresaId.Value || !oc.Activo)
-            return Result<HojaImportacionDto>.Failure("Purchase order not found.");
+        if (!dto.OrdenCompraId.HasValue && !dto.ExpedienteImportacionId.HasValue)
+            return Result<HojaImportacionDto>.Failure("Either OrdenCompraId or ExpedienteImportacionId is required.");
 
-        if (oc.Estado is not (EstadoDocumento.RecepcionParcial or EstadoDocumento.Cerrado or EstadoDocumento.Aprobado))
-            return Result<HojaImportacionDto>.Failure(
-                $"Import sheets can only be created for received orders. Current status: {oc.Estado}.");
+        // Validate OC or Expediente exist and are in valid state
+        if (dto.OrdenCompraId.HasValue)
+        {
+            var oc = await _ocRepo.GetByIdAsync(dto.OrdenCompraId.Value, ct);
+            if (oc is null || oc.EmpresaId != empresaId.Value || !oc.Activo)
+                return Result<HojaImportacionDto>.Failure("Purchase order not found.");
 
-        // Check OC has received lines
-        var ocLineas = await _ocLineaRepo.FindAsync(l => l.OrdenCompraId == dto.OrdenCompraId, ct);
-        var lineasRecibidas = ocLineas.Where(l => l.CantidadRecepcionada > 0).ToList();
-        if (lineasRecibidas.Count == 0)
-            return Result<HojaImportacionDto>.Failure("No received lines found on this purchase order.");
+            var validEstados = new[]
+            {
+                EstadoDocumento.RecepcionParcial,
+                EstadoDocumento.RecepcionConDiferencias,
+                EstadoDocumento.Cerrado,
+                EstadoDocumento.Aprobado,
+                EstadoDocumento.Liberado,
+                EstadoDocumento.EnTransito,
+                EstadoDocumento.Arribado,
+                EstadoDocumento.EnAduana,
+                EstadoDocumento.ObservacionAduana
+            };
+
+            if (!validEstados.Contains(oc.Estado))
+                return Result<HojaImportacionDto>.Failure(
+                    $"Import sheets can only be created for received or in-transit orders. Current status: {oc.Estado}.");
+
+            var ocLineas = await _ocLineaRepo.FindAsync(l => l.OrdenCompraId == dto.OrdenCompraId.Value, ct);
+            if (!ocLineas.Any(l => l.CantidadRecepcionada > 0))
+                return Result<HojaImportacionDto>.Failure("No received lines found on this purchase order.");
+        }
 
         // Validate gastos
         if (dto.Gastos is null || dto.Gastos.Count == 0)
@@ -122,7 +139,8 @@ public class HojaImportacionService : IHojaImportacionService
             EmpresaId = empresaId.Value,
             Numero = numero,
             OrdenCompraId = dto.OrdenCompraId,
-            Fecha = dto.Fecha,
+            ExpedienteImportacionId = dto.ExpedienteImportacionId,
+            Fecha = dto.Fecha == default ? DateTime.UtcNow.Date : dto.Fecha,
             ReferenciaAduanera = dto.ReferenciaAduanera,
             Observaciones = dto.Observaciones,
             MetodoDistribucion = dto.MetodoDistribucion,
@@ -133,7 +151,6 @@ public class HojaImportacionService : IHojaImportacionService
         await _hojaRepo.AddAsync(hoja, ct);
         await _unitOfWork.SaveChangesAsync(ct);
 
-        // Add gastos
         decimal totalGastos = 0;
         foreach (var g in dto.Gastos)
         {
@@ -241,13 +258,35 @@ public class HojaImportacionService : IHojaImportacionService
 
         var totalGastos = gastos.Sum(g => g.MontoBase);
 
-        // Get OC and received lines
-        var oc = await _ocRepo.GetByIdAsync(hoja.OrdenCompraId, ct);
-        if (oc is null)
-            return Result<HojaImportacionDto>.Failure("Purchase order not found.");
+        // Get OC and received lines – support both single-OC and expediente-linked hojas
+        if (!hoja.OrdenCompraId.HasValue && !hoja.ExpedienteImportacionId.HasValue)
+            return Result<HojaImportacionDto>.Failure("Import sheet has no associated purchase order or expedition.");
 
-        var ocLineas = await _ocLineaRepo.FindAsync(l => l.OrdenCompraId == hoja.OrdenCompraId, ct);
-        var lineasRecibidas = ocLineas.Where(l => l.CantidadRecepcionada > 0).ToList();
+        // Collect all OC lines to distribute costs over (single OC or all OCs in expedition)
+        List<OrdenCompraLinea> lineasRecibidas;
+        OrdenCompra? oc = null;
+
+        if (hoja.OrdenCompraId.HasValue)
+        {
+            oc = await _ocRepo.GetByIdAsync(hoja.OrdenCompraId.Value, ct);
+            if (oc is null)
+                return Result<HojaImportacionDto>.Failure("Purchase order not found.");
+            var ocLineas = await _ocLineaRepo.FindAsync(l => l.OrdenCompraId == hoja.OrdenCompraId.Value, ct);
+            lineasRecibidas = ocLineas.Where(l => l.CantidadRecepcionada > 0).ToList();
+        }
+        else
+        {
+            // Expediente: gather lines from all OCs
+            var ocs = await _ocRepo.FindAsync(o => o.ExpedienteImportacionId == hoja.ExpedienteImportacionId, ct);
+            oc = ocs.FirstOrDefault();
+            var allLineas = new List<OrdenCompraLinea>();
+            foreach (var o in ocs)
+            {
+                var ls = await _ocLineaRepo.FindAsync(l => l.OrdenCompraId == o.OrdenCompraId, ct);
+                allLineas.AddRange(ls.Where(l => l.CantidadRecepcionada > 0));
+            }
+            lineasRecibidas = allLineas;
+        }
 
         if (lineasRecibidas.Count == 0)
             return Result<HojaImportacionDto>.Failure("No received lines to distribute costs.");
@@ -350,6 +389,7 @@ public class HojaImportacionService : IHojaImportacionService
         await _unitOfWork.SaveChangesAsync(ct);
 
         // ?? Contabilización automática ??
+        var glosa = oc?.Numero ?? $"EXP-{hoja.ExpedienteImportacionId}";
         await _contabilizacion.ContabilizarDocumentoAsync(
             tipoDocumento: "Importacion",
             montos: new Dictionary<string, decimal>
@@ -360,7 +400,7 @@ public class HojaImportacionService : IHojaImportacionService
             origenId: hoja.HojaImportacionId,
             origenReferencia: hoja.Numero,
             fecha: hoja.Fecha,
-            glosaExtra: oc.Numero,
+            glosaExtra: glosa,
             ct: ct);
 
         return Result<HojaImportacionDto>.Success(await BuildDto(hoja, ct));
@@ -385,7 +425,7 @@ public class HojaImportacionService : IHojaImportacionService
         return Result<bool>.Success(true);
     }
 
-    // ?? Private helpers ??
+    // ?? Private helpers ????????????????????????????????????????????????????????
 
     private async Task<string> GenerarNumeroAsync(int empresaId, CancellationToken ct)
     {
@@ -419,7 +459,14 @@ public class HojaImportacionService : IHojaImportacionService
 
     private async Task<HojaImportacionDto> BuildDto(HojaImportacion hoja, CancellationToken ct)
     {
-        var oc = await _ocRepo.GetByIdAsync(hoja.OrdenCompraId, ct);
+        OrdenCompra? oc = hoja.OrdenCompraId.HasValue
+            ? await _ocRepo.GetByIdAsync(hoja.OrdenCompraId.Value, ct)
+            : null;
+
+        string? expNumero = hoja.ExpedienteImportacionId.HasValue
+            ? $"EXP-{hoja.ExpedienteImportacionId}"
+            : null;
+
         var gastos = await _gastoRepo.FindAsync(g => g.HojaImportacionId == hoja.HojaImportacionId, ct);
         var impLineas = await _impLineaRepo.FindAsync(l => l.HojaImportacionId == hoja.HojaImportacionId, ct);
         var ocLineaIds = impLineas.Select(l => l.OrdenCompraLineaId).Distinct().ToList();
@@ -439,7 +486,9 @@ public class HojaImportacionService : IHojaImportacionService
             hoja.EmpresaId,
             hoja.Numero,
             hoja.OrdenCompraId,
-            oc?.Numero ?? "—",
+            oc?.Numero,
+            hoja.ExpedienteImportacionId,
+            expNumero,
             hoja.Fecha,
             hoja.ReferenciaAduanera,
             hoja.Observaciones,

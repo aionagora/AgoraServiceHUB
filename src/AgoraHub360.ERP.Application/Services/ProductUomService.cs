@@ -11,15 +11,18 @@ public class ProductUomService : IProductUomService
     private readonly IRepository<ProductUom> _repo;
     private readonly IRepository<Uom> _uomRepo;
     private readonly IUnitOfWork _uow;
+    private readonly ICurrentUserService _currentUser;
 
     public ProductUomService(
         IRepository<ProductUom> repo,
         IRepository<Uom> uomRepo,
-        IUnitOfWork uow)
+        IUnitOfWork uow,
+        ICurrentUserService currentUser)
     {
         _repo = repo;
         _uomRepo = uomRepo;
         _uow = uow;
+        _currentUser = currentUser;
     }
 
     public async Task<Result<IReadOnlyList<ProductUomDto>>> GetByProductAsync(long productId, CancellationToken ct = default)
@@ -56,6 +59,7 @@ public class ProductUomService : IProductUomService
 
         var entity = new ProductUom
         {
+            EmpresaId = _currentUser.EmpresaId ?? throw new InvalidOperationException("EmpresaId required."),
             ProductId = dto.ProductId,
             UomId = dto.UomId,
             IsBase = dto.IsBase,

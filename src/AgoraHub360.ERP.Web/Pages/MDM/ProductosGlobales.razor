@@ -9,6 +9,7 @@
 @inject ProductCodeHttpService ProductCodeService
 @inject MdmAttributeHttpService AttributeService
 @inject CategoriaProductoHttpService CategoriaService
+@inject EmpresaHttpService EmpresaSvc
 @inject IJSRuntime JS
 
 <PageTitle>Catalogo Global de Productos</PageTitle>
@@ -827,6 +828,14 @@
             brands = await t4;
             manufacturers = await t5;
             allAttributes = await t6;
+
+            // Auto-seed: if no catalogs or UoMs exist, create default data for the company
+            if (!catalogos.Any() || !unidades.Any())
+            {
+                await EmpresaSvc.SeedMyCompanyAsync();
+                catalogos = await CatalogoService.GetAllAsync();
+                unidades = await UnidadMedidaService.GetAllAsync();
+            }
         }
         catch (Exception ex) { errorMessage = $"Error al cargar datos: {ex.Message}"; }
         finally { loading = false; }
@@ -1009,7 +1018,7 @@
         try
         {
             var dto = new CreateProductCodeDto(addCodeProductId, addCodeForm.CodeType, addCodeForm.Valor,
-                null, null, null, null, addCodeForm.ValidFrom, addCodeForm.ValidTo, addCodeForm.IsPrimary);
+                ValidFrom: addCodeForm.ValidFrom, ValidTo: addCodeForm.ValidTo, IsPrimary: addCodeForm.IsPrimary);
             var r = await ProductCodeService.CreateAsync(dto);
             if (r.Success) { successMessage = "Código asignado."; showAddCodeModal = false; expandedId = 0; await ToggleDetail(addCodeProductId); }
             else errorMessage = r.Message;

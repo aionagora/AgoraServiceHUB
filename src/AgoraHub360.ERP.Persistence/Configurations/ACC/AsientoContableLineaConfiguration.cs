@@ -23,5 +23,11 @@ public class AsientoContableLineaConfiguration : IEntityTypeConfiguration<Asient
             .WithMany()
             .HasForeignKey(l => l.CuentaContableId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(l => l.CentroCosto)
+            .WithMany()
+            .HasForeignKey(l => l.CentroCostoId)
+            .OnDelete(DeleteBehavior.SetNull)
+            .IsRequired(false);
     }
 }
