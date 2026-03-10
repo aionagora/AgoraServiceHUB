@@ -127,6 +127,50 @@ public class AsientoContableHttpService
         }
     }
 
+    /// <summary>
+    /// Exporta un comprobante individual a Excel
+    /// </summary>
+    public async Task<byte[]?> ExportarExcelIndividualAsync(long comprobanteId)
+    {
+        try
+        {
+            var response = await _http.GetAsync($"{Base}/{comprobanteId}/exportar-excel");
+            if (response.IsSuccessStatusCode)
+                return await response.Content.ReadAsByteArrayAsync();
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Exporta listado detallado plano (una fila por línea) para migración
+    /// </summary>
+    public async Task<byte[]?> ExportarExcelPlanoAsync(
+        DateTime? desde = null, DateTime? hasta = null,
+        string? estado = null, int? tipoComprobanteId = null, string? search = null)
+    {
+        try
+        {
+            var url = $"{Base}/exportar-excel-plano?";
+            if (desde.HasValue) url += $"desde={desde.Value:yyyy-MM-dd}&";
+            if (hasta.HasValue) url += $"hasta={hasta.Value:yyyy-MM-dd}&";
+            if (!string.IsNullOrEmpty(estado)) url += $"estado={Uri.EscapeDataString(estado)}&";
+            if (tipoComprobanteId.HasValue) url += $"tipoComprobanteId={tipoComprobanteId}&";
+            if (!string.IsNullOrEmpty(search)) url += $"search={Uri.EscapeDataString(search)}&";
+            var response = await _http.GetAsync(url.TrimEnd('&', '?'));
+            if (response.IsSuccessStatusCode)
+                return await response.Content.ReadAsByteArrayAsync();
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     // ?? Documentos adjuntos ???????????????????????????????????????????????????
 
     /// <summary>Lista los documentos adjuntos a un comprobante.</summary>

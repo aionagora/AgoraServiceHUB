@@ -14,6 +14,9 @@ public class ComprobanteDocumentoDto
     public string MimeType { get; set; } = string.Empty;
     public string? Url { get; set; }
     public long SizeBytes { get; set; }
+
+    /// <summary>Contenido del archivo en Base64, usado solo durante la subida temporal en el cliente.</summary>
+    public string? Contenido { get; set; }
 }
 
 /// <summary>DTO para adjuntar un documento a un comprobante.</summary>
