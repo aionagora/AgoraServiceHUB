@@ -1,0 +1,212 @@
+@inject TareaHttpService TareaSvc
+
+@if (_loading)
+{
+    <div class="d-flex justify-content-center py-4">
+        <div class="spinner-border spinner-border-sm text-primary" role="status">
+            <span class="visually-hidden">Cargando tareas...</span>
+        </div>
+    </div>
+}
+else
+{
+    @if (!string.IsNullOrEmpty(_mensaje))
+    {
+        <div class="alert @(_esError ? "alert-danger" : "alert-success") alert-dismissible fade show py-2 mb-3">
+            @_mensaje
+            <button type="button" class="btn-close btn-sm" @onclick="() => _mensaje = null"></button>
+        </div>
+    }
+
+    @if (!_tareas.Any())
+    {
+        <div class="text-center py-4 text-muted">
+            <i class="bi bi-clipboard2-check fs-2 d-block mb-2"></i>
+            <p class="mb-2">No hay tareas registradas.</p>
+            @if (!IsReadOnly)
+            {
+                <button class="btn btn-outline-primary btn-sm" @onclick="GenerarInicialesAsync" disabled="@_saving">
+                    <i class="bi bi-magic me-1"></i> Generar tareas iniciales
+                </button>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <small class="text-muted">
+                @_tareas.Count(t => t.Completada) / @_tareas.Count completadas
+            </small>
+            @if (!IsReadOnly)
+            {
+                <button class="btn btn-outline-secondary btn-sm" @onclick="GenerarInicialesAsync" disabled="@_saving"
+                        title="Regenerar tareas iniciales">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Regenerar
+                </button>
+            }
+        </div>
+
+        <div class="progress mb-3" style="height: 6px;" role="progressbar"
+             aria-valuenow="@_progreso" aria-valuemin="0" aria-valuemax="100">
+            <div class="progress-bar bg-success" style="width: @(_progreso)%"></div>
+        </div>
+
+        <ul class="list-group list-group-flush">
+            @foreach (var (tarea, index) in _tareas.Select((t, i) => (t, i)))
+            {
+                <li class="list-group-item px-0 py-2">
+                    <div class="d-flex align-items-start gap-2">
+                        @if (!IsReadOnly)
+                        {
+                            <div class="d-flex flex-column gap-1 mt-1">
+                                <button class="btn btn-sm btn-outline-secondary p-0 lh-1" style="width:22px;height:22px;"
+                                        @onclick="() => MoverArribaAsync(index)"
+                                        disabled="@(index == 0 || _saving)"
+                                        title="Subir">
+                                    <i class="bi bi-chevron-up small"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary p-0 lh-1" style="width:22px;height:22px;"
+                                        @onclick="() => MoverAbajoAsync(index)"
+                                        disabled="@(index == _tareas.Count - 1 || _saving)"
+                                        title="Bajar">
+                                    <i class="bi bi-chevron-down small"></i>
+                                </button>
+                            </div>
+                        }
+
+                        <div class="form-check mt-1">
+                            <input class="form-check-input" type="checkbox"
+                                   id="tarea-@tarea.Id"
+                                   checked="@tarea.Completada"
+                                   disabled="@(IsReadOnly || tarea.Completada || _saving)"
+                                   @onchange="() => CompletarAsync(tarea)" />
+                        </div>
+
+                        <div class="flex-grow-1">
+                            <label class="form-check-label @(tarea.Completada ? "text-decoration-line-through text-muted" : "")"
+                                   for="tarea-@tarea.Id">
+                                @tarea.Titulo
+                                @if (tarea.Obligatoria)
+                                {
+                                    <span class="badge bg-danger ms-1" style="font-size:0.65rem;">Obligatoria</span>
+                                }
+                            </label>
+                            @if (!string.IsNullOrEmpty(tarea.Descripcion))
+                            {
+                                <small class="d-block text-muted">@tarea.Descripcion</small>
+                            }
+                            @if (tarea.Completada && tarea.FechaCompletado.HasValue)
+                            {
+                                <small class="d-block text-success">
+                                    <i class="bi bi-check-circle-fill me-1"></i>
+                                    Completada el @tarea.FechaCompletado.Value.ToString("dd/MM/yyyy HH:mm")
+                                    @if (!string.IsNullOrEmpty(tarea.CompletadoPor))
+                                    {
+                                        <span> por @tarea.CompletadoPor</span>
+                                    }
+                                </small>
+                            }
+                        </div>
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+}
+
+@code {
+    /// <summary>Tipo de entidad propietaria de las tareas. Ejemplos: "OrdenPedido", "OrdenCompra", "Cotizacion".</summary>
+    [Parameter, EditorRequired] public string EntityType { get; set; } = string.Empty;
+    /// <summary>Identificador de la entidad propietaria de las tareas.</summary>
+    [Parameter, EditorRequired] public int EntityId { get; set; }
+    /// <summary>Cuando es <c>true</c>, oculta los controles de edición (completar, reordenar, generar).</summary>
+    [Parameter] public bool IsReadOnly { get; set; }
+
+    private List<TareaDto> _tareas = new();
+    private bool _loading = true;
+    private bool _saving;
+    private string? _mensaje;
+    private bool _esError;
+
+    private int _progreso => _tareas.Any()
+        ? (int)Math.Round(_tareas.Count(t => t.Completada) * 100.0 / _tareas.Count)
+        : 0;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (EntityId > 0 && !string.IsNullOrEmpty(EntityType))
+            await CargarAsync();
+    }
+
+    private async Task CargarAsync()
+    {
+        _loading = true;
+        _tareas = await TareaSvc.GetByEntityAsync(EntityType, EntityId);
+        _loading = false;
+    }
+
+    private async Task CompletarAsync(TareaDto tarea)
+    {
+        if (tarea.Completada) return;
+        _saving = true;
+        var result = await TareaSvc.CompletarAsync(tarea.Id);
+        if (result.Success && result.Data is not null)
+        {
+            var idx = _tareas.FindIndex(t => t.Id == tarea.Id);
+            if (idx >= 0) _tareas[idx] = result.Data;
+        }
+        else
+        {
+            MostrarMensaje(result.Message ?? "Error al completar la tarea.", esError: true);
+        }
+        _saving = false;
+    }
+
+    private async Task GenerarInicialesAsync()
+    {
+        _saving = true;
+        var result = await TareaSvc.GenerarInicialesAsync(EntityType, EntityId);
+        if (result.Success && result.Data is not null)
+        {
+            _tareas = result.Data;
+            MostrarMensaje("Tareas iniciales generadas.", esError: false);
+        }
+        else
+        {
+            MostrarMensaje(result.Message ?? "Error al generar las tareas.", esError: true);
+        }
+        _saving = false;
+    }
+
+    private async Task MoverArribaAsync(int index)
+    {
+        if (index <= 0) return;
+        (_tareas[index - 1], _tareas[index]) = (_tareas[index], _tareas[index - 1]);
+        await GuardarOrdenAsync();
+    }
+
+    private async Task MoverAbajoAsync(int index)
+    {
+        if (index >= _tareas.Count - 1) return;
+        (_tareas[index], _tareas[index + 1]) = (_tareas[index + 1], _tareas[index]);
+        await GuardarOrdenAsync();
+    }
+
+    private async Task GuardarOrdenAsync()
+    {
+        _saving = true;
+        var dto = new ReorderTareasDto { TareaIds = _tareas.Select(t => t.Id).ToList() };
+        var result = await TareaSvc.ReorderAsync(dto);
+        if (result.Success && result.Data is not null)
+            _tareas = result.Data;
+        else
+            MostrarMensaje(result.Message ?? "Error al reordenar las tareas.", esError: true);
+        _saving = false;
+    }
+
+    private void MostrarMensaje(string msg, bool esError)
+    {
+        _mensaje = msg;
+        _esError = esError;
+    }
+}
