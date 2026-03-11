@@ -70,9 +70,6 @@ builder.Services.AddScoped<RecepcionCompraHttpService>();
 builder.Services.AddScoped<HojaImportacionHttpService>();
 builder.Services.AddScoped<ExpedienteImportacionHttpService>();
 
-// ──── Servicios HTTP Workflow ────
-builder.Services.AddScoped<TareaHttpService>();
-
 // ──── Dashboard ────
 builder.Services.AddScoped<DashboardDataService>();
 
