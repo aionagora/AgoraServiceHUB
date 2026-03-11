@@ -39,3 +39,16 @@ publish/
 /src/AgoraHub360.ERP.Web/Shared/SchemaColors.cs
 /src/AgoraHub360.ERP.Web/Pages/MDM/GestionProductos.razor
 /src/AgoraHub360.ERP.Web/Pages/MDM/GestionProductos.razor.css
+/docs/migrations/CMP_OrdenesPedido_Numeracion.sql
+/docs/migrations/LOG_HojasRuta.sql
+/src/AgoraHub360.ERP.Api/Controllers/V1/HojasRutaController.cs
+/src/AgoraHub360.ERP.Application/Interfaces/IHojaRutaService.cs
+/src/AgoraHub360.ERP.Domain/Entities/LOG/HojaRuta.cs
+/src/AgoraHub360.ERP.Domain/Entities/LOG/HojaRutaHistorial.cs
+/src/AgoraHub360.ERP.Application/Services/HojaRutaService.cs
+/src/AgoraHub360.ERP.Persistence/Configurations/LOG/HojaRutaConfiguration.cs
+/src/AgoraHub360.ERP.Persistence/Configurations/LOG/HojaRutaHistorialConfiguration.cs
+/src/AgoraHub360.ERP.Shared/DTOs/Logistica/HojaRutaDto.cs
+/src/AgoraHub360.ERP.Web/Pages/Logistica/HojasRuta.razor
+/`src/AgoraHub360.ERP.Application/Services/NumeracionDocumentoService.cs`
+/src/AgoraHub360.ERP.Web/Services/HojaRutaHttpService.cs
