@@ -31,7 +31,8 @@ public class AsientoContableDto
     public string? NumeroDocumentoPago { get; set; }
 
     // Usuario
-    public string? RegistradoPor { get; set; }
+    public int? RegistradoPorId { get; set; }
+    public string? RegistradoPorNombre { get; set; }
 
     // Origen
     public string? OrigenTipo { get; set; }

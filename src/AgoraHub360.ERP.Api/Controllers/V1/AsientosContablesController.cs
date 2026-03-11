@@ -194,7 +194,7 @@ public class AsientosContablesController : ControllerBase
                 worksheet.Cells[row, 12].Value = asiento.TotalDebe;
                 worksheet.Cells[row, 13].Value = asiento.TotalHaber;
                 worksheet.Cells[row, 14].Value = asiento.Estado;
-                worksheet.Cells[row, 15].Value = asiento.RegistradoPor ?? "";
+                worksheet.Cells[row, 15].Value = asiento.RegistradoPorNombre ?? "";
 
                 // Formato de moneda para columnas de monto
                 worksheet.Cells[row, 12].Style.Numberformat.Format = "#,##0.00";
@@ -268,7 +268,7 @@ public class AsientosContablesController : ControllerBase
             ws.Cells[7, 1].Value = "Estado:"; ws.Cells[7, 2].Value = a.Estado;
             ws.Cells[8, 1].Value = "Concepto:"; ws.Cells[8, 2].Value = a.Concepto ?? "";
             ws.Cells[9, 1].Value = "Glosa:"; ws.Cells[9, 2].Value = a.Glosa;
-            ws.Cells[10, 1].Value = "Registrado por:"; ws.Cells[10, 2].Value = a.RegistradoPor ?? "";
+            ws.Cells[10, 1].Value = "Registrado por:"; ws.Cells[10, 2].Value = a.RegistradoPorNombre ?? "";
 
             if (a.TipoCambioMoneda != null)
             {
@@ -412,7 +412,7 @@ public class AsientosContablesController : ControllerBase
                     ws.Cells[row, 12].Value = a.NumeroDocumentoPago ?? "";
                     ws.Cells[row, 13].Value = a.TotalDebe;
                     ws.Cells[row, 14].Value = a.TotalHaber;
-                    ws.Cells[row, 15].Value = a.RegistradoPor ?? "";
+                    ws.Cells[row, 15].Value = a.RegistradoPorNombre ?? "";
                     ws.Cells[row, 16].Value = l.NumeroLinea > 0 ? l.NumeroLinea : (object)"";
                     ws.Cells[row, 17].Value = l.CuentaCodigo;
                     ws.Cells[row, 18].Value = l.CuentaNombre;

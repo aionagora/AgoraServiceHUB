@@ -51,12 +51,12 @@
                     <label class="form-label mb-1 small">Estado</label>
                     <select class="form-select form-select-sm" @bind="filtroEstado">
                         <option value="">Todos</option>
-                        <option value="Borrador">Borrador</option>
-                        <option value="Confirmado">Confirmado</option>
-                        <option value="Aprobado">Aprobado</option>
-                        <option value="RecepcionParcial">Recepción Parcial</option>
-                        <option value="Cerrado">Cerrado</option>
-                        <option value="Anulado">Anulado</option>
+                        <option value="Borrador">@("Borrador".ToNombre())</option>
+                        <option value="Confirmado">@("Confirmado".ToNombre())</option>
+                        <option value="Aprobado">@("Aprobado".ToNombre())</option>
+                        <option value="RecepcionParcial">@("RecepcionParcial".ToNombre())</option>
+                        <option value="Cerrado">@("Cerrado".ToNombre())</option>
+                        <option value="Anulado">@("Anulado".ToNombre())</option>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -124,7 +124,7 @@
                                     <td><span class="badge bg-info text-dark">@oc.MonedaId</span></td>
                                     <td class="text-end"><strong>@oc.Total.ToString("N2")</strong></td>
                                     <td>
-                                        <span class="badge @GetEstadoBadge(oc.Estado)">@oc.Estado</span>
+                                        <span class="badge @oc.Estado.ToBadgeClass()">@oc.Estado.ToNombre()</span>
                                     </td>
                                     <td class="text-end">
                                         @if (oc.Estado == "Borrador")
@@ -685,14 +685,4 @@
     }
 
     // ?? Helpers ??
-    private static string GetEstadoBadge(string estado) => estado switch
-    {
-        "Borrador" => "bg-secondary",
-        "Confirmado" => "bg-primary",
-        "Aprobado" => "bg-success",
-        "RecepcionParcial" => "bg-info",
-        "Cerrado" => "bg-dark",
-        "Anulado" => "bg-danger",
-        _ => "bg-secondary"
-    };
 }

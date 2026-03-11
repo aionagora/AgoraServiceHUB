@@ -3,6 +3,7 @@
 @inject OrdenPedidoHttpService OpService
 @inject AlmacenHttpService AlmacenService
 @inject MdmCompanyProductHttpService CompanyProductService
+@inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>Órdenes de Pedido - AgoraHub360 ERP</PageTitle>
 
@@ -42,13 +43,13 @@
                     <label class="form-label mb-1 small">Estado</label>
                     <select class="form-select form-select-sm" @bind="filtroEstado">
                         <option value="">Todos</option>
-                        <option value="Borrador">Borrador</option>
-                        <option value="EnRevision">En Revisión</option>
-                        <option value="AbastecidoConStock">Stock Disponible</option>
-                        <option value="PendienteAprobacion">Pte. Aprobación</option>
-                        <option value="Aprobado">Aprobado</option>
-                        <option value="Rechazado">Rechazado</option>
-                        <option value="Anulado">Anulado</option>
+                        <option value="Borrador">@("Borrador".ToNombre())</option>
+                        <option value="EnRevision">@("EnRevision".ToNombre())</option>
+                        <option value="AbastecidoConStock">@("AbastecidoConStock".ToNombre())</option>
+                        <option value="PendienteAprobacion">@("PendienteAprobacion".ToNombre())</option>
+                        <option value="Aprobado">@("Aprobado".ToNombre())</option>
+                        <option value="Rechazado">@("Rechazado".ToNombre())</option>
+                        <option value="Anulado">@("Anulado".ToNombre())</option>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -115,13 +116,13 @@
                                     </td>
                                     <td><strong>@op.Numero</strong></td>
                                     <td>@op.FechaEmision.ToString("dd/MM/yyyy")</td>
-                                    <td>@op.Solicitante</td>
+                                    <td>@op.SolicitanteNombre</td>
                                     <td>@op.AlmacenDestinoNombre</td>
                                     <td>
-                                        <span class="badge @GetUrgenciaBadge(op.Urgencia)">@op.Urgencia</span>
+                                        <span class="badge @op.Urgencia.ToUrgenciaBadgeClass()">@op.Urgencia</span>
                                     </td>
                                     <td>
-                                        <span class="badge @GetEstadoBadge(op.Estado)">@op.Estado</span>
+                                        <span class="badge @op.Estado.ToBadgeClass()">@op.Estado.ToNombre()</span>
                                     </td>
                                     <td class="text-end">
                                         @if (op.Estado == "Borrador")
@@ -260,8 +261,9 @@
                             <input type="date" class="form-control" @bind="formFechaRequerida" />
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">Solicitante <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" @bind="formSolicitante" placeholder="Nombre o departamento" />
+                            <label class="form-label">Solicitante</label>
+                            <input type="text" class="form-control bg-light" value="@formSolicitanteNombre" readonly
+                                   title="Asignado automáticamente al usuario que ingresa al sistema" />
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Centro de Costo</label>
@@ -520,6 +522,9 @@
     private string? modalError;
     private long? expandedId;
 
+    // Usuario autenticado
+    private string _currentUserName = "";
+
     // ?? Filtros ?????????????????????????????????????????????????????????????
     private string filtroEstado = "";
     private DateTime? filtroDesde;
@@ -531,7 +536,7 @@
     private long editingOpId;
     private DateTime formFechaEmision = DateTime.Today;
     private DateTime? formFechaRequerida;
-    private string formSolicitante = "";
+    private string formSolicitanteNombre = "";
     private string? formCentroCosto;
     private string formUrgencia = "Normal";
     private int formAlmacenId;
@@ -553,6 +558,9 @@
     // ?? Init ?????????????????????????????????????????????????????????????????
     protected override async Task OnInitializedAsync()
     {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        _currentUserName = authState.User.Identity?.Name ?? "";
+
         var a = await AlmacenService.GetAllAsync();
         var cp = await CompanyProductService.GetAllAsync();
         almacenes = a;
@@ -579,7 +587,7 @@
         editingOpId = 0;
         formFechaEmision = DateTime.Today;
         formFechaRequerida = null;
-        formSolicitante = "";
+        formSolicitanteNombre = _currentUserName;
         formCentroCosto = null;
         formUrgencia = "Normal";
         formAlmacenId = 0;
@@ -595,7 +603,7 @@
         editingOpId = op.OrdenPedidoId;
         formFechaEmision = op.FechaEmision;
         formFechaRequerida = op.FechaRequerida;
-        formSolicitante = op.Solicitante;
+        formSolicitanteNombre = op.SolicitanteNombre;
         formCentroCosto = op.CentroCosto;
         formUrgencia = op.Urgencia;
         formAlmacenId = op.AlmacenDestinoId;
@@ -667,13 +675,12 @@
         saving = true; modalError = null;
         try
         {
-            if (string.IsNullOrWhiteSpace(formSolicitante)) { modalError = "El solicitante es requerido."; return; }
             if (formAlmacenId == 0) { modalError = "Seleccione un almacén destino."; return; }
             if (tempLineas.Count == 0) { modalError = "Agregue al menos una línea."; return; }
 
             if (isEditing)
             {
-                var dto = new UpdateOrdenPedidoDto(formFechaEmision, formFechaRequerida, formSolicitante,
+                var dto = new UpdateOrdenPedidoDto(formFechaEmision, formFechaRequerida,
                     formCentroCosto, formUrgencia, formAlmacenId, formObservaciones);
                 var r = await OpService.UpdateAsync(editingOpId, dto);
                 if (r.Success) { successMessage = "Pedido actualizado."; CloseModal(); await LoadData(); }
@@ -681,9 +688,11 @@
             }
             else
             {
-                var dto = new CreateOrdenPedidoDto(formFechaEmision, formFechaRequerida, formSolicitante,
-                    formCentroCosto, formUrgencia, formAlmacenId, formObservaciones,
-                    tempLineas.Count > 0 ? tempLineas : null);
+                var dto = new CreateOrdenPedidoDto(
+                    formFechaEmision, formFechaRequerida,
+                    formCentroCosto, formUrgencia, formAlmacenId,
+                    Observaciones: formObservaciones,
+                    Lineas: tempLineas.Count > 0 ? tempLineas : null);
                 var r = await OpService.CreateAsync(dto);
                 if (r.Success) { successMessage = $"Pedido {r.Data?.Numero} creado."; CloseModal(); await LoadData(); }
                 else modalError = r.Message;
@@ -769,24 +778,6 @@
     }
 
     // ?? Helpers ??????????????????????????????????????????????????????????????
-    private static string GetEstadoBadge(string estado) => estado switch
-    {
-        "Borrador"            => "bg-secondary",
-        "EnRevision"          => "bg-info text-dark",
-        "AbastecidoConStock"  => "bg-success",
-        "PendienteAprobacion" => "bg-warning text-dark",
-        "Aprobado"            => "bg-primary",
-        "Rechazado"           => "bg-danger",
-        "Anulado"             => "bg-dark",
-        _                     => "bg-secondary"
-    };
-
-    private static string GetUrgenciaBadge(string urgencia) => urgencia switch
-    {
-        "Urgente" => "bg-warning text-dark",
-        "Critico" => "bg-danger",
-        _         => "bg-light text-dark border"
-    };
 
     // ?? ViewModels ????????????????????????????????????????????????????????????
     private class StockLineaVm

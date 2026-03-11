@@ -10,7 +10,8 @@ public class PeriodoContableDto
     public string Nombre { get; set; } = string.Empty;
     public string Estado { get; set; } = string.Empty;
     public DateTime? FechaCierre { get; set; }
-    public string? CerradoPor { get; set; }
+    public int? CerradoPorId { get; set; }
+    public string? CerradoPorNombre { get; set; }
     public int CantidadAsientos { get; set; }
 }
 

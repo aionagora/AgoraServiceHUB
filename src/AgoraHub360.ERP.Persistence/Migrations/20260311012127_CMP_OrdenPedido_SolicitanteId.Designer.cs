@@ -4,6 +4,7 @@ using AgoraHub360.ERP.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AgoraHub360.ERP.Persistence.Migrations
 {
     [DbContext(typeof(AgoraDbContext))]
-    partial class AgoraDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260311012127_CMP_OrdenPedido_SolicitanteId")]
+    partial class CMP_OrdenPedido_SolicitanteId
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -90,12 +93,9 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<int?>("RegistradoPorId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("RegistradoPorNombre")
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
+                    b.Property<string>("RegistradoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int?>("TipoCambioId")
                         .HasColumnType("int");
@@ -124,8 +124,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
                     b.HasIndex("EmpresaId");
 
-                    b.HasIndex("RegistradoPorId");
-
                     b.HasIndex("TipoCambioId");
 
                     b.HasIndex("TipoComprobanteId");
@@ -140,8 +138,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
                     b.HasIndex("EmpresaId", "Numero")
                         .IsUnique();
-
-                    b.HasIndex("EmpresaId", "RegistradoPorId");
 
                     b.HasIndex("OrigenTipo", "OrigenId");
 
@@ -300,12 +296,9 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Property<int>("Anio")
                         .HasColumnType("int");
 
-                    b.Property<int?>("CerradoPorId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("CerradoPorNombre")
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
+                    b.Property<string>("CerradoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("CreadoPor")
                         .HasMaxLength(100)
@@ -342,11 +335,7 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
                     b.HasKey("PeriodoContableId");
 
-                    b.HasIndex("CerradoPorId");
-
                     b.HasIndex("EmpresaId");
-
-                    b.HasIndex("EmpresaId", "CerradoPorId");
 
                     b.HasIndex("EmpresaId", "Estado");
 
@@ -4322,11 +4311,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.ACC.AsientoContable", b =>
                 {
-                    b.HasOne("AgoraHub360.ERP.Domain.Entities.Core.Usuario", "RegistradoPor")
-                        .WithMany()
-                        .HasForeignKey("RegistradoPorId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("AgoraHub360.ERP.Domain.Entities.ACC.TipoCambio", "TipoCambio")
                         .WithMany()
                         .HasForeignKey("TipoCambioId")
@@ -4341,8 +4325,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("TipoPagoId")
                         .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("RegistradoPor");
 
                     b.Navigation("TipoCambio");
 
@@ -4385,16 +4367,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("CuentaPadre");
-                });
-
-            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.ACC.PeriodoContable", b =>
-                {
-                    b.HasOne("AgoraHub360.ERP.Domain.Entities.Core.Usuario", "CerradoPor")
-                        .WithMany()
-                        .HasForeignKey("CerradoPorId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.Navigation("CerradoPor");
                 });
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.ACC.PlantillaContableLinea", b =>

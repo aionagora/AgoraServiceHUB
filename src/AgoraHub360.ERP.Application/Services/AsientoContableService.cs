@@ -167,7 +167,8 @@ public class AsientoContableService : IAsientoContableService
             ValorTipoCambio = valorTc,
             TipoPagoId = dto.TipoPagoId,
             NumeroDocumentoPago = dto.NumeroDocumentoPago,
-            RegistradoPor = _currentUser.UserName,
+            RegistradoPorId = _currentUser.UserIdInt,
+            RegistradoPorNombre = _currentUser.UserName,
             OrigenTipo = dto.OrigenTipo,
             OrigenId = dto.OrigenId,
             OrigenReferencia = dto.OrigenReferencia,
@@ -313,7 +314,8 @@ public class AsientoContableService : IAsientoContableService
             ValorTipoCambio = original.ValorTipoCambio,
             TipoPagoId = original.TipoPagoId,
             NumeroDocumentoPago = null,
-            RegistradoPor = _currentUser.UserName,
+            RegistradoPorId = _currentUser.UserIdInt,
+            RegistradoPorNombre = _currentUser.UserName,
             TotalDebe = original.TotalDebe,
             TotalHaber = original.TotalHaber,
             Activo = true
@@ -608,7 +610,7 @@ public class AsientoContableService : IAsientoContableService
         var periodo = periodos.FirstOrDefault();
         if (periodo is null) return null;
         if (periodo.Estado == "Cerrado")
-            return $"El período '{periodo.Nombre}' está cerrado (cerrado el {periodo.FechaCierre:dd/MM/yyyy} por {periodo.CerradoPor}). Debe reabrirlo primero.";
+            return $"El per\u00edodo '{periodo.Nombre}' est\u00e1 cerrado (cerrado el {periodo.FechaCierre:dd/MM/yyyy} por {periodo.CerradoPorNombre}). Debe reabrirlo primero.";
         return null;
     }
 
@@ -691,7 +693,8 @@ public class AsientoContableService : IAsientoContableService
             TipoPagoCodigo = tipoPago?.Codigo,
             TipoPagoNombre = tipoPago?.Nombre,
             NumeroDocumentoPago = asiento.NumeroDocumentoPago,
-            RegistradoPor = asiento.RegistradoPor,
+            RegistradoPorId = asiento.RegistradoPorId,
+            RegistradoPorNombre = asiento.RegistradoPorNombre,
             OrigenTipo = asiento.OrigenTipo,
             OrigenId = asiento.OrigenId,
             OrigenReferencia = asiento.OrigenReferencia,

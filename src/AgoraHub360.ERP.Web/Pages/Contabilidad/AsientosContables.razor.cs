@@ -185,4 +185,25 @@ public partial class AsientosContables
         catch (Exception ex) { errorMessage = $"Error al exportar: {ex.Message}"; }
         finally { exportando = false; }
     }
+
+    private async Task ExportarListadoFormato(string formato)
+    {
+        exportando = true; errorMessage = null;
+        try
+        {
+            string content; string fileName; string mimeType;
+            switch (formato)
+            {
+                case "json": content = GenerarJsonPlano(asientos);  fileName = "Comprobantes.json"; mimeType = "application/json"; break;
+                case "xml":  content = GenerarXmlPlano(asientos);   fileName = "Comprobantes.xml";  mimeType = "application/xml";  break;
+                case "csv":  content = GenerarCsvListado(asientos); fileName = "Comprobantes.csv";  mimeType = "text/csv";         break;
+                default: throw new Exception("Formato no reconocido.");
+            }
+            var bytes = System.Text.Encoding.UTF8.GetBytes(content);
+            await JS.InvokeVoidAsync("downloadFile", fileName, mimeType, Convert.ToBase64String(bytes));
+            successMessage = $"Archivo {formato.ToUpper()} generado.";
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { exportando = false; }
+    }
 }

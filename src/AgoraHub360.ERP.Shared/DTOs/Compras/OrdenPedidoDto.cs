@@ -7,7 +7,8 @@ public record OrdenPedidoDto(
     string Numero,
     DateTime FechaEmision,
     DateTime? FechaRequerida,
-    string Solicitante,
+    int SolicitanteId,
+    string SolicitanteNombre,
     string? CentroCosto,
     string Urgencia,
     int AlmacenDestinoId,
@@ -38,7 +39,6 @@ public record OrdenPedidoLineaDto(
 public record CreateOrdenPedidoDto(
     DateTime FechaEmision,
     DateTime? FechaRequerida,
-    string Solicitante,
     string? CentroCosto,
     /// <summary>Normal | Urgente | Critico</summary>
     string Urgencia,
@@ -58,7 +58,6 @@ public record CreateOrdenPedidoLineaDto(
 public record UpdateOrdenPedidoDto(
     DateTime FechaEmision,
     DateTime? FechaRequerida,
-    string Solicitante,
     string? CentroCosto,
     /// <summary>Normal | Urgente | Critico</summary>
     string Urgencia,
