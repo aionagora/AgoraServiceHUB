@@ -90,9 +90,12 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("RegistradoPor")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                    b.Property<int?>("RegistradoPorId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RegistradoPorNombre")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
 
                     b.Property<int?>("TipoCambioId")
                         .HasColumnType("int");
@@ -121,6 +124,8 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
                     b.HasIndex("EmpresaId");
 
+                    b.HasIndex("RegistradoPorId");
+
                     b.HasIndex("TipoCambioId");
 
                     b.HasIndex("TipoComprobanteId");
@@ -135,6 +140,8 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
                     b.HasIndex("EmpresaId", "Numero")
                         .IsUnique();
+
+                    b.HasIndex("EmpresaId", "RegistradoPorId");
 
                     b.HasIndex("OrigenTipo", "OrigenId");
 
@@ -293,9 +300,12 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Property<int>("Anio")
                         .HasColumnType("int");
 
-                    b.Property<string>("CerradoPor")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
+                    b.Property<int?>("CerradoPorId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CerradoPorNombre")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
 
                     b.Property<string>("CreadoPor")
                         .HasMaxLength(100)
@@ -332,7 +342,11 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
                     b.HasKey("PeriodoContableId");
 
+                    b.HasIndex("CerradoPorId");
+
                     b.HasIndex("EmpresaId");
+
+                    b.HasIndex("EmpresaId", "CerradoPorId");
 
                     b.HasIndex("EmpresaId", "Estado");
 
@@ -1340,10 +1354,8 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
-                    b.Property<string>("Solicitante")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                    b.Property<int>("SolicitanteId")
+                        .HasColumnType("int");
 
                     b.Property<bool?>("StockCubre")
                         .HasColumnType("bit");
@@ -1357,12 +1369,16 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
                     b.HasIndex("EmpresaId");
 
+                    b.HasIndex("SolicitanteId");
+
                     b.HasIndex("EmpresaId", "Estado");
 
                     b.HasIndex("EmpresaId", "FechaEmision");
 
                     b.HasIndex("EmpresaId", "Numero")
                         .IsUnique();
+
+                    b.HasIndex("EmpresaId", "SolicitanteId");
 
                     b.ToTable("OrdenesPedido", "cmp");
                 });
@@ -2582,6 +2598,183 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("StockProductos", "inv");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.LOG.HojaRuta", b =>
+                {
+                    b.Property<long>("HojaRutaId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("HojaRutaId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("AlmacenDestinoId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("AlmacenOrigenId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ContactoCliente")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("DireccionEntrega")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<DateTime?>("ETA")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("EmpresaId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaDocumento")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaRegistro")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("NumeroHojaRuta")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Observaciones")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<long?>("OrdenPedidoId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ProveedorCliente")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ResponsableUsuario")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("SubEstado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("SubTipo")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("TipoOP")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("HojaRutaId");
+
+                    b.HasIndex("EmpresaId");
+
+                    b.HasIndex("EmpresaId", "Estado");
+
+                    b.HasIndex("EmpresaId", "FechaDocumento");
+
+                    b.HasIndex("EmpresaId", "NumeroHojaRuta")
+                        .IsUnique();
+
+                    b.HasIndex("EmpresaId", "OrdenPedidoId")
+                        .HasDatabaseName("IX_HojasRuta_OrdenPedidoId");
+
+                    b.HasIndex("EmpresaId", "TipoOP");
+
+                    b.ToTable("HojasRuta", "log");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.LOG.HojaRutaHistorial", b =>
+                {
+                    b.Property<long>("HojaRutaHistorialId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("HojaRutaHistorialId"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("EstadoAnterior")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("EstadoNuevo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime>("FechaCambio")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("HojaRutaId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Observaciones")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("SubEstadoAnterior")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("SubEstadoNuevo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Usuario")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("HojaRutaHistorialId");
+
+                    b.HasIndex("HojaRutaId");
+
+                    b.ToTable("HojaRutaHistorial", "log");
                 });
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.Almacen", b =>
@@ -4133,8 +4326,895 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.ToTable("EntityVersions", "ver");
                 });
 
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Workflow.PlantillaTarea", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("Descripcion")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int?>("EmpresaId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("EsAutomatico")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<int>("Orden")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RolResponsable")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("SubTipo")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmpresaId");
+
+                    b.HasIndex("EntityType", "SubTipo", "EmpresaId", "Orden")
+                        .HasDatabaseName("IX_Plantillas_Query");
+
+                    b.ToTable("PlantillasTareas", "wf");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Activo = true,
+                            Codigo = "OP-CREADA",
+                            Descripcion = "Orden de pedido creada en el sistema",
+                            EntityType = "OrdenPedido",
+                            EsAutomatico = true,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 1,
+                            SubTipo = "IMPORTACION"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Activo = true,
+                            Codigo = "OC-EMITIDA",
+                            Descripcion = "Orden de compra emitida al proveedor",
+                            EntityType = "OrdenPedido",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 2,
+                            RolResponsable = "COMPRAS",
+                            SubTipo = "IMPORTACION"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Activo = true,
+                            Codigo = "ETD-CONF",
+                            Descripcion = "ETD confirmado por proveedor / naviera",
+                            EntityType = "OrdenPedido",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 3,
+                            RolResponsable = "COMPRAS",
+                            SubTipo = "IMPORTACION"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Activo = true,
+                            Codigo = "EMBARQUE",
+                            Descripcion = "Embarque despachado (BL / AWB emitido)",
+                            EntityType = "OrdenPedido",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 4,
+                            RolResponsable = "COMPRAS",
+                            SubTipo = "IMPORTACION"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Activo = true,
+                            Codigo = "ETA-CONF",
+                            Descripcion = "ETA confirmado por forwarder / naviera",
+                            EntityType = "OrdenPedido",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 5,
+                            RolResponsable = "COMPRAS",
+                            SubTipo = "IMPORTACION"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Activo = true,
+                            Codigo = "EN-ADUANA",
+                            Descripcion = "Documentos presentados ante aduana",
+                            EntityType = "OrdenPedido",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 6,
+                            RolResponsable = "AGENTE_ADUANA",
+                            SubTipo = "IMPORTACION"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Activo = true,
+                            Codigo = "AFORO",
+                            Descripcion = "Aforo / inspección aduanera realizada",
+                            EntityType = "OrdenPedido",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 7,
+                            RolResponsable = "AGENTE_ADUANA",
+                            SubTipo = "IMPORTACION"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            Activo = true,
+                            Codigo = "DUI",
+                            Descripcion = "DUI / DIM registrado y aprobado",
+                            EntityType = "OrdenPedido",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 8,
+                            RolResponsable = "AGENTE_ADUANA",
+                            SubTipo = "IMPORTACION"
+                        },
+                        new
+                        {
+                            Id = 9,
+                            Activo = true,
+                            Codigo = "LEVANTE",
+                            Descripcion = "Levante de mercancía autorizado",
+                            EntityType = "OrdenPedido",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 9,
+                            RolResponsable = "AGENTE_ADUANA",
+                            SubTipo = "IMPORTACION"
+                        },
+                        new
+                        {
+                            Id = 10,
+                            Activo = true,
+                            Codigo = "TRANSPORTE",
+                            Descripcion = "Transporte interno hacia almacén destino",
+                            EntityType = "OrdenPedido",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 10,
+                            RolResponsable = "LOGISTICA",
+                            SubTipo = "IMPORTACION"
+                        },
+                        new
+                        {
+                            Id = 11,
+                            Activo = true,
+                            Codigo = "RECEPCION",
+                            Descripcion = "Recepción física confirmada en almacén",
+                            EntityType = "OrdenPedido",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 11,
+                            RolResponsable = "ALMACEN",
+                            SubTipo = "IMPORTACION"
+                        },
+                        new
+                        {
+                            Id = 12,
+                            Activo = true,
+                            Codigo = "LANDED-COST",
+                            Descripcion = "Costo de importación calculado y contabilizado",
+                            EntityType = "OrdenPedido",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 12,
+                            RolResponsable = "FINANZAS",
+                            SubTipo = "IMPORTACION"
+                        },
+                        new
+                        {
+                            Id = 13,
+                            Activo = true,
+                            Codigo = "CIERRE",
+                            Descripcion = "Expediente de importación cerrado",
+                            EntityType = "OrdenPedido",
+                            EsAutomatico = true,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 13,
+                            SubTipo = "IMPORTACION"
+                        },
+                        new
+                        {
+                            Id = 14,
+                            Activo = true,
+                            Codigo = "OP-CREADA",
+                            Descripcion = "Orden de pedido de traspaso creada",
+                            EntityType = "OrdenPedido",
+                            EsAutomatico = true,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 1,
+                            SubTipo = "TRASPASO_INTERNO"
+                        },
+                        new
+                        {
+                            Id = 15,
+                            Activo = true,
+                            Codigo = "APROBACION",
+                            Descripcion = "Traspaso aprobado por supervisor",
+                            EntityType = "OrdenPedido",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 2,
+                            RolResponsable = "SUPERVISOR",
+                            SubTipo = "TRASPASO_INTERNO"
+                        },
+                        new
+                        {
+                            Id = 16,
+                            Activo = true,
+                            Codigo = "PREPARACION",
+                            Descripcion = "Mercancía preparada y verificada en origen",
+                            EntityType = "OrdenPedido",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 3,
+                            RolResponsable = "ALMACEN",
+                            SubTipo = "TRASPASO_INTERNO"
+                        },
+                        new
+                        {
+                            Id = 17,
+                            Activo = true,
+                            Codigo = "DESPACHO",
+                            Descripcion = "Mercancía despachada desde almacén origen",
+                            EntityType = "OrdenPedido",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 4,
+                            RolResponsable = "LOGISTICA",
+                            SubTipo = "TRASPASO_INTERNO"
+                        },
+                        new
+                        {
+                            Id = 18,
+                            Activo = true,
+                            Codigo = "TRANSITO",
+                            Descripcion = "Mercancía en tránsito hacia almacén destino",
+                            EntityType = "OrdenPedido",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 5,
+                            RolResponsable = "LOGISTICA",
+                            SubTipo = "TRASPASO_INTERNO"
+                        },
+                        new
+                        {
+                            Id = 19,
+                            Activo = true,
+                            Codigo = "RECEPCION",
+                            Descripcion = "Recepción confirmada en almacén destino",
+                            EntityType = "OrdenPedido",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 6,
+                            RolResponsable = "ALMACEN",
+                            SubTipo = "TRASPASO_INTERNO"
+                        },
+                        new
+                        {
+                            Id = 20,
+                            Activo = true,
+                            Codigo = "CONFIRMACION",
+                            Descripcion = "Traspaso confirmado y diferencias registradas",
+                            EntityType = "OrdenPedido",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 7,
+                            RolResponsable = "SUPERVISOR",
+                            SubTipo = "TRASPASO_INTERNO"
+                        },
+                        new
+                        {
+                            Id = 21,
+                            Activo = true,
+                            Codigo = "CIERRE",
+                            Descripcion = "Traspaso cerrado y stock actualizado",
+                            EntityType = "OrdenPedido",
+                            EsAutomatico = true,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 8,
+                            SubTipo = "TRASPASO_INTERNO"
+                        },
+                        new
+                        {
+                            Id = 22,
+                            Activo = true,
+                            Codigo = "OC-CREADA",
+                            Descripcion = "Orden de compra generada en el sistema",
+                            EntityType = "OrdenCompra",
+                            EsAutomatico = true,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 1
+                        },
+                        new
+                        {
+                            Id = 23,
+                            Activo = true,
+                            Codigo = "APROBACION-L1",
+                            Descripcion = "Aprobación de primer nivel (supervisor)",
+                            EntityType = "OrdenCompra",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 2,
+                            RolResponsable = "SUPERVISOR"
+                        },
+                        new
+                        {
+                            Id = 24,
+                            Activo = true,
+                            Codigo = "APROBACION-L2",
+                            Descripcion = "Aprobación de segundo nivel (gerencia)",
+                            EntityType = "OrdenCompra",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 3,
+                            RolResponsable = "GERENCIA"
+                        },
+                        new
+                        {
+                            Id = 25,
+                            Activo = true,
+                            Codigo = "ENVIADA-PROVEEDOR",
+                            Descripcion = "Orden enviada al proveedor",
+                            EntityType = "OrdenCompra",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 4,
+                            RolResponsable = "COMPRAS"
+                        },
+                        new
+                        {
+                            Id = 26,
+                            Activo = true,
+                            Codigo = "CONF-PROVEEDOR",
+                            Descripcion = "Orden confirmada por el proveedor",
+                            EntityType = "OrdenCompra",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 5,
+                            RolResponsable = "COMPRAS"
+                        },
+                        new
+                        {
+                            Id = 27,
+                            Activo = true,
+                            Codigo = "PRODUCCION",
+                            Descripcion = "Mercancía en producción / preparación",
+                            EntityType = "OrdenCompra",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 6,
+                            RolResponsable = "COMPRAS"
+                        },
+                        new
+                        {
+                            Id = 28,
+                            Activo = true,
+                            Codigo = "ETD",
+                            Descripcion = "Fecha estimada de despacho confirmada",
+                            EntityType = "OrdenCompra",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 7,
+                            RolResponsable = "COMPRAS"
+                        },
+                        new
+                        {
+                            Id = 29,
+                            Activo = true,
+                            Codigo = "EMBARQUE",
+                            Descripcion = "Embarque efectuado (BL / AWB recibido)",
+                            EntityType = "OrdenCompra",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 8,
+                            RolResponsable = "COMPRAS"
+                        },
+                        new
+                        {
+                            Id = 30,
+                            Activo = true,
+                            Codigo = "RECEPCION",
+                            Descripcion = "Mercancía recepcionada en almacén",
+                            EntityType = "OrdenCompra",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 9,
+                            RolResponsable = "ALMACEN"
+                        },
+                        new
+                        {
+                            Id = 31,
+                            Activo = true,
+                            Codigo = "PAGADA",
+                            Descripcion = "Pago al proveedor registrado y confirmado",
+                            EntityType = "OrdenCompra",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 10,
+                            RolResponsable = "FINANZAS"
+                        },
+                        new
+                        {
+                            Id = 32,
+                            Activo = true,
+                            Codigo = "OV-CREADA",
+                            Descripcion = "Orden de venta registrada en el sistema",
+                            EntityType = "OrdenVenta",
+                            EsAutomatico = true,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 1
+                        },
+                        new
+                        {
+                            Id = 33,
+                            Activo = true,
+                            Codigo = "APROBACION",
+                            Descripcion = "Orden de venta aprobada por supervisor",
+                            EntityType = "OrdenVenta",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 2,
+                            RolResponsable = "SUPERVISOR"
+                        },
+                        new
+                        {
+                            Id = 34,
+                            Activo = true,
+                            Codigo = "RESERVA-STOCK",
+                            Descripcion = "Stock reservado para la orden de venta",
+                            EntityType = "OrdenVenta",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 3,
+                            RolResponsable = "ALMACEN"
+                        },
+                        new
+                        {
+                            Id = 35,
+                            Activo = true,
+                            Codigo = "PREPARACION",
+                            Descripcion = "Pedido preparado y empacado en almacén",
+                            EntityType = "OrdenVenta",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 4,
+                            RolResponsable = "ALMACEN"
+                        },
+                        new
+                        {
+                            Id = 36,
+                            Activo = true,
+                            Codigo = "FACTURADA",
+                            Descripcion = "Factura emitida y registrada en contabilidad",
+                            EntityType = "OrdenVenta",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 5,
+                            RolResponsable = "FINANZAS"
+                        },
+                        new
+                        {
+                            Id = 37,
+                            Activo = true,
+                            Codigo = "DESPACHO",
+                            Descripcion = "Mercancía despachada hacia el cliente",
+                            EntityType = "OrdenVenta",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 6,
+                            RolResponsable = "LOGISTICA"
+                        },
+                        new
+                        {
+                            Id = 38,
+                            Activo = true,
+                            Codigo = "ENTREGADA",
+                            Descripcion = "Entrega al cliente confirmada con firma",
+                            EntityType = "OrdenVenta",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 7,
+                            RolResponsable = "LOGISTICA"
+                        },
+                        new
+                        {
+                            Id = 39,
+                            Activo = true,
+                            Codigo = "COBRADA",
+                            Descripcion = "Pago del cliente recibido y conciliado",
+                            EntityType = "OrdenVenta",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 8,
+                            RolResponsable = "FINANZAS"
+                        },
+                        new
+                        {
+                            Id = 40,
+                            Activo = true,
+                            Codigo = "HR-CREADA",
+                            Descripcion = "Hoja de ruta creada en el sistema",
+                            EntityType = "HojaRuta",
+                            EsAutomatico = true,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 1,
+                            SubTipo = "IMPORTACION"
+                        },
+                        new
+                        {
+                            Id = 41,
+                            Activo = true,
+                            Codigo = "DESPACHO-EXT",
+                            Descripcion = "Despacho en origen confirmado",
+                            EntityType = "HojaRuta",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 2,
+                            RolResponsable = "COMPRAS",
+                            SubTipo = "IMPORTACION"
+                        },
+                        new
+                        {
+                            Id = 42,
+                            Activo = true,
+                            Codigo = "EN-TRANSITO",
+                            Descripcion = "Carga en tránsito internacional",
+                            EntityType = "HojaRuta",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 3,
+                            RolResponsable = "COMPRAS",
+                            SubTipo = "IMPORTACION"
+                        },
+                        new
+                        {
+                            Id = 43,
+                            Activo = true,
+                            Codigo = "ADUANA",
+                            Descripcion = "Trámite aduanero iniciado",
+                            EntityType = "HojaRuta",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 4,
+                            RolResponsable = "AGENTE_ADUANA",
+                            SubTipo = "IMPORTACION"
+                        },
+                        new
+                        {
+                            Id = 44,
+                            Activo = true,
+                            Codigo = "LEVANTE",
+                            Descripcion = "Levante de aduana autorizado",
+                            EntityType = "HojaRuta",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 5,
+                            RolResponsable = "AGENTE_ADUANA",
+                            SubTipo = "IMPORTACION"
+                        },
+                        new
+                        {
+                            Id = 45,
+                            Activo = true,
+                            Codigo = "TRANSPORTE",
+                            Descripcion = "Transporte hacia almacén destino",
+                            EntityType = "HojaRuta",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 6,
+                            RolResponsable = "LOGISTICA",
+                            SubTipo = "IMPORTACION"
+                        },
+                        new
+                        {
+                            Id = 46,
+                            Activo = true,
+                            Codigo = "RECEPCION",
+                            Descripcion = "Recepción física en almacén confirmada",
+                            EntityType = "HojaRuta",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 7,
+                            RolResponsable = "ALMACEN",
+                            SubTipo = "IMPORTACION"
+                        },
+                        new
+                        {
+                            Id = 47,
+                            Activo = true,
+                            Codigo = "CIERRE-HR",
+                            Descripcion = "Hoja de ruta cerrada",
+                            EntityType = "HojaRuta",
+                            EsAutomatico = true,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 8,
+                            SubTipo = "IMPORTACION"
+                        },
+                        new
+                        {
+                            Id = 48,
+                            Activo = true,
+                            Codigo = "HR-CREADA",
+                            Descripcion = "Hoja de ruta de traspaso creada",
+                            EntityType = "HojaRuta",
+                            EsAutomatico = true,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 1,
+                            SubTipo = "TRASPASO_INTERNO"
+                        },
+                        new
+                        {
+                            Id = 49,
+                            Activo = true,
+                            Codigo = "PREPARACION",
+                            Descripcion = "Preparación de mercancía en almacén origen",
+                            EntityType = "HojaRuta",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 2,
+                            RolResponsable = "ALMACEN",
+                            SubTipo = "TRASPASO_INTERNO"
+                        },
+                        new
+                        {
+                            Id = 50,
+                            Activo = true,
+                            Codigo = "DESPACHO",
+                            Descripcion = "Despacho desde almacén origen",
+                            EntityType = "HojaRuta",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 3,
+                            RolResponsable = "LOGISTICA",
+                            SubTipo = "TRASPASO_INTERNO"
+                        },
+                        new
+                        {
+                            Id = 51,
+                            Activo = true,
+                            Codigo = "RECEPCION",
+                            Descripcion = "Recepción en almacén destino",
+                            EntityType = "HojaRuta",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 4,
+                            RolResponsable = "ALMACEN",
+                            SubTipo = "TRASPASO_INTERNO"
+                        },
+                        new
+                        {
+                            Id = 52,
+                            Activo = true,
+                            Codigo = "CIERRE-HR",
+                            Descripcion = "Hoja de ruta de traspaso cerrada",
+                            EntityType = "HojaRuta",
+                            EsAutomatico = true,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 5,
+                            SubTipo = "TRASPASO_INTERNO"
+                        },
+                        new
+                        {
+                            Id = 53,
+                            Activo = true,
+                            Codigo = "HR-CREADA",
+                            Descripcion = "Hoja de ruta de entrega creada",
+                            EntityType = "HojaRuta",
+                            EsAutomatico = true,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 1,
+                            SubTipo = "ENTREGA"
+                        },
+                        new
+                        {
+                            Id = 54,
+                            Activo = true,
+                            Codigo = "PREPARACION",
+                            Descripcion = "Pedido preparado para entrega al cliente",
+                            EntityType = "HojaRuta",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 2,
+                            RolResponsable = "ALMACEN",
+                            SubTipo = "ENTREGA"
+                        },
+                        new
+                        {
+                            Id = 55,
+                            Activo = true,
+                            Codigo = "DESPACHO",
+                            Descripcion = "Vehículo de reparto despachado",
+                            EntityType = "HojaRuta",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 3,
+                            RolResponsable = "LOGISTICA",
+                            SubTipo = "ENTREGA"
+                        },
+                        new
+                        {
+                            Id = 56,
+                            Activo = true,
+                            Codigo = "ENTREGADA",
+                            Descripcion = "Entrega al cliente confirmada",
+                            EntityType = "HojaRuta",
+                            EsAutomatico = false,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 4,
+                            RolResponsable = "LOGISTICA",
+                            SubTipo = "ENTREGA"
+                        },
+                        new
+                        {
+                            Id = 57,
+                            Activo = true,
+                            Codigo = "CIERRE-HR",
+                            Descripcion = "Hoja de ruta cerrada",
+                            EntityType = "HojaRuta",
+                            EsAutomatico = true,
+                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Orden = 5,
+                            SubTipo = "ENTREGA"
+                        });
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Workflow.Tarea", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<bool>("Completado")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("CreadoPor")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("Descripcion")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("EmpresaId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("EntityId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("PENDIENTE");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaModificacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateOnly?>("FechaPlan")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("FechaReal")
+                        .HasColumnType("date");
+
+                    b.Property<string>("MetadataJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ModificadoPor")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("Observaciones")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("Orden")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Responsable")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EmpresaId");
+
+                    b.HasIndex("EmpresaId", "FechaReal")
+                        .HasDatabaseName("IX_Tareas_Fechas");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("EmpresaId", "FechaReal"), new[] { "EntityType", "EntityId" });
+
+                    b.HasIndex("EmpresaId", "Estado", "EntityType")
+                        .HasDatabaseName("IX_Tareas_Estado");
+
+                    b.HasIndex("EmpresaId", "EntityType", "EntityId", "Codigo")
+                        .IsUnique()
+                        .HasDatabaseName("IX_Tareas_Codigo_UQ");
+
+                    b.HasIndex("EmpresaId", "EntityType", "EntityId", "Orden")
+                        .HasDatabaseName("IX_Tareas_Entity");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("EmpresaId", "EntityType", "EntityId", "Orden"), new[] { "Estado", "Completado", "FechaReal" });
+
+                    b.ToTable("Tareas", "wf");
+                });
+
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.ACC.AsientoContable", b =>
                 {
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.Core.Usuario", "RegistradoPor")
+                        .WithMany()
+                        .HasForeignKey("RegistradoPorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("AgoraHub360.ERP.Domain.Entities.ACC.TipoCambio", "TipoCambio")
                         .WithMany()
                         .HasForeignKey("TipoCambioId")
@@ -4149,6 +5229,8 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("TipoPagoId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("RegistradoPor");
 
                     b.Navigation("TipoCambio");
 
@@ -4191,6 +5273,16 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("CuentaPadre");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.ACC.PeriodoContable", b =>
+                {
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.Core.Usuario", "CerradoPor")
+                        .WithMany()
+                        .HasForeignKey("CerradoPorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("CerradoPor");
                 });
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.ACC.PlantillaContableLinea", b =>
@@ -4341,7 +5433,15 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.Core.Usuario", "Solicitante")
+                        .WithMany()
+                        .HasForeignKey("SolicitanteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("AlmacenDestino");
+
+                    b.Navigation("Solicitante");
                 });
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CMP.OrdenPedidoLinea", b =>
@@ -4542,6 +5642,17 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Navigation("Almacen");
 
                     b.Navigation("CompanyProduct");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.LOG.HojaRutaHistorial", b =>
+                {
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.LOG.HojaRuta", "HojaRuta")
+                        .WithMany("Historial")
+                        .HasForeignKey("HojaRutaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("HojaRuta");
                 });
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.AttributeOption", b =>
@@ -4799,6 +5910,27 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Navigation("Industry");
                 });
 
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Workflow.PlantillaTarea", b =>
+                {
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.Core.Empresa", "Empresa")
+                        .WithMany()
+                        .HasForeignKey("EmpresaId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Empresa");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Workflow.Tarea", b =>
+                {
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.Core.Empresa", "Empresa")
+                        .WithMany()
+                        .HasForeignKey("EmpresaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Empresa");
+                });
+
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.ACC.AsientoContable", b =>
                 {
                     b.Navigation("Documentos");
@@ -4866,6 +5998,11 @@ namespace AgoraHub360.ERP.Persistence.Migrations
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.DOC.Document", b =>
                 {
                     b.Navigation("ProductDocuments");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.LOG.HojaRuta", b =>
+                {
+                    b.Navigation("Historial");
                 });
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.AttributeDefinition", b =>

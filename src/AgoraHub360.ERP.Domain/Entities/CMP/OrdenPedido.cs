@@ -1,12 +1,12 @@
 namespace AgoraHub360.ERP.Domain.Entities.CMP;
 
 using AgoraHub360.ERP.Domain.Common;
+using AgoraHub360.ERP.Domain.Entities.Core;
 using AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Enums;
 
 /// <summary>
-/// Orden de Pedido (OP) – Demanda interna de una sucursal o área.
-/// Punto de partida del flujo: OP ? revisión stock ? OC ? Importación ? Recepción.
+/// Orden de Pedido (OP) — Demanda interna de una sucursal o área.
 /// Flujo: Borrador ? EnRevision ? (AbastecidoConStock | PendienteAprobacion ? Aprobado ? [OC])
 ///        | Anulado | Rechazado.
 /// </summary>
@@ -22,8 +22,9 @@ public class OrdenPedido : TenantEntity
     /// <summary>Fecha en la que el solicitante necesita los ítems.</summary>
     public DateTime? FechaRequerida { get; set; }
 
-    /// <summary>Sucursal o área que solicita los ítems.</summary>
-    public string Solicitante { get; set; } = string.Empty;
+    /// <summary>Usuario que origina la solicitud (FK a Usuarios).</summary>
+    public int SolicitanteId { get; set; }
+    public Usuario? Solicitante { get; set; }
 
     /// <summary>Centro de costo al que se imputa la solicitud.</summary>
     public string? CentroCosto { get; set; }
@@ -55,6 +56,6 @@ public class OrdenPedido : TenantEntity
     // Navegación
     public ICollection<OrdenPedidoLinea> Lineas { get; set; } = new List<OrdenPedidoLinea>();
 
-    /// <summary>OCs generadas a partir de esta OP (puede haber varias por consolidación).</summary>
+    /// <summary>OCs generadas a partir de esta OP.</summary>
     public ICollection<OrdenCompra> OrdenesCompra { get; set; } = new List<OrdenCompra>();
 }

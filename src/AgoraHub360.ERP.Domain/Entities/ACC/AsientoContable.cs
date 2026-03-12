@@ -1,6 +1,7 @@
 namespace AgoraHub360.ERP.Domain.Entities.ACC;
 
 using AgoraHub360.ERP.Domain.Common;
+using AgoraHub360.ERP.Domain.Entities.Core;
 using AgoraHub360.ERP.Domain.Entities.DOC;
 
 /// <summary>
@@ -57,8 +58,12 @@ public class AsientoContable : TenantEntity
     public string? NumeroDocumentoPago { get; set; }
 
     // ?? Usuario que registra ??
-    /// <summary>Nombre del usuario que registró el comprobante.</summary>
-    public string? RegistradoPor { get; set; }
+    /// <summary>FK al usuario que registro el comprobante.</summary>
+    public int? RegistradoPorId { get; set; }
+    public Usuario? RegistradoPor { get; set; }
+
+    /// <summary>Nombre capturado al registrar — firma historica inmutable para impresiones.</summary>
+    public string? RegistradoPorNombre { get; set; }
 
     // ?? Origen (para asientos automáticos) ??
     /// <summary>Tipo de documento origen (ej: Recepción, Importación, Venta, Ajuste).</summary>

@@ -20,7 +20,7 @@ public class AsientoContableConfiguration : IEntityTypeConfiguration<AsientoCont
         builder.Property(a => a.Glosa).IsRequired().HasMaxLength(500);
         builder.Property(a => a.ValorTipoCambio).HasColumnType("decimal(18,6)");
         builder.Property(a => a.NumeroDocumentoPago).HasMaxLength(100);
-        builder.Property(a => a.RegistradoPor).HasMaxLength(100);
+        builder.Property(a => a.RegistradoPorNombre).HasMaxLength(300);
         builder.Property(a => a.OrigenTipo).HasMaxLength(50);
         builder.Property(a => a.OrigenReferencia).HasMaxLength(100);
         builder.Property(a => a.TotalDebe).HasColumnType("decimal(18,4)");
@@ -33,6 +33,7 @@ public class AsientoContableConfiguration : IEntityTypeConfiguration<AsientoCont
         builder.HasIndex(a => new { a.EmpresaId, a.Estado });
         builder.HasIndex(a => new { a.EmpresaId, a.Gestion });
         builder.HasIndex(a => new { a.OrigenTipo, a.OrigenId });
+        builder.HasIndex(a => new { a.EmpresaId, a.RegistradoPorId });
 
         builder.HasOne(a => a.TipoComprobante)
             .WithMany()
@@ -54,5 +55,11 @@ public class AsientoContableConfiguration : IEntityTypeConfiguration<AsientoCont
             .WithOne(l => l.AsientoContable)
             .HasForeignKey(l => l.AsientoContableId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(a => a.RegistradoPor)
+            .WithMany()
+            .HasForeignKey(a => a.RegistradoPorId)
+            .IsRequired(false)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

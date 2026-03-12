@@ -8,6 +8,7 @@ using AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Enums;
 using AgoraHub360.ERP.Domain.Interfaces;
 using AgoraHub360.ERP.Shared.DTOs.Compras;
+using AgoraHub360.ERP.Shared.DTOs.Workflow;
 
 public class OrdenPedidoService : IOrdenPedidoService
 {
@@ -16,8 +17,11 @@ public class OrdenPedidoService : IOrdenPedidoService
     private readonly IRepository<Almacen> _almacenRepo;
     private readonly IRepository<CompanyProduct> _cpRepo;
     private readonly IRepository<NumeracionDocumento> _numRepo;
+    private readonly IRepository<Usuario> _usuarioRepo;
+    private readonly IRepository<UsuarioEmpresa> _usuarioEmpresaRepo;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
+    private readonly IWorkflowService _workflow;
 
     public OrdenPedidoService(
         IRepository<OrdenPedido> opRepo,
@@ -25,16 +29,22 @@ public class OrdenPedidoService : IOrdenPedidoService
         IRepository<Almacen> almacenRepo,
         IRepository<CompanyProduct> cpRepo,
         IRepository<NumeracionDocumento> numRepo,
+        IRepository<Usuario> usuarioRepo,
+        IRepository<UsuarioEmpresa> usuarioEmpresaRepo,
         IUnitOfWork unitOfWork,
-        ICurrentUserService currentUser)
+        ICurrentUserService currentUser,
+        IWorkflowService workflow)
     {
         _opRepo = opRepo;
         _lineaRepo = lineaRepo;
         _almacenRepo = almacenRepo;
         _cpRepo = cpRepo;
         _numRepo = numRepo;
+        _usuarioRepo = usuarioRepo;
+        _usuarioEmpresaRepo = usuarioEmpresaRepo;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _workflow = workflow;
     }
 
     public async Task<Result<IReadOnlyList<OrdenPedidoDto>>> GetAllAsync(
@@ -55,6 +65,7 @@ public class OrdenPedidoService : IOrdenPedidoService
 
         var almacenes = await _almacenRepo.FindAsync(a => a.EmpresaId == empresaId.Value, ct);
         var almMap = almacenes.ToDictionary(a => a.Id, a => a.Nombre);
+
         var lineas = await _lineaRepo.FindAsync(l => ops.Select(o => o.OrdenPedidoId).Contains(l.OrdenPedidoId), ct);
         var cpIds = lineas.Select(l => l.CompanyProductId).Distinct().ToList();
         var cps = cpIds.Count > 0
@@ -62,12 +73,14 @@ public class OrdenPedidoService : IOrdenPedidoService
             : new List<CompanyProduct>();
         var cpMap = cps.ToDictionary(p => p.CompanyProductId, p => p.Sku);
 
+        var userMap = await GetUsuarioMapAsync(empresaId.Value, ct);
+
         var dtos = ops
             .OrderByDescending(o => o.FechaEmision)
             .ThenByDescending(o => o.OrdenPedidoId)
             .Select(o => MapToDto(o,
                 lineas.Where(l => l.OrdenPedidoId == o.OrdenPedidoId).ToList(),
-                almMap, cpMap))
+                almMap, cpMap, userMap))
             .ToList()
             .AsReadOnly();
 
@@ -96,6 +109,17 @@ public class OrdenPedidoService : IOrdenPedidoService
         if (dto.Lineas is null || dto.Lineas.Count == 0)
             return Result<OrdenPedidoDto>.Failure("A purchase request must have at least one line.");
 
+        // Resolver el SolicitanteId desde el usuario autenticado
+        var solicitanteId = _currentUser.UserIdInt;
+        if (!solicitanteId.HasValue)
+            return Result<OrdenPedidoDto>.Failure("No se pudo identificar al usuario solicitante.");
+
+        // Verificar que el solicitante pertenece a la empresa
+        var asignacion = await _usuarioEmpresaRepo.FindAsync(
+            ue => ue.UsuarioId == solicitanteId.Value && ue.EmpresaId == empresaId.Value, ct);
+        if (!asignacion.Any())
+            return Result<OrdenPedidoDto>.Failure("El usuario no está asignado a la empresa activa.");
+
         var almacen = await _almacenRepo.GetByIdAsync(dto.AlmacenDestinoId, ct);
         if (almacen is null || almacen.EmpresaId != empresaId.Value)
             return Result<OrdenPedidoDto>.Failure("Warehouse not found.");
@@ -108,7 +132,6 @@ public class OrdenPedidoService : IOrdenPedidoService
         }
 
         var numero = await GenerarNumeroAsync(empresaId.Value, ct);
-
         var urgencia = Enum.TryParse<NivelUrgencia>(dto.Urgencia, true, out var u) ? u : NivelUrgencia.Normal;
 
         var op = new OrdenPedido
@@ -117,7 +140,7 @@ public class OrdenPedidoService : IOrdenPedidoService
             Numero = numero,
             FechaEmision = dto.FechaEmision,
             FechaRequerida = dto.FechaRequerida,
-            Solicitante = dto.Solicitante,
+            SolicitanteId = solicitanteId.Value,
             CentroCosto = dto.CentroCosto,
             Urgencia = urgencia,
             AlmacenDestinoId = dto.AlmacenDestinoId,
@@ -147,6 +170,17 @@ public class OrdenPedidoService : IOrdenPedidoService
         }
 
         await _unitOfWork.SaveChangesAsync(ct);
+
+        // Generar tareas automáticas desde plantilla configurada para "OrdenPedido".
+        // Si no existe plantilla el resultado es Failure pero no interrumpe la creación.
+        await _workflow.GenerarHitosInicialesAsync(new GenerarHitosDto
+        {
+            EntityType = "OrdenPedido",
+            EntityId   = (int)op.OrdenPedidoId,
+            EmpresaId  = empresaId.Value,
+            SubTipo    = null
+        }, ct);
+
         return Result<OrdenPedidoDto>.Success(await BuildFullDto(op, ct));
     }
 
@@ -170,7 +204,7 @@ public class OrdenPedidoService : IOrdenPedidoService
 
         op.FechaEmision = dto.FechaEmision;
         op.FechaRequerida = dto.FechaRequerida;
-        op.Solicitante = dto.Solicitante;
+        // Solicitante no se modifica: queda el usuario que creó la OP
         op.CentroCosto = dto.CentroCosto;
         op.Urgencia = urgencia;
         op.AlmacenDestinoId = dto.AlmacenDestinoId;
@@ -332,15 +366,28 @@ public class OrdenPedidoService : IOrdenPedidoService
 
         var almMap = almacenes.ToDictionary(a => a.Id, a => a.Nombre);
         var cpMap = cps.ToDictionary(p => p.CompanyProductId, p => p.Sku);
+        var userMap = await GetUsuarioMapAsync(op.EmpresaId, ct);
 
-        return MapToDto(op, lineas.OrderBy(l => l.NumeroLinea).ToList(), almMap, cpMap);
+        return MapToDto(op, lineas.OrderBy(l => l.NumeroLinea).ToList(), almMap, cpMap, userMap);
+    }
+
+    private async Task<Dictionary<int, string>> GetUsuarioMapAsync(int empresaId, CancellationToken ct)
+    {
+        var asignaciones = await _usuarioEmpresaRepo.FindAsync(
+            ue => ue.EmpresaId == empresaId, ct);
+        var userIds = asignaciones.Select(ue => ue.UsuarioId).Distinct().ToList();
+        if (userIds.Count == 0) return new Dictionary<int, string>();
+
+        var usuarios = await _usuarioRepo.FindAsync(u => userIds.Contains(u.Id), ct);
+        return usuarios.ToDictionary(u => u.Id, u => u.NombreCompleto);
     }
 
     private static OrdenPedidoDto MapToDto(
         OrdenPedido op,
         IList<OrdenPedidoLinea> lineas,
         Dictionary<int, string> almMap,
-        Dictionary<long, string> cpMap)
+        Dictionary<long, string> cpMap,
+        Dictionary<int, string> userMap)
     {
         return new OrdenPedidoDto(
             op.OrdenPedidoId,
@@ -348,7 +395,8 @@ public class OrdenPedidoService : IOrdenPedidoService
             op.Numero,
             op.FechaEmision,
             op.FechaRequerida,
-            op.Solicitante,
+            op.SolicitanteId,
+            userMap.GetValueOrDefault(op.SolicitanteId, "—"),
             op.CentroCosto,
             op.Urgencia.ToString(),
             op.AlmacenDestinoId,

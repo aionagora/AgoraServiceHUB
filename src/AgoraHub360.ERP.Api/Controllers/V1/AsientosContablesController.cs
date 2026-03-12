@@ -194,7 +194,7 @@ public class AsientosContablesController : ControllerBase
                 worksheet.Cells[row, 12].Value = asiento.TotalDebe;
                 worksheet.Cells[row, 13].Value = asiento.TotalHaber;
                 worksheet.Cells[row, 14].Value = asiento.Estado;
-                worksheet.Cells[row, 15].Value = asiento.RegistradoPor ?? "";
+                worksheet.Cells[row, 15].Value = asiento.RegistradoPorNombre ?? "";
 
                 // Formato de moneda para columnas de monto
                 worksheet.Cells[row, 12].Style.Numberformat.Format = "#,##0.00";
@@ -232,6 +232,220 @@ public class AsientosContablesController : ControllerBase
             return File(fileBytes, 
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
                 fileName);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, ApiResponse<string>.Fail($"Error al generar Excel: {ex.Message}"));
+        }
+    }
+
+    /// <summary>
+    /// Exporta un comprobante individual a Excel con cabecera + detalle de líneas
+    /// </summary>
+    [HttpGet("{id:long}/exportar-excel")]
+    public async Task<IActionResult> ExportarExcelIndividual(long id, CancellationToken ct)
+    {
+        try
+        {
+            var result = await _service.GetByIdAsync(id, ct);
+            if (!result.IsSuccess)
+                return NotFound(ApiResponse<string>.Fail(result.Error!));
+
+            var a = result.Value!;
+
+            using var package = new ExcelPackage();
+            var ws = package.Workbook.Worksheets.Add($"Comprobante {a.Numero}");
+
+            // ?? Cabecera ??
+            ws.Cells[1, 1].Value = "COMPROBANTE CONTABLE";
+            ws.Cells[1, 1].Style.Font.Bold = true;
+            ws.Cells[1, 1].Style.Font.Size = 14;
+
+            ws.Cells[3, 1].Value = "Tipo:"; ws.Cells[3, 2].Value = $"{a.TipoComprobanteCodigo} - {a.TipoComprobanteNombre}";
+            ws.Cells[4, 1].Value = "Número:"; ws.Cells[4, 2].Value = a.Numero;
+            ws.Cells[5, 1].Value = "Fecha:"; ws.Cells[5, 2].Value = a.Fecha.ToString("dd/MM/yyyy");
+            ws.Cells[6, 1].Value = "Gestión:"; ws.Cells[6, 2].Value = a.Gestion;
+            ws.Cells[7, 1].Value = "Estado:"; ws.Cells[7, 2].Value = a.Estado;
+            ws.Cells[8, 1].Value = "Concepto:"; ws.Cells[8, 2].Value = a.Concepto ?? "";
+            ws.Cells[9, 1].Value = "Glosa:"; ws.Cells[9, 2].Value = a.Glosa;
+            ws.Cells[10, 1].Value = "Registrado por:"; ws.Cells[10, 2].Value = a.RegistradoPorNombre ?? "";
+
+            if (a.TipoCambioMoneda != null)
+            {
+                ws.Cells[11, 1].Value = "Tipo Cambio:";
+                ws.Cells[11, 2].Value = $"{a.TipoCambioMoneda} {a.ValorTipoCambio:N2}";
+            }
+            if (!string.IsNullOrEmpty(a.TipoPagoCodigo) && a.TipoPagoCodigo != "S/D")
+            {
+                ws.Cells[12, 1].Value = "Documento Pago:";
+                ws.Cells[12, 2].Value = $"{a.TipoPagoNombre} {a.NumeroDocumentoPago}";
+            }
+
+            using (var rng = ws.Cells[3, 1, 12, 1])
+            {
+                rng.Style.Font.Bold = true;
+            }
+
+            // ?? Detalle ??
+            int headerRow = 14;
+            ws.Cells[headerRow, 1].Value = "#";
+            ws.Cells[headerRow, 2].Value = "Código";
+            ws.Cells[headerRow, 3].Value = "Nombre Cuenta";
+            ws.Cells[headerRow, 4].Value = "Glosa Detalle";
+            ws.Cells[headerRow, 5].Value = "Centro Costo";
+            ws.Cells[headerRow, 6].Value = "Debe";
+            ws.Cells[headerRow, 7].Value = "Haber";
+
+            using (var rng = ws.Cells[headerRow, 1, headerRow, 7])
+            {
+                rng.Style.Font.Bold = true;
+                rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                rng.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(79, 129, 189));
+                rng.Style.Font.Color.SetColor(System.Drawing.Color.White);
+            }
+
+            int row = headerRow + 1;
+            foreach (var l in a.Lineas)
+            {
+                ws.Cells[row, 1].Value = l.NumeroLinea;
+                ws.Cells[row, 2].Value = l.CuentaCodigo;
+                ws.Cells[row, 3].Value = l.CuentaNombre;
+                ws.Cells[row, 4].Value = l.Glosa ?? "";
+                ws.Cells[row, 5].Value = l.CentroCostoCodigo ?? "";
+                ws.Cells[row, 6].Value = l.Debe;
+                ws.Cells[row, 7].Value = l.Haber;
+                ws.Cells[row, 6].Style.Numberformat.Format = "#,##0.00";
+                ws.Cells[row, 7].Style.Numberformat.Format = "#,##0.00";
+                row++;
+            }
+
+            // Totales
+            ws.Cells[row, 5].Value = "TOTALES:";
+            ws.Cells[row, 5].Style.Font.Bold = true;
+            ws.Cells[row, 6].Value = a.TotalDebe;
+            ws.Cells[row, 7].Value = a.TotalHaber;
+            ws.Cells[row, 6].Style.Font.Bold = true;
+            ws.Cells[row, 7].Style.Font.Bold = true;
+            ws.Cells[row, 6].Style.Numberformat.Format = "#,##0.00";
+            ws.Cells[row, 7].Style.Numberformat.Format = "#,##0.00";
+            using (var rng = ws.Cells[row, 5, row, 7])
+            {
+                rng.Style.Border.Top.Style = OfficeOpenXml.Style.ExcelBorderStyle.Double;
+            }
+
+            ws.Cells[ws.Dimension.Address].AutoFitColumns();
+
+            var fileBytes = package.GetAsByteArray();
+            var numSafe = a.Numero.Replace("/", "-").Replace("\\", "-");
+            return File(fileBytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"Comprobante_{numSafe}.xlsx");
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, ApiResponse<string>.Fail($"Error al generar Excel: {ex.Message}"));
+        }
+    }
+
+    /// <summary>
+    /// Exporta listado detallado plano: una fila por línea de comprobante.
+    /// Formato pensado para migración a otros sistemas contables.
+    /// </summary>
+    [HttpGet("exportar-excel-plano")]
+    public async Task<IActionResult> ExportarExcelPlano(
+        [FromQuery] DateTime? desde,
+        [FromQuery] DateTime? hasta,
+        [FromQuery] string? estado,
+        [FromQuery] int? tipoComprobanteId,
+        [FromQuery] string? search,
+        CancellationToken ct)
+    {
+        try
+        {
+            var result = await _service.GetAllAsync(desde, hasta, estado, tipoComprobanteId, search, ct);
+            if (!result.IsSuccess)
+                return BadRequest(ApiResponse<string>.Fail(result.Error!));
+
+            var asientos = result.Value!;
+
+            using var package = new ExcelPackage();
+            var ws = package.Workbook.Worksheets.Add("Detalle Plano");
+
+            // Encabezados — una fila por línea de detalle
+            var headers = new[]
+            {
+                "Tipo","Numero","Fecha","Gestion","Concepto","Glosa","TipoRegistro",
+                "Estado","TipoCambioMoneda","ValorTipoCambio","TipoPago","NroDocPago",
+                "TotalDebe","TotalHaber","RegistradoPor",
+                "LineaNro","CuentaCodigo","CuentaNombre","LineaDebe","LineaHaber",
+                "LineaGlosa","CentroCosto"
+            };
+            for (int c = 0; c < headers.Length; c++)
+                ws.Cells[1, c + 1].Value = headers[c];
+
+            using (var rng = ws.Cells[1, 1, 1, headers.Length])
+            {
+                rng.Style.Font.Bold = true;
+                rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                rng.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(31, 73, 125));
+                rng.Style.Font.Color.SetColor(System.Drawing.Color.White);
+            }
+
+            int row = 2;
+            var altRow = false;
+            foreach (var a in asientos)
+            {
+                var lineas = a.Lineas.Count > 0 ? a.Lineas : new List<AsientoContableLineaDto> { new() };
+                foreach (var l in lineas)
+                {
+                    ws.Cells[row, 1].Value  = a.TipoComprobanteCodigo;
+                    ws.Cells[row, 2].Value  = a.Numero;
+                    ws.Cells[row, 3].Value  = a.Fecha.ToString("dd/MM/yyyy");
+                    ws.Cells[row, 4].Value  = a.Gestion;
+                    ws.Cells[row, 5].Value  = a.Concepto ?? "";
+                    ws.Cells[row, 6].Value  = a.Glosa;
+                    ws.Cells[row, 7].Value  = a.TipoRegistro;
+                    ws.Cells[row, 8].Value  = a.Estado;
+                    ws.Cells[row, 9].Value  = a.TipoCambioMoneda ?? "";
+                    ws.Cells[row, 10].Value = a.ValorTipoCambio?.ToString("N2") ?? "";
+                    ws.Cells[row, 11].Value = a.TipoPagoNombre ?? "";
+                    ws.Cells[row, 12].Value = a.NumeroDocumentoPago ?? "";
+                    ws.Cells[row, 13].Value = a.TotalDebe;
+                    ws.Cells[row, 14].Value = a.TotalHaber;
+                    ws.Cells[row, 15].Value = a.RegistradoPorNombre ?? "";
+                    ws.Cells[row, 16].Value = l.NumeroLinea > 0 ? l.NumeroLinea : (object)"";
+                    ws.Cells[row, 17].Value = l.CuentaCodigo;
+                    ws.Cells[row, 18].Value = l.CuentaNombre;
+                    ws.Cells[row, 19].Value = l.Debe > 0 ? l.Debe : (object)"";
+                    ws.Cells[row, 20].Value = l.Haber > 0 ? l.Haber : (object)"";
+                    ws.Cells[row, 21].Value = l.Glosa ?? "";
+                    ws.Cells[row, 22].Value = l.CentroCostoCodigo ?? "";
+
+                    ws.Cells[row, 13].Style.Numberformat.Format = "#,##0.00";
+                    ws.Cells[row, 14].Style.Numberformat.Format = "#,##0.00";
+                    ws.Cells[row, 19].Style.Numberformat.Format = "#,##0.00";
+                    ws.Cells[row, 20].Style.Numberformat.Format = "#,##0.00";
+
+                    // Filas alternadas para mejor legibilidad
+                    if (altRow)
+                    {
+                        using var rng = ws.Cells[row, 1, row, headers.Length];
+                        rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                        rng.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(242, 242, 242));
+                    }
+                    row++;
+                }
+                altRow = !altRow;
+            }
+
+            if (row > 2)
+                ws.Cells[ws.Dimension.Address].AutoFitColumns();
+
+            var fileBytes = package.GetAsByteArray();
+            var ts = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+            return File(fileBytes,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"Comprobantes_Detalle_Plano_{ts}.xlsx");
         }
         catch (Exception ex)
         {

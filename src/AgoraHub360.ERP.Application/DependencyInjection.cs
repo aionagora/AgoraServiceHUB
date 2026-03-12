@@ -2,12 +2,18 @@ namespace AgoraHub360.ERP.Application;
 
 using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Application.Services;
+using AgoraHub360.ERP.Application.Validators.Workflow;
+using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 
 public static class DependencyInjection
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
+        // ?? Validadores FluentValidation ??????????????????????????????????????
+        // Registra todos los AbstractValidator<T> del assembly Application.
+        services.AddValidatorsFromAssemblyContaining<TareaCreateValidator>();
+
         services.AddScoped<IEmpresaService, EmpresaService>();
         services.AddScoped<IRolService, RolService>();
         services.AddScoped<IUsuarioService, UsuarioService>();
@@ -65,6 +71,9 @@ public static class DependencyInjection
         services.AddScoped<IEstadoFinancieroService, EstadoFinancieroService>();
         services.AddScoped<ICentroCostoService, CentroCostoService>();
         services.AddScoped<IComprobanteDocumentoService, ComprobanteDocumentoService>();
+
+        // WF: Workflow
+        services.AddScoped<IWorkflowService, WorkflowService>();
 
         return services;
     }

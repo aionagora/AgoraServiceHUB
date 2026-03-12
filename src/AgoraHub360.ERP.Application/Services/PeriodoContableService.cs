@@ -122,7 +122,8 @@ public class PeriodoContableService : IPeriodoContableService
 
         periodo.Estado = "Cerrado";
         periodo.FechaCierre = DateTime.UtcNow;
-        periodo.CerradoPor = _currentUser.UserName;
+        periodo.CerradoPorId = _currentUser.UserIdInt;
+        periodo.CerradoPorNombre = _currentUser.UserName;
         await _periodoRepo.UpdateAsync(periodo, ct);
         await _unitOfWork.SaveChangesAsync(ct);
 
@@ -148,7 +149,8 @@ public class PeriodoContableService : IPeriodoContableService
 
         periodo.Estado = "Abierto";
         periodo.FechaCierre = null;
-        periodo.CerradoPor = null;
+        periodo.CerradoPorId = null;
+        periodo.CerradoPorNombre = null;
         await _periodoRepo.UpdateAsync(periodo, ct);
         await _unitOfWork.SaveChangesAsync(ct);
 
@@ -164,7 +166,8 @@ public class PeriodoContableService : IPeriodoContableService
         Nombre = p.Nombre,
         Estado = p.Estado,
         FechaCierre = p.FechaCierre,
-        CerradoPor = p.CerradoPor,
+        CerradoPorId = p.CerradoPorId,
+        CerradoPorNombre = p.CerradoPorNombre,
         CantidadAsientos = cantidadAsientos
     };
 }

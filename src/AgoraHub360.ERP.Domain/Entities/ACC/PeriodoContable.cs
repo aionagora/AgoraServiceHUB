@@ -1,6 +1,7 @@
 namespace AgoraHub360.ERP.Domain.Entities.ACC;
 
 using AgoraHub360.ERP.Domain.Common;
+using AgoraHub360.ERP.Domain.Entities.Core;
 
 /// <summary>
 /// Período contable (mensual).
@@ -25,6 +26,10 @@ public class PeriodoContable : TenantEntity
     /// <summary>Fecha en que se cerró el período (null si abierto).</summary>
     public DateTime? FechaCierre { get; set; }
 
-    /// <summary>Usuario que cerró el período.</summary>
-    public string? CerradoPor { get; set; }
+    /// <summary>FK al usuario que cerro el periodo.</summary>
+    public int? CerradoPorId { get; set; }
+    public Usuario? CerradoPor { get; set; }
+
+    /// <summary>Nombre capturado al cierre — firma historica inmutable para reportes.</summary>
+    public string? CerradoPorNombre { get; set; }
 }

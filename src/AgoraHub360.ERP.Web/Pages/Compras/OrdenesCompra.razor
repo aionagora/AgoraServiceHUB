@@ -51,12 +51,12 @@
                     <label class="form-label mb-1 small">Estado</label>
                     <select class="form-select form-select-sm" @bind="filtroEstado">
                         <option value="">Todos</option>
-                        <option value="Borrador">Borrador</option>
-                        <option value="Confirmado">Confirmado</option>
-                        <option value="Aprobado">Aprobado</option>
-                        <option value="RecepcionParcial">Recepción Parcial</option>
-                        <option value="Cerrado">Cerrado</option>
-                        <option value="Anulado">Anulado</option>
+                        <option value="Borrador">@("Borrador".ToNombre())</option>
+                        <option value="Confirmado">@("Confirmado".ToNombre())</option>
+                        <option value="Aprobado">@("Aprobado".ToNombre())</option>
+                        <option value="RecepcionParcial">@("RecepcionParcial".ToNombre())</option>
+                        <option value="Cerrado">@("Cerrado".ToNombre())</option>
+                        <option value="Anulado">@("Anulado".ToNombre())</option>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -124,7 +124,7 @@
                                     <td><span class="badge bg-info text-dark">@oc.MonedaId</span></td>
                                     <td class="text-end"><strong>@oc.Total.ToString("N2")</strong></td>
                                     <td>
-                                        <span class="badge @GetEstadoBadge(oc.Estado)">@oc.Estado</span>
+                                        <span class="badge @oc.Estado.ToBadgeClass()">@oc.Estado.ToNombre()</span>
                                     </td>
                                     <td class="text-end">
                                         @if (oc.Estado == "Borrador")
@@ -281,6 +281,28 @@
                     <button type="button" class="btn-close" @onclick="CloseModal"></button>
                 </div>
                 <div class="modal-body">
+                    @* ?? Nav-tabs ?? *@
+                    <ul class="nav nav-tabs mb-3">
+                        <li class="nav-item">
+                            <button class="nav-link @(ocModalTab == "datos" ? "active" : "")"
+                                    @onclick='() => ocModalTab = "datos"'>
+                                <i class="bi bi-card-list me-1"></i>Datos
+                            </button>
+                        </li>
+                        @if (isEditing)
+                        {
+                            <li class="nav-item">
+                                <button class="nav-link @(ocModalTab == "tareas" ? "active" : "")"
+                                        @onclick='() => ocModalTab = "tareas"'>
+                                    <i class="bi bi-check2-square me-1"></i>? Tareas
+                                </button>
+                            </li>
+                        }
+                    </ul>
+
+                    @* ?? Pestaña Datos ?? *@
+                    @if (ocModalTab == "datos")
+                    {
                     <div class="row">
                         <div class="col-md-4 mb-3">
                             <label class="form-label">Proveedor *</label>
@@ -401,7 +423,19 @@
                             </table>
                         }
                     }
+                    } @* cierre if (ocModalTab == "datos") *@
+
+                    @* ?? Pestaña Tareas (solo en edición) ?? *@
+                    @if (ocModalTab == "tareas" && isEditing)
+                    {
+                        var ocEstado = ordenes.FirstOrDefault(o => o.OrdenCompraId == editingOcId)?.Estado ?? "";
+                        <TareasTab EntityType="OrdenCompra"
+                                   EntityId="@((int)editingOcId)"
+                                   IsReadOnly="@(ocEstado == "Cerrado" || ocEstado == "Anulado")"
+                                   OnTareaCompletada="LoadData" />
+                    }
                 </div>
+
                 <div class="modal-footer">
                     <button class="btn btn-secondary" @onclick="CloseModal">Cancelar</button>
                     <button class="btn btn-primary" @onclick="SaveOrden" disabled="@(saving || formProveedorId == 0 || formAlmacenId == 0 || (!isEditing && tempLineas.Count == 0))">
@@ -482,6 +516,7 @@
     private bool showModal;
     private bool isEditing;
     private long editingOcId;
+    private string ocModalTab = "datos";   // "datos" | "tareas"
     private int formProveedorId;
     private int formAlmacenId;
     private DateTime formFechaEmision = DateTime.Today;
@@ -548,6 +583,7 @@
     private void ShowCreateModal()
     {
         isEditing = false; editingOcId = 0;
+        ocModalTab = "datos";
         formProveedorId = proveedores.FirstOrDefault()?.Id ?? 0;
         formAlmacenId = almacenes.FirstOrDefault()?.Id ?? 0;
         formFechaEmision = DateTime.Today;
@@ -561,6 +597,7 @@
     private void ShowEditModal(OrdenCompraDto oc)
     {
         isEditing = true; editingOcId = oc.OrdenCompraId;
+        ocModalTab = "datos";
         formProveedorId = oc.ProveedorId;
         formAlmacenId = oc.AlmacenDestinoId;
         formFechaEmision = oc.FechaEmision;
@@ -685,14 +722,4 @@
     }
 
     // ?? Helpers ??
-    private static string GetEstadoBadge(string estado) => estado switch
-    {
-        "Borrador" => "bg-secondary",
-        "Confirmado" => "bg-primary",
-        "Aprobado" => "bg-success",
-        "RecepcionParcial" => "bg-info",
-        "Cerrado" => "bg-dark",
-        "Anulado" => "bg-danger",
-        _ => "bg-secondary"
-    };
 }
