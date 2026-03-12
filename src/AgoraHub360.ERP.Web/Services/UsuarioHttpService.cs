@@ -85,4 +85,16 @@ public class UsuarioHttpService
         return await response.Content.ReadFromJsonAsync<ApiResponse<bool>>()
             ?? ApiResponse<bool>.Fail("Error de comunicacion con el servidor.");
     }
+
+    public async Task<ApiResponse<bool>> ResetPasswordAsync(int usuarioId, ResetPasswordDto dto)
+    {
+        var response = await _http.PutAsJsonAsync($"{BaseUrl}/{usuarioId}/reset-password", dto);
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            return ApiResponse<bool>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
+        }
+        return await response.Content.ReadFromJsonAsync<ApiResponse<bool>>()
+            ?? ApiResponse<bool>.Fail("Error de comunicacion con el servidor.");
+    }
 }

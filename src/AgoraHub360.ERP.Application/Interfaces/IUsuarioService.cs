@@ -13,4 +13,5 @@ public interface IUsuarioService
     Task<Result<bool>> AsignarRolAsync(int usuarioId, AsignarRolDto dto, CancellationToken ct = default);
     Task<Result<bool>> RemoverDeEmpresaAsync(int usuarioId, int empresaId, CancellationToken ct = default);
     Task<Result<IReadOnlyList<UsuarioEmpresaRolDto>>> GetEmpresasAsignadasAsync(int usuarioId, CancellationToken ct = default);
+    Task<Result<bool>> ResetPasswordAsync(int usuarioId, ResetPasswordDto dto, CancellationToken ct = default);
 }

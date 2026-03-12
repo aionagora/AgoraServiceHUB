@@ -4,7 +4,11 @@
 @inject RolHttpService RolSvc
 @inject EmpresaHttpService EmpresaSvc
 @inject EmpresaStateService EmpresaState
+@inject AuthenticationStateProvider AuthStateProvider
 @implements IDisposable
+
+@using AgoraHub360.ERP.Shared.DTOs.Usuario
+@using Microsoft.AspNetCore.Components.Authorization
 
 <PageTitle>Usuarios - AgoraHub360 ERP</PageTitle>
 
@@ -112,6 +116,12 @@
                                         @onclick="() => ShowEditar(u)" title="Editar">
                                     <i class="bi bi-pencil"></i>
                                 </button>
+                                <AuthorizeView Roles="Admin">
+                                    <button class="btn btn-outline-warning btn-sm me-1"
+                                            @onclick="() => ShowResetPassword(u)" title="Resetear Contraseña">
+                                        <i class="bi bi-key"></i>
+                                    </button>
+                                </AuthorizeView>
                                 <button class="btn btn-outline-danger btn-sm"
                                         @onclick="() => ConfirmDelete(u)" title="Eliminar">
                                     <i class="bi bi-trash"></i>
@@ -313,6 +323,53 @@
     </div>
 }
 
+<!-- Modal Reset Password (solo Admin) -->
+@if (_showResetPassword)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi bi-key me-2 text-warning"></i>Resetear Contraseña
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseResetPassword"></button>
+                </div>
+                <EditForm Model="_resetModel" OnValidSubmit="ResetPasswordAsync">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body">
+                        <p class="text-muted small mb-3">
+                            Usuario: <strong>@_resetUsuario?.NombreCompleto</strong>
+                            (@_resetUsuario?.NombreUsuario)
+                        </p>
+                        <div class="mb-3">
+                            <label class="form-label">Nueva Contraseña *</label>
+                            <InputText class="form-control" type="password"
+                                       @bind-Value="_resetModel.NuevaPassword"
+                                       placeholder="Mínimo 6 caracteres" />
+                            <ValidationMessage For="() => _resetModel.NuevaPassword" />
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label">Confirmar Contraseña *</label>
+                            <InputText class="form-control" type="password"
+                                       @bind-Value="_resetModel.ConfirmarPassword" />
+                            <ValidationMessage For="() => _resetModel.ConfirmarPassword" />
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary btn-sm"
+                                @onclick="CloseResetPassword">Cancelar</button>
+                        <button type="submit" class="btn btn-warning btn-sm" disabled="@_saving">
+                            @if (_saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                            <i class="bi bi-key me-1"></i>Resetear
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private List<UsuarioDto> _usuarios = new();
     private List<RolDto> _roles = new();
@@ -344,6 +401,11 @@
 
     // Delete
     private UsuarioDto? _deleteTarget;
+
+    // Reset Password
+    private bool _showResetPassword;
+    private UsuarioDto? _resetUsuario;
+    private ResetPasswordDto _resetModel = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -440,7 +502,7 @@
                 }
                 var r = await UsuarioSvc.CreateAsync(_createModel);
                 if (!r.Success) { _mensaje = r.Message; _esError = true; _saving = false; return; }
-                _mensaje = "Usuario creado."; _esError = false;
+                _mensaje = "Usuario criado."; _esError = false;
             }
             CloseForm();
             await LoadUsuariosAsync();
@@ -526,6 +588,31 @@
         catch { _mensaje = "Error de comunicacion."; _esError = true; }
         _saving = false;
     }
+
+    // ── Reset Password ──
+    private void ShowResetPassword(UsuarioDto u)
+    {
+        _resetUsuario = u;
+        _resetModel = new ResetPasswordDto();
+        _showResetPassword = true;
+    }
+
+    private async Task ResetPasswordAsync()
+    {
+        if (_resetUsuario is null) return;
+        _saving = true;
+        try
+        {
+            var r = await UsuarioSvc.ResetPasswordAsync(_resetUsuario.Id, _resetModel);
+            _mensaje = r.Success ? "Contraseña reseteada." : r.Message;
+            _esError = !r.Success;
+            if (r.Success) CloseResetPassword();
+        }
+        catch { _mensaje = "Error de comunicacion."; _esError = true; }
+        _saving = false;
+    }
+
+    private void CloseResetPassword() { _showResetPassword = false; _resetUsuario = null; }
 
     public void Dispose()
     {

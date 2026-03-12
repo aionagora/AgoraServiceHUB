@@ -99,4 +99,18 @@ public class UsuariosController : ControllerBase
 
         return Ok(ApiResponse<bool>.Ok(true, "Usuario removido de la empresa."));
     }
+
+    /// <summary>
+    /// Resetea la contraseña de cualquier usuario. Solo Admin.
+    /// </summary>
+    [HttpPut("{id:int}/reset-password")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> ResetPassword(int id, [FromBody] ResetPasswordDto dto, CancellationToken ct)
+    {
+        var result = await _usuarioService.ResetPasswordAsync(id, dto, ct);
+        if (!result.IsSuccess)
+            return NotFound(ApiResponse<bool>.Fail(result.Error!));
+
+        return Ok(ApiResponse<bool>.Ok(true, "Contraseña reseteada exitosamente."));
+    }
 }
