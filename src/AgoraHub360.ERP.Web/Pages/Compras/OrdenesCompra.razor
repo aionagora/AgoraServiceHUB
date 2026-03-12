@@ -281,6 +281,28 @@
                     <button type="button" class="btn-close" @onclick="CloseModal"></button>
                 </div>
                 <div class="modal-body">
+                    @* ?? Nav-tabs ?? *@
+                    <ul class="nav nav-tabs mb-3">
+                        <li class="nav-item">
+                            <button class="nav-link @(ocModalTab == "datos" ? "active" : "")"
+                                    @onclick='() => ocModalTab = "datos"'>
+                                <i class="bi bi-card-list me-1"></i>Datos
+                            </button>
+                        </li>
+                        @if (isEditing)
+                        {
+                            <li class="nav-item">
+                                <button class="nav-link @(ocModalTab == "tareas" ? "active" : "")"
+                                        @onclick='() => ocModalTab = "tareas"'>
+                                    <i class="bi bi-check2-square me-1"></i>? Tareas
+                                </button>
+                            </li>
+                        }
+                    </ul>
+
+                    @* ?? Pestaña Datos ?? *@
+                    @if (ocModalTab == "datos")
+                    {
                     <div class="row">
                         <div class="col-md-4 mb-3">
                             <label class="form-label">Proveedor *</label>
@@ -401,7 +423,19 @@
                             </table>
                         }
                     }
+                    } @* cierre if (ocModalTab == "datos") *@
+
+                    @* ?? Pestaña Tareas (solo en edición) ?? *@
+                    @if (ocModalTab == "tareas" && isEditing)
+                    {
+                        var ocEstado = ordenes.FirstOrDefault(o => o.OrdenCompraId == editingOcId)?.Estado ?? "";
+                        <TareasTab EntityType="OrdenCompra"
+                                   EntityId="@((int)editingOcId)"
+                                   IsReadOnly="@(ocEstado == "Cerrado" || ocEstado == "Anulado")"
+                                   OnTareaCompletada="LoadData" />
+                    }
                 </div>
+
                 <div class="modal-footer">
                     <button class="btn btn-secondary" @onclick="CloseModal">Cancelar</button>
                     <button class="btn btn-primary" @onclick="SaveOrden" disabled="@(saving || formProveedorId == 0 || formAlmacenId == 0 || (!isEditing && tempLineas.Count == 0))">
@@ -482,6 +516,7 @@
     private bool showModal;
     private bool isEditing;
     private long editingOcId;
+    private string ocModalTab = "datos";   // "datos" | "tareas"
     private int formProveedorId;
     private int formAlmacenId;
     private DateTime formFechaEmision = DateTime.Today;
@@ -548,6 +583,7 @@
     private void ShowCreateModal()
     {
         isEditing = false; editingOcId = 0;
+        ocModalTab = "datos";
         formProveedorId = proveedores.FirstOrDefault()?.Id ?? 0;
         formAlmacenId = almacenes.FirstOrDefault()?.Id ?? 0;
         formFechaEmision = DateTime.Today;
@@ -561,6 +597,7 @@
     private void ShowEditModal(OrdenCompraDto oc)
     {
         isEditing = true; editingOcId = oc.OrdenCompraId;
+        ocModalTab = "datos";
         formProveedorId = oc.ProveedorId;
         formAlmacenId = oc.AlmacenDestinoId;
         formFechaEmision = oc.FechaEmision;

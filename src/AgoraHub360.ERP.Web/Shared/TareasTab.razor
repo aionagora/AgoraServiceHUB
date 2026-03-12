@@ -1,0 +1,612 @@
+@inject IWorkflowClientService WorkflowService
+@inject EmpresaStateService EmpresaState
+
+@* ????????????????????????????????????????????????????????????????????????????
+   TareasTab — Componente de hitos de workflow para cualquier documento ERP.
+   Uso:  <TareasTab EntityType="OrdenPedido" EntityId="@id" SubTipo="IMPORTACION" />
+   ???????????????????????????????????????????????????????????????????????????? *@
+
+@* ?? CSS del componente ?????????????????????????????????????????????????????? *@
+<style>
+    .wf-card {
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.06);
+        border: 1px solid #e5e7eb;
+        overflow: hidden;
+    }
+
+    .wf-header {
+        background: #F1F5F9;
+        padding: .6rem 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .wf-header-title {
+        font-family: 'Syne', Arial, sans-serif;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        color: #64748B;
+    }
+
+    .wf-progress-bar {
+        height: 6px;
+        border-radius: 3px;
+        background: #e5e7eb;
+        overflow: hidden;
+        min-width: 80px;
+    }
+
+    .wf-progress-fill {
+        height: 100%;
+        border-radius: 3px;
+        background: linear-gradient(90deg, #6366f1, #8b5cf6);
+        transition: width .4s ease;
+    }
+
+    .wf-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: Arial, sans-serif;
+        font-size: .83rem;
+    }
+
+    .wf-table thead th {
+        font-family: 'Syne', Arial, sans-serif;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        color: #64748B;
+        background: #F8FAFC;
+        padding: .45rem .75rem;
+        border-bottom: 1px solid #e5e7eb;
+        white-space: nowrap;
+    }
+
+    .wf-table tbody tr {
+        border-bottom: 1px solid #f1f5f9;
+        transition: background .12s;
+        cursor: grab;
+    }
+    .wf-table tbody tr:hover { filter: brightness(.97); }
+    .wf-table tbody tr.dragging { opacity: .4; }
+
+    .wf-table td {
+        padding: .4rem .75rem;
+        vertical-align: middle;
+    }
+
+    /* Estados */
+    .wf-row-pendiente   { background: #FFFFFF; }
+    .wf-row-en_proceso  { background: #DBEAFE; }
+    .wf-row-completado  { background: #D1FAE5; }
+    .wf-row-bloqueado   { background: #FEE2E2; }
+    .wf-row-completado .wf-desc { text-decoration: line-through; color: #6b7280; }
+
+    .wf-code {
+        font-family: 'JetBrains Mono', 'Consolas', monospace;
+        font-size: .75rem;
+        font-weight: 600;
+        color: #4f46e5;
+        white-space: nowrap;
+    }
+
+    .wf-date {
+        font-family: 'JetBrains Mono', 'Consolas', monospace;
+        font-size: .78rem;
+        color: #374151;
+        white-space: nowrap;
+    }
+
+    .wf-orden {
+        font-family: 'JetBrains Mono', 'Consolas', monospace;
+        font-size: .75rem;
+        color: #9ca3af;
+        text-align: center;
+    }
+
+    .wf-badge {
+        font-size: .68rem;
+        font-weight: 600;
+        padding: .15rem .45rem;
+        border-radius: 4px;
+        white-space: nowrap;
+    }
+    .wf-badge-pendiente   { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
+    .wf-badge-en_proceso  { background: #dbeafe; color: #1d4ed8; }
+    .wf-badge-completado  { background: #d1fae5; color: #065f46; }
+    .wf-badge-bloqueado   { background: #fee2e2; color: #991b1b; }
+
+    .wf-checkbox { cursor: pointer; width: 16px, height, 16px, accent-color: #6366f1; }
+
+    .wf-btn-icon {
+        border: none;
+        background: transparent;
+        padding: .15rem .3rem;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: .85rem;
+        line-height: 1;
+        transition: background .12s;
+    }
+    .wf-btn-icon:hover { background: rgba(0,0,0,.07); }
+    .wf-btn-icon.save  { color: #065f46; }
+    .wf-btn-icon.cancel { color: #991b1b; }
+
+    .wf-inline-input {
+        border: 1px solid #a5b4fc;
+        border-radius: 4px;
+        padding: .15rem .35rem;
+        font-size: .82rem;
+        width: 100%;
+        outline: none;
+    }
+    .wf-inline-input:focus { border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,.15); }
+
+    .wf-empty {
+        text-align: center;
+        padding: 2.5rem 1rem;
+        color: #9ca3af;
+    }
+
+    .wf-spinner { width: 1.4rem; height: 1.4rem; }
+</style>
+
+@* ?? Cuerpo del componente ??????????????????????????????????????????????????? *@
+<div class="wf-card">
+
+    @* ?? BARRA DE RESUMEN ??????????????????????????????????????????????????? *@
+    <div class="wf-header">
+        <span class="wf-header-title">
+            <i class="bi bi-diagram-3 me-1"></i> Hitos del Workflow
+        </span>
+
+        @if (resumen is not null)
+        {
+            <div class="d-flex align-items-center gap-3">
+                @* Contadores *@
+                <div class="d-flex gap-2 align-items-center" style="font-size:.78rem">
+                    <span class="wf-badge wf-badge-completado">? @resumen.Completadas</span>
+                    <span class="wf-badge wf-badge-pendiente">? @resumen.Pendientes</span>
+                    @if (resumen.Bloqueadas > 0)
+                    {
+                        <span class="wf-badge wf-badge-bloqueado">? @resumen.Bloqueadas</span>
+                    }
+                    <span style="color:#64748b;font-size:.75rem">/ @resumen.TotalTareas</span>
+                </div>
+
+                @* Barra de progreso *@
+                <div class="d-flex align-items-center gap-1">
+                    <div class="wf-progress-bar" style="width:90px">
+                        <div class="wf-progress-fill" style="width:@(resumen.PorcentajeAvance)%"></div>
+                    </div>
+                    <span style="font-size:.75rem;color:#4f46e5;font-weight:600;min-width:34px">
+                        @resumen.PorcentajeAvance%
+                    </span>
+                </div>
+
+                @* Próxima fecha *@
+                @if (resumen.ProximaFechaVencimiento.HasValue)
+                {
+                    <span style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:#b45309">
+                        <i class="bi bi-calendar-event me-1"></i>@resumen.ProximaFechaVencimiento.Value.ToString("dd/MM/yy")
+                    </span>
+                }
+            </div>
+        }
+        else if (loading)
+        {
+            <div class="spinner-border spinner-border-sm wf-spinner text-secondary" role="status"></div>
+        }
+    </div>
+
+    @* ?? LOADING ???????????????????????????????????????????????????????????? *@
+    @if (loading)
+    {
+        <div class="text-center py-4">
+            <div class="spinner-border wf-spinner text-primary" role="status"></div>
+            <div class="mt-2 text-muted" style="font-size:.82rem">Cargando hitos...</div>
+        </div>
+    }
+
+    @* ?? GENERAR HITOS (sin tareas y modo editable) ????????????????????????? *@
+    else if (tareas.Count == 0 && !IsReadOnly)
+    {
+        <div class="wf-empty">
+            <i class="bi bi-diagram-3 mb-2 d-block" style="font-size:2rem;color:#a5b4fc"></i>
+            <p class="mb-3">No hay hitos configurados para este documento.</p>
+            <button class="btn btn-sm btn-primary" @onclick="GenerarHitosAsync" disabled="@generandoHitos">
+                @if (generandoHitos)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                else
+                {
+                    <i class="bi bi-magic me-1"></i>
+                }
+                Generar hitos automáticos
+            </button>
+            @if (!string.IsNullOrEmpty(errorMsg))
+            {
+                <div class="alert alert-danger mt-2 py-1 px-2" style="font-size:.8rem">@errorMsg</div>
+            }
+        </div>
+    }
+
+    @* ?? TABLA DE HITOS ????????????????????????????????????????????????????? *@
+    else if (tareas.Count > 0)
+    {
+        <div style="overflow-x:auto">
+            <table class="wf-table">
+                <thead>
+                    <tr>
+                        <th style="width:36px">#</th>
+                        <th style="width:90px">Código</th>
+                        <th>Descripción</th>
+                        <th style="width:96px">F.Plan</th>
+                        <th style="width:96px">F.Real</th>
+                        <th style="width:110px">Estado</th>
+                        <th style="width:110px">Responsable</th>
+                        @if (!IsReadOnly)
+                        {
+                            <th style="width:28px">?</th>
+                            <th style="width:72px"></th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var t in tareas.OrderBy(x => x.Orden))
+                    {
+                        var rowClass = GetRowClass(t.Estado);
+                        var isEditing = editandoId == t.Id;
+
+                        <tr class="@rowClass @(dragItem?.Id == t.Id ? "dragging" : "")"
+                            draggable="@(!IsReadOnly && t.Estado == "PENDIENTE" ? "true" : "false")"
+                            @ondragstart="() => OnDragStart(t)"
+                            @ondragover:preventDefault="true"
+                            @ondrop="() => OnDrop(t)"
+                            @ondblclick="() => { if (!IsReadOnly) StartEdit(t); }">
+
+                            @* Orden *@
+                            <td class="wf-orden">@t.Orden</td>
+
+                            @* Código *@
+                            <td><span class="wf-code">@t.Codigo</span></td>
+
+                            @* Descripción *@
+                            <td>
+                                @if (isEditing)
+                                {
+                                    <input class="wf-inline-input" @bind="editDescripcion" />
+                                }
+                                else
+                                {
+                                    <span class="wf-desc">@t.Descripcion</span>
+                                }
+                            </td>
+
+                            @* Fecha Plan *@
+                            <td>
+                                @if (isEditing)
+                                {
+                                    <input type="date" class="wf-inline-input"
+                                           value="@(editFechaPlan?.ToString("yyyy-MM-dd"))"
+                                           @onchange="e => editFechaPlan = ParseDate(e.Value?.ToString())" />
+                                }
+                                else
+                                {
+                                    <span class="wf-date">@t.FechaPlan?.ToString("dd/MM/yy")</span>
+                                }
+                            </td>
+
+                            @* Fecha Real *@
+                            <td>
+                                @if (isEditing)
+                                {
+                                    <input type="date" class="wf-inline-input"
+                                           value="@(editFechaReal?.ToString("yyyy-MM-dd"))"
+                                           @onchange="e => editFechaReal = ParseDate(e.Value?.ToString())" />
+                                }
+                                else
+                                {
+                                    <span class="wf-date">@t.FechaReal?.ToString("dd/MM/yy")</span>
+                                }
+                            </td>
+
+                            @* Estado *@
+                            <td>
+                                @if (isEditing)
+                                {
+                                    <select class="wf-inline-input" @bind="editEstado">
+                                        <option value="PENDIENTE">Pendiente</option>
+                                        <option value="EN_PROCESO">En Proceso</option>
+                                        <option value="COMPLETADO">Completado</option>
+                                        <option value="BLOQUEADO">Bloqueado</option>
+                                    </select>
+                                }
+                                else
+                                {
+                                    <span class="wf-badge @GetBadgeClass(t.Estado)">@GetEstadoLabel(t.Estado)</span>
+                                }
+                            </td>
+
+                            @* Responsable *@
+                            <td>
+                                @if (isEditing)
+                                {
+                                    <input class="wf-inline-input" @bind="editResponsable" />
+                                }
+                                else
+                                {
+                                    <span style="font-size:.78rem;color:#64748b">@t.Responsable</span>
+                                }
+                            </td>
+
+                            @* Checkbox completar *@
+                            @if (!IsReadOnly)
+                            {
+                                <td>
+                                    <input type="checkbox"
+                                           class="wf-checkbox"
+                                           checked="@t.Completado"
+                                           disabled="@(t.Completado || isEditing)"
+                                           @onchange="() => CompletarTareaAsync(t)" />
+                                </td>
+
+                                @* Botones edición *@
+                                <td>
+                                    @if (isEditing)
+                                    {
+                                        <button class="wf-btn-icon save" title="Guardar" @onclick="() => SaveEditAsync(t)">
+                                            <i class="bi bi-check-lg"></i>
+                                        </button>
+                                        <button class="wf-btn-icon cancel" title="Cancelar" @onclick="CancelEdit">
+                                            <i class="bi bi-x-lg"></i>
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button class="wf-btn-icon" title="Editar (doble clic)" @onclick="() => StartEdit(t)">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMsg))
+        {
+            <div class="alert alert-danger m-2 py-1 px-2" style="font-size:.8rem">
+                <i class="bi bi-exclamation-triangle me-1"></i>@errorMsg
+            </div>
+        }
+    }
+
+    @* ?? SIN TAREAS (modo ReadOnly) ????????????????????????????????????????? *@
+    else
+    {
+        <div class="wf-empty">
+            <i class="bi bi-check2-all d-block mb-1" style="font-size:1.8rem;color:#d1fae5"></i>
+            Sin hitos registrados.
+        </div>
+    }
+</div>
+
+@code {
+    // ?? Parámetros ????????????????????????????????????????????????????????????
+
+    [Parameter, EditorRequired] public string EntityType { get; set; } = string.Empty;
+    [Parameter, EditorRequired] public int EntityId { get; set; }
+    [Parameter] public string? SubTipo { get; set; }
+    [Parameter] public bool IsReadOnly { get; set; } = false;
+    [Parameter] public EventCallback OnTareaCompletada { get; set; }
+
+    // ?? Estado interno ????????????????????????????????????????????????????????
+
+    private List<TareaDto> tareas     = new();
+    private TareaResumenDto? resumen;
+    private bool loading              = true;
+    private bool generandoHitos       = false;
+    private string? errorMsg;
+
+    // Edición inline
+    private int?    editandoId        = null;
+    private string  editDescripcion   = string.Empty;
+    private DateOnly? editFechaPlan;
+    private DateOnly? editFechaReal;
+    private string  editEstado        = string.Empty;
+    private string? editResponsable;
+
+    // Drag & drop
+    private TareaDto? dragItem;
+
+    // ?? Ciclo de vida ?????????????????????????????????????????????????????????
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (EntityId > 0 && !string.IsNullOrEmpty(EntityType))
+            await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        loading  = true;
+        errorMsg = null;
+        try
+        {
+            tareas  = await WorkflowService.GetByEntityAsync(EntityType, EntityId);
+            resumen = await WorkflowService.GetResumenAsync(EntityType, EntityId);
+        }
+        catch (Exception ex)
+        {
+            errorMsg = $"Error al cargar hitos: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    // ?? Acciones ??????????????????????????????????????????????????????????????
+
+    private async Task GenerarHitosAsync()
+    {
+        generandoHitos = true;
+        errorMsg       = null;
+        try
+        {
+            var empresaId = EmpresaState.EmpresaActivaId ?? 0;
+            await WorkflowService.GenerarHitosAsync(new GenerarHitosDto
+            {
+                EntityType = EntityType,
+                EntityId   = EntityId,
+                EmpresaId  = empresaId,
+                SubTipo    = SubTipo,
+            });
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMsg = $"Error al generar hitos: {ex.Message}";
+        }
+        finally
+        {
+            generandoHitos = false;
+        }
+    }
+
+    private async Task CompletarTareaAsync(TareaDto tarea)
+    {
+        errorMsg = null;
+        var updated = await WorkflowService.CompletarAsync(new CompletarTareaDto
+        {
+            TareaId   = tarea.Id,
+            FechaReal = DateOnly.FromDateTime(DateTime.Today),
+        });
+
+        if (updated is null)
+        {
+            errorMsg = "No se pudo completar la tarea. Inténtalo de nuevo.";
+            return;
+        }
+
+        var idx = tareas.FindIndex(t => t.Id == tarea.Id);
+        if (idx >= 0) tareas[idx] = updated;
+        resumen = await WorkflowService.GetResumenAsync(EntityType, EntityId);
+
+        if (OnTareaCompletada.HasDelegate)
+            await OnTareaCompletada.InvokeAsync();
+    }
+
+    // ?? Edición inline ????????????????????????????????????????????????????????
+
+    private void StartEdit(TareaDto t)
+    {
+        editandoId      = t.Id;
+        editDescripcion = t.Descripcion;
+        editFechaPlan   = t.FechaPlan;
+        editFechaReal   = t.FechaReal;
+        editEstado      = t.Estado;
+        editResponsable = t.Responsable;
+    }
+
+    private void CancelEdit() => editandoId = null;
+
+    private async Task SaveEditAsync(TareaDto t)
+    {
+        errorMsg = null;
+        var dto = new TareaUpdateDto
+        {
+            Descripcion = editDescripcion,
+            FechaPlan   = editFechaPlan,
+            FechaReal   = editFechaReal,
+            Estado      = editEstado,
+            Responsable = editResponsable,
+        };
+
+        var updated = await WorkflowService.UpdateAsync(t.Id, dto);
+        if (updated is null)
+        {
+            errorMsg = "No se pudo guardar los cambios. Inténtalo de nuevo.";
+            return;
+        }
+
+        var idx = tareas.FindIndex(x => x.Id == t.Id);
+        if (idx >= 0) tareas[idx] = updated;
+        editandoId = null;
+        resumen = await WorkflowService.GetResumenAsync(EntityType, EntityId);
+    }
+
+    // ?? Drag & drop ???????????????????????????????????????????????????????????
+
+    private void OnDragStart(TareaDto t) => dragItem = t;
+
+    private async Task OnDrop(TareaDto target)
+    {
+        if (dragItem is null || dragItem.Id == target.Id) return;
+        if (dragItem.Estado != "PENDIENTE") return;
+
+        var srcOrden = dragItem.Orden;
+        var dstOrden = target.Orden;
+
+        var srcIdx = tareas.FindIndex(t => t.Id == dragItem.Id);
+        var dstIdx = tareas.FindIndex(t => t.Id == target.Id);
+        if (srcIdx < 0 || dstIdx < 0) return;
+
+        tareas[srcIdx].Orden = dstOrden;
+        tareas[dstIdx].Orden = srcOrden;
+
+        errorMsg = null;
+        await WorkflowService.ReordenarAsync(new ReordenarTareasDto
+        {
+            Items = tareas.Select(t => new TareaOrdenItem
+            {
+                TareaId    = t.Id,
+                NuevoOrden = t.Orden,
+            }).ToList()
+        });
+
+        dragItem = null;
+    }
+
+    // ?? Helpers ???????????????????????????????????????????????????????????????
+
+    private static string GetRowClass(string estado) => estado.ToUpperInvariant() switch
+    {
+        "PENDIENTE"  => "wf-row-pendiente",
+        "EN_PROCESO" => "wf-row-en_proceso",
+        "COMPLETADO" => "wf-row-completado",
+        "BLOQUEADO"  => "wf-row-bloqueado",
+        _            => "wf-row-pendiente",
+    };
+
+    private static string GetBadgeClass(string estado) => estado.ToUpperInvariant() switch
+    {
+        "PENDIENTE"  => "wf-badge-pendiente",
+        "EN_PROCESO" => "wf-badge-en_proceso",
+        "COMPLETADO" => "wf-badge-completado",
+        "BLOQUEADO"  => "wf-badge-bloqueado",
+        _            => "wf-badge-pendiente",
+    };
+
+    private static string GetEstadoLabel(string estado) => estado.ToUpperInvariant() switch
+    {
+        "PENDIENTE"  => "Pendiente",
+        "EN_PROCESO" => "En Proceso",
+        "COMPLETADO" => "Completado",
+        "BLOQUEADO"  => "Bloqueado",
+        _            => estado,
+    };
+
+    private static DateOnly? ParseDate(string? value)
+        => DateOnly.TryParse(value, out var d) ? d : null;
+}

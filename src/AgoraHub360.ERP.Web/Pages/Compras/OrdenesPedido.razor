@@ -4,6 +4,7 @@
 @inject AlmacenHttpService AlmacenService
 @inject MdmCompanyProductHttpService CompanyProductService
 @inject AuthenticationStateProvider AuthStateProvider
+@inject HojaRutaHttpService HrService
 
 <PageTitle>Órdenes de Pedido - AgoraHub360 ERP</PageTitle>
 
@@ -251,6 +252,43 @@
                     {
                         <div class="alert alert-danger py-2">@modalError</div>
                     }
+
+                    @* ?? Nav-tabs ?? *@
+                    <ul class="nav nav-tabs mb-3">
+                        <li class="nav-item">
+                            <button class="nav-link @(opModalTab == "datos" ? "active" : "")"
+                                    @onclick='() => opModalTab = "datos"'>
+                                <i class="bi bi-card-list me-1"></i>Datos
+                            </button>
+                        </li>
+                        @if (isEditing)
+                        {
+                            <li class="nav-item">
+                                <button class="nav-link @(opModalTab == "tareas" ? "active" : "")"
+                                        @onclick='() => opModalTab = "tareas"'>
+                                    <i class="bi bi-check2-square me-1"></i>Tareas
+                                </button>
+                            </li>
+                            <li class="nav-item">
+                                <button class="nav-link @(opModalTab == "hoja-ruta" ? "active" : "")"
+                                        @onclick="SwitchToHojaRuta">
+                                    <i class="bi bi-map me-1"></i>Hoja de Ruta
+                                    @if (hrLoading)
+                                    {
+                                        <span class="spinner-border spinner-border-sm ms-1" style="width:.7rem;height:.7rem"></span>
+                                    }
+                                    else if (hojasRuta.Count > 0)
+                                    {
+                                        <span class="badge bg-primary ms-1" style="font-size:.65rem">@hojasRuta.Count</span>
+                                    }
+                                </button>
+                            </li>
+                        }
+                    </ul>
+
+                    @* ?? Pestaña Datos ?? *@
+                    @if (opModalTab == "datos")
+                    {
                     <div class="row g-3">
                         <div class="col-md-3">
                             <label class="form-label">Fecha Emisión <span class="text-danger">*</span></label>
@@ -340,7 +378,7 @@
                                         </td>
                                         <td>
                                             <input type="text" class="form-control form-control-sm" style="width:80px"
-                                                   value="@tempLineas[idx].UnidadMedida"
+                                                   value="@tempLineas[idx]. UnidadMedida"
                                                    @onchange="e => { tempLineas[idx] = tempLineas[idx] with { UnidadMedida = e.Value?.ToString() ?? string.Empty }; }" />
                                         </td>
                                         <td>
@@ -363,12 +401,275 @@
                             </tbody>
                         </table>
                     }
+                    } @* fin pestaña datos *@
+
+                    @* ?? Pestaña Tareas (solo en edición) ?? *@
+                    @if (opModalTab == "tareas" && isEditing)
+                    {
+                        var opDto    = pedidos.FirstOrDefault(o => o.OrdenPedidoId == editingOpId);
+                        var opEstado = opDto?.Estado ?? "";
+                        <TareasTab EntityType="OrdenPedido"
+                                   EntityId="@((int)editingOpId)"
+                                   IsReadOnly="@(opEstado is "Cerrado" or "Anulado" or "Rechazado")"
+                                   OnTareaCompletada="LoadData" />
+                    }
+                    @* ?? Pestaña Hoja de Ruta (solo en edición) ?? *@
+                    @if (opModalTab == "hoja-ruta" && isEditing)
+                    {
+                        @if (hrLoading)
+                        {
+                            <div class="text-center py-4">
+                                <div class="spinner-border text-primary"></div>
+                                <p class="mt-2 text-muted small">Cargando hojas de ruta...</p>
+                            </div>
+                        }
+                        else
+                        {
+                            @* ?? Botón crear HR vinculada ?? *@
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="text-muted small">
+                                    Hojas de ruta vinculadas a esta orden de pedido
+                                </span>
+                                <button class="btn btn-sm btn-outline-primary"
+                                        @onclick="ShowCrearHrModal"
+                                        disabled="@hrSaving">
+                                    <i class="bi bi-plus-circle me-1"></i>Nueva Hoja de Ruta
+                                </button>
+                            </div>
+
+                            @if (!string.IsNullOrEmpty(hrError))
+                            {
+                                <div class="alert alert-danger py-2 small">@hrError</div>
+                            }
+
+                            @if (hojasRuta.Count == 0)
+                            {
+                                <div class="text-center py-4">
+                                    <i class="bi bi-map" style="font-size:2rem;color:#9ca3af"></i>
+                                    <p class="text-muted mt-2 small">No hay hojas de ruta vinculadas a este pedido.</p>
+                                </div>
+                            }
+                            else
+                            {
+                                @foreach (var hr in hojasRuta)
+                                {
+                                    <div class="card mb-3 border">
+                                        @* ?? Cabecera de la HR ?? *@
+                                        <div class="card-header d-flex justify-content-between align-items-center py-2">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <i class="bi bi-map-fill text-primary"></i>
+                                                <strong>@hr.NumeroHojaRuta</strong>
+                                                <span class="badge @HrEstadoBadge(hr.Estado)">@hr.Estado</span>
+                                                <span class="badge bg-secondary" style="font-size:.65rem">@hr.SubEstado</span>
+                                            </div>
+                                            <div class="d-flex gap-1">
+                                                <a href="/logistica/hojas-ruta" class="btn btn-xs btn-outline-secondary p-0 px-1"
+                                                   title="Ver en módulo Logística">
+                                                    <i class="bi bi-box-arrow-up-right"></i>
+                                                </a>
+                                                @if (hr.Estado == "BORRADOR")
+                                                {
+                                                    <button class="btn btn-xs btn-outline-danger p-0 px-1"
+                                                            @onclick="() => ConfirmDeleteHr(hr)"
+                                                            title="Eliminar">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                }
+                                            </div>
+                                        </div>
+
+                                        @* ?? Datos de la HR ?? *@
+                                        <div class="card-body py-2 px-3">
+                                            <div class="row g-2" style="font-size:.82rem">
+                                                <div class="col-md-3">
+                                                    <span class="text-muted">Tipo:</span>
+                                                    <strong>@hr.TipoOP / @hr.SubTipo</strong>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <span class="text-muted">Fecha Doc.:</span>
+                                                    <strong>@hr.FechaDocumento.ToString("dd/MM/yyyy")</strong>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <span class="text-muted">ETA:</span>
+                                                    <strong>@(hr.ETA?.ToString("dd/MM/yyyy") ?? "—")</strong>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <span class="text-muted">Responsable:</span>
+                                                    <strong>@hr.ResponsableUsuario</strong>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <span class="text-muted">Almacén Origen:</span>
+                                                    <strong>@(hr.AlmacenOrigenNombre ?? "—")</strong>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <span class="text-muted">Almacén Destino:</span>
+                                                    <strong>@(hr.AlmacenDestinoNombre ?? "—")</strong>
+                                                </div>
+                                                @if (!string.IsNullOrEmpty(hr.ProveedorCliente))
+                                                {
+                                                    <div class="col-md-6">
+                                                        <span class="text-muted">Proveedor/Cliente:</span>
+                                                        <strong>@hr.ProveedorCliente</strong>
+                                                    </div>
+                                                }
+                                                @if (!string.IsNullOrEmpty(hr.Observaciones))
+                                                {
+                                                    <div class="col-12">
+                                                        <span class="text-muted">Obs.:</span> @hr.Observaciones
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+
+                                        @* ?? Historial de estados ?? *@
+                                        @if (hr.Historial.Count > 0)
+                                        {
+                                            <div class="card-footer py-1 px-3 bg-light">
+                                                <small class="text-muted fw-semibold">Historial de estados</small>
+                                                <div class="d-flex flex-wrap gap-1 mt-1">
+                                                    @foreach (var h in hr.Historial.OrderBy(x => x.FechaCambio))
+                                                    {
+                                                        <span class="badge bg-light text-dark border" style="font-size:.65rem">
+                                                            @h.FechaCambio.ToString("dd/MM HH:mm") — @h.EstadoNuevo / @h.SubEstadoNuevo
+                                                            @if (!string.IsNullOrEmpty(h.Observaciones))
+                                                            {
+                                                                <span class="ms-1 text-muted"">(@h.Observaciones)</span>
+                                                            }
+                                                        </span>
+                                                    }
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            }
+                        }
+                    }
                 </div>
                 <div class="modal-footer">
                     <button class="btn btn-secondary" @onclick="CloseModal" disabled="@saving">Cancelar</button>
                     <button class="btn btn-primary" @onclick="SavePedido" disabled="@saving">
                         @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
                         @(isEditing ? "Guardar Cambios" : "Crear Pedido")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* ?? Modal: Crear Hoja de Ruta vinculada ?? *@
+@if (showCrearHrModal)
+{
+    <div class="modal fade show d-block" style="background:rgba(0,0,0,.6);z-index:1060">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-map-fill me-1"></i>Nueva Hoja de Ruta</h5>
+                    <button type="button" class="btn-close" @onclick="() => showCrearHrModal = false"></button>
+                </div>
+                <div class="modal-body">
+                    @if (!string.IsNullOrEmpty(hrError))
+                    {
+                        <div class="alert alert-danger py-2">@hrError</div>
+                    }
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Tipo <span class="text-danger">*</span></label>
+                            <select class="form-select" @bind="hrFormTipoOP">
+                                <option value="INTERNA">INTERNA</option>
+                                <option value="CLIENTE">CLIENTE</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Sub-tipo <span class="text-danger">*</span></label>
+                            <select class="form-select" @bind="hrFormSubTipo">
+                                @if (hrFormTipoOP == "INTERNA")
+                                {
+                                    <option value="IMPORTACION">IMPORTACION</option>
+                                    <option value="TRASPASO_INTERNO">TRASPASO_INTERNO</option>
+                                    <option value="DEVOLUCION">DEVOLUCION</option>
+                                    <option value="AJUSTE">AJUSTE</option>
+                                }
+                                else
+                                {
+                                    <option value="ENTREGA">ENTREGA</option>
+                                    <option value="RECOJO">RECOJO</option>
+                                    <option value="DEVOLUCION_CLI">DEVOLUCION_CLI</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Almacén Origen <span class="text-danger">*</span></label>
+                            <select class="form-select" @bind="hrFormAlmacenOrigen">
+                                <option value="0">— Seleccionar —</option>
+                                @foreach (var a in almacenes)
+                                {
+                                    <option value="@a.Id">@a.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Almacén Destino</label>
+                            <select class="form-select" @bind="hrFormAlmacenDestino">
+                                <option value="0">— Ninguno —</option>
+                                @foreach (var a in almacenes)
+                                {
+                                    <option value="@a.Id">@a.Nombre</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Fecha Documento <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" @bind="hrFormFechaDocumento" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">ETA</label>
+                            <input type="date" class="form-control" @bind="hrFormETA" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Proveedor / Cliente</label>
+                            <input class="form-control" @bind="hrFormProveedorCliente" placeholder="Nombre del proveedor o cliente" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Observaciones</label>
+                            <input class="form-control" @bind="hrFormObservaciones" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="() => showCrearHrModal = false" disabled="@hrSaving">Cancelar</button>
+                    <button class="btn btn-primary" @onclick="SaveCrearHr" disabled="@hrSaving">
+                        @if (hrSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        Crear Hoja de Ruta
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* ?? Modal: Confirmar eliminar HR ?? *@
+@if (hrAEliminar is not null)
+{
+    <div class="modal fade show d-block" style="background:rgba(0,0,0,.6);z-index:1060">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-trash text-danger me-1"></i>Eliminar Hoja de Ruta</h5>
+                    <button type="button" class="btn-close" @onclick="() => hrAEliminar = null"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Eliminar <strong>@hrAEliminar.NumeroHojaRuta</strong>?</p>
+                    <div class="alert alert-warning py-2 small">
+                        Solo se pueden eliminar hojas de ruta en estado <strong>BORRADOR</strong>.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="() => hrAEliminar = null" disabled="@hrSaving">Cancelar</button>
+                    <button class="btn btn-danger" @onclick="ExecuteDeleteHr" disabled="@hrSaving">
+                        @if (hrSaving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        Eliminar
                     </button>
                 </div>
             </div>
@@ -534,6 +835,7 @@
     private bool showFormModal;
     private bool isEditing;
     private long editingOpId;
+    private string opModalTab = "datos";   // "datos" | "tareas"
     private DateTime formFechaEmision = DateTime.Today;
     private DateTime? formFechaRequerida;
     private string formSolicitanteNombre = "";
@@ -555,6 +857,24 @@
     private bool aprobando;
     private string? motivoRechazo;
 
+    // ?? Hoja de ruta ????????????????????????????????????????????????????????
+    private bool hrLoading;
+    private bool hrSaving;
+    private string? hrError;
+    private List<HojaRutaDto> hojasRuta = new();
+    private HojaRutaDto? hrAEliminar;
+
+    // Campos form nueva HR
+    private bool showCrearHrModal;
+    private string hrFormTipoOP      = "INTERNA";
+    private string hrFormSubTipo     = "IMPORTACION";
+    private int    hrFormAlmacenOrigen;
+    private int    hrFormAlmacenDestino;   // 0 = ninguno
+    private string? hrFormProveedorCliente;
+    private DateTime hrFormFechaDocumento = DateTime.Today;
+    private DateTime? hrFormETA;
+    private string? hrFormObservaciones;
+
     // ?? Init ?????????????????????????????????????????????????????????????????
     protected override async Task OnInitializedAsync()
     {
@@ -571,10 +891,12 @@
     private async Task LoadData()
     {
         loading = true;
+        StateHasChanged();
         pedidos = await OpService.GetAllAsync(
             string.IsNullOrEmpty(filtroEstado) ? null : filtroEstado,
             filtroDesde, filtroHasta);
         loading = false;
+        StateHasChanged();
     }
 
     private void ToggleDetail(long id) =>
@@ -585,6 +907,7 @@
     {
         isEditing = false;
         editingOpId = 0;
+        opModalTab = "datos";
         formFechaEmision = DateTime.Today;
         formFechaRequerida = null;
         formSolicitanteNombre = _currentUserName;
@@ -601,6 +924,7 @@
     {
         isEditing = true;
         editingOpId = op.OrdenPedidoId;
+        opModalTab = "datos";
         formFechaEmision = op.FechaEmision;
         formFechaRequerida = op.FechaRequerida;
         formSolicitanteNombre = op.SolicitanteNombre;
@@ -611,6 +935,8 @@
         tempLineas = op.Lineas.Select(l => new CreateOrdenPedidoLineaDto(
             l.CompanyProductId, l.Descripcion, l.UnidadMedida, l.CantidadSolicitada, l.Notas)).ToList();
         modalError = null;
+        hojasRuta  = new();
+        hrError    = null;
         showFormModal = true;
     }
 
@@ -647,6 +973,28 @@
         showStockModal = false;
         showAprobarModal = false;
         selectedOp = null;
+    }
+
+    private async Task SwitchToHojaRuta()
+    {
+        opModalTab = "hoja-ruta";
+        hrLoading  = true;
+        hrError    = null;
+        StateHasChanged();
+        try
+        {
+            hojasRuta = await HrService.GetByOrdenPedidoAsync(editingOpId);
+        }
+        catch
+        {
+            hrError   = "Error al cargar las hojas de ruta.";
+            hojasRuta = new();
+        }
+        finally
+        {
+            hrLoading = false;
+            StateHasChanged();
+        }
     }
 
     // ?? Líneas form ??????????????????????????????????????????????????????????
@@ -694,7 +1042,22 @@
                     Observaciones: formObservaciones,
                     Lineas: tempLineas.Count > 0 ? tempLineas : null);
                 var r = await OpService.CreateAsync(dto);
-                if (r.Success) { successMessage = $"Pedido {r.Data?.Numero} creado."; CloseModal(); await LoadData(); }
+                if (r.Success)
+                {
+                    successMessage = $"Pedido {r.Data?.Numero} creado.";
+                    CloseModal();
+                    await LoadData();
+                    // Abrir el pedido recién creado en pestaña Tareas para visualizar los hitos generados
+                    if (r.Data is not null)
+                    {
+                        var nuevo = pedidos.FirstOrDefault(o => o.OrdenPedidoId == r.Data.OrdenPedidoId);
+                        if (nuevo is not null)
+                        {
+                            ShowEditModal(nuevo);
+                            opModalTab = "tareas";
+                        }
+                    }
+                }
                 else modalError = r.Message;
             }
         }
@@ -778,6 +1141,88 @@
     }
 
     // ?? Helpers ??????????????????????????????????????????????????????????????
+
+    private static string HrEstadoBadge(string estado) => estado switch
+    {
+        "BORRADOR"   => "bg-secondary",
+        "EN_PROCESO" => "bg-warning text-dark",
+        "COMPLETADO" => "bg-success",
+        "ANULADO"    => "bg-danger",
+        _            => "bg-light text-dark border"
+    };
+
+    // ?? Hojas de ruta: modal crear vinculada ???????????????????????????????????
+    private void ShowCrearHrModal()
+    {
+        hrFormTipoOP           = "INTERNA";
+        hrFormSubTipo          = "IMPORTACION";
+        hrFormAlmacenOrigen    = formAlmacenId > 0 ? formAlmacenId : 0;
+        hrFormAlmacenDestino   = 0;
+        hrFormProveedorCliente = null;
+        hrFormFechaDocumento   = DateTime.Today;
+        hrFormETA              = null;
+        hrFormObservaciones    = null;
+        hrError                = null;
+        showCrearHrModal       = true;
+    }
+
+    private void ConfirmDeleteHr(HojaRutaDto hr) => hrAEliminar = hr;
+
+    private async Task SaveCrearHr()
+    {
+        if (hrFormAlmacenOrigen == 0) { hrError = "Seleccione el almacén de origen."; return; }
+        hrSaving = true; hrError = null;
+        StateHasChanged();
+        try
+        {
+            var dto = new CreateHojaRutaDto
+            {
+                TipoOP           = hrFormTipoOP,
+                SubTipo          = hrFormSubTipo,
+                AlmacenOrigenId  = hrFormAlmacenOrigen,
+                AlmacenDestinoId = hrFormAlmacenDestino > 0 ? hrFormAlmacenDestino : null,
+                ProveedorCliente = hrFormProveedorCliente,
+                FechaDocumento   = hrFormFechaDocumento,
+                ETA              = hrFormETA,
+                Observaciones    = hrFormObservaciones,
+                OrdenPedidoId    = editingOpId,
+            };
+            var r = await HrService.CreateAsync(dto);
+            if (r.Success && r.Data is not null)
+            {
+                showCrearHrModal = false;
+                hojasRuta        = await HrService.GetByOrdenPedidoAsync(editingOpId);
+            }
+            else
+            {
+                hrError = r.Message ?? "No se pudo crear la Hoja de Ruta.";
+            }
+        }
+        catch (Exception ex) { hrError = ex.Message; }
+        finally { hrSaving = false; StateHasChanged(); }
+    }
+
+    private async Task ExecuteDeleteHr()
+    {
+        if (hrAEliminar is null) return;
+        hrSaving = true;
+        StateHasChanged();
+        try
+        {
+            var r = await HrService.DeleteAsync(hrAEliminar.HojaRutaId);
+            if (r.Success)
+                hojasRuta = await HrService.GetByOrdenPedidoAsync(editingOpId);
+            else
+                hrError = r.Message ?? "No se pudo eliminar.";
+        }
+        catch (Exception ex) { hrError = ex.Message; }
+        finally
+        {
+            hrAEliminar = null;
+            hrSaving    = false;
+            StateHasChanged();
+        }
+    }
 
     // ?? ViewModels ????????????????????????????????????????????????????????????
     private class StockLineaVm

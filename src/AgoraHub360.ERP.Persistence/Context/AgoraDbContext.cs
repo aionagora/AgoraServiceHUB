@@ -8,6 +8,8 @@ using AgoraHub360.ERP.Domain.Entities.CST;
 using AgoraHub360.ERP.Domain.Entities.DOC;
 using AgoraHub360.ERP.Domain.Entities.ACC;
 using AgoraHub360.ERP.Domain.Entities.INV;
+using AgoraHub360.ERP.Domain.Entities.LOG;
+using AgoraHub360.ERP.Domain.Entities.Workflow;
 using AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Entities.PRC;
 using AgoraHub360.ERP.Domain.Entities.RUL;
@@ -131,6 +133,14 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     public DbSet<TipoComprobante> TiposComprobante => Set<TipoComprobante>();
     public DbSet<TipoCambio> TiposCambio => Set<TipoCambio>();
     public DbSet<TipoPago> TiposPago => Set<TipoPago>();
+
+    // ── LOG: Logística ────────────────────────────────────────────────────────
+    public DbSet<HojaRuta> HojasRuta => Set<HojaRuta>();
+    public DbSet<HojaRutaHistorial> HojaRutaHistorial => Set<HojaRutaHistorial>();
+
+    // ── WF: Workflow ──────────────────────────────────────────────────────────
+    public DbSet<Tarea> Tareas => Set<Tarea>();
+    public DbSet<PlantillaTarea> PlantillasTareas => Set<PlantillaTarea>();
 
     // ── Audit ─────────────────────────────────────────────────────────────────
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
