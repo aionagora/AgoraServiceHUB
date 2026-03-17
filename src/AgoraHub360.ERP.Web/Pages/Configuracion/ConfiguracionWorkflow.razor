@@ -1,0 +1,477 @@
+﻿@page "/config/workflow"
+@attribute [Authorize(Roles = "Admin")]
+@inject IWorkflowClientService WfService
+
+<PageTitle>Configuración Workflow - AgoraHub360 ERP</PageTitle>
+
+<div class="container-fluid">
+
+    @* ?? Cabecera ?? *@
+    <div class="row mb-3">
+        <div class="col">
+            <h3><i class="bi bi-diagram-3-fill"></i> Configuración de Workflow</h3>
+            <p class="text-muted mb-0">
+                Plantillas de hitos por tipo de documento.
+                <span class="badge bg-secondary ms-1">Global</span> = sistema (solo lectura) &nbsp;
+                <span class="badge bg-primary ms-1">Empresa</span> = personalizable
+            </p>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="ShowCreateModal">
+                <i class="bi bi-plus-circle me-1"></i>Nueva Plantilla
+            </button>
+        </div>
+    </div>
+
+    @* ?? Alertas ?? *@
+    @if (!string.IsNullOrEmpty(successMsg))
+    {
+        <div class="alert alert-success alert-dismissible fade show py-2">
+            <i class="bi bi-check-circle-fill me-1"></i>@successMsg
+            <button type="button" class="btn-close" @onclick="() => successMsg = null"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(errorMsg))
+    {
+        <div class="alert alert-danger alert-dismissible fade show py-2">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>@errorMsg
+            <button type="button" class="btn-close" @onclick="() => errorMsg = null"></button>
+        </div>
+    }
+
+    @* ?? Filtros ?? *@
+    <div class="card mb-3">
+        <div class="card-body py-2">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label mb-1 small">Tipo de Documento</label>
+                    <select class="form-select form-select-sm" @bind="filtroEntityType">
+                        <option value="">Todos</option>
+                        @foreach (var et in EntityTypes)
+                        {
+                            <option value="@et">@et</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label mb-1 small">Sub-tipo</label>
+                    <input class="form-control form-control-sm" @bind="filtroSubTipo" placeholder="IMPORTACION..." />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label mb-1 small">Origen</label>
+                    <select class="form-select form-select-sm" @bind="filtroOrigen">
+                        <option value="">Todos</option>
+                        <option value="global">Solo Global</option>
+                        <option value="empresa">Solo Empresa</option>
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="LoadData">
+                        <i class="bi bi-funnel"></i> Filtrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ?? Tabla ?? *@
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center py-2">
+            <span>Plantillas <span class="badge bg-secondary ms-1">@PlantillasFiltradasList.Count</span></span>
+            <small class="text-muted">Las plantillas globales son de solo lectura. Cree plantillas de empresa para personalizarlas.</small>
+        </div>
+        <div class="card-body p-0">
+            @if (loading)
+            {
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary"></div>
+                    <p class="mt-2 text-muted">Cargando plantillas...</p>
+                </div>
+            }
+            else if (PlantillasFiltradasList.Count == 0)
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-diagram-3" style="font-size:2.5rem;color:#9ca3af"></i>
+                    <p class="text-muted mt-3">No hay plantillas con los filtros aplicados.</p>
+                </div>
+            }
+            else
+            {
+                @* Agrupa por EntityType + SubTipo para mejor lectura *@
+                @foreach (var grupo in PlantillasFiltradasList
+                    .GroupBy(p => $"{p.EntityType} / {p.SubTipo ?? "(genérico)"}")
+                    .OrderBy(g => g.Key))
+                {
+                    <div class="px-3 pt-3 pb-1">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <i class="bi bi-diagram-2 text-primary"></i>
+                            <strong style="font-size:.85rem">@grupo.Key</strong>
+                            <span class="badge bg-light text-secondary border">@grupo.Count() hitos</span>
+                        </div>
+                    </div>
+                    <div class="table-responsive mb-3 px-3">
+                        <table class="table table-sm table-hover mb-0" style="font-size:.82rem">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:50px" class="text-center">Orden</th>
+                                    <th style="width:130px">Código</th>
+                                    <th>Descripción</th>
+                                    <th style="width:120px">Rol Responsable</th>
+                                    <th style="width:90px" class="text-center">Automático</th>
+                                    <th style="width:80px" class="text-center">Origen</th>
+                                    <th style="width:80px" class="text-end">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var p in grupo.OrderBy(x => x.Orden))
+                                {
+                                    var esGlobal = p.EmpresaId is null;
+                                    <tr class="@(esGlobal ? "text-muted" : "")">
+                                        <td class="text-center">
+                                            <span class="badge bg-light text-dark border">@p.Orden</span>
+                                        </td>
+                                        <td>
+                                            <code class="@(esGlobal ? "text-secondary" : "text-primary")">@p.Codigo</code>
+                                        </td>
+                                        <td>
+                                            @p.Descripcion
+                                            @if (p.EsAutomatico)
+                                            {
+                                                <span class="badge bg-info ms-1" style="font-size:.65rem" title="Se completa automáticamente">auto</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(p.RolResponsable))
+                                            {
+                                                <span class="badge bg-secondary" style="font-size:.7rem">@p.RolResponsable</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">—</span>
+                                            }
+                                        </td>
+                                        <td class="text-center">
+                                            @if (p.EsAutomatico)
+                                            { <i class="bi bi-lightning-fill text-warning" title="Automático"></i> }
+                                            else
+                                            { <i class="bi bi-person-check text-muted" title="Manual"></i> }
+                                        </td>
+                                        <td class="text-center">
+                                            @if (esGlobal)
+                                            {
+                                                <span class="badge bg-secondary" style="font-size:.65rem">Global</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-primary" style="font-size:.65rem">Empresa</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            @if (!esGlobal)
+                                            {
+                                                <button class="btn btn-xs btn-outline-primary me-1 p-0 px-1"
+                                                        @onclick="() => ShowEditModal(p)"
+                                                        title="Editar">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <button class="btn btn-xs btn-outline-danger p-0 px-1"
+                                                        @onclick="() => ConfirmDelete(p)"
+                                                        title="Eliminar">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@* ?? Modal Crear / Editar ?? *@
+@if (showModal)
+{
+    <div class="modal fade show d-block" style="background:rgba(0,0,0,.5)">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="bi @(isEditing ? "bi-pencil-square" : "bi-plus-circle") me-1"></i>
+                        @(isEditing ? "Editar Plantilla" : "Nueva Plantilla de Empresa")
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    @if (!string.IsNullOrEmpty(modalError))
+                    {
+                        <div class="alert alert-danger py-2">@modalError</div>
+                    }
+
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Tipo de Documento <span class="text-danger">*</span></label>
+                            <select class="form-select" @bind="fEntityType" disabled="@isEditing">
+                                <option value="">— Seleccionar —</option>
+                                @foreach (var et in EntityTypes)
+                                {
+                                    <option value="@et">@et</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Sub-tipo</label>
+                            <input class="form-control" @bind="fSubTipo" placeholder="IMPORTACION (vacío = genérico)"
+                                   disabled="@isEditing" />
+                            <div class="form-text">Vacío = aplica a todos los sub-tipos</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Código <span class="text-danger">*</span></label>
+                            <input class="form-control text-uppercase" @bind="fCodigo" placeholder="ETD, APROBACION-L1..."
+                                   maxlength="20" disabled="@isEditing" />
+                            <div class="form-text">Solo mayúsculas, números y guiones</div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Orden <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" @bind="fOrden" min="1" max="99" />
+                        </div>
+                        <div class="col-md-10">
+                            <label class="form-label">Descripción <span class="text-danger">*</span></label>
+                            <input class="form-control" @bind="fDescripcion" placeholder="Descripción legible del hito..." maxlength="200" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Rol Responsable</label>
+                            <select class="form-select" @bind="fRolResponsable">
+                                <option value="">— Cualquiera —</option>
+                                @foreach (var rol in RolesDisponibles)
+                                {
+                                    <option value="@rol">@rol</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="chkAuto" @bind="fEsAutomatico" />
+                                <label class="form-check-label" for="chkAuto">
+                                    <i class="bi bi-lightning-fill text-warning me-1"></i>Completar automáticamente
+                                </label>
+                                <div class="form-text">Se completa al crear/cerrar el documento</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CloseModal" disabled="@saving">Cancelar</button>
+                    <button class="btn btn-primary" @onclick="SavePlantilla" disabled="@saving">
+                        @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        @(isEditing ? "Guardar Cambios" : "Crear Plantilla")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* ?? Modal Confirmar Eliminar ?? *@
+@if (plantillaAEliminar is not null)
+{
+    <div class="modal fade show d-block" style="background:rgba(0,0,0,.5)">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-trash text-danger me-1"></i>Eliminar Plantilla</h5>
+                    <button type="button" class="btn-close" @onclick="() => plantillaAEliminar = null"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Eliminar la plantilla <strong><code>@plantillaAEliminar.Codigo</code></strong> de
+                    <strong>@plantillaAEliminar.EntityType</strong>?</p>
+                    <div class="alert alert-warning py-2 small">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        Esta acción es irreversible. Los documentos existentes que ya tengan tareas generadas no se ven afectados.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="() => plantillaAEliminar = null" disabled="@saving">Cancelar</button>
+                    <button class="btn btn-danger" @onclick="ExecuteDelete" disabled="@saving">
+                        @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    // ?? Estado general ????????????????????????????????????????????????????????
+    private List<PlantillaTareaDto> todas = new();
+    private bool   loading    = true;
+    private bool   saving     = false;
+    private string? successMsg;
+    private string? errorMsg;
+
+    // ?? Filtros ???????????????????????????????????????????????????????????????
+    private string filtroEntityType = "";
+    private string filtroSubTipo    = "";
+    private string filtroOrigen     = "";
+
+    private IEnumerable<PlantillaTareaDto> PlantillasFiltradas => todas
+        .Where(p =>
+            (string.IsNullOrEmpty(filtroEntityType) || p.EntityType == filtroEntityType) &&
+            (string.IsNullOrEmpty(filtroSubTipo)    || (p.SubTipo ?? "").Contains(filtroSubTipo, StringComparison.OrdinalIgnoreCase)) &&
+            (filtroOrigen == "" ||
+             (filtroOrigen == "global"  && p.EmpresaId is null) ||
+             (filtroOrigen == "empresa" && p.EmpresaId is not null)));
+
+    private List<PlantillaTareaDto> PlantillasFiltradasList => PlantillasFiltradas.ToList();
+
+    // ?? Constantes de dominio ?????????????????????????????????????????????????
+    private static readonly string[] EntityTypes =
+        ["OrdenPedido", "OrdenCompra", "OrdenVenta", "HojaRuta", "Embarque", "Recepcion"];
+
+    private static readonly string[] RolesDisponibles =
+        ["ALMACEN", "COMPRAS", "LOGISTICA", "FINANZAS", "AGENTE_ADUANA", "SUPERVISOR", "GERENCIA", "VENTAS"];
+
+    // ?? Modal Crear/Editar ????????????????????????????????????????????????????
+    private bool   showModal;
+    private bool   isEditing;
+    private int    editingId;
+    private string? modalError;
+
+    // Campos del formulario
+    private string fEntityType    = "";
+    private string fSubTipo       = "";
+    private string fCodigo        = "";
+    private int    fOrden         = 1;
+    private string fDescripcion   = "";
+    private string fRolResponsable = "";
+    private bool   fEsAutomatico  = false;
+
+    // ?? Eliminar ??????????????????????????????????????????????????????????????
+    private PlantillaTareaDto? plantillaAEliminar;
+
+    // ?? Init ??????????????????????????????????????????????????????????????????
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    private async Task LoadData()
+    {
+        loading = true;
+        todas   = await WfService.GetAllPlantillasAsync();
+        loading = false;
+    }
+
+    // ?? Modales ???????????????????????????????????????????????????????????????
+    private void ShowCreateModal()
+    {
+        isEditing      = false;
+        editingId      = 0;
+        fEntityType    = EntityTypes[0];
+        fSubTipo       = "";
+        fCodigo        = "";
+        fOrden         = (todas.Where(p => p.EntityType == fEntityType).MaxBy(p => p.Orden)?.Orden ?? 0) + 1;
+        fDescripcion   = "";
+        fRolResponsable = "";
+        fEsAutomatico  = false;
+        modalError     = null;
+        showModal      = true;
+    }
+
+    private void ShowEditModal(PlantillaTareaDto p)
+    {
+        isEditing       = true;
+        editingId       = p.Id;
+        fEntityType     = p.EntityType;
+        fSubTipo        = p.SubTipo ?? "";
+        fCodigo         = p.Codigo;
+        fOrden          = p.Orden;
+        fDescripcion    = p.Descripcion;
+        fRolResponsable = p.RolResponsable ?? "";
+        fEsAutomatico   = p.EsAutomatico;
+        modalError      = null;
+        showModal       = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal  = false;
+        modalError = null;
+    }
+
+    private void ConfirmDelete(PlantillaTareaDto p) => plantillaAEliminar = p;
+
+    // ?? Acciones ??????????????????????????????????????????????????????????????
+    private async Task SavePlantilla()
+    {
+        modalError = null;
+        if (string.IsNullOrWhiteSpace(fEntityType))  { modalError = "Seleccione el tipo de documento."; return; }
+        if (string.IsNullOrWhiteSpace(fCodigo))      { modalError = "El código es obligatorio.";        return; }
+        if (string.IsNullOrWhiteSpace(fDescripcion)) { modalError = "La descripción es obligatoria.";   return; }
+        if (fOrden <= 0)                             { modalError = "El orden debe ser mayor a 0.";     return; }
+
+        saving = true;
+        try
+        {
+            if (isEditing)
+            {
+                var dto = new PlantillaTareaUpdateDto
+                {
+                    Orden          = fOrden,
+                    Descripcion    = fDescripcion,
+                    EsAutomatico   = fEsAutomatico,
+                    RolResponsable = string.IsNullOrWhiteSpace(fRolResponsable) ? null : fRolResponsable,
+                };
+                var result = await WfService.UpdatePlantillaAsync(editingId, dto);
+                if (result is not null)
+                {
+                    successMsg = $"Plantilla '{result.Codigo}' actualizada.";
+                    CloseModal();
+                    await LoadData();
+                }
+                else
+                {
+                    modalError = "No se pudo actualizar la plantilla. Verifique que sea de empresa.";
+                }
+            }
+            else
+            {
+                var dto = new PlantillaTareaCreateDto
+                {
+                    EntityType     = fEntityType,
+                    SubTipo        = string.IsNullOrWhiteSpace(fSubTipo) ? null : fSubTipo.ToUpper(),
+                    Orden          = fOrden,
+                    Codigo         = fCodigo.ToUpper(),
+                    Descripcion    = fDescripcion,
+                    EsAutomatico   = fEsAutomatico,
+                    RolResponsable = string.IsNullOrWhiteSpace(fRolResponsable) ? null : fRolResponsable,
+                };
+                var result = await WfService.CreatePlantillaAsync(dto);
+                if (result is not null)
+                {
+                    successMsg = $"Plantilla '{result.Codigo}' creada para {result.EntityType}.";
+                    CloseModal();
+                    await LoadData();
+                }
+                else
+                {
+                    modalError = "No se pudo crear la plantilla. Verifique los datos.";
+                }
+            }
+        }
+        finally { saving = false; }
+    }
+
+    private async Task ExecuteDelete()
+    {
+        if (plantillaAEliminar is null) return;
+        saving = true;
+        await WfService.DeletePlantillaAsync(plantillaAEliminar.Id);
+        successMsg         = $"Plantilla '{plantillaAEliminar.Codigo}' eliminada.";
+        plantillaAEliminar = null;
+        saving             = false;
+        await LoadData();
+    }
+}
+

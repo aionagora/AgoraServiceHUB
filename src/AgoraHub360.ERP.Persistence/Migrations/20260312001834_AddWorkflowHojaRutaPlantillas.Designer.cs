@@ -4,6 +4,7 @@ using AgoraHub360.ERP.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AgoraHub360.ERP.Persistence.Migrations
 {
     [DbContext(typeof(AgoraDbContext))]
-    partial class AgoraDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260312001834_AddWorkflowHojaRutaPlantillas")]
+    partial class AddWorkflowHojaRutaPlantillas
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2665,9 +2668,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
 
-                    b.Property<long?>("OrdenPedidoId")
-                        .HasColumnType("bigint");
-
                     b.Property<string>("ProveedorCliente")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
@@ -2701,9 +2701,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
                     b.HasIndex("EmpresaId", "NumeroHojaRuta")
                         .IsUnique();
-
-                    b.HasIndex("EmpresaId", "OrdenPedidoId")
-                        .HasDatabaseName("IX_HojasRuta_OrdenPedidoId");
 
                     b.HasIndex("EmpresaId", "TipoOP");
 

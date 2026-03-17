@@ -4,6 +4,7 @@ using AgoraHub360.ERP.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AgoraHub360.ERP.Persistence.Migrations
 {
     [DbContext(typeof(AgoraDbContext))]
-    partial class AgoraDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260311205703_AddWorkflowPlantillasSeed")]
+    partial class AddWorkflowPlantillasSeed
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2665,9 +2668,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
 
-                    b.Property<long?>("OrdenPedidoId")
-                        .HasColumnType("bigint");
-
                     b.Property<string>("ProveedorCliente")
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
@@ -2701,9 +2701,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
                     b.HasIndex("EmpresaId", "NumeroHojaRuta")
                         .IsUnique();
-
-                    b.HasIndex("EmpresaId", "OrdenPedidoId")
-                        .HasDatabaseName("IX_HojasRuta_OrdenPedidoId");
 
                     b.HasIndex("EmpresaId", "TipoOP");
 
@@ -4877,234 +4874,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                             FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
                             Orden = 8,
                             RolResponsable = "FINANZAS"
-                        },
-                        new
-                        {
-                            Id = 40,
-                            Activo = true,
-                            Codigo = "HR-CREADA",
-                            Descripcion = "Hoja de ruta creada en el sistema",
-                            EntityType = "HojaRuta",
-                            EsAutomatico = true,
-                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Orden = 1,
-                            SubTipo = "IMPORTACION"
-                        },
-                        new
-                        {
-                            Id = 41,
-                            Activo = true,
-                            Codigo = "DESPACHO-EXT",
-                            Descripcion = "Despacho en origen confirmado",
-                            EntityType = "HojaRuta",
-                            EsAutomatico = false,
-                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Orden = 2,
-                            RolResponsable = "COMPRAS",
-                            SubTipo = "IMPORTACION"
-                        },
-                        new
-                        {
-                            Id = 42,
-                            Activo = true,
-                            Codigo = "EN-TRANSITO",
-                            Descripcion = "Carga en tránsito internacional",
-                            EntityType = "HojaRuta",
-                            EsAutomatico = false,
-                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Orden = 3,
-                            RolResponsable = "COMPRAS",
-                            SubTipo = "IMPORTACION"
-                        },
-                        new
-                        {
-                            Id = 43,
-                            Activo = true,
-                            Codigo = "ADUANA",
-                            Descripcion = "Trámite aduanero iniciado",
-                            EntityType = "HojaRuta",
-                            EsAutomatico = false,
-                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Orden = 4,
-                            RolResponsable = "AGENTE_ADUANA",
-                            SubTipo = "IMPORTACION"
-                        },
-                        new
-                        {
-                            Id = 44,
-                            Activo = true,
-                            Codigo = "LEVANTE",
-                            Descripcion = "Levante de aduana autorizado",
-                            EntityType = "HojaRuta",
-                            EsAutomatico = false,
-                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Orden = 5,
-                            RolResponsable = "AGENTE_ADUANA",
-                            SubTipo = "IMPORTACION"
-                        },
-                        new
-                        {
-                            Id = 45,
-                            Activo = true,
-                            Codigo = "TRANSPORTE",
-                            Descripcion = "Transporte hacia almacén destino",
-                            EntityType = "HojaRuta",
-                            EsAutomatico = false,
-                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Orden = 6,
-                            RolResponsable = "LOGISTICA",
-                            SubTipo = "IMPORTACION"
-                        },
-                        new
-                        {
-                            Id = 46,
-                            Activo = true,
-                            Codigo = "RECEPCION",
-                            Descripcion = "Recepción física en almacén confirmada",
-                            EntityType = "HojaRuta",
-                            EsAutomatico = false,
-                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Orden = 7,
-                            RolResponsable = "ALMACEN",
-                            SubTipo = "IMPORTACION"
-                        },
-                        new
-                        {
-                            Id = 47,
-                            Activo = true,
-                            Codigo = "CIERRE-HR",
-                            Descripcion = "Hoja de ruta cerrada",
-                            EntityType = "HojaRuta",
-                            EsAutomatico = true,
-                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Orden = 8,
-                            SubTipo = "IMPORTACION"
-                        },
-                        new
-                        {
-                            Id = 48,
-                            Activo = true,
-                            Codigo = "HR-CREADA",
-                            Descripcion = "Hoja de ruta de traspaso creada",
-                            EntityType = "HojaRuta",
-                            EsAutomatico = true,
-                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Orden = 1,
-                            SubTipo = "TRASPASO_INTERNO"
-                        },
-                        new
-                        {
-                            Id = 49,
-                            Activo = true,
-                            Codigo = "PREPARACION",
-                            Descripcion = "Preparación de mercancía en almacén origen",
-                            EntityType = "HojaRuta",
-                            EsAutomatico = false,
-                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Orden = 2,
-                            RolResponsable = "ALMACEN",
-                            SubTipo = "TRASPASO_INTERNO"
-                        },
-                        new
-                        {
-                            Id = 50,
-                            Activo = true,
-                            Codigo = "DESPACHO",
-                            Descripcion = "Despacho desde almacén origen",
-                            EntityType = "HojaRuta",
-                            EsAutomatico = false,
-                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Orden = 3,
-                            RolResponsable = "LOGISTICA",
-                            SubTipo = "TRASPASO_INTERNO"
-                        },
-                        new
-                        {
-                            Id = 51,
-                            Activo = true,
-                            Codigo = "RECEPCION",
-                            Descripcion = "Recepción en almacén destino",
-                            EntityType = "HojaRuta",
-                            EsAutomatico = false,
-                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Orden = 4,
-                            RolResponsable = "ALMACEN",
-                            SubTipo = "TRASPASO_INTERNO"
-                        },
-                        new
-                        {
-                            Id = 52,
-                            Activo = true,
-                            Codigo = "CIERRE-HR",
-                            Descripcion = "Hoja de ruta de traspaso cerrada",
-                            EntityType = "HojaRuta",
-                            EsAutomatico = true,
-                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Orden = 5,
-                            SubTipo = "TRASPASO_INTERNO"
-                        },
-                        new
-                        {
-                            Id = 53,
-                            Activo = true,
-                            Codigo = "HR-CREADA",
-                            Descripcion = "Hoja de ruta de entrega creada",
-                            EntityType = "HojaRuta",
-                            EsAutomatico = true,
-                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Orden = 1,
-                            SubTipo = "ENTREGA"
-                        },
-                        new
-                        {
-                            Id = 54,
-                            Activo = true,
-                            Codigo = "PREPARACION",
-                            Descripcion = "Pedido preparado para entrega al cliente",
-                            EntityType = "HojaRuta",
-                            EsAutomatico = false,
-                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Orden = 2,
-                            RolResponsable = "ALMACEN",
-                            SubTipo = "ENTREGA"
-                        },
-                        new
-                        {
-                            Id = 55,
-                            Activo = true,
-                            Codigo = "DESPACHO",
-                            Descripcion = "Vehículo de reparto despachado",
-                            EntityType = "HojaRuta",
-                            EsAutomatico = false,
-                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Orden = 3,
-                            RolResponsable = "LOGISTICA",
-                            SubTipo = "ENTREGA"
-                        },
-                        new
-                        {
-                            Id = 56,
-                            Activo = true,
-                            Codigo = "ENTREGADA",
-                            Descripcion = "Entrega al cliente confirmada",
-                            EntityType = "HojaRuta",
-                            EsAutomatico = false,
-                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Orden = 4,
-                            RolResponsable = "LOGISTICA",
-                            SubTipo = "ENTREGA"
-                        },
-                        new
-                        {
-                            Id = 57,
-                            Activo = true,
-                            Codigo = "CIERRE-HR",
-                            Descripcion = "Hoja de ruta cerrada",
-                            EntityType = "HojaRuta",
-                            EsAutomatico = true,
-                            FechaCreacion = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Orden = 5,
-                            SubTipo = "ENTREGA"
                         });
                 });
 

@@ -38,6 +38,9 @@ public static class DependencyInjection
 
         services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
+        // WF: Workflow
+        services.AddScoped<IWorkflowRepository, WorkflowRepository>();
+
         // Servicio de consulta de AuditLog (implementación en Persistence por acceso IQueryable)
         services.AddScoped<IAuditLogService, AuditLogService>();
 

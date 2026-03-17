@@ -8,6 +8,7 @@ using AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Enums;
 using AgoraHub360.ERP.Domain.Interfaces;
 using AgoraHub360.ERP.Shared.DTOs.Compras;
+using AgoraHub360.ERP.Shared.DTOs.Workflow;
 
 public class OrdenPedidoService : IOrdenPedidoService
 {
@@ -20,6 +21,7 @@ public class OrdenPedidoService : IOrdenPedidoService
     private readonly IRepository<UsuarioEmpresa> _usuarioEmpresaRepo;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
+    private readonly IWorkflowService _workflow;
 
     public OrdenPedidoService(
         IRepository<OrdenPedido> opRepo,
@@ -30,7 +32,8 @@ public class OrdenPedidoService : IOrdenPedidoService
         IRepository<Usuario> usuarioRepo,
         IRepository<UsuarioEmpresa> usuarioEmpresaRepo,
         IUnitOfWork unitOfWork,
-        ICurrentUserService currentUser)
+        ICurrentUserService currentUser,
+        IWorkflowService workflow)
     {
         _opRepo = opRepo;
         _lineaRepo = lineaRepo;
@@ -41,6 +44,7 @@ public class OrdenPedidoService : IOrdenPedidoService
         _usuarioEmpresaRepo = usuarioEmpresaRepo;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _workflow = workflow;
     }
 
     public async Task<Result<IReadOnlyList<OrdenPedidoDto>>> GetAllAsync(
@@ -166,6 +170,17 @@ public class OrdenPedidoService : IOrdenPedidoService
         }
 
         await _unitOfWork.SaveChangesAsync(ct);
+
+        // Generar tareas automáticas desde plantilla configurada para "OrdenPedido".
+        // Si no existe plantilla el resultado es Failure pero no interrumpe la creación.
+        await _workflow.GenerarHitosInicialesAsync(new GenerarHitosDto
+        {
+            EntityType = "OrdenPedido",
+            EntityId   = (int)op.OrdenPedidoId,
+            EmpresaId  = empresaId.Value,
+            SubTipo    = null
+        }, ct);
+
         return Result<OrdenPedidoDto>.Success(await BuildFullDto(op, ct));
     }
 
