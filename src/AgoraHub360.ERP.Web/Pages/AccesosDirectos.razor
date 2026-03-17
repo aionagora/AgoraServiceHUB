@@ -1,0 +1,255 @@
+@page "/accesos"
+@page "/accesos/{ModuloId}"
+@attribute [Authorize]
+@inject NavigationManager Nav
+@using Microsoft.AspNetCore.Components.Authorization
+
+<PageTitle>@(_modulo is null ? "M\u00f3dulos" : _modulo.Nombre) - AgoraHub360 ERP</PageTitle>
+
+<!-- ?? Cabecera ??????????????????????????????????????????????? -->
+<div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div class="d-flex align-items-center gap-3">
+        @if (_modulo is not null)
+        {
+            <button class="hub-back-btn" @onclick="Volver" title="Ver todos los m\u00f3dulos">
+                <i class="bi bi-arrow-left"></i>
+            </button>
+            <span class="hub-back-icon" style="background:@_modulo.BgColor;color:@_modulo.Color">
+                <i class="bi @_modulo.Icono"></i>
+            </span>
+        }
+        <div>
+            <h1 class="mb-0">
+                @if (_modulo is null)
+                {
+                    <i class="bi bi-grid-3x3-gap-fill me-2"></i>
+                    <span>M&oacute;dulos del Sistema</span>
+                }
+                else
+                {
+                    @_modulo.Nombre
+                }
+            </h1>
+            <p class="text-muted mb-0 small">
+                @(_modulo is null
+                    ? "Selecciona un m\u00f3dulo para ver sus accesos directos"
+                    : _modulo.Descripcion)
+            </p>
+        </div>
+    </div>
+    @if (_modulo is not null)
+    {
+        <a href="/accesos" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-grid-3x3-gap me-1"></i>Todos los m&oacute;dulos
+        </a>
+    }
+</div>
+
+<!-- ?????????????????????????????????????????????????????????? -->
+<!-- VISTA 1 — Grid de módulos (sin parámetro)                -->
+<!-- ?????????????????????????????????????????????????????????? -->
+@if (_modulo is null)
+{
+    <div class="row g-3">
+        @foreach (var m in _modulos)
+        {
+            if (m.SoloAdmin)
+            {
+                <AuthorizeView Roles="Admin">
+                    <Authorized>
+                        <div class="col-12 col-sm-6 col-lg-4">
+                            <a href="/accesos/@m.Id" class="hub-module-card">
+                                <span class="hub-module-icon" style="background:@m.BgColor;color:@m.Color">
+                                    <i class="bi @m.Icono"></i>
+                                </span>
+                                <div class="hub-module-info">
+                                    <span class="hub-module-name">@m.Nombre</span>
+                                    <span class="hub-module-desc">@m.Descripcion</span>
+                                </div>
+                                <div class="hub-module-count">
+                                    <span>@m.Items.Count</span>
+                                    <small>accesos</small>
+                                </div>
+                                <i class="bi bi-chevron-right hub-module-arrow"></i>
+                            </a>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+            }
+            else
+            {
+                <div class="col-12 col-sm-6 col-lg-4">
+                    <a href="/accesos/@m.Id" class="hub-module-card">
+                        <span class="hub-module-icon" style="background:@m.BgColor;color:@m.Color">
+                            <i class="bi @m.Icono"></i>
+                        </span>
+                        <div class="hub-module-info">
+                            <span class="hub-module-name">@m.Nombre</span>
+                            <span class="hub-module-desc">@m.Descripcion</span>
+                        </div>
+                        <div class="hub-module-count">
+                            <span>@m.Items.Count</span>
+                            <small>accesos</small>
+                        </div>
+                        <i class="bi bi-chevron-right hub-module-arrow"></i>
+                    </a>
+                </div>
+            }
+        }
+    </div>
+}
+
+<!-- ?????????????????????????????????????????????????????????? -->
+<!-- VISTA 2 — Panel de accesos del módulo                    -->
+<!-- ?????????????????????????????????????????????????????????? -->
+@if (_modulo is not null)
+{
+    <div class="hub-panel-enter">
+        <div class="row g-3">
+            @foreach (var item in _modulo.Items)
+            {
+                <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+                    <a href="@item.Url" class="hub-item-card @(item.EsDashboard ? "hub-item-dashboard" : "")">
+                        @if (item.EsDashboard)
+                        {
+                            <span class="hub-item-badge">Dashboard</span>
+                        }
+                        <i class="bi @item.Icono" style="color:@item.Color"></i>
+                        <span class="hub-item-name">@item.Nombre</span>
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string? ModuloId { get; set; }
+
+    // ?? Modelos ????????????????????????????????????????????????
+    record ModuloItem(string Nombre, string Icono, string Color, string Url, bool EsDashboard = false);
+
+    record Modulo(
+        string Id,
+        string Nombre,
+        string Descripcion,
+        string Icono,
+        string Color,
+        string BgColor,
+        List<ModuloItem> Items,
+        bool SoloAdmin = false);
+
+    // ?? Estado ?????????????????????????????????????????????????
+    private Modulo? _modulo;
+
+    protected override void OnParametersSet()
+    {
+        _modulo = string.IsNullOrWhiteSpace(ModuloId)
+            ? null
+            : _modulos.FirstOrDefault(m => m.Id == ModuloId);
+    }
+
+    private void Volver() => Nav.NavigateTo("/accesos");
+
+    // ?? Datos de módulos ???????????????????????????????????????
+    private readonly List<Modulo> _modulos = new()
+    {
+        new("mdm", "Datos Maestros",
+            "Clientes, proveedores, productos y configuraci\u00f3n base",
+            "bi-database-fill", "#d97706", "rgba(245,158,11,.18)",
+            new()
+            {
+                new("Clientes",          "bi-people-fill",     "#3b82f6", "/mdm/clientes"),
+                new("Proveedores",       "bi-truck",           "#f59e0b", "/mdm/proveedores"),
+                new("Productos",         "bi-box-seam-fill",   "#10b981", "/mdm/productos"),
+                new("Categor\u00edas",   "bi-tags-fill",       "#8b5cf6", "/mdm/categorias"),
+                new("Unid. Medida",      "bi-rulers",          "#06b6d4", "/mdm/unidades-medida"),
+                new("Almacenes",         "bi-house-gear-fill", "#ef4444", "/mdm/almacenes"),
+            }),
+
+        new("gestion-prod", "Gesti\u00f3n de Productos",
+            "Cat\u00e1logo global, variantes, atributos y precios",
+            "bi-box-seam-fill", "#059669", "rgba(16,185,129,.18)",
+            new()
+            {
+                new("Cat\u00e1logo Global", "bi-database",        "#3b82f6", "/mdm/productos-globales"),
+                new("Prod. Empresa",        "bi-box-seam",        "#10b981", "/mdm/productos-empresa"),
+                new("Variantes",            "bi-intersect",       "#8b5cf6", "/mdm/variantes"),
+                new("Atributos MDM",        "bi-list-check",      "#f59e0b", "/mdm/atributos"),
+                new("Marcas",               "bi-bookmark-star",   "#ef4444", "/mdm/marcas"),
+                new("Fabricantes",          "bi-building",        "#06b6d4", "/mdm/fabricantes"),
+                new("Listas de Precios",    "bi-currency-dollar", "#10b981", "/mdm/listas-precios"),
+            }),
+
+        new("inventario", "Inventario",
+            "Stock, movimientos y kardex de inventario",
+            "bi-boxes", "#16a34a", "rgba(34,197,94,.18)",
+            new()
+            {
+                new("Dashboard",     "bi-grid-1x2",        "#16a34a", "/dashboard/inventario", true),
+                new("Almacenes",     "bi-house-gear-fill", "#ef4444", "/inventario/almacenes"),
+                new("Movimientos",   "bi-arrow-left-right","#3b82f6", "/inventario/movimientos"),
+                new("Kardex",        "bi-journal-text",    "#8b5cf6", "/inventario/kardex"),
+                new("Stock Actual",  "bi-box-seam-fill",   "#10b981", "/inventario/stock"),
+            }),
+
+        new("compras", "Compras",
+            "Pedidos, \u00f3rdenes de compra, recepciones e importaciones",
+            "bi-cart-fill", "#2563eb", "rgba(59,130,246,.18)",
+            new()
+            {
+                new("Dashboard",          "bi-grid-1x2",              "#2563eb", "/dashboard/compras",      true),
+                new("Pedidos Internos",   "bi-clipboard2-check-fill", "#f59e0b", "/compras/pedidos"),
+                new("Ordenes de Compra",  "bi-cart-fill",             "#3b82f6", "/compras/ordenes"),
+                new("Recepciones",        "bi-box-seam",              "#10b981", "/compras/recepciones"),
+                new("Expedientes Imp.",   "bi-globe-americas",        "#06b6d4", "/compras/expedientes"),
+                new("Hojas Importaci\u00f3n", "bi-receipt-cutoff",    "#ef4444", "/compras/importaciones"),
+            }),
+
+        new("contabilidad", "Contabilidad",
+            "Asientos, plan de cuentas, per\u00edodos y reportes",
+            "bi-journal-bookmark-fill", "#7c3aed", "rgba(139,92,246,.18)",
+            new()
+            {
+                new("Dashboard",          "bi-grid-1x2",             "#7c3aed", "/dashboard/contabilidad",   true),
+                new("Plan de Cuentas",    "bi-journal-bookmark-fill","#8b5cf6", "/contabilidad/plan-cuentas"),
+                new("Asientos Contables", "bi-journal-text",         "#3b82f6", "/contabilidad/asientos"),
+                new("Per\u00edodos",      "bi-calendar3",            "#10b981", "/contabilidad/periodos"),
+                new("Plantillas",         "bi-file-earmark-ruled",   "#f59e0b", "/contabilidad/plantillas"),
+            }),
+
+        new("reportes", "Reportes Contables",
+            "Estados financieros, balance, resultados y libros",
+            "bi-bar-chart-line-fill", "#0891b2", "rgba(6,182,212,.18)",
+            new()
+            {
+                new("Balance General",   "bi-bar-chart-line-fill",  "#0891b2", "/contabilidad/balance-general"),
+                new("Est. Resultados",   "bi-graph-up-arrow",       "#10b981", "/contabilidad/estado-resultados"),
+                new("Sumas y Saldos",    "bi-table",                "#8b5cf6", "/contabilidad/sumas-saldos"),
+                new("Libro Diario",      "bi-journal-bookmark-fill","#3b82f6", "/contabilidad/libro-diario"),
+            }),
+
+        new("ventas", "Ventas",
+            "Pedidos de venta y facturaci\u00f3n",
+            "bi-bag-fill", "#dc2626", "rgba(239,68,68,.18)",
+            new()
+            {
+                new("Pedidos",  "bi-receipt",                "#f59e0b", "/ventas/pedidos"),
+                new("Facturas", "bi-file-earmark-text-fill", "#ef4444", "/ventas/facturas"),
+            }),
+
+        new("sistema", "Administraci\u00f3n",
+            "Configuraci\u00f3n del sistema, usuarios y auditor\u00eda",
+            "bi-gear-fill", "#475569", "rgba(100,116,139,.18)",
+            new()
+            {
+                new("Empresas",             "bi-building-gear",   "#475569", "/config/empresas"),
+                new("Usuarios",             "bi-person-gear",     "#3b82f6", "/config/usuarios"),
+                new("Roles",                "bi-shield-lock-fill","#8b5cf6", "/config/roles"),
+                new("Par\u00e1m. Numer.",   "bi-sliders",         "#f59e0b", "/config/parametros-numeracion"),
+                new("Auditor\u00eda",       "bi-clock-history",   "#06b6d4", "/config/auditoria"),
+                new("Empresa Demo",         "bi-magic",           "#10b981", "/config/empresa-demo"),
+            },
+            SoloAdmin: true),
+    };
+}
