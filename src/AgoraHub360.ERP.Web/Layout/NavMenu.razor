@@ -9,7 +9,8 @@
 
 <!-- Navigation -->
 <nav class="sidebar-nav">
-    <!-- Dashboard -->
+
+    <!-- Dashboard principal -->
     <div class="nav-item">
         <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
             <i class="bi bi-grid-1x2-fill"></i>
@@ -17,279 +18,91 @@
         </NavLink>
     </div>
 
-    <!-- MDM -->
-    <div class="nav-section">Datos Maestros</div>
+    <div class="nav-divider"></div>
+
+    <!-- ?? Módulos principales ????????????? -->
+    <div class="nav-module-label">M&oacute;dulos</div>
+
     <div class="nav-item">
-        <NavLink class="nav-link" href="mdm/clientes">
-            <i class="bi bi-people-fill"></i>
-            <span>Clientes</span>
-        </NavLink>
-    </div>
-    <div class="nav-item">
-        <NavLink class="nav-link" href="mdm/proveedores">
-            <i class="bi bi-truck"></i>
-            <span>Proveedores</span>
-        </NavLink>
-    </div>
-    <div class="nav-item">
-        <NavLink class="nav-link" href="mdm/productos">
-            <i class="bi bi-box-seam-fill"></i>
-            <span>Productos</span>
-        </NavLink>
-    </div>
-    <div class="nav-item">
-        <NavLink class="nav-link" href="mdm/categorias">
-            <i class="bi bi-tags-fill"></i>
-            <span>Categorias</span>
-        </NavLink>
-    </div>
-    <div class="nav-item">
-        <NavLink class="nav-link" href="mdm/unidades-medida">
-            <i class="bi bi-rulers"></i>
-            <span>Unid. Medida</span>
-        </NavLink>
-    </div>
-    <div class="nav-item">
-        <NavLink class="nav-link" href="mdm/almacenes">
-            <i class="bi bi-house-gear-fill"></i>
-            <span>Almacenes</span>
+        <NavLink class="nav-link nav-module" href="accesos/mdm">
+            <span class="nav-mod-icon" style="background:rgba(245,158,11,.2);color:#f59e0b">
+                <i class="bi bi-database-fill"></i>
+            </span>
+            <span>Datos Maestros</span>
         </NavLink>
     </div>
 
-    <!-- MDM avanzado -->
-    <div class="nav-section">Gestion de Productos</div>
     <div class="nav-item">
-        <NavLink class="nav-link" href="mdm/productos-globales">
-            <i class="bi bi-database"></i>
-            <span>Catalogo Global</span>
-        </NavLink>
-    </div>
-    <div class="nav-item">
-        <NavLink class="nav-link" href="mdm/productos-empresa">
-            <i class="bi bi-box-seam"></i>
-            <span>Prod. Empresa</span>
-        </NavLink>
-    </div>
-    <div class="nav-item">
-        <NavLink class="nav-link" href="mdm/variantes">
-            <i class="bi bi-intersect"></i>
-            <span>Variantes</span>
-        </NavLink>
-    </div>
-    <div class="nav-item">
-        <NavLink class="nav-link" href="mdm/atributos">
-            <i class="bi bi-list-check"></i>
-            <span>Atributos MDM</span>
-        </NavLink>
-    </div>
-    <div class="nav-item">
-        <NavLink class="nav-link" href="mdm/marcas">
-            <i class="bi bi-bookmark-star"></i>
-            <span>Marcas</span>
-        </NavLink>
-    </div>
-    <div class="nav-item">
-        <NavLink class="nav-link" href="mdm/fabricantes">
-            <i class="bi bi-building"></i>
-            <span>Fabricantes</span>
-        </NavLink>
-    </div>
-    <div class="nav-item">
-        <NavLink class="nav-link" href="mdm/listas-precios">
-            <i class="bi bi-currency-dollar"></i>
-            <span>Listas de Precios</span>
+        <NavLink class="nav-link nav-module" href="accesos/gestion-prod">
+            <span class="nav-mod-icon" style="background:rgba(16,185,129,.2);color:#10b981">
+                <i class="bi bi-box-seam-fill"></i>
+            </span>
+            <span>Gesti&oacute;n Productos</span>
         </NavLink>
     </div>
 
-    <!-- Inventario -->
-    <div class="nav-section">Inventario</div>
     <div class="nav-item">
-        <NavLink class="nav-link" href="dashboard/inventario">
-            <i class="bi bi-grid-1x2 text-success"></i>
-            <span>Dashboard Inventario</span>
-        </NavLink>
-    </div>
-    <div class="nav-item">
-        <NavLink class="nav-link" href="inventario/almacenes">
-            <i class="bi bi-house-gear-fill"></i>
-            <span>Almacenes</span>
-        </NavLink>
-    </div>
-    <div class="nav-item">
-        <NavLink class="nav-link" href="inventario/movimientos">
-            <i class="bi bi-arrow-left-right"></i>
-            <span>Movimientos</span>
-        </NavLink>
-    </div>
-    <div class="nav-item">
-        <NavLink class="nav-link" href="inventario/kardex">
-            <i class="bi bi-journal-text"></i>
-            <span>Kardex</span>
-        </NavLink>
-    </div>
-    <div class="nav-item">
-        <NavLink class="nav-link" href="inventario/stock">
-            <i class="bi bi-box-seam-fill"></i>
-            <span>Stock Actual</span>
+        <NavLink class="nav-link nav-module" href="accesos/inventario">
+            <span class="nav-mod-icon" style="background:rgba(34,197,94,.2);color:#22c55e">
+                <i class="bi bi-boxes"></i>
+            </span>
+            <span>Inventario</span>
         </NavLink>
     </div>
 
-    <!-- Compras -->
-    <div class="nav-section">Compras</div>
     <div class="nav-item">
-        <NavLink class="nav-link" href="dashboard/compras">
-            <i class="bi bi-grid-1x2 text-primary"></i>
-            <span>Dashboard Compras</span>
-        </NavLink>
-    </div>
-    <div class="nav-item">
-        <NavLink class="nav-link" href="compras/pedidos">
-            <i class="bi bi-clipboard2-check-fill"></i>
-            <span>Pedidos Internos</span>
-        </NavLink>
-    </div>
-    <div class="nav-item">
-        <NavLink class="nav-link" href="compras/ordenes">
-            <i class="bi bi-cart-fill"></i>
-            <span>Ordenes de Compra</span>
-        </NavLink>
-    </div>
-    <div class="nav-item">
-        <NavLink class="nav-link" href="compras/recepciones">
-            <i class="bi bi-box-seam"></i>
-            <span>Recepciones</span>
-        </NavLink>
-    </div>
-    <div class="nav-item">
-        <NavLink class="nav-link" href="compras/expedientes">
-            <i class="bi bi-globe-americas"></i>
-            <span>Expedientes Imp.</span>
-        </NavLink>
-    </div>
-    <div class="nav-item">
-        <NavLink class="nav-link" href="compras/importaciones">
-            <i class="bi bi-receipt-cutoff"></i>
-            <span>Hojas Importación</span>
+        <NavLink class="nav-link nav-module" href="accesos/compras">
+            <span class="nav-mod-icon" style="background:rgba(59,130,246,.2);color:#3b82f6">
+                <i class="bi bi-cart-fill"></i>
+            </span>
+            <span>Compras</span>
         </NavLink>
     </div>
 
-    <!-- Contabilidad -->
-    <div class="nav-section">Contabilidad</div>
     <div class="nav-item">
-        <NavLink class="nav-link" href="dashboard/contabilidad">
-            <i class="bi bi-grid-1x2" style="color:#8b5cf6"></i>
-            <span>Dashboard Contabilidad</span>
-        </NavLink>
-    </div>
-    <div class="nav-item">
-        <NavLink class="nav-link" href="contabilidad/plan-cuentas">
-            <i class="bi bi-journal-bookmark-fill"></i>
-            <span>Plan de Cuentas</span>
-        </NavLink>
-    </div>
-    <div class="nav-item">
-        <NavLink class="nav-link" href="contabilidad/asientos">
-            <i class="bi bi-journal-text"></i>
-            <span>Asientos Contables</span>
-        </NavLink>
-    </div>
-    <div class="nav-item">
-        <NavLink class="nav-link" href="contabilidad/periodos">
-            <i class="bi bi-calendar3"></i>
-            <span>Períodos Contables</span>
-        </NavLink>
-    </div>
-    <div class="nav-item">
-        <NavLink class="nav-link" href="contabilidad/plantillas">
-            <i class="bi bi-file-earmark-ruled"></i>
-            <span>Plantillas Contables</span>
+        <NavLink class="nav-link nav-module" href="accesos/contabilidad">
+            <span class="nav-mod-icon" style="background:rgba(139,92,246,.2);color:#8b5cf6">
+                <i class="bi bi-journal-bookmark-fill"></i>
+            </span>
+            <span>Contabilidad</span>
         </NavLink>
     </div>
 
-    <!-- Reportes Contables -->
-    <div class="nav-section">Reportes Contables</div>
     <div class="nav-item">
-        <NavLink class="nav-link" href="contabilidad/balance-general">
-            <i class="bi bi-bar-chart-line-fill"></i>
-            <span>Balance General</span>
-        </NavLink>
-    </div>
-    <div class="nav-item">
-        <NavLink class="nav-link" href="contabilidad/estado-resultados">
-            <i class="bi bi-graph-up-arrow"></i>
-            <span>Estado de Resultados</span>
-        </NavLink>
-    </div>
-    <div class="nav-item">
-        <NavLink class="nav-link" href="contabilidad/sumas-saldos">
-            <i class="bi bi-table"></i>
-            <span>Sumas y Saldos</span>
-        </NavLink>
-    </div>
-    <div class="nav-item">
-        <NavLink class="nav-link" href="contabilidad/libro-diario">
-            <i class="bi bi-journal-bookmark-fill"></i>
-            <span>Libro Diario</span>
+        <NavLink class="nav-link nav-module" href="accesos/reportes">
+            <span class="nav-mod-icon" style="background:rgba(6,182,212,.2);color:#06b6d4">
+                <i class="bi bi-bar-chart-line-fill"></i>
+            </span>
+            <span>Reportes</span>
         </NavLink>
     </div>
 
-    <!-- Ventas -->
-    <div class="nav-section">Ventas</div>
     <div class="nav-item">
-        <NavLink class="nav-link" href="ventas/pedidos">
-            <i class="bi bi-receipt"></i>
-            <span>Pedidos</span>
-        </NavLink>
-    </div>
-    <div class="nav-item">
-        <NavLink class="nav-link" href="ventas/facturas">
-            <i class="bi bi-file-earmark-text-fill"></i>
-            <span>Facturas</span>
+        <NavLink class="nav-link nav-module" href="accesos/ventas">
+            <span class="nav-mod-icon" style="background:rgba(239,68,68,.2);color:#ef4444">
+                <i class="bi bi-bag-fill"></i>
+            </span>
+            <span>Ventas</span>
         </NavLink>
     </div>
 
-    <!-- Configuracion — solo visible para administradores -->
+    <div class="nav-divider"></div>
+
+    <!-- ?? Sistema (solo Admin) ??????????? -->
     <AuthorizeView Roles="Admin">
         <Authorized>
-            <div class="nav-section">Sistema</div>
+            <div class="nav-module-label">Sistema</div>
             <div class="nav-item">
-                <NavLink class="nav-link" href="config/empresas">
-                    <i class="bi bi-building-gear"></i>
-                    <span>Empresas</span>
-                </NavLink>
-            </div>
-            <div class="nav-item">
-                <NavLink class="nav-link" href="config/usuarios">
-                    <i class="bi bi-person-gear"></i>
-                    <span>Usuarios</span>
-                </NavLink>
-            </div>
-            <div class="nav-item">
-                <NavLink class="nav-link" href="config/roles">
-                    <i class="bi bi-shield-lock-fill"></i>
-                    <span>Roles</span>
-                </NavLink>
-            </div>
-            <div class="nav-item">
-                <NavLink class="nav-link" href="config/parametros-numeracion">
-                    <i class="bi bi-sliders"></i>
-                    <span>Parametros y Numeracion</span>
-                </NavLink>
-            </div>
-            <div class="nav-item">
-                <NavLink class="nav-link" href="config/auditoria">
-                    <i class="bi bi-clock-history"></i>
-                    <span>Auditoria</span>
-                </NavLink>
-            </div>
-            <div class="nav-item">
-                <NavLink class="nav-link" href="config/empresa-demo">
-                    <i class="bi bi-magic"></i>
-                    <span>Crear Empresa Demo</span>
+                <NavLink class="nav-link nav-module" href="accesos/sistema">
+                    <span class="nav-mod-icon" style="background:rgba(100,116,139,.2);color:#94a3b8">
+                        <i class="bi bi-gear-fill"></i>
+                    </span>
+                    <span>Administraci&oacute;n</span>
                 </NavLink>
             </div>
         </Authorized>
     </AuthorizeView>
+
 </nav>
 
 @code {
