@@ -48,7 +48,7 @@
     else if (clientes.Count == 0)
     {
         <div class="alert alert-info">
-            <i class="bi bi-info-circle"></i> No hay clientes registrados. Crea el primer cliente usando el bot髇 "Nuevo Cliente".
+            <i class="bi bi-info-circle"></i> No hay clientes registrados. Crea el primer cliente usando el bot贸n "Nuevo Cliente".
         </div>
     }
     else
@@ -59,10 +59,10 @@
                     <table class="table table-hover">
                         <thead>
                             <tr>
-                                <th>C骴igo</th>
-                                <th>Raz髇 Social</th>
+                                <th>C贸digo</th>
+                                <th>Raz贸n Social</th>
                                 <th>NIT</th>
-                                <th>Tel閒ono</th>
+                                <th>Tel茅fono</th>
                                 <th>Email</th>
                                 <th>Tipo</th>
                                 <th>Estado</th>
@@ -124,13 +124,13 @@
 
                         <div class="row">
                             <div class="col-md-4 mb-3">
-                                <label class="form-label">C骴igo *</label>
+                                <label class="form-label">C贸digo *</label>
                                 <InputText class="form-control" @bind-Value="createDto.Codigo" placeholder="Ej: CLI-001" />
                                 <ValidationMessage For="@(() => createDto.Codigo)" />
                             </div>
                             <div class="col-md-8 mb-3">
-                                <label class="form-label">Raz髇 Social *</label>
-                                <InputText class="form-control" @bind-Value="createDto.RazonSocial" placeholder="Nombre o raz髇 social" />
+                                <label class="form-label">Raz贸n Social *</label>
+                                <InputText class="form-control" @bind-Value="createDto.RazonSocial" placeholder="Nombre o raz贸n social" />
                                 <ValidationMessage For="@(() => createDto.RazonSocial)" />
                             </div>
                         </div>
@@ -152,7 +152,7 @@
                                 <ValidationMessage For="@(() => createDto.TipoCliente)" />
                             </div>
                             <div class="col-md-4 mb-3">
-                                <label class="form-label">Tel閒ono</label>
+                                <label class="form-label">Tel茅fono</label>
                                 <InputText class="form-control" @bind-Value="createDto.Telefono" placeholder="77123456" />
                                 <ValidationMessage For="@(() => createDto.Telefono)" />
                             </div>
@@ -172,8 +172,8 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Direcci髇</label>
-                            <InputTextArea class="form-control" @bind-Value="createDto.Direccion" rows="2" placeholder="Direcci髇 completa" />
+                            <label class="form-label">Direcci贸n</label>
+                            <InputTextArea class="form-control" @bind-Value="createDto.Direccion" rows="2" placeholder="Direcci贸n completa" />
                             <ValidationMessage For="@(() => createDto.Direccion)" />
                         </div>
 
@@ -211,13 +211,13 @@
 
                         <div class="row">
                             <div class="col-md-4 mb-3">
-                                <label class="form-label">C骴igo *</label>
+                                <label class="form-label">C贸digo *</label>
                                 <InputText class="form-control" @bind-Value="updateDto.Codigo" placeholder="Ej: CLI-001" />
                                 <ValidationMessage For="@(() => updateDto.Codigo)" />
                             </div>
                             <div class="col-md-8 mb-3">
-                                <label class="form-label">Raz髇 Social *</label>
-                                <InputText class="form-control" @bind-Value="updateDto.RazonSocial" placeholder="Nombre o raz髇 social" />
+                                <label class="form-label">Raz贸n Social *</label>
+                                <InputText class="form-control" @bind-Value="updateDto.RazonSocial" placeholder="Nombre o raz贸n social" />
                                 <ValidationMessage For="@(() => updateDto.RazonSocial)" />
                             </div>
                         </div>
@@ -239,7 +239,7 @@
                                 <ValidationMessage For="@(() => updateDto.TipoCliente)" />
                             </div>
                             <div class="col-md-4 mb-3">
-                                <label class="form-label">Tel閒ono</label>
+                                <label class="form-label">Tel茅fono</label>
                                 <InputText class="form-control" @bind-Value="updateDto.Telefono" placeholder="77123456" />
                                 <ValidationMessage For="@(() => updateDto.Telefono)" />
                             </div>
@@ -259,8 +259,8 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Direcci髇</label>
-                            <InputTextArea class="form-control" @bind-Value="updateDto.Direccion" rows="2" placeholder="Direcci髇 completa" />
+                            <label class="form-label">Direcci贸n</label>
+                            <InputTextArea class="form-control" @bind-Value="updateDto.Direccion" rows="2" placeholder="Direcci贸n completa" />
                             <ValidationMessage For="@(() => updateDto.Direccion)" />
                         </div>
 
@@ -413,7 +413,7 @@
 
     private async Task DeleteCliente(ClienteDto cliente)
     {
-        if (!await JS.InvokeAsync<bool>("confirm", $"縀liminar el cliente '{cliente.RazonSocial}'?"))
+        if (!await JS.InvokeAsync<bool>("confirm", $"驴Eliminar el cliente '{cliente.RazonSocial}'?"))
             return;
 
         try

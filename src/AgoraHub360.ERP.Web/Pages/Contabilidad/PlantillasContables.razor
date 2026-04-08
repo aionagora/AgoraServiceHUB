@@ -9,13 +9,13 @@
 <div class="container-fluid">
     <div class="row mb-3">
         <div class="col">
-            <h3><i class="bi bi-file-earmark-ruled"></i> Plantillas de Contabilización</h3>
-            <p class="text-muted mb-0">Configuración de asientos automáticos por tipo de documento</p>
+            <h3><i class="bi bi-file-earmark-ruled"></i> Plantillas de ContabilizaciÃ³n</h3>
+            <p class="text-muted mb-0">ConfiguraciÃ³n de asientos automÃ¡ticos por tipo de documento</p>
         </div>
         <div class="col-auto d-flex gap-2">
             <button class="btn btn-outline-success" @onclick="SeedPlantillas" disabled="@seeding">
                 @if (seeding) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                <i class="bi bi-magic"></i> Generar Plantillas Estándar
+                <i class="bi bi-magic"></i> Generar Plantillas EstÃ¡ndar
             </button>
             <button class="btn btn-primary" @onclick="ShowCreateModal">
                 <i class="bi bi-plus-circle"></i> Nueva Plantilla
@@ -46,7 +46,7 @@
     {
         <div class="text-center py-5">
             <i class="bi bi-file-earmark-x" style="font-size:2.5rem;"></i>
-            <p class="text-muted mt-3">No hay plantillas configuradas. Use <strong>"Generar Plantillas Estándar"</strong> para crear las plantillas predefinidas.</p>
+            <p class="text-muted mt-3">No hay plantillas configuradas. Use <strong>"Generar Plantillas EstÃ¡ndar"</strong> para crear las plantillas predefinidas.</p>
         </div>
     }
     else
@@ -96,7 +96,7 @@
                                                 </span>
                                             </td>
                                             <td><code>@l.CampoMonto</code></td>
-                                            <td class="text-end">@(l.Factor != 1m ? l.Factor.ToString("N4") : "×1")</td>
+                                            <td class="text-end">@(l.Factor != 1m ? l.Factor.ToString("N4") : "Ã—1")</td>
                                         </tr>
                                     }
                                 </tbody>
@@ -132,14 +132,14 @@
                         @if (!isEditing)
                         {
                             <div class="col-md-2">
-                                <label class="form-label">Código *</label>
+                                <label class="form-label">CÃ³digo *</label>
                                 <input class="form-control" @bind="formCodigo" placeholder="REC" />
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">Tipo Documento *</label>
                                 <select class="form-select" @bind="formTipoDoc">
-                                    <option value="Recepcion">Recepción de Compra</option>
-                                    <option value="Importacion">Liquidación de Importación</option>
+                                    <option value="Recepcion">RecepciÃ³n de Compra</option>
+                                    <option value="Importacion">LiquidaciÃ³n de ImportaciÃ³n</option>
                                     <option value="Venta">Venta / Factura</option>
                                     <option value="CostoVenta">Costo de Venta</option>
                                     <option value="AjusteInventario">Ajuste de Inventario</option>
@@ -153,16 +153,16 @@
                         </div>
                         <div class="@(isEditing ? "col-md-7" : "col-md-3")">
                             <label class="form-label">Glosa Plantilla *</label>
-                            <input class="form-control" @bind="formGlosa" placeholder="Recepción {Numero}..." />
+                            <input class="form-control" @bind="formGlosa" placeholder="RecepciÃ³n {Numero}..." />
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Descripción</label>
+                        <label class="form-label">DescripciÃ³n</label>
                         <input class="form-control" @bind="formDescripcion" />
                     </div>
 
                     <hr />
-                    <strong><i class="bi bi-list-ol"></i> Líneas de la Plantilla</strong>
+                    <strong><i class="bi bi-list-ol"></i> LÃ­neas de la Plantilla</strong>
 
                     <div class="row g-2 align-items-end mt-2 mb-2">
                         <div class="col-md-4">
@@ -171,7 +171,7 @@
                                 <option value="0">-- Seleccionar --</option>
                                 @foreach (var c in cuentasMov)
                                 {
-                                    <option value="@c.CuentaContableId">@c.Codigo — @c.Nombre</option>
+                                    <option value="@c.CuentaContableId">@c.Codigo â€” @c.Nombre</option>
                                 }
                             </select>
                         </div>
@@ -222,7 +222,7 @@
                                         <td><code>@l.CuentaCodigo</code> <small class="text-muted">@l.CuentaNombre</small></td>
                                         <td><span class="badge @(l.TipoMov == "Debe" ? "bg-primary" : "bg-success")">@l.TipoMov</span></td>
                                         <td><code>@l.Campo</code></td>
-                                        <td class="text-end">@(l.Factor != 1m ? l.Factor.ToString("N4") : "×1")</td>
+                                        <td class="text-end">@(l.Factor != 1m ? l.Factor.ToString("N4") : "Ã—1")</td>
                                         <td class="text-end"><button class="btn btn-sm btn-outline-danger" @onclick="() => tempLineas.RemoveAt(idx)"><i class="bi bi-x-lg"></i></button></td>
                                     </tr>
                                 }
@@ -231,11 +231,11 @@
                         <div class="mt-2">
                             @if (tempLineas.Any(l => l.TipoMov == "Debe") && tempLineas.Any(l => l.TipoMov == "Haber"))
                             {
-                                <span class="text-success"><i class="bi bi-check-circle-fill"></i> Plantilla tiene líneas Debe y Haber</span>
+                                <span class="text-success"><i class="bi bi-check-circle-fill"></i> Plantilla tiene lÃ­neas Debe y Haber</span>
                             }
                             else
                             {
-                                <span class="text-danger"><i class="bi bi-exclamation-triangle-fill"></i> Falta al menos una línea @(tempLineas.Any(l => l.TipoMov == "Debe") ? "Haber" : "Debe")</span>
+                                <span class="text-danger"><i class="bi bi-exclamation-triangle-fill"></i> Falta al menos una lÃ­nea @(tempLineas.Any(l => l.TipoMov == "Debe") ? "Haber" : "Debe")</span>
                             }
                         </div>
                     }
@@ -362,7 +362,7 @@
 
     private async Task DeletePlantilla(PlantillaContableDto p)
     {
-        if (!await JS.InvokeAsync<bool>("confirm", $"¿Eliminar plantilla {p.Codigo} — {p.Nombre}?")) return;
+        if (!await JS.InvokeAsync<bool>("confirm", $"Â¿Eliminar plantilla {p.Codigo} â€” {p.Nombre}?")) return;
         try
         {
             var r = await PlantillaService.DeleteAsync(p.PlantillaContableId);
@@ -374,7 +374,7 @@
 
     private async Task SeedPlantillas()
     {
-        if (!await JS.InvokeAsync<bool>("confirm", "¿Generar las plantillas estándar? Requiere que el plan de cuentas ya exista.")) return;
+        if (!await JS.InvokeAsync<bool>("confirm", "Â¿Generar las plantillas estÃ¡ndar? Requiere que el plan de cuentas ya exista.")) return;
         seeding = true; errorMessage = null;
         try
         {
@@ -388,8 +388,8 @@
 
     private static string GetTipoDocLabel(string tipo) => tipo switch
     {
-        "Recepcion" => "?? Recepción",
-        "Importacion" => "?? Importación",
+        "Recepcion" => "?? RecepciÃ³n",
+        "Importacion" => "?? ImportaciÃ³n",
         "Venta" => "?? Venta",
         "CostoVenta" => "?? Costo Venta",
         "AjusteInventario" => "?? Ajuste Inv.",

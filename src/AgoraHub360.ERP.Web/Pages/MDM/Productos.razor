@@ -19,7 +19,7 @@
     <div class="row mb-3">
         <div class="col">
             <h3><i class="bi bi-box-seam-fill"></i> Productos</h3>
-            <p class="text-muted mb-0">Catálogo de productos con relaciones</p>
+            <p class="text-muted mb-0">CatÃ¡logo de productos con relaciones</p>
         </div>
         <div class="col-auto">
             <button class="btn btn-primary" @onclick="ShowCreateModal">
@@ -71,12 +71,12 @@
                             <tr>
                                 <th style="width:40px"></th>
                                 <th>Nombre Comercial</th>
-                                <th>Nombre Genérico</th>
+                                <th>Nombre GenÃ©rico</th>
                                 <th>Marca</th>
                                 <th>Fabricante</th>
                                 <th>UdM</th>
                                 <th>Tipo</th>
-                                <th>Catálogo</th>
+                                <th>CatÃ¡logo</th>
                                 <th>Estado</th>
                                 <th class="text-end">Acciones</th>
                             </tr>
@@ -92,8 +92,8 @@
                                     </td>
                                     <td><strong>@p.CommercialName</strong></td>
                                     <td><small class="text-muted">@p.GenericName</small></td>
-                                    <td><small>@(p.BrandName ?? "—")</small></td>
-                                    <td><small>@(p.ManufacturerName ?? "—")</small></td>
+                                    <td><small>@(p.BrandName ?? "â€”")</small></td>
+                                    <td><small>@(p.ManufacturerName ?? "â€”")</small></td>
                                     <td><span class="badge bg-info text-dark">@p.DefaultUomCode</span></td>
                                     <td><span class="badge bg-secondary">@GetKindLabel(p.ProductKind)</span></td>
                                     <td><small>@p.CatalogName</small></td>
@@ -131,7 +131,7 @@
                                                     </li>
                                                     <li class="nav-item">
                                                         <button class="nav-link @(activeTab == "codigos" ? "active" : "")" @onclick='() => activeTab = "codigos"'>
-                                                            <i class="bi bi-upc-scan"></i> Códigos <span class="badge bg-secondary">@detailCodes.Count</span>
+                                                            <i class="bi bi-upc-scan"></i> CÃ³digos <span class="badge bg-secondary">@detailCodes.Count</span>
                                                         </button>
                                                     </li>
                                                     <li class="nav-item">
@@ -160,18 +160,18 @@
                                                         else
                                                         {
                                                             <table class="table table-sm table-bordered mb-0">
-                                                                <thead><tr><th>SKU</th><th>Nombre</th><th>Código Barras</th><th>Ejes</th><th>Estado</th></tr></thead>
+                                                                <thead><tr><th>SKU</th><th>Nombre</th><th>CÃ³digo Barras</th><th>Ejes</th><th>Estado</th></tr></thead>
                                                                 <tbody>
                                                                     @foreach (var v in detailVariants)
                                                                     {
                                                                         <tr>
                                                                             <td><code>@v.Sku</code></td>
-                                                                            <td>@(v.VariantName ?? "—")</td>
-                                                                            <td><small>@(v.Barcode ?? "—")</small></td>
+                                                                            <td>@(v.VariantName ?? "â€”")</td>
+                                                                            <td><small>@(v.Barcode ?? "â€”")</small></td>
                                                                             <td>
                                                                                 @foreach (var ax in v.AxisValues)
                                                                                 {
-                                                                                    <span class="badge bg-outline-secondary me-1">@ax.AttributeName: @(ax.OptionValue ?? ax.ValueString ?? "—")</span>
+                                                                                    <span class="badge bg-outline-secondary me-1">@ax.AttributeName: @(ax.OptionValue ?? ax.ValueString ?? "â€”")</span>
                                                                                 }
                                                                             </td>
                                                                             <td><span class="badge @(v.Activo ? "bg-success" : "bg-secondary")">@(v.Activo ? "Activo" : "Inactivo")</span></td>
@@ -193,7 +193,7 @@
                                                         else
                                                         {
                                                             <table class="table table-sm table-bordered mb-0">
-                                                                <thead><tr><th>UdM</th><th>Código</th><th class="text-center">Base</th><th class="text-end">Factor</th><th>Cód. Barras</th><th class="text-end"></th></tr></thead>
+                                                                <thead><tr><th>UdM</th><th>CÃ³digo</th><th class="text-center">Base</th><th class="text-end">Factor</th><th>CÃ³d. Barras</th><th class="text-end"></th></tr></thead>
                                                                 <tbody>
                                                                     @foreach (var u in detailUoms)
                                                                     {
@@ -202,7 +202,7 @@
                                                                             <td><code>@u.UomCode</code></td>
                                                                             <td class="text-center">@if(u.IsBase){<i class="bi bi-star-fill text-warning"></i>}</td>
                                                                             <td class="text-end">@u.FactorToBase.ToString("N6")</td>
-                                                                            <td><small>@(u.Barcode ?? "—")</small></td>
+                                                                            <td><small>@(u.Barcode ?? "â€”")</small></td>
                                                                             <td class="text-end">
                                                                                 <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteUom(p.ProductId, u.ProductUomId)"><i class="bi bi-x-lg"></i></button>
                                                                             </td>
@@ -213,14 +213,14 @@
                                                         }
                                                     }
 
-                                                    @* ?? Tab Códigos ?? *@
+                                                    @* ?? Tab CÃ³digos ?? *@
                                                     @if (activeTab == "codigos")
                                                     {
                                                         <div class="d-flex justify-content-between align-items-center mb-2">
-                                                            <strong>Códigos de Producto</strong>
+                                                            <strong>CÃ³digos de Producto</strong>
                                                             <button class="btn btn-sm btn-success" @onclick="() => ShowAddCodeModal(p.ProductId)"><i class="bi bi-plus"></i> Agregar</button>
                                                         </div>
-                                                        @if (detailCodes.Count == 0) { <p class="text-muted small">Sin códigos.</p> }
+                                                        @if (detailCodes.Count == 0) { <p class="text-muted small">Sin cÃ³digos.</p> }
                                                         else
                                                         {
                                                             <table class="table table-sm table-bordered mb-0">
@@ -232,7 +232,7 @@
                                                                             <td><span class="badge bg-secondary">@CodeTypeLabel(c.CodeType)</span></td>
                                                                             <td><code>@c.Valor</code></td>
                                                                             <td class="text-center">@if(c.IsPrimary){<i class="bi bi-star-fill text-warning"></i>}</td>
-                                                                            <td><small>@(c.ValidFrom?.ToString("dd/MM/yy") ?? "—") ? @(c.ValidTo?.ToString("dd/MM/yy") ?? "—")</small></td>
+                                                                            <td><small>@(c.ValidFrom?.ToString("dd/MM/yy") ?? "â€”") ? @(c.ValidTo?.ToString("dd/MM/yy") ?? "â€”")</small></td>
                                                                             <td class="text-end">
                                                                                 <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteCode(p.ProductId, c.ProductCodeId)"><i class="bi bi-x-lg"></i></button>
                                                                             </td>
@@ -261,7 +261,7 @@
                                                                         <tr>
                                                                             <td><strong>@a.AttributeName</strong></td>
                                                                             <td>@FormatAttrValue(a)</td>
-                                                                            <td><small>@(a.ValidFrom?.ToString("dd/MM/yy") ?? "—") ? @(a.ValidTo?.ToString("dd/MM/yy") ?? "—")</small></td>
+                                                                            <td><small>@(a.ValidFrom?.ToString("dd/MM/yy") ?? "â€”") ? @(a.ValidTo?.ToString("dd/MM/yy") ?? "â€”")</small></td>
                                                                         </tr>
                                                                     }
                                                                 </tbody>
@@ -280,18 +280,18 @@
                                                         else
                                                         {
                                                             <table class="table table-sm table-bordered mb-0">
-                                                                <thead><tr><th>SKU</th><th>Cód. Interno</th><th class="text-center">POS</th><th class="text-center">Ecom</th><th class="text-center">B2B</th><th class="text-end">Stock Min</th><th class="text-end">Stock Max</th><th>Estado</th></tr></thead>
+                                                                <thead><tr><th>SKU</th><th>CÃ³d. Interno</th><th class="text-center">POS</th><th class="text-center">Ecom</th><th class="text-center">B2B</th><th class="text-end">Stock Min</th><th class="text-end">Stock Max</th><th>Estado</th></tr></thead>
                                                                 <tbody>
                                                                     @foreach (var cp in detailCompany)
                                                                     {
                                                                         <tr>
                                                                             <td><code>@cp.Sku</code></td>
-                                                                            <td><small>@(cp.CodigoInterno ?? "—")</small></td>
+                                                                            <td><small>@(cp.CodigoInterno ?? "â€”")</small></td>
                                                                             <td class="text-center"><i class="bi @(cp.IsVisiblePOS ? "bi-check-circle-fill text-success" : "bi-x-circle text-secondary")"></i></td>
                                                                             <td class="text-center"><i class="bi @(cp.IsVisibleEcommerce ? "bi-check-circle-fill text-success" : "bi-x-circle text-secondary")"></i></td>
                                                                             <td class="text-center"><i class="bi @(cp.IsVisibleB2B ? "bi-check-circle-fill text-success" : "bi-x-circle text-secondary")"></i></td>
-                                                                            <td class="text-end">@(cp.MinStock?.ToString("N2") ?? "—")</td>
-                                                                            <td class="text-end">@(cp.MaxStock?.ToString("N2") ?? "—")</td>
+                                                                            <td class="text-end">@(cp.MinStock?.ToString("N2") ?? "â€”")</td>
+                                                                            <td class="text-end">@(cp.MaxStock?.ToString("N2") ?? "â€”")</td>
                                                                             <td><span class="badge @(cp.Activo ? "bg-success" : "bg-secondary")">@(cp.Activo ? "Activo" : "Inactivo")</span></td>
                                                                         </tr>
                                                                     }
@@ -313,7 +313,7 @@
     }
 </div>
 
-@* ?? Modal Crear (Wizard con pestañas) ?? *@
+@* ?? Modal Crear (Wizard con pestaÃ±as) ?? *@
 @if (showCreateModal)
 {
     <div class="modal show d-block" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
@@ -334,7 +334,7 @@
                     <ul class="nav nav-tabs px-3 pt-3">
                         <li class="nav-item">
                             <button class="nav-link @(wizardTab == "datos" ? "active" : "")" @onclick='() => wizardTab = "datos"'>
-                                <i class="bi bi-1-circle-fill me-1"></i> Datos Básicos
+                                <i class="bi bi-1-circle-fill me-1"></i> Datos BÃ¡sicos
                                 @if (createdProductId > 0) { <i class="bi bi-check-circle-fill text-success ms-1"></i> }
                             </button>
                         </li>
@@ -345,7 +345,7 @@
                         </li>
                         <li class="nav-item">
                             <button class="nav-link @(wizardTab == "w-codes" ? "active" : "") @(createdProductId == 0 ? "disabled" : "")" @onclick='() => { if (createdProductId > 0) wizardTab = "w-codes"; }'>
-                                <i class="bi bi-3-circle-fill me-1"></i> Códigos <span class="badge bg-secondary ms-1">@wizardCodes.Count</span>
+                                <i class="bi bi-3-circle-fill me-1"></i> CÃ³digos <span class="badge bg-secondary ms-1">@wizardCodes.Count</span>
                             </button>
                         </li>
                         <li class="nav-item">
@@ -375,22 +375,22 @@
                             <div class="alert alert-success alert-dismissible py-2"><i class="bi bi-check-circle-fill"></i> @wizardSuccess <button type="button" class="btn-close" @onclick="() => wizardSuccess = null"></button></div>
                         }
 
-                        @* ?????? Tab 1: Datos Básicos ?????? *@
+                        @* ?????? Tab 1: Datos BÃ¡sicos ?????? *@
                         @if (wizardTab == "datos")
                         {
                             @if (catalogos.Count == 0 || unidades.Count == 0)
                             {
-                                <div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> Debe crear al menos un <strong>Catálogo</strong> y una <strong>Unidad de Medida</strong>.</div>
+                                <div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> Debe crear al menos un <strong>CatÃ¡logo</strong> y una <strong>Unidad de Medida</strong>.</div>
                             }
                             else
                             {
                                 <fieldset disabled="@(createdProductId > 0)">
                                     <div class="row">
                                         <div class="col-md-6 mb-3"><label class="form-label">Nombre Comercial *</label><input class="form-control" @bind="createDto.CommercialName" placeholder="Nombre comercial" /></div>
-                                        <div class="col-md-6 mb-3"><label class="form-label">Nombre Genérico *</label><input class="form-control" @bind="createDto.GenericName" placeholder="Nombre genérico" /></div>
+                                        <div class="col-md-6 mb-3"><label class="form-label">Nombre GenÃ©rico *</label><input class="form-control" @bind="createDto.GenericName" placeholder="Nombre genÃ©rico" /></div>
                                     </div>
                                     <div class="row">
-                                        <div class="col-md-4 mb-3"><label class="form-label">Catálogo *</label><select class="form-select" @bind="createDto.CatalogId"><option value="0">-- Seleccionar --</option>@foreach (var c in catalogos) { <option value="@c.CatalogId">@c.Name</option> }</select></div>
+                                        <div class="col-md-4 mb-3"><label class="form-label">CatÃ¡logo *</label><select class="form-select" @bind="createDto.CatalogId"><option value="0">-- Seleccionar --</option>@foreach (var c in catalogos) { <option value="@c.CatalogId">@c.Name</option> }</select></div>
                                         <div class="col-md-4 mb-3"><label class="form-label">UdM Base *</label><select class="form-select" @bind="createDto.DefaultUomId"><option value="0">-- Seleccionar --</option>@foreach (var u in unidades) { <option value="@u.UomId">@u.Name (@u.Code)</option> }</select></div>
                                         <div class="col-md-4 mb-3"><label class="form-label">Tipo</label><select class="form-select" @bind="createDto.ProductKind"><option value="1">Bien</option><option value="2">Servicio</option><option value="3">Kit</option><option value="4">BOM</option></select></div>
                                     </div>
@@ -398,7 +398,7 @@
                                         <div class="col-md-6 mb-3"><label class="form-label">Marca</label><select class="form-select" @bind="createDto.BrandId"><option value="">-- Sin marca --</option>@foreach (var b in brands) { <option value="@b.BrandId">@b.Name</option> }</select></div>
                                         <div class="col-md-6 mb-3"><label class="form-label">Fabricante</label><select class="form-select" @bind="createDto.ManufacturerId"><option value="">-- Sin fabricante --</option>@foreach (var m in manufacturers) { <option value="@m.ManufacturerId">@m.Name @(!string.IsNullOrEmpty(m.Country) ? $"({m.Country})" : "")</option> }</select></div>
                                     </div>
-                                    <div class="mb-3"><label class="form-label">Descripción Corta</label><input class="form-control" @bind="createDto.ShortDescription" /></div>
+                                    <div class="mb-3"><label class="form-label">DescripciÃ³n Corta</label><input class="form-control" @bind="createDto.ShortDescription" /></div>
                                     <div class="row">
                                         <div class="col-auto"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" @bind="createDto.IsStockable" id="wcSt" /><label class="form-check-label" for="wcSt">Stockable</label></div></div>
                                         <div class="col-auto"><div class="form-check form-switch"><input class="form-check-input" type="checkbox" @bind="createDto.IsSellable" id="wcSe" /><label class="form-check-label" for="wcSe">Vendible</label></div></div>
@@ -407,7 +407,7 @@
                                 </fieldset>
                                 @if (createdProductId > 0)
                                 {
-                                    <div class="alert alert-info mt-3 mb-0"><i class="bi bi-info-circle"></i> Producto guardado. Continue con las pestañas para agregar relaciones, o cierre este diálogo.</div>
+                                    <div class="alert alert-info mt-3 mb-0"><i class="bi bi-info-circle"></i> Producto guardado. Continue con las pestaÃ±as para agregar relaciones, o cierre este diÃ¡logo.</div>
                                 }
                             }
                         }
@@ -418,7 +418,7 @@
                             <div class="row g-2 align-items-end mb-3">
                                 <div class="col-md-3"><label class="form-label small">UdM *</label><select class="form-select form-select-sm" @bind="wUomForm.UomId"><option value="0">-- Seleccionar --</option>@foreach (var u in unidades) { <option value="@u.UomId">@u.Name (@u.Code)</option> }</select></div>
                                 <div class="col-md-2"><label class="form-label small">Factor *</label><input type="number" step="0.000001" class="form-control form-control-sm" @bind="wUomForm.FactorToBase" /></div>
-                                <div class="col-md-3"><label class="form-label small">Cód. Barras</label><input class="form-control form-control-sm" @bind="wUomForm.Barcode" /></div>
+                                <div class="col-md-3"><label class="form-label small">CÃ³d. Barras</label><input class="form-control form-control-sm" @bind="wUomForm.Barcode" /></div>
                                 <div class="col-md-2"><div class="form-check form-check-inline mt-3"><input class="form-check-input" type="checkbox" @bind="wUomForm.IsBase" id="wuBase" /><label class="form-check-label" for="wuBase">Base</label></div></div>
                                 <div class="col-md-2"><button class="btn btn-success btn-sm w-100" @onclick="() => WizardAddUom()" disabled="@(saving || wUomForm.UomId == 0)"><i class="bi bi-plus"></i> Agregar</button></div>
                             </div>
@@ -426,7 +426,7 @@
                             else
                             {
                                 <table class="table table-sm table-bordered mb-0">
-                                    <thead><tr><th>UdM</th><th>Código</th><th class="text-center">Base</th><th class="text-end">Factor</th><th>Cód. Barras</th><th class="text-end"></th></tr></thead>
+                                    <thead><tr><th>UdM</th><th>CÃ³digo</th><th class="text-center">Base</th><th class="text-end">Factor</th><th>CÃ³d. Barras</th><th class="text-end"></th></tr></thead>
                                     <tbody>
                                         @foreach (var u in wizardUoms)
                                         {
@@ -434,7 +434,7 @@
                                                 <td>@u.UomName</td><td><code>@u.UomCode</code></td>
                                                 <td class="text-center">@if(u.IsBase){<i class="bi bi-star-fill text-warning"></i>}</td>
                                                 <td class="text-end">@u.FactorToBase.ToString("N6")</td>
-                                                <td><small>@(u.Barcode ?? "—")</small></td>
+                                                <td><small>@(u.Barcode ?? "â€”")</small></td>
                                                 <td class="text-end"><button class="btn btn-sm btn-outline-danger" @onclick="() => WizardDeleteUom(u.ProductUomId)"><i class="bi bi-x-lg"></i></button></td>
                                             </tr>
                                         }
@@ -443,18 +443,18 @@
                             }
                         }
 
-                        @* ?????? Tab 3: Códigos ?????? *@
+                        @* ?????? Tab 3: CÃ³digos ?????? *@
                         @if (wizardTab == "w-codes")
                         {
                             <div class="row g-2 align-items-end mb-3">
-                                <div class="col-md-2"><label class="form-label small">Tipo *</label><select class="form-select form-select-sm" @bind="wCodeForm.CodeType"><option value="0">--</option><option value="1">Cód. Barras</option><option value="2">SKU</option><option value="3">EAN</option><option value="4">Otro</option></select></div>
+                                <div class="col-md-2"><label class="form-label small">Tipo *</label><select class="form-select form-select-sm" @bind="wCodeForm.CodeType"><option value="0">--</option><option value="1">CÃ³d. Barras</option><option value="2">SKU</option><option value="3">EAN</option><option value="4">Otro</option></select></div>
                                 <div class="col-md-3"><label class="form-label small">Valor *</label><input class="form-control form-control-sm" @bind="wCodeForm.Valor" /></div>
                                 <div class="col-md-2"><label class="form-label small">Desde</label><InputDate class="form-control form-control-sm" @bind-Value="wCodeForm.ValidFrom" /></div>
                                 <div class="col-md-2"><label class="form-label small">Hasta</label><InputDate class="form-control form-control-sm" @bind-Value="wCodeForm.ValidTo" /></div>
                                 <div class="col-md-1"><div class="form-check mt-3"><input class="form-check-input" type="checkbox" @bind="wCodeForm.IsPrimary" id="wcPrim" /><label class="form-check-label small" for="wcPrim">Ppal</label></div></div>
                                 <div class="col-md-2"><button class="btn btn-success btn-sm w-100" @onclick="WizardAddCode" disabled="@(saving || wCodeForm.CodeType == 0 || string.IsNullOrWhiteSpace(wCodeForm.Valor))"><i class="bi bi-plus"></i> Agregar</button></div>
                             </div>
-                            @if (wizardCodes.Count == 0) { <p class="text-muted small">Sin códigos agregados.</p> }
+                            @if (wizardCodes.Count == 0) { <p class="text-muted small">Sin cÃ³digos agregados.</p> }
                             else
                             {
                                 <table class="table table-sm table-bordered mb-0">
@@ -466,7 +466,7 @@
                                                 <td><span class="badge bg-secondary">@CodeTypeLabel(c.CodeType)</span></td>
                                                 <td><code>@c.Valor</code></td>
                                                 <td class="text-center">@if(c.IsPrimary){<i class="bi bi-star-fill text-warning"></i>}</td>
-                                                <td><small>@(c.ValidFrom?.ToString("dd/MM/yy") ?? "—") ? @(c.ValidTo?.ToString("dd/MM/yy") ?? "—")</small></td>
+                                                <td><small>@(c.ValidFrom?.ToString("dd/MM/yy") ?? "â€”") ? @(c.ValidTo?.ToString("dd/MM/yy") ?? "â€”")</small></td>
                                                 <td class="text-end"><button class="btn btn-sm btn-outline-danger" @onclick="() => WizardDeleteCode(c.ProductCodeId)"><i class="bi bi-x-lg"></i></button></td>
                                             </tr>
                                         }
@@ -483,14 +483,14 @@
                                     <label class="form-label small">Atributo *</label>
                                     <select class="form-select form-select-sm" @bind="wAttrForm.AttributeId" @bind:after="OnWizardAttrSelected">
                                         <option value="0">-- Seleccionar --</option>
-                                        @foreach (var a in allAttributes) { <option value="@a.AttributeId">@a.Name — @DataTypeLabel(a.DataType)</option> }
+                                        @foreach (var a in allAttributes) { <option value="@a.AttributeId">@a.Name â€” @DataTypeLabel(a.DataType)</option> }
                                     </select>
                                 </div>
                                 @if (wizardSelectedAttr is not null)
                                 {
                                     <div class="col-md-4">
                                         @if (wizardSelectedAttr.DataType == 6 && wizardSelectedAttr.Options.Count > 0)
-                                        { <label class="form-label small">Opción</label><select class="form-select form-select-sm" @bind="wAttrForm.OptionId"><option value="">--</option>@foreach (var o in wizardSelectedAttr.Options) { <option value="@o.OptionId">@o.Value</option> }</select> }
+                                        { <label class="form-label small">OpciÃ³n</label><select class="form-select form-select-sm" @bind="wAttrForm.OptionId"><option value="">--</option>@foreach (var o in wizardSelectedAttr.Options) { <option value="@o.OptionId">@o.Value</option> }</select> }
                                         else if (wizardSelectedAttr.DataType == 1)
                                         { <label class="form-label small">Texto</label><input class="form-control form-control-sm" @bind="wAttrForm.ValueString" /> }
                                         else if (wizardSelectedAttr.DataType == 2)
@@ -498,7 +498,7 @@
                                         else if (wizardSelectedAttr.DataType == 3)
                                         { <label class="form-label small">Entero</label><input type="number" class="form-control form-control-sm" @bind="wAttrForm.ValueInt" /> }
                                         else if (wizardSelectedAttr.DataType == 4)
-                                        { <div class="form-check mt-3"><input class="form-check-input" type="checkbox" @bind="wAttrForm.ValueBool" id="waBool" /><label class="form-check-label" for="waBool">Sí/No</label></div> }
+                                        { <div class="form-check mt-3"><input class="form-check-input" type="checkbox" @bind="wAttrForm.ValueBool" id="waBool" /><label class="form-check-label" for="waBool">SÃ­/No</label></div> }
                                         else if (wizardSelectedAttr.DataType == 5)
                                         { <label class="form-label small">Fecha</label><InputDate class="form-control form-control-sm" @bind-Value="wAttrForm.ValueDate" /> }
                                         else
@@ -512,7 +512,7 @@
                             {
                                 <table class="table table-sm table-bordered mb-0">
                                     <thead><tr><th>Atributo</th><th>Valor</th><th>Vigencia</th></tr></thead>
-                                    <tbody>@foreach (var a in wizardAttrs) { <tr><td><strong>@a.AttributeName</strong></td><td>@FormatAttrValue(a)</td><td><small>@(a.ValidFrom?.ToString("dd/MM/yy") ?? "—") ? @(a.ValidTo?.ToString("dd/MM/yy") ?? "—")</small></td></tr> }</tbody>
+                                    <tbody>@foreach (var a in wizardAttrs) { <tr><td><strong>@a.AttributeName</strong></td><td>@FormatAttrValue(a)</td><td><small>@(a.ValidFrom?.ToString("dd/MM/yy") ?? "â€”") ? @(a.ValidTo?.ToString("dd/MM/yy") ?? "â€”")</small></td></tr> }</tbody>
                                 </table>
                             }
                         }
@@ -522,7 +522,7 @@
                         {
                             <div class="row g-2 align-items-end mb-3">
                                 <div class="col-md-3"><label class="form-label small">SKU Variante *</label><input class="form-control form-control-sm" @bind="wVariantForm.Sku" placeholder="SKU-VAR-001" /></div>
-                                <div class="col-md-3"><label class="form-label small">Código de Barras</label><input class="form-control form-control-sm" @bind="wVariantForm.Barcode" /></div>
+                                <div class="col-md-3"><label class="form-label small">CÃ³digo de Barras</label><input class="form-control form-control-sm" @bind="wVariantForm.Barcode" /></div>
                                 <div class="col-md-4">
                                     <label class="form-label small">Eje (Atributo variante)</label>
                                     <div class="input-group input-group-sm">
@@ -541,7 +541,7 @@
                                 <div class="mb-2">
                                     @foreach (var ax in wVariantForm.AxisValues)
                                     {
-                                        <span class="badge bg-primary me-1">@ax.AttributeName: @(ax.OptionValue ?? ax.ValueString ?? "—") <i class="bi bi-x" style="cursor:pointer" @onclick="() => wVariantForm.AxisValues.Remove(ax)"></i></span>
+                                        <span class="badge bg-primary me-1">@ax.AttributeName: @(ax.OptionValue ?? ax.ValueString ?? "â€”") <i class="bi bi-x" style="cursor:pointer" @onclick="() => wVariantForm.AxisValues.Remove(ax)"></i></span>
                                     }
                                 </div>
                             }
@@ -554,8 +554,8 @@
                                         @foreach (var v in wizardVariants)
                                         {
                                             <tr>
-                                                <td><code>@v.Sku</code></td><td><small>@(v.Barcode ?? "—")</small></td><td>@(v.VariantName ?? "—")</td>
-                                                <td>@foreach (var ax in v.AxisValues) { <span class="badge bg-outline-secondary me-1">@ax.AttributeName: @(ax.OptionValue ?? ax.ValueString ?? "—")</span> }</td>
+                                                <td><code>@v.Sku</code></td><td><small>@(v.Barcode ?? "â€”")</small></td><td>@(v.VariantName ?? "â€”")</td>
+                                                <td>@foreach (var ax in v.AxisValues) { <span class="badge bg-outline-secondary me-1">@ax.AttributeName: @(ax.OptionValue ?? ax.ValueString ?? "â€”")</span> }</td>
                                                 <td class="text-end"><button class="btn btn-sm btn-outline-danger" @onclick="() => WizardDeleteVariant(v.VariantId)"><i class="bi bi-x-lg"></i></button></td>
                                             </tr>
                                         }
@@ -569,7 +569,7 @@
                         {
                             <div class="row g-2 align-items-end mb-3">
                                 <div class="col-md-3"><label class="form-label small">SKU Empresa *</label><input class="form-control form-control-sm" @bind="wCompanyForm.Sku" placeholder="EMP-SKU-001" /></div>
-                                <div class="col-md-2"><label class="form-label small">Cód. Interno</label><input class="form-control form-control-sm" @bind="wCompanyForm.CodigoInterno" /></div>
+                                <div class="col-md-2"><label class="form-label small">CÃ³d. Interno</label><input class="form-control form-control-sm" @bind="wCompanyForm.CodigoInterno" /></div>
                                 <div class="col-md-1"><div class="form-check mt-3"><input class="form-check-input" type="checkbox" @bind="wCompanyForm.IsVisiblePOS" id="wePOS" /><label class="form-check-label small" for="wePOS">POS</label></div></div>
                                 <div class="col-md-1"><div class="form-check mt-3"><input class="form-check-input" type="checkbox" @bind="wCompanyForm.IsVisibleEcommerce" id="weEco" /><label class="form-check-label small" for="weEco">Ecom</label></div></div>
                                 <div class="col-md-1"><div class="form-check mt-3"><input class="form-check-input" type="checkbox" @bind="wCompanyForm.IsVisibleB2B" id="weB2B" /><label class="form-check-label small" for="weB2B">B2B</label></div></div>
@@ -581,18 +581,18 @@
                             else
                             {
                                 <table class="table table-sm table-bordered mb-0">
-                                    <thead><tr><th>SKU</th><th>Cód. Int.</th><th class="text-center">POS</th><th class="text-center">Ecom</th><th class="text-center">B2B</th><th class="text-end">Min</th><th class="text-end">Max</th><th class="text-end"></th></tr></thead>
+                                    <thead><tr><th>SKU</th><th>CÃ³d. Int.</th><th class="text-center">POS</th><th class="text-center">Ecom</th><th class="text-center">B2B</th><th class="text-end">Min</th><th class="text-end">Max</th><th class="text-end"></th></tr></thead>
                                     <tbody>
                                         @foreach (var cp in wizardCompany)
                                         {
                                             <tr>
                                                 <td><code>@cp.Sku</code></td>
-                                                <td><small>@(cp.CodigoInterno ?? "—")</small></td>
+                                                <td><small>@(cp.CodigoInterno ?? "â€”")</small></td>
                                                 <td class="text-center"><i class="bi @(cp.IsVisiblePOS ? "bi-check-circle-fill text-success" : "bi-x-circle text-secondary")"></i></td>
                                                 <td class="text-center"><i class="bi @(cp.IsVisibleEcommerce ? "bi-check-circle-fill text-success" : "bi-x-circle text-secondary")"></i></td>
                                                 <td class="text-center"><i class="bi @(cp.IsVisibleB2B ? "bi-check-circle-fill text-success" : "bi-x-circle text-secondary")"></i></td>
-                                                <td class="text-end">@(cp.MinStock?.ToString("N2") ?? "—")</td>
-                                                <td class="text-end">@(cp.MaxStock?.ToString("N2") ?? "—")</td>
+                                                <td class="text-end">@(cp.MinStock?.ToString("N2") ?? "â€”")</td>
+                                                <td class="text-end">@(cp.MaxStock?.ToString("N2") ?? "â€”")</td>
                                                 <td class="text-end"><button class="btn btn-sm btn-outline-danger" @onclick="() => WizardDeleteCompany(cp.CompanyProductId)"><i class="bi bi-x-lg"></i></button></td>
                                             </tr>
                                         }
@@ -793,7 +793,7 @@
         finally { saving = false; }
     }
 
-    // Wizard – UdM
+    // Wizard â€“ UdM
     private async Task WizardAddUom()
     {
         if (wUomForm.UomId == 0) return;
@@ -809,12 +809,12 @@
     }
     private async Task WizardDeleteUom(long id)
     {
-        if (!await JS.InvokeAsync<bool>("confirm", "¿Eliminar esta UdM?")) return;
+        if (!await JS.InvokeAsync<bool>("confirm", "Â¿Eliminar esta UdM?")) return;
         try { var r = await ProductUomService.DeleteAsync(id); if (r.Success) { wizardUoms = await ProductUomService.GetByProductAsync(createdProductId); wizardSuccess = "UdM eliminada."; } else wizardError = r.Message; }
         catch (Exception ex) { wizardError = ex.Message; }
     }
 
-    // Wizard – Códigos
+    // Wizard â€“ CÃ³digos
     private async Task WizardAddCode()
     {
         if (wCodeForm.CodeType == 0 || string.IsNullOrWhiteSpace(wCodeForm.Valor)) return;
@@ -822,7 +822,7 @@
         try
         {
             var r = await ProductCodeService.CreateAsync(new CreateProductCodeDto(modalProductId, addCodeForm.CodeType, addCodeForm.Valor, ValidFrom: addCodeForm.ValidFrom, ValidTo: addCodeForm.ValidTo, IsPrimary: addCodeForm.IsPrimary));
-            if (r.Success) { successMessage = "Código asignado."; showAddCodeModal = false; expandedId = 0; await ToggleDetail(modalProductId); }
+            if (r.Success) { successMessage = "CÃ³digo asignado."; showAddCodeModal = false; expandedId = 0; await ToggleDetail(modalProductId); }
             else errorMessage = r.Message;
         }
         catch (Exception ex) { errorMessage = ex.Message; }
@@ -830,12 +830,12 @@
     }
     private async Task WizardDeleteCode(long id)
     {
-        if (!await JS.InvokeAsync<bool>("confirm", "¿Eliminar este código?")) return;
-        try { var r = await ProductCodeService.DeleteAsync(id); if (r.Success) { wizardCodes = await ProductCodeService.GetByProductAsync(createdProductId); wizardSuccess = "Código eliminado."; } else wizardError = r.Message; }
+        if (!await JS.InvokeAsync<bool>("confirm", "Â¿Eliminar este cÃ³digo?")) return;
+        try { var r = await ProductCodeService.DeleteAsync(id); if (r.Success) { wizardCodes = await ProductCodeService.GetByProductAsync(createdProductId); wizardSuccess = "CÃ³digo eliminado."; } else wizardError = r.Message; }
         catch (Exception ex) { wizardError = ex.Message; }
     }
 
-    // Wizard – Atributos
+    // Wizard â€“ Atributos
     private void OnWizardAttrSelected()
     {
         wizardSelectedAttr = allAttributes.FirstOrDefault(a => a.AttributeId == wAttrForm.AttributeId);
@@ -856,7 +856,7 @@
         finally { saving = false; }
     }
 
-    // Wizard – Variantes
+    // Wizard â€“ Variantes
     private void WizardAddAxis()
     {
         if (wVariantAxisAttrId == 0 || string.IsNullOrWhiteSpace(wVariantAxisValue)) return;
@@ -881,12 +881,12 @@
     }
     private async Task WizardDeleteVariant(long id)
     {
-        if (!await JS.InvokeAsync<bool>("confirm", "¿Eliminar esta variante?")) return;
+        if (!await JS.InvokeAsync<bool>("confirm", "Â¿Eliminar esta variante?")) return;
         try { var r = await VariantService.DeleteAsync(id); if (r.Success) { wizardVariants = await VariantService.GetByParentAsync(createdProductId); wizardSuccess = "Variante eliminada."; } else wizardError = r.Message; }
         catch (Exception ex) { wizardError = ex.Message; }
     }
 
-    // Wizard – Activar en Empresa
+    // Wizard â€“ Activar en Empresa
     private async Task WizardAddCompany()
     {
         if (string.IsNullOrWhiteSpace(wCompanyForm.Sku)) return;
@@ -903,7 +903,7 @@
     }
     private async Task WizardDeleteCompany(long id)
     {
-        if (!await JS.InvokeAsync<bool>("confirm", "¿Desactivar producto de empresa?")) return;
+        if (!await JS.InvokeAsync<bool>("confirm", "Â¿Desactivar producto de empresa?")) return;
         try { var r = await CompanyProductService.DeleteAsync(id); if (r.Success) { var all = await CompanyProductService.GetAllAsync(); wizardCompany = all.Where(cp => cp.ProductId == createdProductId).ToList(); wizardSuccess = "Desactivado."; } else wizardError = r.Message; }
         catch (Exception ex) { wizardError = ex.Message; }
     }
@@ -933,7 +933,7 @@
 
     private async Task DeleteProducto(ProductDto2 p)
     {
-        if (!await JS.InvokeAsync<bool>("confirm", $"¿Eliminar '{p.CommercialName}'?")) return;
+        if (!await JS.InvokeAsync<bool>("confirm", $"Â¿Eliminar '{p.CommercialName}'?")) return;
         try { var r = await ProductoService.DeleteAsync(p.ProductId); if (r.Success) { successMessage = "Producto eliminado."; await LoadData(); } else errorMessage = r.Message; }
         catch (Exception ex) { errorMessage = ex.Message; }
     }
@@ -948,7 +948,7 @@
     }
     private async Task DeleteUom(long productId, long id)
     {
-        if (!await JS.InvokeAsync<bool>("confirm", "¿Eliminar esta UdM?")) return;
+        if (!await JS.InvokeAsync<bool>("confirm", "Â¿Eliminar esta UdM?")) return;
         try { var r = await ProductUomService.DeleteAsync(id); if (r.Success) { successMessage = "UdM eliminada."; expandedId = 0; await ToggleDetail(productId); } else errorMessage = r.Message; }
         catch (Exception ex) { errorMessage = ex.Message; }
     }
@@ -957,13 +957,13 @@
     private async Task AddCode()
     {
         saving = true; errorMessage = null;
-        try { var r = await ProductCodeService.CreateAsync(new CreateProductCodeDto(modalProductId, addCodeForm.CodeType, addCodeForm.Valor, ValidFrom: addCodeForm.ValidFrom, ValidTo: addCodeForm.ValidTo, IsPrimary: addCodeForm.IsPrimary)); if (r.Success) { successMessage = "Código asignado."; showAddCodeModal = false; expandedId = 0; await ToggleDetail(modalProductId); } else errorMessage = r.Message; }
+        try { var r = await ProductCodeService.CreateAsync(new CreateProductCodeDto(modalProductId, addCodeForm.CodeType, addCodeForm.Valor, ValidFrom: addCodeForm.ValidFrom, ValidTo: addCodeForm.ValidTo, IsPrimary: addCodeForm.IsPrimary)); if (r.Success) { successMessage = "CÃ³digo asignado."; showAddCodeModal = false; expandedId = 0; await ToggleDetail(modalProductId); } else errorMessage = r.Message; }
         catch (Exception ex) { errorMessage = ex.Message; } finally { saving = false; }
     }
     private async Task DeleteCode(long productId, long id)
     {
-        if (!await JS.InvokeAsync<bool>("confirm", "¿Eliminar este código?")) return;
-        try { var r = await ProductCodeService.DeleteAsync(id); if (r.Success) { successMessage = "Código eliminado."; expandedId = 0; await ToggleDetail(productId); } else errorMessage = r.Message; }
+        if (!await JS.InvokeAsync<bool>("confirm", "Â¿Eliminar este cÃ³digo?")) return;
+        try { var r = await ProductCodeService.DeleteAsync(id); if (r.Success) { successMessage = "CÃ³digo eliminado."; expandedId = 0; await ToggleDetail(productId); } else errorMessage = r.Message; }
         catch (Exception ex) { errorMessage = ex.Message; }
     }
 
@@ -978,16 +978,16 @@
 
     // ?? Helpers ??
     private static string GetKindLabel(byte k) => k switch { 1 => "Bien", 2 => "Servicio", 3 => "Kit", 4 => "BOM", _ => k.ToString() };
-    private static string CodeTypeLabel(byte t) => t switch { 1 => "Cód. Barras", 2 => "SKU", 3 => "EAN", 4 => "Otro", _ => "?" };
-    private static string DataTypeLabel(byte d) => d switch { 1 => "Texto", 2 => "Decimal", 3 => "Entero", 4 => "Bool", 5 => "Fecha", 6 => "Opción", _ => d.ToString() };
+    private static string CodeTypeLabel(byte t) => t switch { 1 => "CÃ³d. Barras", 2 => "SKU", 3 => "EAN", 4 => "Otro", _ => "?" };
+    private static string DataTypeLabel(byte d) => d switch { 1 => "Texto", 2 => "Decimal", 3 => "Entero", 4 => "Bool", 5 => "Fecha", 6 => "OpciÃ³n", _ => d.ToString() };
     private static string FormatAttrValue(ProductAttributeDto a)
     {
         if (!string.IsNullOrEmpty(a.OptionValue)) return a.OptionValue;
         if (!string.IsNullOrEmpty(a.ValueString)) return a.ValueString;
         if (a.ValueDecimal.HasValue) return a.ValueDecimal.Value.ToString("N4");
         if (a.ValueInt.HasValue) return a.ValueInt.Value.ToString();
-        if (a.ValueBool.HasValue) return a.ValueBool.Value ? "Sí" : "No";
+        if (a.ValueBool.HasValue) return a.ValueBool.Value ? "SÃ­" : "No";
         if (a.ValueDate.HasValue) return a.ValueDate.Value.ToString("dd/MM/yyyy");
-        return "—";
+        return "â€”";
     }
 }

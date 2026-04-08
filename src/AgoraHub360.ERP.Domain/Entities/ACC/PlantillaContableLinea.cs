@@ -3,15 +3,15 @@ namespace AgoraHub360.ERP.Domain.Entities.ACC;
 using AgoraHub360.ERP.Domain.Common;
 
 /// <summary>
-/// Línea de una plantilla de contabilización.
-/// Define qué cuenta afectar, si al Debe o al Haber, y qué campo del documento usar como monto.
+/// LÃ­nea de una plantilla de contabilizaciÃ³n.
+/// Define quÃ© cuenta afectar, si al Debe o al Haber, y quÃ© campo del documento usar como monto.
 /// </summary>
 public class PlantillaContableLinea : AuditableEntity
 {
     public int PlantillaContableLineaId { get; set; }
     public int PlantillaContableId { get; set; }
 
-    /// <summary>Orden de la línea.</summary>
+    /// <summary>Orden de la lÃ­nea.</summary>
     public int NumeroLinea { get; set; }
 
     /// <summary>Cuenta contable a afectar.</summary>
@@ -30,9 +30,9 @@ public class PlantillaContableLinea : AuditableEntity
     /// <summary>Factor multiplicador (ej: 1.0 para usar el monto tal cual, 0.13 para IVA 13%).</summary>
     public decimal Factor { get; set; } = 1m;
 
-    /// <summary>Glosa de la línea. Soporta tokens: {CuentaCodigo}, {CuentaNombre}.</summary>
+    /// <summary>Glosa de la lÃ­nea. Soporta tokens: {CuentaCodigo}, {CuentaNombre}.</summary>
     public string? Glosa { get; set; }
 
-    // Navegación
+    // NavegaciÃ³n
     public PlantillaContable? PlantillaContable { get; set; }
 }

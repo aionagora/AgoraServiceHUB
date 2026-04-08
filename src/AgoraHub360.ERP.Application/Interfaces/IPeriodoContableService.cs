@@ -5,15 +5,15 @@ using AgoraHub360.ERP.Shared.DTOs.Contabilidad;
 
 public interface IPeriodoContableService
 {
-    /// <summary>Lista los perÌodos de un aÒo (o todos si no se especifica).</summary>
+    /// <summary>Lista los per√≠odos de un a√±o (o todos si no se especifica).</summary>
     Task<Result<IReadOnlyList<PeriodoContableDto>>> GetAllAsync(int? anio = null, CancellationToken ct = default);
 
-    /// <summary>Genera los 12 perÌodos de un aÒo fiscal.</summary>
+    /// <summary>Genera los 12 per√≠odos de un a√±o fiscal.</summary>
     Task<Result<int>> GenerarPeriodosAsync(int anio, CancellationToken ct = default);
 
-    /// <summary>Cierra un perÌodo (no se podr·n crear/contabilizar asientos en ese mes).</summary>
+    /// <summary>Cierra un per√≠odo (no se podr√°n crear/contabilizar asientos en ese mes).</summary>
     Task<Result<PeriodoContableDto>> CerrarAsync(int id, CancellationToken ct = default);
 
-    /// <summary>Reabre un perÌodo cerrado.</summary>
+    /// <summary>Reabre un per√≠odo cerrado.</summary>
     Task<Result<PeriodoContableDto>> ReabrirAsync(int id, CancellationToken ct = default);
 }

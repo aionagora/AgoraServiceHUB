@@ -11,11 +11,11 @@
     <div class="row mb-3">
         <div class="col">
             <h3><i class="bi bi-box-seam-fill"></i> Recepciones de Compra</h3>
-            <p class="text-muted mb-0">Recepción de mercadería contra Órdenes de Compra aprobadas</p>
+            <p class="text-muted mb-0">RecepciÃ³n de mercaderÃ­a contra Ã“rdenes de Compra aprobadas</p>
         </div>
         <div class="col-auto">
             <button class="btn btn-primary" @onclick="ShowCreateModal">
-                <i class="bi bi-plus-circle"></i> Nueva Recepción
+                <i class="bi bi-plus-circle"></i> Nueva RecepciÃ³n
             </button>
         </div>
     </div>
@@ -78,10 +78,10 @@
                         <thead class="table-light">
                             <tr>
                                 <th style="width:40px"></th>
-                                <th>Número</th>
+                                <th>NÃºmero</th>
                                 <th>Fecha</th>
                                 <th>OC</th>
-                                <th>Almacén</th>
+                                <th>AlmacÃ©n</th>
                                 <th>Doc. Proveedor</th>
                                 <th>Estado</th>
                             </tr>
@@ -91,7 +91,7 @@
                             {
                                 <tr>
                                     <td>
-                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => ToggleDetail(rec.RecepcionCompraId)" title="Ver líneas">
+                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => ToggleDetail(rec.RecepcionCompraId)" title="Ver lÃ­neas">
                                             <i class="bi @(expandedId == rec.RecepcionCompraId ? "bi-chevron-up" : "bi-chevron-down")"></i>
                                         </button>
                                     </td>
@@ -99,7 +99,7 @@
                                     <td>@rec.FechaRecepcion.ToString("dd/MM/yyyy")</td>
                                     <td><span class="badge bg-info text-dark">@rec.OrdenCompraNumero</span></td>
                                     <td>@rec.AlmacenNombre</td>
-                                    <td>@(rec.DocumentoProveedor ?? "—")</td>
+                                    <td>@(rec.DocumentoProveedor ?? "â€”")</td>
                                     <td>
                                         @if (rec.Confirmada)
                                         {
@@ -116,13 +116,13 @@
                                     <tr>
                                         <td colspan="7" class="bg-light p-0">
                                             <div class="p-3">
-                                                <strong><i class="bi bi-list-ol"></i> Líneas recibidas — @rec.Numero</strong>
+                                                <strong><i class="bi bi-list-ol"></i> LÃ­neas recibidas â€” @rec.Numero</strong>
                                                 <table class="table table-sm table-bordered mt-2 mb-0">
                                                     <thead>
                                                         <tr>
                                                             <th>#</th>
                                                             <th>Producto</th>
-                                                            <th>Descripción</th>
+                                                            <th>DescripciÃ³n</th>
                                                             <th>UdM</th>
                                                             <th class="text-end">Ordenada</th>
                                                             <th class="text-end">Recibida</th>
@@ -143,7 +143,7 @@
                                                                 <td class="text-end"><strong class="text-success">@l.CantidadRecibida.ToString("N2")</strong></td>
                                                                 <td class="text-end">@l.CostoUnitario.ToString("N4")</td>
                                                                 <td class="text-end"><strong>@((l.CantidadRecibida * l.CostoUnitario).ToString("N2"))</strong></td>
-                                                                <td><small class="text-muted">@(l.Notas ?? "—")</small></td>
+                                                                <td><small class="text-muted">@(l.Notas ?? "â€”")</small></td>
                                                             </tr>
                                                         }
                                                     </tbody>
@@ -165,14 +165,14 @@
     </div>
 </div>
 
-@* ?????? Modal Nueva Recepción ?????? *@
+@* ?????? Modal Nueva RecepciÃ³n ?????? *@
 @if (showModal)
 {
     <div class="modal show d-block" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-box-seam"></i> Nueva Recepción de Compra</h5>
+                    <h5 class="modal-title"><i class="bi bi-box-seam"></i> Nueva RecepciÃ³n de Compra</h5>
                     <button type="button" class="btn-close" @onclick="CloseModal"></button>
                 </div>
                 <div class="modal-body">
@@ -184,16 +184,16 @@
                                 <option value="0">-- Seleccionar OC aprobada --</option>
                                 @foreach (var oc in ocDisponibles)
                                 {
-                                    <option value="@oc.OrdenCompraId">@oc.Numero — @oc.ProveedorNombre (@oc.Estado)</option>
+                                    <option value="@oc.OrdenCompraId">@oc.Numero â€” @oc.ProveedorNombre (@oc.Estado)</option>
                                 }
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">Fecha Recepción *</label>
+                            <label class="form-label">Fecha RecepciÃ³n *</label>
                             <input type="date" class="form-control" @bind="formFecha" />
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Almacén Destino</label>
+                            <label class="form-label">AlmacÃ©n Destino</label>
                             <select class="form-select" @bind="formAlmacenId">
                                 @foreach (var a in almacenes)
                                 {
@@ -205,7 +205,7 @@
                     <div class="row mb-3">
                         <div class="col-md-4">
                             <label class="form-label">Doc. Proveedor</label>
-                            <input class="form-control" @bind="formDocProv" placeholder="Guía, factura, remisión…" />
+                            <input class="form-control" @bind="formDocProv" placeholder="GuÃ­a, factura, remisiÃ³nâ€¦" />
                         </div>
                         <div class="col-md-8">
                             <label class="form-label">Observaciones</label>
@@ -213,18 +213,18 @@
                         </div>
                     </div>
 
-                    @* ?? Paso 2: Líneas pendientes de la OC ?? *@
+                    @* ?? Paso 2: LÃ­neas pendientes de la OC ?? *@
                     @if (selectedOc is not null)
                     {
                         <hr />
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <strong><i class="bi bi-list-check"></i> Líneas pendientes de recepcionar</strong>
+                            <strong><i class="bi bi-list-check"></i> LÃ­neas pendientes de recepcionar</strong>
                             <button class="btn btn-sm btn-outline-success" @onclick="RecibirTodo"><i class="bi bi-check-all"></i> Recibir Todo</button>
                         </div>
 
                         @if (lineasPendientes.Count == 0)
                         {
-                            <div class="alert alert-info"><i class="bi bi-info-circle"></i> Todas las líneas de esta OC ya fueron recepcionadas.</div>
+                            <div class="alert alert-info"><i class="bi bi-info-circle"></i> Todas las lÃ­neas de esta OC ya fueron recepcionadas.</div>
                         }
                         else
                         {
@@ -233,7 +233,7 @@
                                     <tr>
                                         <th>#</th>
                                         <th>Producto</th>
-                                        <th>Descripción</th>
+                                        <th>DescripciÃ³n</th>
                                         <th>UdM</th>
                                         <th class="text-end">Ordenada</th>
                                         <th class="text-end">Ya recibida</th>
@@ -264,7 +264,7 @@
                                                        @bind="lp.CostoUnitario" />
                                             </td>
                                             <td>
-                                                <input class="form-control form-control-sm" @bind="lp.Notas" placeholder="Notas…" />
+                                                <input class="form-control form-control-sm" @bind="lp.Notas" placeholder="Notasâ€¦" />
                                             </td>
                                         </tr>
                                     }
@@ -278,7 +278,7 @@
                     <button class="btn btn-success" @onclick="SaveRecepcion"
                             disabled="@(saving || selectedOcId == 0 || !lineasPendientes.Any(l => l.CantidadARecibir > 0))">
                         @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                        <i class="bi bi-box-seam"></i> Confirmar Recepción
+                        <i class="bi bi-box-seam"></i> Confirmar RecepciÃ³n
                     </button>
                 </div>
             </div>
@@ -400,7 +400,7 @@
 
             if (lineas.Count == 0)
             {
-                errorMessage = "Debe recibir al menos una línea.";
+                errorMessage = "Debe recibir al menos una lÃ­nea.";
                 return;
             }
 
@@ -415,7 +415,7 @@
             var result = await RecService.CreateAsync(dto);
             if (result.Success)
             {
-                successMessage = $"Recepción {result.Data?.Numero} registrada. Stock actualizado.";
+                successMessage = $"RecepciÃ³n {result.Data?.Numero} registrada. Stock actualizado.";
                 CloseModal();
                 await LoadData();
             }
@@ -428,7 +428,7 @@
         finally { saving = false; }
     }
 
-    // ?? ViewModel para líneas pendientes ??
+    // ?? ViewModel para lÃ­neas pendientes ??
     private class LineaPendienteVM
     {
         public long OrdenCompraLineaId { get; set; }

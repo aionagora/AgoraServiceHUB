@@ -36,7 +36,7 @@ public class PlantillaContableHttpService
             return ApiResponse<PlantillaContableDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<PlantillaContableDto>>()
-            ?? ApiResponse<PlantillaContableDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<PlantillaContableDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<PlantillaContableDto>> UpdateAsync(int id, UpdatePlantillaContableDto dto)
@@ -48,7 +48,7 @@ public class PlantillaContableHttpService
             return ApiResponse<PlantillaContableDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<PlantillaContableDto>>()
-            ?? ApiResponse<PlantillaContableDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<PlantillaContableDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<bool>> DeleteAsync(int id)
@@ -60,7 +60,7 @@ public class PlantillaContableHttpService
             return ApiResponse<bool>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<bool>>()
-            ?? ApiResponse<bool>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<bool>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<int>> SeedPlantillasAsync()
@@ -72,6 +72,6 @@ public class PlantillaContableHttpService
             return ApiResponse<int>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<int>>()
-            ?? ApiResponse<int>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<int>.Fail("Error de comunicaci贸n.");
     }
 }

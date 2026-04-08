@@ -4,7 +4,7 @@ using AgoraHub360.ERP.Domain.Common;
 
 /// <summary>
 /// Historial de cambios de estado de una Hoja de Ruta.
-/// Cada transición queda registrada como auditoría.
+/// Cada transiciÃ³n queda registrada como auditorÃ­a.
 /// </summary>
 public class HojaRutaHistorial : AuditableEntity
 {
@@ -20,6 +20,6 @@ public class HojaRutaHistorial : AuditableEntity
     public string Usuario { get; set; } = string.Empty;
     public string? Observaciones { get; set; }
 
-    // Navegación
+    // NavegaciÃ³n
     public HojaRuta? HojaRuta { get; set; }
 }

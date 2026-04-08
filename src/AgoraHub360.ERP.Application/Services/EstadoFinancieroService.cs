@@ -211,8 +211,8 @@ public class EstadoFinancieroService : IEstadoFinancieroService
                     cuentaMap.TryGetValue(l.CuentaContableId, out var cuenta);
                     return new LibroDiarioLineaDto
                     {
-                        CuentaCodigo = cuenta?.Codigo ?? "—",
-                        CuentaNombre = cuenta?.Nombre ?? "—",
+                        CuentaCodigo = cuenta?.Codigo ?? "â€”",
+                        CuentaNombre = cuenta?.Nombre ?? "â€”",
                         Glosa = l.Glosa,
                         Debe = l.Debe,
                         Haber = l.Haber
@@ -222,7 +222,7 @@ public class EstadoFinancieroService : IEstadoFinancieroService
             entradas.Add(new LibroDiarioEntradaDto
             {
                 AsientoContableId = a.AsientoContableId,
-                TipoComprobante = a.Numero.Split('-').FirstOrDefault() ?? "—",
+                TipoComprobante = a.Numero.Split('-').FirstOrDefault() ?? "â€”",
                 Numero = a.Numero,
                 Fecha = a.Fecha,
                 Concepto = a.Concepto,

@@ -3,7 +3,7 @@ namespace AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Common;
 
 /// <summary>
-/// Hierarchical category with N-level tree support — tenant-scoped.
+/// Hierarchical category with N-level tree support â€” tenant-scoped.
 /// A product can belong to multiple categories (N:N via ProductCategory).
 /// </summary>
 public class Category : TenantEntity

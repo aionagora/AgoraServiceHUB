@@ -348,9 +348,9 @@ public class OrdenCompraService : IOrdenCompraService
         {
             // Borrador ? Confirmado (compras revisa y consolida)
             (EstadoDocumento.Borrador, EstadoDocumento.Confirmado) => true,
-            // Confirmado ? PendienteAprobacion (requiere aprobación por monto/política)
+            // Confirmado ? PendienteAprobacion (requiere aprobaciÃ³n por monto/polÃ­tica)
             (EstadoDocumento.Confirmado, EstadoDocumento.PendienteAprobacion) => true,
-            // Confirmado ? Aprobado (aprobación automática / sin gate)
+            // Confirmado ? Aprobado (aprobaciÃ³n automÃ¡tica / sin gate)
             (EstadoDocumento.Confirmado, EstadoDocumento.Aprobado) => true,
             // PendienteAprobacion ? Aprobado (Finanzas/Dir aprueba)
             (EstadoDocumento.PendienteAprobacion, EstadoDocumento.Aprobado) => true,
@@ -364,15 +364,15 @@ public class OrdenCompraService : IOrdenCompraService
             (EstadoDocumento.EnNegociacion, EstadoDocumento.Borrador) => true,
             // EnviadaProveedor ? ConfirmadaProveedor (PI aceptada)
             (EstadoDocumento.EnviadaProveedor, EstadoDocumento.ConfirmadaProveedor) => true,
-            // EnNegociacion ? ConfirmadaProveedor (tras renegociación exitosa)
+            // EnNegociacion ? ConfirmadaProveedor (tras renegociaciÃ³n exitosa)
             (EstadoDocumento.EnNegociacion, EstadoDocumento.ConfirmadaProveedor) => true,
             // ConfirmadaProveedor ? PagoProgramado (anticipo/saldo programado)
             (EstadoDocumento.ConfirmadaProveedor, EstadoDocumento.PagoProgramado) => true,
             // PagoProgramado ? EnTransito (expediente abierto)
             (EstadoDocumento.PagoProgramado, EstadoDocumento.EnTransito) => true,
-            // ConfirmadaProveedor ? EnTransito (sin pago explícito)
+            // ConfirmadaProveedor ? EnTransito (sin pago explÃ­cito)
             (EstadoDocumento.ConfirmadaProveedor, EstadoDocumento.EnTransito) => true,
-            // EnTransito ? RecepcionParcial / Cerrado vía RecepcionCompraService
+            // EnTransito ? RecepcionParcial / Cerrado vÃ­a RecepcionCompraService
             // Anulaciones permitidas hasta EnviadaProveedor
             (EstadoDocumento.Borrador, EstadoDocumento.Anulado) => true,
             (EstadoDocumento.Confirmado, EstadoDocumento.Anulado) => true,
@@ -402,7 +402,7 @@ public class OrdenCompraService : IOrdenCompraService
     }
 
     /// <summary>
-    /// Aprueba o rechaza la OC (gate de Finanzas/Dirección).
+    /// Aprueba o rechaza la OC (gate de Finanzas/DirecciÃ³n).
     /// PendienteAprobacion ? Aprobado | Rechazado.
     /// </summary>
     public async Task<Result<OrdenCompraDto>> AprobarRechazarAsync(long id, AprobarRechazarOrdenCompraDto dto, CancellationToken ct)
@@ -436,7 +436,7 @@ public class OrdenCompraService : IOrdenCompraService
     }
 
     /// <summary>
-    /// Registra la confirmación o negociación del proveedor (PI / aceptación).
+    /// Registra la confirmaciÃ³n o negociaciÃ³n del proveedor (PI / aceptaciÃ³n).
     /// Gate [4]: si CondicionesOK ? ConfirmadaProveedor, si no ? EnNegociacion.
     /// </summary>
     public async Task<Result<ConfirmacionProveedorDto>> RegistrarConfirmacionProveedorAsync(
@@ -557,7 +557,7 @@ public class OrdenCompraService : IOrdenCompraService
             false, null, pago.Observaciones));
     }
 
-    /// <summary>Registra la ejecución real de un pago programado.</summary>
+    /// <summary>Registra la ejecuciÃ³n real de un pago programado.</summary>
     public async Task<Result<PagoOrdenCompraDto>> EjecutarPagoAsync(long id, long pagoId, EjecutarPagoDto dto, CancellationToken ct)
     {
         var empresaId = _currentUser.EmpresaId;
@@ -707,9 +707,9 @@ public class OrdenCompraService : IOrdenCompraService
             oc.FechaEmision,
             oc.FechaEntregaEstimada,
             oc.ProveedorId,
-            provMap.GetValueOrDefault(oc.ProveedorId, "—"),
+            provMap.GetValueOrDefault(oc.ProveedorId, "â€”"),
             oc.AlmacenDestinoId,
-            almMap.GetValueOrDefault(oc.AlmacenDestinoId, "—"),
+            almMap.GetValueOrDefault(oc.AlmacenDestinoId, "â€”"),
             oc.MonedaId,
             oc.TasaCambio,
             oc.Estado.ToString(),
@@ -729,7 +729,7 @@ public class OrdenCompraService : IOrdenCompraService
                 l.OrdenCompraLineaId,
                 l.NumeroLinea,
                 l.CompanyProductId,
-                cpMap.GetValueOrDefault(l.CompanyProductId, "—"),
+                cpMap.GetValueOrDefault(l.CompanyProductId, "â€”"),
                 l.Descripcion,
                 l.UnidadMedida,
                 l.Cantidad,

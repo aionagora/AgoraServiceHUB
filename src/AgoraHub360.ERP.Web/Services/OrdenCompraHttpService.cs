@@ -45,7 +45,7 @@ public class OrdenCompraHttpService
             return ApiResponse<OrdenCompraDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<OrdenCompraDto>>()
-            ?? ApiResponse<OrdenCompraDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<OrdenCompraDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<OrdenCompraDto>> UpdateAsync(long id, UpdateOrdenCompraDto dto)
@@ -57,7 +57,7 @@ public class OrdenCompraHttpService
             return ApiResponse<OrdenCompraDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<OrdenCompraDto>>()
-            ?? ApiResponse<OrdenCompraDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<OrdenCompraDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<OrdenCompraDto>> AddLineaAsync(long ordenId, AddOrdenCompraLineaDto dto)
@@ -69,7 +69,7 @@ public class OrdenCompraHttpService
             return ApiResponse<OrdenCompraDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<OrdenCompraDto>>()
-            ?? ApiResponse<OrdenCompraDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<OrdenCompraDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<OrdenCompraDto>> UpdateLineaAsync(long ordenId, long lineaId, UpdateOrdenCompraLineaDto dto)
@@ -81,7 +81,7 @@ public class OrdenCompraHttpService
             return ApiResponse<OrdenCompraDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<OrdenCompraDto>>()
-            ?? ApiResponse<OrdenCompraDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<OrdenCompraDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<OrdenCompraDto>> RemoveLineaAsync(long ordenId, long lineaId)
@@ -93,7 +93,7 @@ public class OrdenCompraHttpService
             return ApiResponse<OrdenCompraDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<OrdenCompraDto>>()
-            ?? ApiResponse<OrdenCompraDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<OrdenCompraDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<OrdenCompraDto>> CambiarEstadoAsync(long id, string nuevoEstado)
@@ -105,7 +105,7 @@ public class OrdenCompraHttpService
             return ApiResponse<OrdenCompraDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<OrdenCompraDto>>()
-            ?? ApiResponse<OrdenCompraDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<OrdenCompraDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<OrdenCompraDto>> AprobarRechazarAsync(long id, AprobarRechazarOrdenCompraDto dto)
@@ -117,7 +117,7 @@ public class OrdenCompraHttpService
             return ApiResponse<OrdenCompraDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<OrdenCompraDto>>()
-            ?? ApiResponse<OrdenCompraDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<OrdenCompraDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<ConfirmacionProveedorDto>> RegistrarConfirmacionProveedorAsync(long id, RegistrarConfirmacionProveedorDto dto)
@@ -129,7 +129,7 @@ public class OrdenCompraHttpService
             return ApiResponse<ConfirmacionProveedorDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<ConfirmacionProveedorDto>>()
-            ?? ApiResponse<ConfirmacionProveedorDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<ConfirmacionProveedorDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<List<ConfirmacionProveedorDto>> GetConfirmacionesAsync(long id)
@@ -147,7 +147,7 @@ public class OrdenCompraHttpService
             return ApiResponse<PagoOrdenCompraDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<PagoOrdenCompraDto>>()
-            ?? ApiResponse<PagoOrdenCompraDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<PagoOrdenCompraDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<PagoOrdenCompraDto>> EjecutarPagoAsync(long id, long pagoId, EjecutarPagoDto dto)
@@ -159,7 +159,7 @@ public class OrdenCompraHttpService
             return ApiResponse<PagoOrdenCompraDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<PagoOrdenCompraDto>>()
-            ?? ApiResponse<PagoOrdenCompraDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<PagoOrdenCompraDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<List<PagoOrdenCompraDto>> GetPagosAsync(long id)
@@ -177,6 +177,6 @@ public class OrdenCompraHttpService
             return ApiResponse<bool>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<bool>>()
-            ?? ApiResponse<bool>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<bool>.Fail("Error de comunicaci贸n.");
     }
 }

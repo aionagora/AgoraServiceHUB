@@ -9,7 +9,7 @@ using AgoraHub360.ERP.Domain.Interfaces;
 using AgoraHub360.ERP.Shared.DTOs.Contabilidad;
 
 /// <summary>
-/// Motor de contabilización automática.
+/// Motor de contabilizaciÃ³n automÃ¡tica.
 /// Lee la plantilla configurada para un tipo de documento,
 /// resuelve los montos, genera el asiento y lo contabiliza en un solo paso.
 /// </summary>
@@ -69,7 +69,7 @@ public class ContabilizacionService : IContabilizacionService
 
         var plantilla = plantillas.FirstOrDefault();
         if (plantilla is null)
-            return Result<AsientoContableDto>.Success(null!); // No template = skip silently (contabilización opcional)
+            return Result<AsientoContableDto>.Success(null!); // No template = skip silently (contabilizaciÃ³n opcional)
 
         var plantillaLineas = await _plantillaLineaRepo.FindAsync(
             l => l.PlantillaContableId == plantilla.PlantillaContableId && l.Activo, ct);
@@ -114,7 +114,7 @@ public class ContabilizacionService : IContabilizacionService
             var diff = totalDebe - totalHaber;
             if (Math.Abs(diff) < 0.01m)
             {
-                // Rounding difference — adjust last haber line
+                // Rounding difference â€” adjust last haber line
                 var lastHaber = asientoLineas.FindLastIndex(l => l.haber > 0);
                 if (lastHaber >= 0)
                 {
@@ -147,7 +147,7 @@ public class ContabilizacionService : IContabilizacionService
             var allTipos = await _tipoCompRepo.FindAsync(t => t.EmpresaId == empresaId.Value && t.Activo, ct);
             tipoComp = allTipos.FirstOrDefault();
             if (tipoComp is null)
-                return Result<AsientoContableDto>.Failure("No hay tipos de comprobante configurados. Ejecute 'Generar Catálogos' primero.");
+                return Result<AsientoContableDto>.Failure("No hay tipos de comprobante configurados. Ejecute 'Generar CatÃ¡logos' primero.");
         }
 
         // ?? 7. Generate entry number ??
@@ -165,7 +165,7 @@ public class ContabilizacionService : IContabilizacionService
             Numero = numero,
             Fecha = fecha,
             Gestion = gestion,
-            TipoRegistro = "Automático",
+            TipoRegistro = "AutomÃ¡tico",
             Glosa = glosa,
             Estado = "Contabilizado",
             RegistradoPorId = _currentUser.UserIdInt,
@@ -247,8 +247,8 @@ public class ContabilizacionService : IContabilizacionService
                 {
                     NumeroLinea = i + 1,
                     CuentaContableId = l.cuentaId,
-                    CuentaCodigo = cuenta?.Codigo ?? "—",
-                    CuentaNombre = cuenta?.Nombre ?? "—",
+                    CuentaCodigo = cuenta?.Codigo ?? "â€”",
+                    CuentaNombre = cuenta?.Nombre ?? "â€”",
                     Debe = l.debe,
                     Haber = l.haber,
                     Glosa = l.glosa,

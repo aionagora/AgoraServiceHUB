@@ -13,39 +13,39 @@ public interface IOrdenCompraService
         DateTime? fechaHasta = null,
         CancellationToken ct = default);
 
-    /// <summary>Obtiene una OC con sus l韓eas por Id.</summary>
+    /// <summary>Obtiene una OC con sus l铆neas por Id.</summary>
     Task<Result<OrdenCompraDto>> GetByIdAsync(long id, CancellationToken ct = default);
 
-    /// <summary>Crea una OC en estado Borrador con sus l韓eas.</summary>
+    /// <summary>Crea una OC en estado Borrador con sus l铆neas.</summary>
     Task<Result<OrdenCompraDto>> CreateAsync(CreateOrdenCompraDto dto, CancellationToken ct = default);
 
     /// <summary>Actualiza la cabecera de una OC en Borrador.</summary>
     Task<Result<OrdenCompraDto>> UpdateAsync(long id, UpdateOrdenCompraDto dto, CancellationToken ct = default);
 
-    /// <summary>Agrega una l韓ea a una OC en Borrador.</summary>
+    /// <summary>Agrega una l铆nea a una OC en Borrador.</summary>
     Task<Result<OrdenCompraDto>> AddLineaAsync(long ordenId, AddOrdenCompraLineaDto dto, CancellationToken ct = default);
 
-    /// <summary>Actualiza una l韓ea de una OC en Borrador.</summary>
+    /// <summary>Actualiza una l铆nea de una OC en Borrador.</summary>
     Task<Result<OrdenCompraDto>> UpdateLineaAsync(long ordenId, long lineaId, UpdateOrdenCompraLineaDto dto, CancellationToken ct = default);
 
-    /// <summary>Elimina una l韓ea de una OC en Borrador.</summary>
+    /// <summary>Elimina una l铆nea de una OC en Borrador.</summary>
     Task<Result<OrdenCompraDto>> RemoveLineaAsync(long ordenId, long lineaId, CancellationToken ct = default);
 
     /// <summary>
-    /// Cambia el estado de la OC seg鷑 la m醧uina de estados del flujo de importaci髇.
+    /// Cambia el estado de la OC seg煤n la m谩quina de estados del flujo de importaci贸n.
     /// Borrador?Confirmado?PendienteAprobacion?Aprobado?EnviadaProveedor
     /// ?(EnNegociacion)?ConfirmadaProveedor?PagoProgramado?EnTransito / Anulado / Rechazado.
     /// </summary>
     Task<Result<OrdenCompraDto>> CambiarEstadoAsync(long id, string nuevoEstado, CancellationToken ct = default);
 
     /// <summary>
-    /// Gate de aprobaci髇 [Finanzas/Direcci髇]: aprueba o rechaza la OC.
+    /// Gate de aprobaci贸n [Finanzas/Direcci贸n]: aprueba o rechaza la OC.
     /// PendienteAprobacion ? Aprobado | Rechazado.
     /// </summary>
     Task<Result<OrdenCompraDto>> AprobarRechazarAsync(long id, AprobarRechazarOrdenCompraDto dto, CancellationToken ct = default);
 
     /// <summary>
-    /// Gate [4]: registra la confirmaci髇 o negociaci髇 del proveedor (PI/Proforma).
+    /// Gate [4]: registra la confirmaci贸n o negociaci贸n del proveedor (PI/Proforma).
     /// EnviadaProveedor|EnNegociacion ? CondicionesOK=true ? ConfirmadaProveedor
     ///                                ? CondicionesOK=false ? EnNegociacion.
     /// </summary>
@@ -61,7 +61,7 @@ public interface IOrdenCompraService
     /// </summary>
     Task<Result<PagoOrdenCompraDto>> ProgramarPagoAsync(long id, ProgramarPagoDto dto, CancellationToken ct = default);
 
-    /// <summary>Registra la ejecuci髇 real de un pago previamente programado.</summary>
+    /// <summary>Registra la ejecuci贸n real de un pago previamente programado.</summary>
     Task<Result<PagoOrdenCompraDto>> EjecutarPagoAsync(long id, long pagoId, EjecutarPagoDto dto, CancellationToken ct = default);
 
     /// <summary>Lista todos los pagos programados/ejecutados de una OC.</summary>

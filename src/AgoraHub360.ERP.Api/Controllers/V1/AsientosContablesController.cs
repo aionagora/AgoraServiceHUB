@@ -95,7 +95,7 @@ public class AsientosContablesController : ControllerBase
         return Ok(ApiResponse<bool>.Ok(true, "Comprobante eliminado."));
     }
 
-    // ?? Catálogos ??
+    // ?? CatÃ¡logos ??
     [HttpGet("tipos-comprobante")]
     public async Task<IActionResult> GetTiposComprobante(CancellationToken ct)
     {
@@ -121,7 +121,7 @@ public class AsientosContablesController : ControllerBase
     public async Task<IActionResult> SeedCatalogos(CancellationToken ct)
     {
         var r = await _service.SeedCatalogosAsync(ct);
-        return r.IsSuccess ? Ok(ApiResponse<int>.Ok(r.Value!, $"{r.Value} catálogos generados.")) : BadRequest(ApiResponse<int>.Fail(r.Error!));
+        return r.IsSuccess ? Ok(ApiResponse<int>.Ok(r.Value!, $"{r.Value} catÃ¡logos generados.")) : BadRequest(ApiResponse<int>.Fail(r.Error!));
     }
 
     /// <summary>
@@ -151,9 +151,9 @@ public class AsientosContablesController : ControllerBase
 
             // Configurar encabezados
             worksheet.Cells[1, 1].Value = "Tipo";
-            worksheet.Cells[1, 2].Value = "Número";
+            worksheet.Cells[1, 2].Value = "NÃºmero";
             worksheet.Cells[1, 3].Value = "Fecha";
-            worksheet.Cells[1, 4].Value = "Gestión";
+            worksheet.Cells[1, 4].Value = "GestiÃ³n";
             worksheet.Cells[1, 5].Value = "Concepto";
             worksheet.Cells[1, 6].Value = "Glosa";
             worksheet.Cells[1, 7].Value = "Tipo Registro";
@@ -240,7 +240,7 @@ public class AsientosContablesController : ControllerBase
     }
 
     /// <summary>
-    /// Exporta un comprobante individual a Excel con cabecera + detalle de líneas
+    /// Exporta un comprobante individual a Excel con cabecera + detalle de lÃ­neas
     /// </summary>
     [HttpGet("{id:long}/exportar-excel")]
     public async Task<IActionResult> ExportarExcelIndividual(long id, CancellationToken ct)
@@ -262,9 +262,9 @@ public class AsientosContablesController : ControllerBase
             ws.Cells[1, 1].Style.Font.Size = 14;
 
             ws.Cells[3, 1].Value = "Tipo:"; ws.Cells[3, 2].Value = $"{a.TipoComprobanteCodigo} - {a.TipoComprobanteNombre}";
-            ws.Cells[4, 1].Value = "Número:"; ws.Cells[4, 2].Value = a.Numero;
+            ws.Cells[4, 1].Value = "NÃºmero:"; ws.Cells[4, 2].Value = a.Numero;
             ws.Cells[5, 1].Value = "Fecha:"; ws.Cells[5, 2].Value = a.Fecha.ToString("dd/MM/yyyy");
-            ws.Cells[6, 1].Value = "Gestión:"; ws.Cells[6, 2].Value = a.Gestion;
+            ws.Cells[6, 1].Value = "GestiÃ³n:"; ws.Cells[6, 2].Value = a.Gestion;
             ws.Cells[7, 1].Value = "Estado:"; ws.Cells[7, 2].Value = a.Estado;
             ws.Cells[8, 1].Value = "Concepto:"; ws.Cells[8, 2].Value = a.Concepto ?? "";
             ws.Cells[9, 1].Value = "Glosa:"; ws.Cells[9, 2].Value = a.Glosa;
@@ -289,7 +289,7 @@ public class AsientosContablesController : ControllerBase
             // ?? Detalle ??
             int headerRow = 14;
             ws.Cells[headerRow, 1].Value = "#";
-            ws.Cells[headerRow, 2].Value = "Código";
+            ws.Cells[headerRow, 2].Value = "CÃ³digo";
             ws.Cells[headerRow, 3].Value = "Nombre Cuenta";
             ws.Cells[headerRow, 4].Value = "Glosa Detalle";
             ws.Cells[headerRow, 5].Value = "Centro Costo";
@@ -348,8 +348,8 @@ public class AsientosContablesController : ControllerBase
     }
 
     /// <summary>
-    /// Exporta listado detallado plano: una fila por línea de comprobante.
-    /// Formato pensado para migración a otros sistemas contables.
+    /// Exporta listado detallado plano: una fila por lÃ­nea de comprobante.
+    /// Formato pensado para migraciÃ³n a otros sistemas contables.
     /// </summary>
     [HttpGet("exportar-excel-plano")]
     public async Task<IActionResult> ExportarExcelPlano(
@@ -371,7 +371,7 @@ public class AsientosContablesController : ControllerBase
             using var package = new ExcelPackage();
             var ws = package.Workbook.Worksheets.Add("Detalle Plano");
 
-            // Encabezados — una fila por línea de detalle
+            // Encabezados â€” una fila por lÃ­nea de detalle
             var headers = new[]
             {
                 "Tipo","Numero","Fecha","Gestion","Concepto","Glosa","TipoRegistro",
@@ -481,7 +481,7 @@ public class AsientosContablesController : ControllerBase
             ApiResponse<ComprobanteDocumentoDto>.Ok(result.Value!, "Documento adjuntado."));
     }
 
-    /// <summary>Elimina el vínculo entre un comprobante y un documento adjunto.</summary>
+    /// <summary>Elimina el vÃ­nculo entre un comprobante y un documento adjunto.</summary>
     [HttpDelete("{comprobanteId:long}/documentos/{docId:int}")]
     public async Task<IActionResult> RemoverDocumento(long comprobanteId, int docId, CancellationToken ct)
     {

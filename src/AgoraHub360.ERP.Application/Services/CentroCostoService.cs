@@ -64,19 +64,19 @@ public class CentroCostoService : ICentroCostoService
         if (!empresaId.HasValue)
             return Result<CentroCostoDto>.Failure("No active company.");
 
-        // Validaci髇: Nombre requerido, m醲 120 chars
+        // Validaci贸n: Nombre requerido, m谩x 120 chars
         if (string.IsNullOrWhiteSpace(dto.Nombre))
             return Result<CentroCostoDto>.Failure("El nombre es obligatorio.");
         if (dto.Nombre.Length > 120)
             return Result<CentroCostoDto>.Failure("El nombre no puede superar 120 caracteres.");
 
-        // Validaci髇: C骴igo 鷑ico por empresa
+        // Validaci贸n: C贸digo 煤nico por empresa
         var duplicado = await _repo.FindAsync(
             c => c.EmpresaId == empresaId.Value && c.Codigo == dto.Codigo.Trim() && c.Activo, ct);
         if (duplicado.Count > 0)
-            return Result<CentroCostoDto>.Failure($"Ya existe un centro de costo con el c骴igo '{dto.Codigo}'.");
+            return Result<CentroCostoDto>.Failure($"Ya existe un centro de costo con el c贸digo '{dto.Codigo}'.");
 
-        // Validaci髇: ParentId v醠ido (misma empresa)
+        // Validaci贸n: ParentId v谩lido (misma empresa)
         if (dto.ParentId.HasValue)
         {
             var parent = await _repo.GetByIdAsync(dto.ParentId.Value, ct);
@@ -112,13 +112,13 @@ public class CentroCostoService : ICentroCostoService
         if (cc is null || cc.EmpresaId != empresaId.Value || !cc.Activo)
             return Result<CentroCostoDto>.Failure("Centro de costo no encontrado.");
 
-        // Validaci髇: Nombre requerido, m醲 120 chars
+        // Validaci贸n: Nombre requerido, m谩x 120 chars
         if (string.IsNullOrWhiteSpace(dto.Nombre))
             return Result<CentroCostoDto>.Failure("El nombre es obligatorio.");
         if (dto.Nombre.Length > 120)
             return Result<CentroCostoDto>.Failure("El nombre no puede superar 120 caracteres.");
 
-        // Validaci髇: ParentId v醠ido (misma empresa, no circular)
+        // Validaci贸n: ParentId v谩lido (misma empresa, no circular)
         if (dto.ParentId.HasValue)
         {
             if (dto.ParentId.Value == id)
@@ -188,7 +188,7 @@ public class CentroCostoService : ICentroCostoService
 
     /// <summary>
     /// Verifica si <paramref name="candidateId"/> es descendiente de <paramref name="ancestorId"/>
-    /// para evitar referencias circulares en la jerarqu韆.
+    /// para evitar referencias circulares en la jerarqu铆a.
     /// </summary>
     private async Task<bool> EsDescendienteAsync(
         int candidateId, int ancestorId, int empresaId, CancellationToken ct)

@@ -39,7 +39,7 @@ public class HojaRutaHttpService
         if (!r.IsSuccessStatusCode)
             return ApiResponse<HojaRutaDto>.Fail($"Error HTTP {(int)r.StatusCode}");
         return await r.Content.ReadFromJsonAsync<ApiResponse<HojaRutaDto>>()
-            ?? ApiResponse<HojaRutaDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<HojaRutaDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<HojaRutaDto>> UpdateAsync(long id, UpdateHojaRutaDto dto)
@@ -48,7 +48,7 @@ public class HojaRutaHttpService
         if (!r.IsSuccessStatusCode)
             return ApiResponse<HojaRutaDto>.Fail($"Error HTTP {(int)r.StatusCode}");
         return await r.Content.ReadFromJsonAsync<ApiResponse<HojaRutaDto>>()
-            ?? ApiResponse<HojaRutaDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<HojaRutaDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<HojaRutaDto>> CambiarEstadoAsync(long id, CambiarEstadoHojaRutaDto dto)
@@ -57,7 +57,7 @@ public class HojaRutaHttpService
         if (!r.IsSuccessStatusCode)
             return ApiResponse<HojaRutaDto>.Fail($"Error HTTP {(int)r.StatusCode}");
         return await r.Content.ReadFromJsonAsync<ApiResponse<HojaRutaDto>>()
-            ?? ApiResponse<HojaRutaDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<HojaRutaDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<bool>> DeleteAsync(long id)
@@ -66,7 +66,7 @@ public class HojaRutaHttpService
         if (!r.IsSuccessStatusCode)
             return ApiResponse<bool>.Fail($"Error HTTP {(int)r.StatusCode}");
         return await r.Content.ReadFromJsonAsync<ApiResponse<bool>>()
-            ?? ApiResponse<bool>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<bool>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<List<HojaRutaDto>> GetByOrdenPedidoAsync(long ordenPedidoId)

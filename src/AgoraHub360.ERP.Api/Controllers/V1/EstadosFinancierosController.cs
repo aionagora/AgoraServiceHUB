@@ -58,11 +58,11 @@ public class EstadosFinancierosController : ControllerBase
         ws.Cells[2, 1].Style.Font.Bold = true;
         ws.Cells[2, 1].Style.Font.Size = 12;
 
-        ws.Cells[3, 1].Value = $"Al {data.FechaCorte:dd/MM/yyyy} — Gestión {data.Gestion}";
+        ws.Cells[3, 1].Value = $"Al {data.FechaCorte:dd/MM/yyyy} â€” GestiÃ³n {data.Gestion}";
         ws.Cells[3, 1, 3, 3].Merge = true;
 
         int row = 5;
-        SetHeader(ws, ref row, "Código", "Cuenta", "Saldo");
+        SetHeader(ws, ref row, "CÃ³digo", "Cuenta", "Saldo");
 
         // ACTIVOS
         row++;
@@ -158,11 +158,11 @@ public class EstadosFinancierosController : ControllerBase
         ws.Cells[2, 1].Style.Font.Bold = true;
         ws.Cells[2, 1].Style.Font.Size = 12;
 
-        ws.Cells[3, 1].Value = $"Del {data.FechaDesde:dd/MM/yyyy} al {data.FechaHasta:dd/MM/yyyy} — Gestión {data.Gestion}";
+        ws.Cells[3, 1].Value = $"Del {data.FechaDesde:dd/MM/yyyy} al {data.FechaHasta:dd/MM/yyyy} â€” GestiÃ³n {data.Gestion}";
         ws.Cells[3, 1, 3, 3].Merge = true;
 
         int row = 5;
-        SetHeader(ws, ref row, "Código", "Cuenta", "Monto");
+        SetHeader(ws, ref row, "CÃ³digo", "Cuenta", "Monto");
 
         // INGRESOS
         row++;
@@ -200,7 +200,7 @@ public class EstadosFinancierosController : ControllerBase
 
         // UTILIDAD NETA
         row += 2;
-        ws.Cells[row, 2].Value = "UTILIDAD (PÉRDIDA) NETA";
+        ws.Cells[row, 2].Value = "UTILIDAD (PÃ‰RDIDA) NETA";
         ws.Cells[row, 2].Style.Font.Bold = true;
         ws.Cells[row, 2].Style.Font.Size = 12;
         ws.Cells[row, 3].Value = data.UtilidadNeta;
@@ -248,12 +248,12 @@ public class EstadosFinancierosController : ControllerBase
         ws.Cells[1, 1].Style.Font.Bold = true;
         ws.Cells[1, 1].Style.Font.Size = 14;
 
-        ws.Cells[2, 1].Value = "BALANCE DE COMPROBACIÓN — SUMAS Y SALDOS";
+        ws.Cells[2, 1].Value = "BALANCE DE COMPROBACIÃ“N â€” SUMAS Y SALDOS";
         ws.Cells[2, 1, 2, 6].Merge = true;
         ws.Cells[2, 1].Style.Font.Bold = true;
         ws.Cells[2, 1].Style.Font.Size = 12;
 
-        ws.Cells[3, 1].Value = $"Del {data.FechaDesde:dd/MM/yyyy} al {data.FechaHasta:dd/MM/yyyy} — Gestión {data.Gestion}";
+        ws.Cells[3, 1].Value = $"Del {data.FechaDesde:dd/MM/yyyy} al {data.FechaHasta:dd/MM/yyyy} â€” GestiÃ³n {data.Gestion}";
         ws.Cells[3, 1, 3, 6].Merge = true;
 
         int row = 5;
@@ -268,7 +268,7 @@ public class EstadosFinancierosController : ControllerBase
         ws.Cells[row, 5].Style.Font.Bold = true;
         row++;
 
-        string[] headers = ["Código", "Cuenta", "Debe", "Haber", "Deudor", "Acreedor"];
+        string[] headers = ["CÃ³digo", "Cuenta", "Debe", "Haber", "Deudor", "Acreedor"];
         for (int c = 0; c < headers.Length; c++)
         {
             ws.Cells[row, c + 1].Value = headers[c];
@@ -351,11 +351,11 @@ public class EstadosFinancierosController : ControllerBase
         ws.Cells[2, 1].Style.Font.Bold = true;
         ws.Cells[2, 1].Style.Font.Size = 12;
 
-        ws.Cells[3, 1].Value = $"Del {data.FechaDesde:dd/MM/yyyy} al {data.FechaHasta:dd/MM/yyyy} — Gestión {data.Gestion}";
+        ws.Cells[3, 1].Value = $"Del {data.FechaDesde:dd/MM/yyyy} al {data.FechaHasta:dd/MM/yyyy} â€” GestiÃ³n {data.Gestion}";
         ws.Cells[3, 1, 3, 6].Merge = true;
 
         int row = 5;
-        string[] headers = ["Fecha", "Nro. Comprobante", "Código", "Cuenta", "Debe", "Haber"];
+        string[] headers = ["Fecha", "Nro. Comprobante", "CÃ³digo", "Cuenta", "Debe", "Haber"];
         for (int c = 0; c < headers.Length; c++)
         {
             ws.Cells[row, c + 1].Value = headers[c];

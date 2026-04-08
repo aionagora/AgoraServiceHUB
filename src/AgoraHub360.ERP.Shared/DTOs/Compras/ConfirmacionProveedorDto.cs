@@ -1,6 +1,6 @@
 namespace AgoraHub360.ERP.Shared.DTOs.Compras;
 
-/// <summary>DTO de lectura para Confirmaci髇 del Proveedor (PI).</summary>
+/// <summary>DTO de lectura para Confirmaci贸n del Proveedor (PI).</summary>
 public record ConfirmacionProveedorDto(
     long ConfirmacionProveedorId,
     long OrdenCompraId,
@@ -14,7 +14,7 @@ public record ConfirmacionProveedorDto(
     string? Observaciones,
     int IteracionNegociacion);
 
-/// <summary>DTO para registrar la confirmaci髇 o negociaci髇 del proveedor.</summary>
+/// <summary>DTO para registrar la confirmaci贸n o negociaci贸n del proveedor.</summary>
 public record RegistrarConfirmacionProveedorDto(
     string? NumeroProforma,
     DateTime FechaConfirmacion,
@@ -50,7 +50,7 @@ public record ProgramarPagoDto(
     DateTime FechaProgramada,
     string? Observaciones = null);
 
-/// <summary>DTO para registrar la ejecuci髇 de un pago programado.</summary>
+/// <summary>DTO para registrar la ejecuci贸n de un pago programado.</summary>
 public record EjecutarPagoDto(
     DateTime FechaEjecucion,
     decimal MontoEjecutado,

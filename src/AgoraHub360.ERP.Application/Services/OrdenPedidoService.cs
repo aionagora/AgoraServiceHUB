@@ -118,7 +118,7 @@ public class OrdenPedidoService : IOrdenPedidoService
         var asignacion = await _usuarioEmpresaRepo.FindAsync(
             ue => ue.UsuarioId == solicitanteId.Value && ue.EmpresaId == empresaId.Value, ct);
         if (!asignacion.Any())
-            return Result<OrdenPedidoDto>.Failure("El usuario no está asignado a la empresa activa.");
+            return Result<OrdenPedidoDto>.Failure("El usuario no estÃ¡ asignado a la empresa activa.");
 
         var almacen = await _almacenRepo.GetByIdAsync(dto.AlmacenDestinoId, ct);
         if (almacen is null || almacen.EmpresaId != empresaId.Value)
@@ -171,8 +171,8 @@ public class OrdenPedidoService : IOrdenPedidoService
 
         await _unitOfWork.SaveChangesAsync(ct);
 
-        // Generar tareas automáticas desde plantilla configurada para "OrdenPedido".
-        // Si no existe plantilla el resultado es Failure pero no interrumpe la creación.
+        // Generar tareas automÃ¡ticas desde plantilla configurada para "OrdenPedido".
+        // Si no existe plantilla el resultado es Failure pero no interrumpe la creaciÃ³n.
         await _workflow.GenerarHitosInicialesAsync(new GenerarHitosDto
         {
             EntityType = "OrdenPedido",
@@ -204,7 +204,7 @@ public class OrdenPedidoService : IOrdenPedidoService
 
         op.FechaEmision = dto.FechaEmision;
         op.FechaRequerida = dto.FechaRequerida;
-        // Solicitante no se modifica: queda el usuario que creó la OP
+        // Solicitante no se modifica: queda el usuario que creÃ³ la OP
         op.CentroCosto = dto.CentroCosto;
         op.Urgencia = urgencia;
         op.AlmacenDestinoId = dto.AlmacenDestinoId;
@@ -396,11 +396,11 @@ public class OrdenPedidoService : IOrdenPedidoService
             op.FechaEmision,
             op.FechaRequerida,
             op.SolicitanteId,
-            userMap.GetValueOrDefault(op.SolicitanteId, "—"),
+            userMap.GetValueOrDefault(op.SolicitanteId, "â€”"),
             op.CentroCosto,
             op.Urgencia.ToString(),
             op.AlmacenDestinoId,
-            almMap.GetValueOrDefault(op.AlmacenDestinoId, "—"),
+            almMap.GetValueOrDefault(op.AlmacenDestinoId, "â€”"),
             op.Estado.ToString(),
             op.Observaciones,
             op.MotivoRechazo,
@@ -411,7 +411,7 @@ public class OrdenPedidoService : IOrdenPedidoService
                 l.OrdenPedidoLineaId,
                 l.NumeroLinea,
                 l.CompanyProductId,
-                cpMap.GetValueOrDefault(l.CompanyProductId, "—"),
+                cpMap.GetValueOrDefault(l.CompanyProductId, "â€”"),
                 l.Descripcion,
                 l.UnidadMedida,
                 l.CantidadSolicitada,

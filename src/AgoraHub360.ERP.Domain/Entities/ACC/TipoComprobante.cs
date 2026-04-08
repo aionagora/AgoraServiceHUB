@@ -9,15 +9,15 @@ public class TipoComprobante : TenantEntity
 {
     public int TipoComprobanteId { get; set; }
 
-    /// <summary>Código corto (ej: "ING", "EGR", "TRA").</summary>
+    /// <summary>CÃ³digo corto (ej: "ING", "EGR", "TRA").</summary>
     public string Codigo { get; set; } = string.Empty;
 
     /// <summary>Nombre del tipo (ej: "Comprobante de Ingreso").</summary>
     public string Nombre { get; set; } = string.Empty;
 
-    /// <summary>Prefijo para numeración (ej: "CI", "CE", "CT").</summary>
+    /// <summary>Prefijo para numeraciÃ³n (ej: "CI", "CE", "CT").</summary>
     public string Prefijo { get; set; } = string.Empty;
 
-    /// <summary>Orden de visualización.</summary>
+    /// <summary>Orden de visualizaciÃ³n.</summary>
     public int Orden { get; set; }
 }

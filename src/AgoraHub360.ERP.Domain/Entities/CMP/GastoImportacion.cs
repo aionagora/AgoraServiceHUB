@@ -3,7 +3,7 @@ namespace AgoraHub360.ERP.Domain.Entities.CMP;
 using AgoraHub360.ERP.Domain.Common;
 
 /// <summary>
-/// Gasto individual de importación (flete, seguro, arancel, agencia, etc.).
+/// Gasto individual de importaciÃ³n (flete, seguro, arancel, agencia, etc.).
 /// </summary>
 public class GastoImportacion : AuditableEntity
 {
@@ -13,7 +13,7 @@ public class GastoImportacion : AuditableEntity
     /// <summary>Tipo de gasto (ej: Flete, Seguro, Arancel, Agencia, Almacenaje, Otros).</summary>
     public string TipoGasto { get; set; } = string.Empty;
 
-    /// <summary>Descripción detallada.</summary>
+    /// <summary>DescripciÃ³n detallada.</summary>
     public string? Descripcion { get; set; }
 
     /// <summary>Monto del gasto.</summary>
@@ -31,6 +31,6 @@ public class GastoImportacion : AuditableEntity
     /// <summary>Referencia de factura/documento del gasto.</summary>
     public string? Referencia { get; set; }
 
-    // Navegación
+    // NavegaciÃ³n
     public HojaImportacion? HojaImportacion { get; set; }
 }

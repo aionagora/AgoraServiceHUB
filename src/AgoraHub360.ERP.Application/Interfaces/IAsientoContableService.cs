@@ -15,7 +15,7 @@ public interface IAsientoContableService
         string? search = null,
         CancellationToken ct = default);
 
-    /// <summary>Obtiene un asiento con sus líneas.</summary>
+    /// <summary>Obtiene un asiento con sus lÃ­neas.</summary>
     Task<Result<AsientoContableDto>> GetByIdAsync(long id, CancellationToken ct = default);
 
     /// <summary>Crea un asiento contable manual en estado Borrador.</summary>

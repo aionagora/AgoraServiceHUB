@@ -8,10 +8,10 @@ using AgoraHub360.ERP.Domain.Interfaces;
 using AgoraHub360.ERP.Shared.DTOs.Workflow;
 
 /// <summary>
-/// ImplementaciÛn del servicio de Workflow.
-/// Orquesta creaciÛn, avance y consulta de tareas sobre documentos del ERP.
-/// El commit de cada operaciÛn de escritura es responsabilidad de este servicio
-/// a travÈs de <see cref="IUnitOfWork"/>.
+/// Implementaci√≥n del servicio de Workflow.
+/// Orquesta creaci√≥n, avance y consulta de tareas sobre documentos del ERP.
+/// El commit de cada operaci√≥n de escritura es responsabilidad de este servicio
+/// a trav√©s de <see cref="IUnitOfWork"/>.
 /// </summary>
 public sealed class WorkflowService : IWorkflowService
 {
@@ -120,7 +120,7 @@ public sealed class WorkflowService : IWorkflowService
         var plantillas = await _repo.GetPlantillasAsync(dto.EntityType, dto.SubTipo, dto.EmpresaId, ct);
         if (plantillas.Count == 0)
             return Result<bool>.Failure(
-                $"Plantilla no configurada para EntityType='{dto.EntityType}', SubTipo='{dto.SubTipo ?? "ó"}'.");
+                $"Plantilla no configurada para EntityType='{dto.EntityType}', SubTipo='{dto.SubTipo ?? "‚Äî"}'.");
 
         // 3. Construir las tareas desde las plantillas
         var ahora = DateTime.UtcNow;
@@ -133,7 +133,7 @@ public sealed class WorkflowService : IWorkflowService
             Codigo          = p.Codigo,
             Descripcion     = p.Descripcion,
             Responsable     = p.RolResponsable,
-            // Hitos autom·ticos se completan de inmediato
+            // Hitos autom√°ticos se completan de inmediato
             Estado          = p.EsAutomatico ? WorkflowDomainRules.Completado : WorkflowDomainRules.Pendiente,
             Completado      = p.EsAutomatico,
             FechaReal       = p.EsAutomatico ? DateOnly.FromDateTime(DateTime.Today) : null,
@@ -157,15 +157,15 @@ public sealed class WorkflowService : IWorkflowService
         if (tarea is null)
             return Result<TareaDto>.Failure($"Tarea {id} no encontrada.");
 
-        // Validar transiciÛn de estado si se solicita cambio
+        // Validar transici√≥n de estado si se solicita cambio
         if (dto.Estado is not null &&
             !WorkflowDomainRules.TransicionEstadoValida(tarea.Estado, dto.Estado))
         {
             return Result<TareaDto>.Failure(
-                $"TransiciÛn de estado inv·lida: '{tarea.Estado}' ? '{dto.Estado}'.");
+                $"Transici√≥n de estado inv√°lida: '{tarea.Estado}' ? '{dto.Estado}'.");
         }
 
-        // Aplicar solo campos enviados (patch sem·ntico)
+        // Aplicar solo campos enviados (patch sem√°ntico)
         if (dto.Descripcion   is not null) tarea.Descripcion   = dto.Descripcion;
         if (dto.FechaPlan     is not null) tarea.FechaPlan     = dto.FechaPlan;
         if (dto.FechaReal     is not null) tarea.FechaReal     = dto.FechaReal;
@@ -193,7 +193,7 @@ public sealed class WorkflowService : IWorkflowService
         int empresaId, ReordenarTareasDto dto, CancellationToken ct = default)
     {
         if (dto.Items.Count == 0)
-            return Result<bool>.Failure("La lista de items de reordenamiento est· vacÌa.");
+            return Result<bool>.Failure("La lista de items de reordenamiento est√° vac√≠a.");
 
         var ahora = DateTime.UtcNow;
         var errores = new List<string>();
@@ -243,7 +243,7 @@ public sealed class WorkflowService : IWorkflowService
         var yaExiste = await _repo.GetByCodigoAsync(dto.EntityType, dto.EntityId, dto.Codigo, empresaId, ct);
         if (yaExiste is not null)
             return Result<TareaDto>.Failure(
-                $"Ya existe una tarea con cÛdigo '{dto.Codigo}' para este documento.");
+                $"Ya existe una tarea con c√≥digo '{dto.Codigo}' para este documento.");
 
         var tarea = new Tarea
         {
@@ -349,7 +349,7 @@ public sealed class WorkflowService : IWorkflowService
             Descripcion    = dto.Descripcion,
             EsAutomatico   = dto.EsAutomatico,
             RolResponsable = string.IsNullOrWhiteSpace(dto.RolResponsable) ? null : dto.RolResponsable.ToUpperInvariant(),
-            EmpresaId      = empresaId,   // siempre empresa ó no globales
+            EmpresaId      = empresaId,   // siempre empresa ‚Äî no globales
             Activo         = true,
             FechaCreacion  = DateTime.UtcNow,
             CreadoPor      = _currentUser.UserName,

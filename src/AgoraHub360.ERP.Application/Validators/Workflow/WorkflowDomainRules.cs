@@ -3,20 +3,20 @@ namespace AgoraHub360.ERP.Application.Validators.Workflow;
 using AgoraHub360.ERP.Domain.Entities.Workflow;
 
 /// <summary>
-/// Reglas de dominio est·ticas para el mÛdulo Workflow.
+/// Reglas de dominio est√°ticas para el m√≥dulo Workflow.
 /// Centralizan las decisiones de negocio sobre transiciones de estado
-/// y permisos de operaciÛn sobre tareas.
+/// y permisos de operaci√≥n sobre tareas.
 /// </summary>
 public static class WorkflowDomainRules
 {
-    // ?? Estados v·lidos ???????????????????????????????????????????????????????
+    // ?? Estados v√°lidos ???????????????????????????????????????????????????????
     public const string Pendiente   = "PENDIENTE";
     public const string EnProceso   = "EN_PROCESO";
     public const string Completado  = "COMPLETADO";
     public const string Bloqueado   = "BLOQUEADO";
 
     /// <summary>
-    /// Grafo de transiciones v·lidas.
+    /// Grafo de transiciones v√°lidas.
     /// Key   = estado actual.
     /// Value = estados destino permitidos.
     /// </summary>
@@ -26,31 +26,31 @@ public static class WorkflowDomainRules
             [Pendiente]  = new[] { EnProceso,  Pendiente },
             [EnProceso]  = new[] { Completado, Bloqueado, Pendiente },
             [Bloqueado]  = new[] { Pendiente },
-            [Completado] = Array.Empty<string>(),   // estado terminal ó no se puede mover
+            [Completado] = Array.Empty<string>(),   // estado terminal ‚Äî no se puede mover
         };
 
     // ?? Operaciones permitidas ????????????????????????????????????????????????
 
     /// <summary>
     /// La tarea puede marcarse como completada si:
-    /// ï su estado actual NO es ya "COMPLETADO", y
-    /// ï est· activa (no fue eliminada lÛgicamente).
+    /// ‚Ä¢ su estado actual NO es ya "COMPLETADO", y
+    /// ‚Ä¢ est√° activa (no fue eliminada l√≥gicamente).
     /// </summary>
     public static bool PuedeCompletarse(Tarea t)
         => t.Estado != Completado && t.Activo;
 
     /// <summary>
     /// La tarea puede reordenarse dentro del workflow solo si
-    /// a˙n no ha comenzado (estado PENDIENTE).
-    /// Tareas en proceso, bloqueadas o completadas tienen posiciÛn fija.
+    /// a√∫n no ha comenzado (estado PENDIENTE).
+    /// Tareas en proceso, bloqueadas o completadas tienen posici√≥n fija.
     /// </summary>
     public static bool PuedeReordenarse(Tarea t)
         => t.Estado == Pendiente;
 
     /// <summary>
-    /// Verifica si la transiciÛn de <paramref name="estadoActual"/> a
-    /// <paramref name="estadoNuevo"/> es v·lida seg˙n el grafo de dominio.
-    /// La transiciÛn a PENDIENTE (reset) est· siempre permitida desde
+    /// Verifica si la transici√≥n de <paramref name="estadoActual"/> a
+    /// <paramref name="estadoNuevo"/> es v√°lida seg√∫n el grafo de dominio.
+    /// La transici√≥n a PENDIENTE (reset) est√° siempre permitida desde
     /// cualquier estado excepto COMPLETADO.
     /// </summary>
     /// <param name="estadoActual">Estado de origen (case-insensitive).</param>
@@ -64,8 +64,8 @@ public static class WorkflowDomainRules
     }
 
     /// <summary>
-    /// Retorna el array de estados destino v·lidos desde <paramref name="estadoActual"/>.
-    /// ⁄til para poblar un select en la UI solo con opciones legÌtimas.
+    /// Retorna el array de estados destino v√°lidos desde <paramref name="estadoActual"/>.
+    /// √ötil para poblar un select en la UI solo con opciones leg√≠timas.
     /// </summary>
     public static IEnumerable<string> TransicionesDisponibles(string estadoActual)
         => Transiciones.TryGetValue(estadoActual, out var permitidos)
