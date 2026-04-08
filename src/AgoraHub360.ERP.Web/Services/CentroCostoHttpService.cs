@@ -30,7 +30,7 @@ public class CentroCostoHttpService
             return ApiResponse<CentroCostoDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<CentroCostoDto>>()
-            ?? ApiResponse<CentroCostoDto>.Fail("Error de comunicación.");
+            ?? ApiResponse<CentroCostoDto>.Fail("Error de comunicaciÃ³n.");
     }
 
     public async Task<ApiResponse<CentroCostoDto>> UpdateAsync(int id, UpdateCentroCostoDto dto)
@@ -42,7 +42,7 @@ public class CentroCostoHttpService
             return ApiResponse<CentroCostoDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<CentroCostoDto>>()
-            ?? ApiResponse<CentroCostoDto>.Fail("Error de comunicación.");
+            ?? ApiResponse<CentroCostoDto>.Fail("Error de comunicaciÃ³n.");
     }
 
     public async Task<ApiResponse<bool>> DeleteAsync(int id)
@@ -54,6 +54,6 @@ public class CentroCostoHttpService
             return ApiResponse<bool>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<bool>>()
-            ?? ApiResponse<bool>.Fail("Error de comunicación.");
+            ?? ApiResponse<bool>.Fail("Error de comunicaciÃ³n.");
     }
 }

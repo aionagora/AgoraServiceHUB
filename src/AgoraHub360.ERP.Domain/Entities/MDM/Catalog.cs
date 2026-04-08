@@ -3,7 +3,7 @@ namespace AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Common;
 
 /// <summary>
-/// Catalog — tenant-scoped.
+/// Catalog â€” tenant-scoped.
 /// Each company has its own catalogs. Scope field is kept for backward compat.
 /// </summary>
 public class Catalog : TenantEntity

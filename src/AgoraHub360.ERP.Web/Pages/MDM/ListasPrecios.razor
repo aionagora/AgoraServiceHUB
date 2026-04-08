@@ -76,8 +76,8 @@
                                     <td><span class="badge bg-info text-dark">@pl.CurrencyId</span></td>
                                     <td>
                                         <small class="text-muted">
-                                            @(pl.ValidFrom?.ToString("dd/MM/yyyy") ?? "—")
-                                            ? @(pl.ValidTo?.ToString("dd/MM/yyyy") ?? "—")
+                                            @(pl.ValidFrom?.ToString("dd/MM/yyyy") ?? "â€”")
+                                            ? @(pl.ValidTo?.ToString("dd/MM/yyyy") ?? "â€”")
                                         </small>
                                     </td>
                                     <td>
@@ -135,13 +135,13 @@
                                                             @foreach (var item in currentItems)
                                                             {
                                                                 <tr>
-                                                                    <td>@(item.CompanyProductId?.ToString() ?? "—")</td>
-                                                                    <td>@(item.VariantId?.ToString() ?? "—")</td>
+                                                                    <td>@(item.CompanyProductId?.ToString() ?? "â€”")</td>
+                                                                    <td>@(item.VariantId?.ToString() ?? "â€”")</td>
                                                                     <td class="text-end fw-bold">@item.Price.ToString("N2")</td>
-                                                                    <td class="text-end">@(item.MinQty?.ToString("N2") ?? "—")</td>
-                                                                    <td class="text-end">@(item.DiscountPercent?.ToString("N2") ?? "—")</td>
+                                                                    <td class="text-end">@(item.MinQty?.ToString("N2") ?? "â€”")</td>
+                                                                    <td class="text-end">@(item.DiscountPercent?.ToString("N2") ?? "â€”")</td>
                                                                     <td>
-                                                                        <small>@(item.ValidFrom?.ToString("dd/MM/yy") ?? "—") ? @(item.ValidTo?.ToString("dd/MM/yy") ?? "—")</small>
+                                                                        <small>@(item.ValidFrom?.ToString("dd/MM/yy") ?? "â€”") ? @(item.ValidTo?.ToString("dd/MM/yy") ?? "â€”")</small>
                                                                     </td>
                                                                     <td class="text-end">
                                                                         <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteItem(pl.PriceListId, item.ItemId)">
@@ -383,7 +383,7 @@
 
     private async Task DeleteList(PriceListDto pl)
     {
-        if (!await JS.InvokeAsync<bool>("confirm", $"¿Eliminar lista '{pl.Name}'?")) return;
+        if (!await JS.InvokeAsync<bool>("confirm", $"Â¿Eliminar lista '{pl.Name}'?")) return;
         try
         {
             var r = await PlService.DeleteAsync(pl.PriceListId);
@@ -416,7 +416,7 @@
 
     private async Task DeleteItem(long plId, long itemId)
     {
-        if (!await JS.InvokeAsync<bool>("confirm", "¿Eliminar este precio?")) return;
+        if (!await JS.InvokeAsync<bool>("confirm", "Â¿Eliminar este precio?")) return;
         try
         {
             var r = await PlService.DeleteItemAsync(plId, itemId);

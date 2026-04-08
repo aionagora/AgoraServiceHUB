@@ -3,13 +3,13 @@
 @inject PeriodoContableHttpService PeriodoService
 @inject IJSRuntime JS
 
-<PageTitle>Períodos Contables - AgoraHub360 ERP</PageTitle>
+<PageTitle>PerÃ­odos Contables - AgoraHub360 ERP</PageTitle>
 
 <div class="container-fluid">
     <div class="row mb-3">
         <div class="col">
-            <h3><i class="bi bi-calendar3"></i> Períodos Contables</h3>
-            <p class="text-muted mb-0">Gestión de períodos mensuales — Apertura y cierre</p>
+            <h3><i class="bi bi-calendar3"></i> PerÃ­odos Contables</h3>
+            <p class="text-muted mb-0">GestiÃ³n de perÃ­odos mensuales â€” Apertura y cierre</p>
         </div>
     </div>
 
@@ -28,12 +28,12 @@
         </div>
     }
 
-    @* ?? Generar períodos ?? *@
+    @* ?? Generar perÃ­odos ?? *@
     <div class="card mb-3">
         <div class="card-body py-2">
             <div class="row g-2 align-items-end">
                 <div class="col-md-2">
-                    <label class="form-label mb-1 small">Año</label>
+                    <label class="form-label mb-1 small">AÃ±o</label>
                     <select class="form-select form-select-sm" @bind="selectedAnio">
                         @for (int y = DateTime.Today.Year + 1; y >= DateTime.Today.Year - 5; y--)
                         {
@@ -47,7 +47,7 @@
                 <div class="col-md-auto">
                     <button class="btn btn-sm btn-success" @onclick="GenerarPeriodos" disabled="@generando">
                         @if (generando) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                        <i class="bi bi-calendar-plus"></i> Generar Períodos @selectedAnio
+                        <i class="bi bi-calendar-plus"></i> Generar PerÃ­odos @selectedAnio
                     </button>
                 </div>
                 <div class="col-md-auto ms-auto">
@@ -63,7 +63,7 @@
         </div>
     </div>
 
-    @* ?? Grid de períodos ?? *@
+    @* ?? Grid de perÃ­odos ?? *@
     <div class="card">
         <div class="card-body p-0">
             @if (loading)
@@ -74,7 +74,7 @@
             {
                 <div class="text-center py-5">
                     <i class="bi bi-calendar-x" style="font-size:2.5rem;"></i>
-                    <p class="text-muted mt-3">No hay períodos para el año <strong>@selectedAnio</strong>. Use <strong>"Generar Períodos"</strong> para crearlos.</p>
+                    <p class="text-muted mt-3">No hay perÃ­odos para el aÃ±o <strong>@selectedAnio</strong>. Use <strong>"Generar PerÃ­odos"</strong> para crearlos.</p>
                 </div>
             }
             else
@@ -110,13 +110,13 @@
                                 <div class="card-footer text-center py-1">
                                     @if (!esCerrado)
                                     {
-                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => CerrarPeriodo(p)" title="Cerrar período">
+                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => CerrarPeriodo(p)" title="Cerrar perÃ­odo">
                                             <i class="bi bi-lock"></i> Cerrar
                                         </button>
                                     }
                                     else
                                     {
-                                        <button class="btn btn-sm btn-outline-warning" @onclick="() => ReabrirPeriodo(p)" title="Reabrir período">
+                                        <button class="btn btn-sm btn-outline-warning" @onclick="() => ReabrirPeriodo(p)" title="Reabrir perÃ­odo">
                                             <i class="bi bi-unlock"></i> Reabrir
                                         </button>
                                     }
@@ -153,12 +153,12 @@
 
     private async Task GenerarPeriodos()
     {
-        if (!await JS.InvokeAsync<bool>("confirm", $"¿Generar los 12 períodos mensuales para el año {selectedAnio}?")) return;
+        if (!await JS.InvokeAsync<bool>("confirm", $"Â¿Generar los 12 perÃ­odos mensuales para el aÃ±o {selectedAnio}?")) return;
         generando = true; errorMessage = null;
         try
         {
             var r = await PeriodoService.GenerarPeriodosAsync(selectedAnio);
-            if (r.Success) { successMessage = r.Message ?? "Períodos generados."; await LoadData(); }
+            if (r.Success) { successMessage = r.Message ?? "PerÃ­odos generados."; await LoadData(); }
             else errorMessage = r.Message;
         }
         catch (Exception ex) { errorMessage = ex.Message; }
@@ -167,11 +167,11 @@
 
     private async Task CerrarPeriodo(PeriodoContableDto periodo)
     {
-        if (!await JS.InvokeAsync<bool>("confirm", $"¿Cerrar el período {periodo.Nombre}? No se podrán crear ni contabilizar asientos en este mes.")) return;
+        if (!await JS.InvokeAsync<bool>("confirm", $"Â¿Cerrar el perÃ­odo {periodo.Nombre}? No se podrÃ¡n crear ni contabilizar asientos en este mes.")) return;
         try
         {
             var r = await PeriodoService.CerrarAsync(periodo.PeriodoContableId);
-            if (r.Success) { successMessage = $"Período {periodo.Nombre} cerrado."; await LoadData(); }
+            if (r.Success) { successMessage = $"PerÃ­odo {periodo.Nombre} cerrado."; await LoadData(); }
             else errorMessage = r.Message;
         }
         catch (Exception ex) { errorMessage = ex.Message; }
@@ -179,11 +179,11 @@
 
     private async Task ReabrirPeriodo(PeriodoContableDto periodo)
     {
-        if (!await JS.InvokeAsync<bool>("confirm", $"¿Reabrir el período {periodo.Nombre}?")) return;
+        if (!await JS.InvokeAsync<bool>("confirm", $"Â¿Reabrir el perÃ­odo {periodo.Nombre}?")) return;
         try
         {
             var r = await PeriodoService.ReabrirAsync(periodo.PeriodoContableId);
-            if (r.Success) { successMessage = $"Período {periodo.Nombre} reabierto."; await LoadData(); }
+            if (r.Success) { successMessage = $"PerÃ­odo {periodo.Nombre} reabierto."; await LoadData(); }
             else errorMessage = r.Message;
         }
         catch (Exception ex) { errorMessage = ex.Message; }

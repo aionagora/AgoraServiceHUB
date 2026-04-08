@@ -2,7 +2,7 @@
 @inject EmpresaStateService EmpresaState
 
 @* ????????????????????????????????????????????????????????????????????????????
-   TareasTab ó Componente de hitos de workflow para cualquier documento ERP.
+   TareasTab ‚Äî Componente de hitos de workflow para cualquier documento ERP.
    Uso:  <TareasTab EntityType="OrdenPedido" EntityId="@id" SubTipo="IMPORTACION" />
    ???????????????????????????????????????????????????????????????????????????? *@
 
@@ -190,7 +190,7 @@
                     </span>
                 </div>
 
-                @* PrÛxima fecha *@
+                @* Pr√≥xima fecha *@
                 @if (resumen.ProximaFechaVencimiento.HasValue)
                 {
                     <span style="font-family:'JetBrains Mono',monospace;font-size:.72rem;color:#b45309">
@@ -229,7 +229,7 @@
                 {
                     <i class="bi bi-magic me-1"></i>
                 }
-                Generar hitos autom·ticos
+                Generar hitos autom√°ticos
             </button>
             @if (!string.IsNullOrEmpty(errorMsg))
             {
@@ -246,8 +246,8 @@
                 <thead>
                     <tr>
                         <th style="width:36px">#</th>
-                        <th style="width:90px">CÛdigo</th>
-                        <th>DescripciÛn</th>
+                        <th style="width:90px">C√≥digo</th>
+                        <th>Descripci√≥n</th>
                         <th style="width:96px">F.Plan</th>
                         <th style="width:96px">F.Real</th>
                         <th style="width:110px">Estado</th>
@@ -275,10 +275,10 @@
                             @* Orden *@
                             <td class="wf-orden">@t.Orden</td>
 
-                            @* CÛdigo *@
+                            @* C√≥digo *@
                             <td><span class="wf-code">@t.Codigo</span></td>
 
-                            @* DescripciÛn *@
+                            @* Descripci√≥n *@
                             <td>
                                 @if (isEditing)
                                 {
@@ -358,7 +358,7 @@
                                            @onchange="() => CompletarTareaAsync(t)" />
                                 </td>
 
-                                @* Botones ediciÛn *@
+                                @* Botones edici√≥n *@
                                 <td>
                                     @if (isEditing)
                                     {
@@ -402,7 +402,7 @@
 </div>
 
 @code {
-    // ?? Par·metros ????????????????????????????????????????????????????????????
+    // ?? Par√°metros ????????????????????????????????????????????????????????????
 
     [Parameter, EditorRequired] public string EntityType { get; set; } = string.Empty;
     [Parameter, EditorRequired] public int EntityId { get; set; }
@@ -418,7 +418,7 @@
     private bool generandoHitos       = false;
     private string? errorMsg;
 
-    // EdiciÛn inline
+    // Edici√≥n inline
     private int?    editandoId        = null;
     private string  editDescripcion   = string.Empty;
     private DateOnly? editFechaPlan;
@@ -495,7 +495,7 @@
 
         if (updated is null)
         {
-            errorMsg = "No se pudo completar la tarea. IntÈntalo de nuevo.";
+            errorMsg = "No se pudo completar la tarea. Int√©ntalo de nuevo.";
             return;
         }
 
@@ -507,7 +507,7 @@
             await OnTareaCompletada.InvokeAsync();
     }
 
-    // ?? EdiciÛn inline ????????????????????????????????????????????????????????
+    // ?? Edici√≥n inline ????????????????????????????????????????????????????????
 
     private void StartEdit(TareaDto t)
     {
@@ -536,7 +536,7 @@
         var updated = await WorkflowService.UpdateAsync(t.Id, dto);
         if (updated is null)
         {
-            errorMsg = "No se pudo guardar los cambios. IntÈntalo de nuevo.";
+            errorMsg = "No se pudo guardar los cambios. Int√©ntalo de nuevo.";
             return;
         }
 

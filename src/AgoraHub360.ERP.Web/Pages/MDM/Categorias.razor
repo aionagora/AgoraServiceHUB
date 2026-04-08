@@ -4,16 +4,16 @@
 @inject CatalogoHttpService CatalogoService
 @inject IJSRuntime JS
 
-<PageTitle>Categorías - AgoraHub360 ERP</PageTitle>
+<PageTitle>CategorÃ­as - AgoraHub360 ERP</PageTitle>
 
 <div class="container-fluid">
     <div class="row mb-3">
         <div class="col">
-            <h3>??? Categorías</h3>
+            <h3>??? CategorÃ­as</h3>
         </div>
         <div class="col-auto">
             <button class="btn btn-primary" @onclick="ShowCreateModal">
-                <i class="bi bi-plus-circle"></i> Nueva Categoría
+                <i class="bi bi-plus-circle"></i> Nueva CategorÃ­a
             </button>
         </div>
     </div>
@@ -22,7 +22,7 @@
     {
         <div class="text-center py-5">
             <div class="spinner-border text-primary" role="status"></div>
-            <p class="mt-2">Cargando categorías...</p>
+            <p class="mt-2">Cargando categorÃ­as...</p>
         </div>
     }
     else if (!string.IsNullOrEmpty(errorMessage))
@@ -35,7 +35,7 @@
     else if (categorias.Count == 0)
     {
         <div class="alert alert-info">
-            <i class="bi bi-info-circle"></i> No hay categorías registradas.
+            <i class="bi bi-info-circle"></i> No hay categorÃ­as registradas.
         </div>
     }
     else
@@ -47,7 +47,7 @@
                         <thead>
                             <tr>
                                 <th>Nombre</th>
-                                <th>Catálogo</th>
+                                <th>CatÃ¡logo</th>
                                 <th>Ruta</th>
                                 <th>Estado</th>
                                 <th class="text-end">Acciones</th>
@@ -89,7 +89,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Nueva Categoría</h5>
+                    <h5 class="modal-title">Nueva CategorÃ­a</h5>
                     <button type="button" class="btn-close" @onclick="CloseCreateModal"></button>
                 </div>
                 <div class="modal-body">
@@ -97,9 +97,9 @@
                         <DataAnnotationsValidator />
                         <ValidationSummary class="text-danger" />
                         <div class="mb-3">
-                            <label class="form-label">Catálogo *</label>
+                            <label class="form-label">CatÃ¡logo *</label>
                             <InputSelect class="form-select" @bind-Value="createDto.CatalogId">
-                                <option value="0">-- Seleccionar catálogo --</option>
+                                <option value="0">-- Seleccionar catÃ¡logo --</option>
                                 @foreach (var c in catalogos)
                                 {
                                     <option value="@c.CatalogId">@c.Name</option>
@@ -107,12 +107,12 @@
                             </InputSelect>
                             @if (createDto.CatalogId == 0)
                             {
-                                <div class="text-danger small mt-1">El catálogo es obligatorio.</div>
+                                <div class="text-danger small mt-1">El catÃ¡logo es obligatorio.</div>
                             }
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Nombre *</label>
-                            <InputText class="form-control" @bind-Value="createDto.Name" placeholder="Ej: Electrónica" />
+                            <InputText class="form-control" @bind-Value="createDto.Name" placeholder="Ej: ElectrÃ³nica" />
                             <ValidationMessage For="@(() => createDto.Name)" />
                         </div>
                         <div class="mb-3">
@@ -139,7 +139,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Editar Categoría</h5>
+                    <h5 class="modal-title">Editar CategorÃ­a</h5>
                     <button type="button" class="btn-close" @onclick="CloseEditModal"></button>
                 </div>
                 <div class="modal-body">
@@ -148,7 +148,7 @@
                         <ValidationSummary class="text-danger" />
                         <div class="mb-3">
                             <label class="form-label">Nombre *</label>
-                            <InputText class="form-control" @bind-Value="updateDto.Name" placeholder="Ej: Electrónica" />
+                            <InputText class="form-control" @bind-Value="updateDto.Name" placeholder="Ej: ElectrÃ³nica" />
                             <ValidationMessage For="@(() => updateDto.Name)" />
                         </div>
                         <div class="mb-3">
@@ -260,7 +260,7 @@
 
     private async Task DeleteCategoria(CategoryDto cat)
     {
-        if (!await JS.InvokeAsync<bool>("confirm", $"¿Eliminar categoría '{cat.Name}'?")) return;
+        if (!await JS.InvokeAsync<bool>("confirm", $"Â¿Eliminar categorÃ­a '{cat.Name}'?")) return;
         try
         {
             var response = await CategoriaService.DeleteAsync(cat.CategoryId);

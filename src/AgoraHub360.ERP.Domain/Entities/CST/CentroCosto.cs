@@ -4,23 +4,23 @@ using AgoraHub360.ERP.Domain.Common;
 using AgoraHub360.ERP.Domain.Entities.Core;
 
 /// <summary>
-/// Centro de costo para analítica contable.
-/// Permite estructura jerárquica mediante auto-referencia (ParentId).
+/// Centro de costo para analÃ­tica contable.
+/// Permite estructura jerÃ¡rquica mediante auto-referencia (ParentId).
 /// </summary>
 public class CentroCosto : AuditableEntity
 {
     public int Id { get; set; }
 
-    /// <summary>Código único dentro de la empresa (ej: CC-VEN-01).</summary>
+    /// <summary>CÃ³digo Ãºnico dentro de la empresa (ej: CC-VEN-01).</summary>
     public string Codigo { get; set; } = string.Empty;
 
     /// <summary>Nombre descriptivo del centro de costo.</summary>
     public string Nombre { get; set; } = string.Empty;
 
-    /// <summary>Descripción opcional.</summary>
+    /// <summary>DescripciÃ³n opcional.</summary>
     public string? Descripcion { get; set; }
 
-    /// <summary>Centro de costo padre (jerarquía). Null = nivel raíz.</summary>
+    /// <summary>Centro de costo padre (jerarquÃ­a). Null = nivel raÃ­z.</summary>
     public int? ParentId { get; set; }
 
     /// <summary>Empresa a la que pertenece el centro de costo.</summary>

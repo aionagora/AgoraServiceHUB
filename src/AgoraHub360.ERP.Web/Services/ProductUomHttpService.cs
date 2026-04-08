@@ -24,7 +24,7 @@ public class ProductUomHttpService
         if (!response.IsSuccessStatusCode)
             return ApiResponse<ProductUomDto>.Fail($"HTTP {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
         return await response.Content.ReadFromJsonAsync<ApiResponse<ProductUomDto>>()
-            ?? ApiResponse<ProductUomDto>.Fail("Error de comunicación.");
+            ?? ApiResponse<ProductUomDto>.Fail("Error de comunicaciÃ³n.");
     }
 
     public async Task<ApiResponse<ProductUomDto>> UpdateAsync(long id, UpdateProductUomDto dto)
@@ -33,7 +33,7 @@ public class ProductUomHttpService
         if (!response.IsSuccessStatusCode)
             return ApiResponse<ProductUomDto>.Fail($"HTTP {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
         return await response.Content.ReadFromJsonAsync<ApiResponse<ProductUomDto>>()
-            ?? ApiResponse<ProductUomDto>.Fail("Error de comunicación.");
+            ?? ApiResponse<ProductUomDto>.Fail("Error de comunicaciÃ³n.");
     }
 
     public async Task<ApiResponse<bool>> DeleteAsync(long id)
@@ -42,6 +42,6 @@ public class ProductUomHttpService
         if (!response.IsSuccessStatusCode)
             return ApiResponse<bool>.Fail($"HTTP {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
         return await response.Content.ReadFromJsonAsync<ApiResponse<bool>>()
-            ?? ApiResponse<bool>.Fail("Error de comunicación.");
+            ?? ApiResponse<bool>.Fail("Error de comunicaciÃ³n.");
     }
 }

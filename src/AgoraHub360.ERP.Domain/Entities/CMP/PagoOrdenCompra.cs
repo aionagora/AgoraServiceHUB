@@ -28,7 +28,7 @@ public class PagoOrdenCompra : TenantEntity
     /// <summary>Fecha programada de pago.</summary>
     public DateTime FechaProgramada { get; set; }
 
-    /// <summary>Fecha real de ejecución del pago.</summary>
+    /// <summary>Fecha real de ejecuciÃ³n del pago.</summary>
     public DateTime? FechaEjecucion { get; set; }
 
     /// <summary>Monto efectivamente pagado.</summary>
@@ -37,7 +37,7 @@ public class PagoOrdenCompra : TenantEntity
     /// <summary>True cuando el pago fue ejecutado.</summary>
     public bool Ejecutado { get; set; }
 
-    /// <summary>Referencia bancaria / número de transferencia.</summary>
+    /// <summary>Referencia bancaria / nÃºmero de transferencia.</summary>
     public string? ReferenciaTransferencia { get; set; }
 
     public string? Observaciones { get; set; }

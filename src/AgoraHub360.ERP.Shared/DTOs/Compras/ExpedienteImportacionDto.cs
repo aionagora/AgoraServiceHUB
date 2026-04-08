@@ -1,6 +1,6 @@
 namespace AgoraHub360.ERP.Shared.DTOs.Compras;
 
-/// <summary>DTO de lectura para Expediente de Importaci髇.</summary>
+/// <summary>DTO de lectura para Expediente de Importaci贸n.</summary>
 public record ExpedienteImportacionDto(
     long ExpedienteImportacionId,
     int EmpresaId,
@@ -13,7 +13,7 @@ public record ExpedienteImportacionDto(
     string? PuertoDestino,
     string? Forwarder,
     string? Aseguradora,
-    string? NumeroP髄izaSeguro,
+    string? NumeroP贸lizaSeguro,
     string? NumeroBLAWB,
     DateTime? ETD,
     DateTime? ATD,
@@ -40,7 +40,7 @@ public record HitoExpedienteDto(
     string? Descripcion,
     string? ReferenciaDocumento);
 
-/// <summary>DTO para crear un Expediente de Importaci髇.</summary>
+/// <summary>DTO para crear un Expediente de Importaci贸n.</summary>
 public record CreateExpedienteImportacionDto(
     List<long> OrdenesCompraIds,
     string? Incoterm = null,
@@ -50,7 +50,7 @@ public record CreateExpedienteImportacionDto(
     string? PuertoDestino = null,
     string? Forwarder = null,
     string? Aseguradora = null,
-    string? NumeroP髄izaSeguro = null,
+    string? NumeroP贸lizaSeguro = null,
     string? Observaciones = null);
 
 /// <summary>DTO para actualizar datos de embarque del expediente.</summary>
@@ -62,7 +62,7 @@ public record UpdateExpedienteEmbarqueDto(
     string? PuertoDestino,
     string? Forwarder,
     string? Aseguradora,
-    string? NumeroP髄izaSeguro,
+    string? NumeroP贸lizaSeguro,
     string? NumeroBLAWB,
     DateTime? ETD,
     DateTime? ETA,
@@ -81,12 +81,12 @@ public record RegistrarDespachoAduaneroDto(
     decimal TotalTributos,
     string? Observaciones = null);
 
-/// <summary>DTO para registrar una observaci髇/aforo aduanero.</summary>
+/// <summary>DTO para registrar una observaci贸n/aforo aduanero.</summary>
 public record RegistrarObservacionAduanaDto(
     string DetalleObservacion,
     string? Observaciones = null);
 
-/// <summary>DTO para registrar el levante/liberaci髇 aduanera.</summary>
+/// <summary>DTO para registrar el levante/liberaci贸n aduanera.</summary>
 public record RegistrarLevanteDto(
     DateTime FechaLevante,
     string? Observaciones = null);

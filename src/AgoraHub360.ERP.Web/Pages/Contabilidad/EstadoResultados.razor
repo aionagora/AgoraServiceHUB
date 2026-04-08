@@ -9,7 +9,7 @@
     <div class="row mb-3">
         <div class="col">
             <h3><i class="bi bi-graph-up-arrow"></i> Estado de Resultados</h3>
-            <p class="text-muted mb-0">Estado de Pérdidas y Ganancias</p>
+            <p class="text-muted mb-0">Estado de PÃ©rdidas y Ganancias</p>
         </div>
     </div>
 
@@ -61,7 +61,7 @@
                     <div class="text-center mb-4">
                         <h4 class="fw-bold">@data.Empresa</h4>
                         <h5>ESTADO DE RESULTADOS</h5>
-                        <p class="text-muted">Del @data.FechaDesde.ToString("dd/MM/yyyy") al @data.FechaHasta.ToString("dd/MM/yyyy") — Gestión @data.Gestion</p>
+                        <p class="text-muted">Del @data.FechaDesde.ToString("dd/MM/yyyy") al @data.FechaHasta.ToString("dd/MM/yyyy") â€” GestiÃ³n @data.Gestion</p>
                         <p class="small text-muted">(Expresado en Bolivianos)</p>
                     </div>
 
@@ -98,7 +98,7 @@
 
                         @* UTILIDAD NETA *@
                         <div class="d-flex justify-content-between fw-bold border-top border-bottom border-3 border-dark py-3 mt-4 fs-5">
-                            <span>UTILIDAD (PÉRDIDA) NETA</span>
+                            <span>UTILIDAD (PÃ‰RDIDA) NETA</span>
                             <span class="@(data.UtilidadNeta >= 0 ? "text-success" : "text-danger")">
                                 @(data.UtilidadNeta >= 0 ? data.UtilidadNeta.ToString("N2") : $"({Math.Abs(data.UtilidadNeta).ToString("N2")})")
                             </span>

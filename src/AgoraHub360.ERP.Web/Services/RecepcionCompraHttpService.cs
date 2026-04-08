@@ -43,7 +43,7 @@ public class RecepcionCompraHttpService
             return ApiResponse<RecepcionCompraDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<RecepcionCompraDto>>()
-            ?? ApiResponse<RecepcionCompraDto>.Fail("Error de comunicación.");
+            ?? ApiResponse<RecepcionCompraDto>.Fail("Error de comunicaciÃ³n.");
     }
 
     public async Task<ApiResponse<bool>> DeleteAsync(long id)
@@ -55,6 +55,6 @@ public class RecepcionCompraHttpService
             return ApiResponse<bool>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<bool>>()
-            ?? ApiResponse<bool>.Fail("Error de comunicación.");
+            ?? ApiResponse<bool>.Fail("Error de comunicaciÃ³n.");
     }
 }

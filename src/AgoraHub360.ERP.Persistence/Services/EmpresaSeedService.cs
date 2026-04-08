@@ -38,7 +38,7 @@ public class EmpresaSeedService : IEmpresaSeedService
             {
                 EmpresaId = empresaId,
                 Scope = 1,
-                Name = "Cat·logo General",
+                Name = "Cat√°logo General",
                 IsDefault = true,
                 Activo = true
             });

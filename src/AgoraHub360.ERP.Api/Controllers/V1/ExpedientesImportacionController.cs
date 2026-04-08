@@ -54,7 +54,7 @@ public class ExpedientesImportacionController : ControllerBase
         return CreatedAtAction(
             nameof(GetById),
             new { id = result.Value!.ExpedienteImportacionId },
-            ApiResponse<ExpedienteImportacionDto>.Ok(result.Value!, "Expediente de importaci髇 creado."));
+            ApiResponse<ExpedienteImportacionDto>.Ok(result.Value!, "Expediente de importaci贸n creado."));
     }
 
     /// <summary>Actualiza datos de embarque (forwarder, BL/AWB, ETD, ETA, etc.).</summary>
@@ -74,7 +74,7 @@ public class ExpedientesImportacionController : ControllerBase
         var result = await _service.ConfirmarSalidaAsync(id, fechaSalida, ct);
         if (!result.IsSuccess)
             return BadRequest(ApiResponse<ExpedienteImportacionDto>.Fail(result.Error!));
-        return Ok(ApiResponse<ExpedienteImportacionDto>.Ok(result.Value!, "Salida confirmada. Expediente en tr醤sito."));
+        return Ok(ApiResponse<ExpedienteImportacionDto>.Ok(result.Value!, "Salida confirmada. Expediente en tr谩nsito."));
     }
 
     /// <summary>Registra el arribo: EnTransito ? Arribado.</summary>
@@ -97,34 +97,34 @@ public class ExpedientesImportacionController : ControllerBase
         return Ok(ApiResponse<ExpedienteImportacionDto>.Ok(result.Value!, "Despacho aduanero iniciado."));
     }
 
-    /// <summary>Gate: registra observaci髇/aforo aduanero ? ObservacionAduana.</summary>
+    /// <summary>Gate: registra observaci贸n/aforo aduanero ? ObservacionAduana.</summary>
     [HttpPost("{id:long}/observacion-aduana")]
     public async Task<IActionResult> RegistrarObservacion(long id, [FromBody] RegistrarObservacionAduanaDto dto, CancellationToken ct)
     {
         var result = await _service.RegistrarObservacionAduanaAsync(id, dto, ct);
         if (!result.IsSuccess)
             return BadRequest(ApiResponse<ExpedienteImportacionDto>.Fail(result.Error!));
-        return Ok(ApiResponse<ExpedienteImportacionDto>.Ok(result.Value!, "Observaci髇 aduanera registrada."));
+        return Ok(ApiResponse<ExpedienteImportacionDto>.Ok(result.Value!, "Observaci贸n aduanera registrada."));
     }
 
-    /// <summary>Subsana observaci髇 y vuelve a EnAduana.</summary>
+    /// <summary>Subsana observaci贸n y vuelve a EnAduana.</summary>
     [HttpPost("{id:long}/subsanar-observacion")]
     public async Task<IActionResult> SubsanarObservacion(long id, [FromQuery] string? observaciones, CancellationToken ct)
     {
         var result = await _service.SubsanarObservacionAsync(id, observaciones, ct);
         if (!result.IsSuccess)
             return BadRequest(ApiResponse<ExpedienteImportacionDto>.Fail(result.Error!));
-        return Ok(ApiResponse<ExpedienteImportacionDto>.Ok(result.Value!, "Observaci髇 subsanada. Expediente vuelve a despacho aduanero."));
+        return Ok(ApiResponse<ExpedienteImportacionDto>.Ok(result.Value!, "Observaci贸n subsanada. Expediente vuelve a despacho aduanero."));
     }
 
-    /// <summary>Registra el levante/liberaci髇 aduanera ? Liberado.</summary>
+    /// <summary>Registra el levante/liberaci贸n aduanera ? Liberado.</summary>
     [HttpPost("{id:long}/levante")]
     public async Task<IActionResult> RegistrarLevante(long id, [FromBody] RegistrarLevanteDto dto, CancellationToken ct)
     {
         var result = await _service.RegistrarLevanteAsync(id, dto, ct);
         if (!result.IsSuccess)
             return BadRequest(ApiResponse<ExpedienteImportacionDto>.Fail(result.Error!));
-        return Ok(ApiResponse<ExpedienteImportacionDto>.Ok(result.Value!, "Levante registrado. Mercader韆 liberada."));
+        return Ok(ApiResponse<ExpedienteImportacionDto>.Ok(result.Value!, "Levante registrado. Mercader铆a liberada."));
     }
 
     /// <summary>Agrega un hito de tracking manual al expediente.</summary>
@@ -137,14 +137,14 @@ public class ExpedientesImportacionController : ControllerBase
         return Ok(ApiResponse<ExpedienteImportacionDto>.Ok(result.Value!, "Hito registrado."));
     }
 
-    /// <summary>Cierra el expediente cuando todas las OCs est醤 cerradas.</summary>
+    /// <summary>Cierra el expediente cuando todas las OCs est谩n cerradas.</summary>
     [HttpPost("{id:long}/cerrar")]
     public async Task<IActionResult> Cerrar(long id, CancellationToken ct)
     {
         var result = await _service.CerrarAsync(id, ct);
         if (!result.IsSuccess)
             return BadRequest(ApiResponse<ExpedienteImportacionDto>.Fail(result.Error!));
-        return Ok(ApiResponse<ExpedienteImportacionDto>.Ok(result.Value!, "Expediente de importaci髇 cerrado."));
+        return Ok(ApiResponse<ExpedienteImportacionDto>.Ok(result.Value!, "Expediente de importaci贸n cerrado."));
     }
 
     /// <summary>Elimina (soft-delete) un expediente en Borrador.</summary>

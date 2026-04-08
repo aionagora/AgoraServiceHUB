@@ -29,7 +29,7 @@ public class MdmProductCodesController : ControllerBase
     {
         var result = await _service.CreateAsync(dto, ct);
         if (!result.IsSuccess) return BadRequest(ApiResponse<ProductCodeDto>.Fail(result.Error!));
-        return Ok(ApiResponse<ProductCodeDto>.Ok(result.Value!, "Código creado."));
+        return Ok(ApiResponse<ProductCodeDto>.Ok(result.Value!, "CÃ³digo creado."));
     }
 
     [HttpPut("{id:long}")]
@@ -37,7 +37,7 @@ public class MdmProductCodesController : ControllerBase
     {
         var result = await _service.UpdateAsync(id, dto, ct);
         if (!result.IsSuccess) return BadRequest(ApiResponse<ProductCodeDto>.Fail(result.Error!));
-        return Ok(ApiResponse<ProductCodeDto>.Ok(result.Value!, "Código actualizado."));
+        return Ok(ApiResponse<ProductCodeDto>.Ok(result.Value!, "CÃ³digo actualizado."));
     }
 
     [HttpDelete("{id:long}")]
@@ -45,6 +45,6 @@ public class MdmProductCodesController : ControllerBase
     {
         var result = await _service.DeleteAsync(id, ct);
         if (!result.IsSuccess) return NotFound(ApiResponse<bool>.Fail(result.Error!));
-        return Ok(ApiResponse<bool>.Ok(true, "Código eliminado."));
+        return Ok(ApiResponse<bool>.Ok(true, "CÃ³digo eliminado."));
     }
 }

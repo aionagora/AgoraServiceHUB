@@ -30,7 +30,7 @@ public class PeriodoContableHttpService
             return ApiResponse<int>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<int>>()
-            ?? ApiResponse<int>.Fail("Error de comunicación.");
+            ?? ApiResponse<int>.Fail("Error de comunicaciÃ³n.");
     }
 
     public async Task<ApiResponse<PeriodoContableDto>> CerrarAsync(int id)
@@ -42,7 +42,7 @@ public class PeriodoContableHttpService
             return ApiResponse<PeriodoContableDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<PeriodoContableDto>>()
-            ?? ApiResponse<PeriodoContableDto>.Fail("Error de comunicación.");
+            ?? ApiResponse<PeriodoContableDto>.Fail("Error de comunicaciÃ³n.");
     }
 
     public async Task<ApiResponse<PeriodoContableDto>> ReabrirAsync(int id)
@@ -54,6 +54,6 @@ public class PeriodoContableHttpService
             return ApiResponse<PeriodoContableDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<PeriodoContableDto>>()
-            ?? ApiResponse<PeriodoContableDto>.Fail("Error de comunicación.");
+            ?? ApiResponse<PeriodoContableDto>.Fail("Error de comunicaciÃ³n.");
     }
 }

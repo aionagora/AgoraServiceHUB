@@ -16,18 +16,18 @@
     </div>
     <div class="card-body text-center py-5">
         <i class="bi bi-receipt" style="font-size: 3rem; color: var(--agora-text-light);"></i>
-        <p class="text-muted mt-3">MÛdulo en construcciÛn.</p>
+        <p class="text-muted mt-3">M√≥dulo en construcci√≥n.</p>
     </div>
 </div>
 
-@* ?? Preview del componente de Workflow (disponible al implementar el mÛdulo) ?? *@
+@* ?? Preview del componente de Workflow (disponible al implementar el m√≥dulo) ?? *@
 @if (mostrarPreviewWorkflow)
 {
     <div class="card mt-3">
         <div class="card-header py-2">
             <small class="text-muted">
                 <i class="bi bi-info-circle me-1"></i>
-                Preview ó TareasTab para OrdenVenta. Se activar· con el mÛdulo de ventas.
+                Preview ‚Äî TareasTab para OrdenVenta. Se activar√° con el m√≥dulo de ventas.
             </small>
         </div>
         <div class="card-body">
@@ -40,13 +40,13 @@
 }
 
 @code {
-    // Variables preparadas para el mÛdulo de OrdenVenta
-    // Se conectar·n al servicio cuando el mÛdulo estÈ implementado.
+    // Variables preparadas para el m√≥dulo de OrdenVenta
+    // Se conectar√°n al servicio cuando el m√≥dulo est√© implementado.
     private bool mostrarPreviewWorkflow = false;
     private int  previewOrdenVentaId   = 0;
     private bool previewIsReadOnly     = false;
 
-    // Firma est·ndar que usar· cada fila del listado de ventas:
+    // Firma est√°ndar que usar√° cada fila del listado de ventas:
     //   <TareasTab EntityType="OrdenVenta"
     //              EntityId="@ov.OrdenVentaId"
     //              IsReadOnly="@(ov.Estado is "ENTREGADA" or "COBRADA")"

@@ -62,7 +62,7 @@ public class CentrosCostoController : ControllerBase
             ApiResponse<CentroCostoDto>.Ok(result.Value!, "Centro de costo creado."));
     }
 
-    /// <summary>Actualiza nombre, descripción o padre de un centro de costo.</summary>
+    /// <summary>Actualiza nombre, descripciÃ³n o padre de un centro de costo.</summary>
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateCentroCostoDto dto, CancellationToken ct)
     {

@@ -5,17 +5,17 @@ using AgoraHub360.ERP.Shared.DTOs.Compras;
 
 public interface IHojaImportacionService
 {
-    /// <summary>Lista hojas de importación con filtros opcionales.</summary>
+    /// <summary>Lista hojas de importaciÃ³n con filtros opcionales.</summary>
     Task<Result<IReadOnlyList<HojaImportacionDto>>> GetAllAsync(
         long? ordenCompraId = null,
         DateTime? fechaDesde = null,
         DateTime? fechaHasta = null,
         CancellationToken ct = default);
 
-    /// <summary>Obtiene una hoja con gastos y líneas de distribución.</summary>
+    /// <summary>Obtiene una hoja con gastos y lÃ­neas de distribuciÃ³n.</summary>
     Task<Result<HojaImportacionDto>> GetByIdAsync(long id, CancellationToken ct = default);
 
-    /// <summary>Crea una hoja de importación con gastos iniciales (sin liquidar).</summary>
+    /// <summary>Crea una hoja de importaciÃ³n con gastos iniciales (sin liquidar).</summary>
     Task<Result<HojaImportacionDto>> CreateAsync(CreateHojaImportacionDto dto, CancellationToken ct = default);
 
     /// <summary>Agrega un gasto a una hoja no liquidada.</summary>
@@ -25,7 +25,7 @@ public interface IHojaImportacionService
     Task<Result<HojaImportacionDto>> RemoveGastoAsync(long hojaId, long gastoId, CancellationToken ct = default);
 
     /// <summary>
-    /// Liquida la hoja: distribuye gastos sobre líneas de OC según método,
+    /// Liquida la hoja: distribuye gastos sobre lÃ­neas de OC segÃºn mÃ©todo,
     /// recalcula Landed Cost unitario y actualiza StockProducto.AverageCost.
     /// </summary>
     Task<Result<HojaImportacionDto>> LiquidarAsync(long id, CancellationToken ct = default);

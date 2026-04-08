@@ -34,7 +34,7 @@ public class RecepcionesCompraController : ControllerBase
         return Ok(ApiResponse<IReadOnlyList<RecepcionCompraDto>>.Ok(result.Value!));
     }
 
-    /// <summary>Obtiene una recepci髇 por Id con sus l韓eas.</summary>
+    /// <summary>Obtiene una recepci贸n por Id con sus l铆neas.</summary>
     [HttpGet("{id:long}")]
     public async Task<IActionResult> GetById(long id, CancellationToken ct)
     {
@@ -45,8 +45,8 @@ public class RecepcionesCompraController : ControllerBase
     }
 
     /// <summary>
-    /// Crea una recepci髇: valida OC aprobada, genera movimientos Receipt,
-    /// actualiza stock y CantidadRecepcionada de las l韓eas de OC.
+    /// Crea una recepci贸n: valida OC aprobada, genera movimientos Receipt,
+    /// actualiza stock y CantidadRecepcionada de las l铆neas de OC.
     /// </summary>
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateRecepcionCompraDto dto, CancellationToken ct)
@@ -57,16 +57,16 @@ public class RecepcionesCompraController : ControllerBase
         return CreatedAtAction(
             nameof(GetById),
             new { id = result.Value!.RecepcionCompraId },
-            ApiResponse<RecepcionCompraDto>.Ok(result.Value!, "Recepci髇 registrada exitosamente."));
+            ApiResponse<RecepcionCompraDto>.Ok(result.Value!, "Recepci贸n registrada exitosamente."));
     }
 
-    /// <summary>Elimina (soft-delete) una recepci髇 no confirmada.</summary>
+    /// <summary>Elimina (soft-delete) una recepci贸n no confirmada.</summary>
     [HttpDelete("{id:long}")]
     public async Task<IActionResult> Delete(long id, CancellationToken ct)
     {
         var result = await _service.DeleteAsync(id, ct);
         if (!result.IsSuccess)
             return BadRequest(ApiResponse<bool>.Fail(result.Error!));
-        return Ok(ApiResponse<bool>.Ok(true, "Recepci髇 eliminada."));
+        return Ok(ApiResponse<bool>.Ok(true, "Recepci贸n eliminada."));
     }
 }

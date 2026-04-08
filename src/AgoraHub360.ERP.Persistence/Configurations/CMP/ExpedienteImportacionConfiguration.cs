@@ -20,7 +20,7 @@ public class ExpedienteImportacionConfiguration : IEntityTypeConfiguration<Exped
         builder.Property(e => e.PuertoDestino).HasMaxLength(200);
         builder.Property(e => e.Forwarder).HasMaxLength(200);
         builder.Property(e => e.Aseguradora).HasMaxLength(200);
-        builder.Property(e => e.NumeroPólizaSeguro).HasMaxLength(100);
+        builder.Property(e => e.NumeroPÃ³lizaSeguro).HasMaxLength(100);
         builder.Property(e => e.NumeroBLAWB).HasMaxLength(100);
         builder.Property(e => e.NumeroDUIDIM).HasMaxLength(100);
         builder.Property(e => e.Despachante).HasMaxLength(200);

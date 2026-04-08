@@ -3,8 +3,8 @@ namespace AgoraHub360.ERP.Domain.Entities.CMP;
 using AgoraHub360.ERP.Domain.Common;
 
 /// <summary>
-/// Línea de distribución de la hoja de importación.
-/// Cada línea corresponde a una línea de OC y muestra cómo se distribuyó el landed cost.
+/// LÃ­nea de distribuciÃ³n de la hoja de importaciÃ³n.
+/// Cada lÃ­nea corresponde a una lÃ­nea de OC y muestra cÃ³mo se distribuyÃ³ el landed cost.
 /// </summary>
 public class ImportacionLinea : AuditableEntity
 {
@@ -15,13 +15,13 @@ public class ImportacionLinea : AuditableEntity
     /// <summary>Costo FOB unitario (precio de compra original).</summary>
     public decimal CostoFobUnitario { get; set; }
 
-    /// <summary>Costo FOB total de la línea (CostoFobUnit * Cantidad).</summary>
+    /// <summary>Costo FOB total de la lÃ­nea (CostoFobUnit * Cantidad).</summary>
     public decimal CostoFobTotal { get; set; }
 
-    /// <summary>Factor de distribución usado (depende del método: valor, peso, etc.).</summary>
+    /// <summary>Factor de distribuciÃ³n usado (depende del mÃ©todo: valor, peso, etc.).</summary>
     public decimal FactorDistribucion { get; set; }
 
-    /// <summary>Monto de gasto asignado a esta línea.</summary>
+    /// <summary>Monto de gasto asignado a esta lÃ­nea.</summary>
     public decimal GastoAsignado { get; set; }
 
     /// <summary>Costo Landed unitario: (CostoFobTotal + GastoAsignado) / Cantidad.</summary>
@@ -30,7 +30,7 @@ public class ImportacionLinea : AuditableEntity
     /// <summary>Costo Landed total: CostoFobTotal + GastoAsignado.</summary>
     public decimal CostoLandedTotal { get; set; }
 
-    // Navegación
+    // NavegaciÃ³n
     public HojaImportacion? HojaImportacion { get; set; }
     public OrdenCompraLinea? OrdenCompraLinea { get; set; }
 }

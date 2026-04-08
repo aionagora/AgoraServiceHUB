@@ -4,22 +4,22 @@ using System.ComponentModel.DataAnnotations;
 
 public class UpdateClienteDto
 {
-    [Required(ErrorMessage = "La razÛn social es requerida.")]
-    [MaxLength(200, ErrorMessage = "La razÛn social no puede exceder 200 caracteres.")]
+    [Required(ErrorMessage = "La raz√≥n social es requerida.")]
+    [MaxLength(200, ErrorMessage = "La raz√≥n social no puede exceder 200 caracteres.")]
     public string RazonSocial { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "El NIT es requerido.")]
     [MaxLength(20, ErrorMessage = "El NIT no puede exceder 20 caracteres.")]
     public string NIT { get; set; } = string.Empty;
 
-    [MaxLength(20, ErrorMessage = "El telÈfono no puede exceder 20 caracteres.")]
+    [MaxLength(20, ErrorMessage = "El tel√©fono no puede exceder 20 caracteres.")]
     public string? Telefono { get; set; }
 
-    [EmailAddress(ErrorMessage = "El formato del email no es v·lido.")]
+    [EmailAddress(ErrorMessage = "El formato del email no es v√°lido.")]
     [MaxLength(100, ErrorMessage = "El email no puede exceder 100 caracteres.")]
     public string? Email { get; set; }
 
-    [MaxLength(300, ErrorMessage = "La direcciÛn no puede exceder 300 caracteres.")]
+    [MaxLength(300, ErrorMessage = "La direcci√≥n no puede exceder 300 caracteres.")]
     public string? Direccion { get; set; }
 
     public bool Activo { get; set; } = true;

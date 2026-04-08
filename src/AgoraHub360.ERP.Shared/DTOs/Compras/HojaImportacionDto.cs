@@ -1,6 +1,6 @@
 namespace AgoraHub360.ERP.Shared.DTOs.Compras;
 
-/// <summary>DTO de lectura para Hoja de Importaci髇.</summary>
+/// <summary>DTO de lectura para Hoja de Importaci贸n.</summary>
 public record HojaImportacionDto(
     long HojaImportacionId,
     int EmpresaId,
@@ -19,7 +19,7 @@ public record HojaImportacionDto(
     List<GastoImportacionDto> Gastos,
     List<ImportacionLineaDto> Lineas);
 
-/// <summary>DTO de lectura para gasto de importaci髇.</summary>
+/// <summary>DTO de lectura para gasto de importaci贸n.</summary>
 public record GastoImportacionDto(
     long GastoImportacionId,
     string TipoGasto,
@@ -30,7 +30,7 @@ public record GastoImportacionDto(
     decimal MontoBase,
     string? Referencia);
 
-/// <summary>DTO de lectura para l韓ea de distribuci髇.</summary>
+/// <summary>DTO de lectura para l铆nea de distribuci贸n.</summary>
 public record ImportacionLineaDto(
     long ImportacionLineaId,
     long OrdenCompraLineaId,
@@ -45,7 +45,7 @@ public record ImportacionLineaDto(
     decimal CostoLandedUnitario,
     decimal CostoLandedTotal);
 
-/// <summary>DTO para crear una hoja de importaci髇 (vinculada a OC directa).</summary>
+/// <summary>DTO para crear una hoja de importaci贸n (vinculada a OC directa).</summary>
 public record CreateHojaImportacionDto(
     long? OrdenCompraId = null,
     long? ExpedienteImportacionId = null,
@@ -55,7 +55,7 @@ public record CreateHojaImportacionDto(
     byte MetodoDistribucion = 3,
     List<CreateGastoImportacionDto>? Gastos = null);
 
-/// <summary>DTO para crear un gasto de importaci髇.</summary>
+/// <summary>DTO para crear un gasto de importaci贸n.</summary>
 public record CreateGastoImportacionDto(
     string TipoGasto,
     string? Descripcion,

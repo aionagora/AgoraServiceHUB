@@ -14,7 +14,7 @@ public class PlantillaContableDto
     public List<PlantillaContableLineaDto> Lineas { get; set; } = new();
 }
 
-/// <summary>DTO de lectura para línea de plantilla.</summary>
+/// <summary>DTO de lectura para lÃ­nea de plantilla.</summary>
 public class PlantillaContableLineaDto
 {
     public int PlantillaContableLineaId { get; set; }
@@ -28,7 +28,7 @@ public class PlantillaContableLineaDto
     public string? Glosa { get; set; }
 }
 
-/// <summary>DTO para crear una plantilla contable con líneas.</summary>
+/// <summary>DTO para crear una plantilla contable con lÃ­neas.</summary>
 public class CreatePlantillaContableDto
 {
     public string Codigo { get; set; } = string.Empty;
@@ -39,7 +39,7 @@ public class CreatePlantillaContableDto
     public List<CreatePlantillaLineaDto> Lineas { get; set; } = new();
 }
 
-/// <summary>DTO para actualizar una plantilla (reemplaza líneas).</summary>
+/// <summary>DTO para actualizar una plantilla (reemplaza lÃ­neas).</summary>
 public class UpdatePlantillaContableDto
 {
     public string Nombre { get; set; } = string.Empty;
@@ -48,7 +48,7 @@ public class UpdatePlantillaContableDto
     public List<CreatePlantillaLineaDto> Lineas { get; set; } = new();
 }
 
-/// <summary>DTO para crear una línea de plantilla.</summary>
+/// <summary>DTO para crear una lÃ­nea de plantilla.</summary>
 public class CreatePlantillaLineaDto
 {
     public int CuentaContableId { get; set; }

@@ -4,21 +4,21 @@ using AgoraHub360.ERP.Domain.Common;
 using AgoraHub360.ERP.Domain.Entities.MDM;
 
 /// <summary>
-/// Línea de detalle de una Orden de Compra.
-/// Cada línea referencia un CompanyProduct con cantidad, precio, descuento e impuesto.
+/// LÃ­nea de detalle de una Orden de Compra.
+/// Cada lÃ­nea referencia un CompanyProduct con cantidad, precio, descuento e impuesto.
 /// </summary>
 public class OrdenCompraLinea : AuditableEntity
 {
     public long OrdenCompraLineaId { get; set; }
     public long OrdenCompraId { get; set; }
 
-    /// <summary>Número de línea dentro de la OC (1, 2, 3…).</summary>
+    /// <summary>NÃºmero de lÃ­nea dentro de la OC (1, 2, 3â€¦).</summary>
     public int NumeroLinea { get; set; }
 
     public long CompanyProductId { get; set; }
     public CompanyProduct? CompanyProduct { get; set; }
 
-    /// <summary>Descripción libre (puede diferir del nombre del producto).</summary>
+    /// <summary>DescripciÃ³n libre (puede diferir del nombre del producto).</summary>
     public string Descripcion { get; set; } = string.Empty;
 
     /// <summary>Unidad de medida de compra.</summary>
@@ -27,7 +27,7 @@ public class OrdenCompraLinea : AuditableEntity
     public decimal Cantidad { get; set; }
     public decimal PrecioUnitario { get; set; }
 
-    /// <summary>Porcentaje de descuento de línea (0–100).</summary>
+    /// <summary>Porcentaje de descuento de lÃ­nea (0â€“100).</summary>
     public decimal PorcentajeDescuento { get; set; }
 
     /// <summary>Monto de descuento calculado: Cantidad * PrecioUnitario * %Desc / 100.</summary>
@@ -42,22 +42,22 @@ public class OrdenCompraLinea : AuditableEntity
     /// <summary>Monto de impuesto calculado sobre el Subtotal.</summary>
     public decimal MontoImpuesto { get; set; }
 
-    /// <summary>Total de la línea: Subtotal + MontoImpuesto.</summary>
+    /// <summary>Total de la lÃ­nea: Subtotal + MontoImpuesto.</summary>
     public decimal TotalLinea { get; set; }
 
     /// <summary>Cantidad ya recepcionada. Se actualiza al crear recepciones.</summary>
     public decimal CantidadRecepcionada { get; set; }
 
-    /// <summary>True si la línea está totalmente recepcionada.</summary>
+    /// <summary>True si la lÃ­nea estÃ¡ totalmente recepcionada.</summary>
     public bool RecepcionCompleta => CantidadRecepcionada >= Cantidad;
 
     /// <summary>Cantidad pendiente de recepcionar.</summary>
     public decimal CantidadPendiente => Cantidad - CantidadRecepcionada;
 
-    // Navegación
+    // NavegaciÃ³n
     public OrdenCompra? OrdenCompra { get; set; }
 
-    /// <summary>Recalcula montos de la línea.</summary>
+    /// <summary>Recalcula montos de la lÃ­nea.</summary>
     public void Recalcular()
     {
         var bruto = Cantidad * PrecioUnitario;

@@ -7,7 +7,7 @@ using AgoraHub360.ERP.Shared.DTOs.MDM;
 
 /// <summary>
 /// Agrega en una sola llamada paralela todos los KPIs
-/// necesarios para los dashboards principal y por módulo.
+/// necesarios para los dashboards principal y por mÃ³dulo.
 /// </summary>
 public class DashboardDataService
 {

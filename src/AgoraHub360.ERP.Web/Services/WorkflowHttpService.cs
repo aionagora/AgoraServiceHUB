@@ -6,9 +6,9 @@ using AgoraHub360.ERP.Shared.DTOs.Workflow;
 using Microsoft.Extensions.Logging;
 
 /// <summary>
-/// Implementación HTTP de <see cref="IWorkflowClientService"/> para Blazor WASM.
+/// ImplementaciÃ³n HTTP de <see cref="IWorkflowClientService"/> para Blazor WASM.
 /// Mapea las llamadas del componente a los endpoints de /api/v1/wf.
-/// Todos los métodos capturan <see cref="HttpRequestException"/> y retornan
+/// Todos los mÃ©todos capturan <see cref="HttpRequestException"/> y retornan
 /// el valor por defecto del tipo de retorno para evitar crashes en la UI.
 /// </summary>
 public class WorkflowHttpService : IWorkflowClientService
