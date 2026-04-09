@@ -363,6 +363,98 @@ public class EstadoFinancieroService : IEstadoFinancieroService
     }
 
     // ????????????????????????????????????????????
+    // LIBRO MAYOR
+    // ????????????????????????????????????????????
+    public async Task<LibroMayorDto> GetLibroMayorAsync(int empresaId, int cuentaContableId, DateTime desde, DateTime hasta, CancellationToken ct = default)
+    {
+        var cuenta = await _cuentaRepo.GetByIdAsync(cuentaContableId, ct);
+        if (cuenta == null || cuenta.EmpresaId != empresaId)
+        {
+            throw new Exception("Cuenta contable no encontrada.");
+        }
+
+        // Calcular Saldo Anterior
+        var asientosAnteriores = await _asientoRepo.FindAsync(
+            a => a.EmpresaId == empresaId && a.Activo
+                && a.Estado == "Contabilizado"
+                && a.Fecha < desde, ct);
+
+        var asientosAnterioresIds = asientosAnteriores.Select(a => a.AsientoContableId).ToHashSet();
+        decimal saldoAnterior = 0;
+
+        if (asientosAnterioresIds.Count > 0)
+        {
+            var lineasAnteriores = await _lineaRepo.FindAsync(l => asientosAnterioresIds.Contains(l.AsientoContableId) && l.CuentaContableId == cuentaContableId && l.Activo, ct);
+            foreach (var l in lineasAnteriores)
+            {
+                if (cuenta.Naturaleza == NaturalezaCuenta.Deudora)
+                    saldoAnterior += l.Debe - l.Haber;
+                else
+                    saldoAnterior += l.Haber - l.Debe;
+            }
+        }
+
+        // Consultar movimientos del periodo
+        var asientosPeriodo = await _asientoRepo.FindAsync(
+            a => a.EmpresaId == empresaId && a.Activo
+                && a.Estado == "Contabilizado"
+                && a.Fecha >= desde && a.Fecha <= hasta.AddDays(1).AddSeconds(-1), ct);
+
+        var asientoPeriodoIds = asientosPeriodo.Select(a => a.AsientoContableId).ToHashSet();
+        var lineasPeriodo = asientoPeriodoIds.Count > 0
+            ? await _lineaRepo.FindAsync(l => asientoPeriodoIds.Contains(l.AsientoContableId) && l.CuentaContableId == cuentaContableId && l.Activo, ct)
+            : new List<AsientoContableLinea>();
+
+        var asientosMap = asientosPeriodo.ToDictionary(a => a.AsientoContableId);
+
+        var lineasDto = new List<LibroMayorLineaDto>();
+        decimal saldoProgresivo = saldoAnterior;
+        decimal totalDebe = 0;
+        decimal totalHaber = 0;
+
+        // Ordenar líneas
+        var lineasOrdenadas = lineasPeriodo
+            .OrderBy(l => asientosMap.ContainsKey(l.AsientoContableId) ? asientosMap[l.AsientoContableId].Fecha : DateTime.MinValue)
+            .ThenBy(l => l.AsientoContableLineaId) // Orden estable adicional
+            .ToList();
+
+        foreach (var l in lineasOrdenadas)
+        {
+            var asientoInfo = asientosMap.TryGetValue(l.AsientoContableId, out var asient) ? asient : null;
+
+            totalDebe += l.Debe;
+            totalHaber += l.Haber;
+
+            if (cuenta.Naturaleza == NaturalezaCuenta.Deudora)
+                saldoProgresivo += l.Debe - l.Haber;
+            else
+                saldoProgresivo += l.Haber - l.Debe;
+
+            lineasDto.Add(new LibroMayorLineaDto
+            {
+                Fecha = asientoInfo?.Fecha ?? DateTime.MinValue,
+                NumeroAsiento = asientoInfo?.Numero ?? string.Empty,
+                Glosa = string.IsNullOrWhiteSpace(l.Glosa) ? (asientoInfo?.Glosa ?? string.Empty) : l.Glosa,
+                Debe = l.Debe,
+                Haber = l.Haber,
+                SaldoProgresivo = saldoProgresivo
+            });
+        }
+
+        return new LibroMayorDto
+        {
+            CuentaContableId = cuenta.CuentaContableId,
+            CodigoCuenta = cuenta.Codigo,
+            NombreCuenta = cuenta.Nombre,
+            SaldoAnterior = saldoAnterior,
+            TotalDebe = totalDebe,
+            TotalHaber = totalHaber,
+            SaldoFinal = saldoProgresivo,
+            Lineas = lineasDto
+        };
+    }
+
+    // ????????????????????????????????????????????
     // HELPERS
     // ????????????????????????????????????????????
 
