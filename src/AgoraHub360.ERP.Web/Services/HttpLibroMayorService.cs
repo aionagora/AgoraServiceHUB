@@ -11,7 +11,7 @@ public class HttpLibroMayorService
 
     public HttpLibroMayorService(HttpClient http) => _http = http;
 
-    public async Task<LibroMayorDto?> GetLibroMayorAsync(Guid cuentaId, DateTime desde, DateTime hasta)
+    public async Task<LibroMayorDto?> GetLibroMayorAsync(int cuentaId, DateTime desde, DateTime hasta)
     {
         var url = $"{Base}/libro-mayor?cuentaContableId={cuentaId}&desde={desde:yyyy-MM-dd}&hasta={hasta:yyyy-MM-dd}";
         var r = await _http.GetFromJsonAsync<ApiResponse<LibroMayorDto>>(url);
