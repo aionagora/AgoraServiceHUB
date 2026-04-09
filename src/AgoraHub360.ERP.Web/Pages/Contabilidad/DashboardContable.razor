@@ -1,0 +1,176 @@
+@page "/contabilidad/dashboard"
+@using AgoraHub360.ERP.Shared.DTOs.Contabilidad
+@using AgoraHub360.ERP.Web.Services
+@inject CierreContableHttpService CierreService
+
+<div class="row mb-4">
+    <div class="col-12">
+        <h3 class="fw-bold">Dashboard Contable</h3>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title text-primary">Gestión Actual: @gestionActual</h5>
+                @if (isLoading)
+                {
+                    <p class="text-muted">Cargando estado...</p>
+                }
+                else
+                {
+                    <div class="mb-3">
+                        <span class="fw-bold">Estado: </span> 
+                        <span class="badge @(estado == "Abierto" ? "bg-success" : "bg-danger")">@estado</span>
+                    </div>
+
+                    @if (fechaUltimoCierre.HasValue)
+                    {
+                        <div class="mb-3">
+                            <span class="fw-bold">Fecha del Cierre: </span> 
+                            <span>@fechaUltimoCierre.Value.ToString("dd/MM/yyyy")</span>
+                        </div>
+                    }
+
+                    <div class="d-flex gap-2 mt-4">
+                        @if (estado == "Abierto")
+                        {
+                            <button class="btn btn-warning" @onclick="CerrarGestion" disabled="@isSaving">
+                                @(isSaving ? "Procesando..." : "Cerrar Gestión")
+                            </button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-success" @onclick="AbrirNuevaGestion" disabled="@isSaving">
+                                @(isSaving ? "Procesando..." : "Abrir Nueva Gestión")
+                            </button>
+                        }
+                    </div>
+                    
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger mt-3">@errorMessage</div>
+                    }
+                    @if (!string.IsNullOrEmpty(successMessage))
+                    {
+                        <div class="alert alert-success mt-3">@successMessage</div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private int gestionActual = DateTime.Today.Year;
+    private string estado = "Abierto";
+    private DateTime? fechaUltimoCierre;
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private string errorMessage = "";
+    private string successMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarEstado();
+    }
+
+    private async Task CargarEstado()
+    {
+        isLoading = true;
+        errorMessage = "";
+        successMessage = "";
+        try
+        {
+            var cierre = await CierreService.ObtenerCierreAsync(gestionActual);
+            if (cierre != null && cierre.Estado == "CERRADO")
+            {
+                estado = "Cerrado";
+                fechaUltimoCierre = cierre.FechaCierre;
+            }
+            else
+            {
+                estado = "Abierto";
+                fechaUltimoCierre = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Error al cargar estado de la gestión.";
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task CerrarGestion()
+    {
+        isSaving = true;
+        errorMessage = "";
+        successMessage = "";
+
+        try
+        {
+            var dto = new EjecutarCierreDto
+            {
+                Gestion = gestionActual,
+                FechaCierre = new DateTime(gestionActual, 12, 31)
+            };
+            
+            var res = await CierreService.EjecutarCierreAsync(dto);
+            if (res.Success)
+            {
+                successMessage = "Cierre de gestión completado exitosamente.";
+                await CargarEstado();
+            }
+            else
+            {
+                errorMessage = res.Message ?? "Error al cerrar gestión.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Ocurrió un error inesperado al cerrar la gestión.";
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task AbrirNuevaGestion()
+    {
+        isSaving = true;
+        errorMessage = "";
+        successMessage = "";
+        var nuevaGestion = gestionActual + 1;
+
+        try
+        {
+            var res = await CierreService.EjecutarAperturaAsync(nuevaGestion);
+            if (res.Success)
+            {
+                successMessage = $"Nueva gestión {nuevaGestion} abierta exitosamente.";
+                gestionActual = nuevaGestion;
+                await CargarEstado();
+            }
+            else
+            {
+                errorMessage = res.Message ?? "Error al abrir nueva gestión.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Ocurrió un error inesperado al abrir nueva gestión.";
+            Console.WriteLine(ex);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+}

@@ -2,12 +2,10 @@ namespace AgoraHub360.ERP.Infrastructure.Services;
 
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Shared.DTOs.Contabilidad;
-using OfficeOpenXml;
-using OfficeOpenXml.Style;
+using ClosedXML.Excel;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
@@ -16,55 +14,52 @@ public class ExportService : IExportService
 {
     public ExportService()
     {
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
     }
 
     #region Helpers Excel
-    private ExcelWorksheet ConfigurarReporteExcel(ExcelPackage package, string nombreEmpresa, string titulo, string subtitulo, int maxColumns)
+    private IXLWorksheet ConfigurarReporteExcel(XLWorkbook workbook, string nombreEmpresa, string titulo, string subtitulo, int maxColumns)
     {
-        var ws = package.Workbook.Worksheets.Add("Reporte");
-        
-        ws.Cells[1, 1].Value = nombreEmpresa;
-        if (maxColumns > 1) ws.Cells[1, 1, 1, maxColumns].Merge = true;
-        ws.Cells[1, 1].Style.Font.Bold = true;
-        ws.Cells[1, 1].Style.Font.Size = 14;
+        var ws = workbook.Worksheets.Add("Reporte");
 
-        ws.Cells[2, 1].Value = titulo;
-        if (maxColumns > 1) ws.Cells[2, 1, 2, maxColumns].Merge = true;
-        ws.Cells[2, 1].Style.Font.Bold = true;
-        ws.Cells[2, 1].Style.Font.Size = 12;
+        ws.Cell(1, 1).Value = nombreEmpresa;
+        if (maxColumns > 1) ws.Range(1, 1, 1, maxColumns).Merge();
+        ws.Cell(1, 1).Style.Font.Bold = true;
+        ws.Cell(1, 1).Style.Font.FontSize = 14;
 
-        ws.Cells[3, 1].Value = subtitulo;
-        if (maxColumns > 1) ws.Cells[3, 1, 3, maxColumns].Merge = true;
+        ws.Cell(2, 1).Value = titulo;
+        if (maxColumns > 1) ws.Range(2, 1, 2, maxColumns).Merge();
+        ws.Cell(2, 1).Style.Font.Bold = true;
+        ws.Cell(2, 1).Style.Font.FontSize = 12;
+
+        ws.Cell(3, 1).Value = subtitulo;
+        if (maxColumns > 1) ws.Range(3, 1, 3, maxColumns).Merge();
 
         return ws;
     }
 
-    private void AplicarEstiloHeaderExcel(ExcelWorksheet ws, int row, params string[] headers)
+    private void AplicarEstiloHeaderExcel(IXLWorksheet ws, int row, params string[] headers)
     {
         for (int i = 0; i < headers.Length; i++)
         {
-            var cell = ws.Cells[row, i + 1];
+            var cell = ws.Cell(row, i + 1);
             cell.Value = headers[i];
             cell.Style.Font.Bold = true;
-            cell.Style.Font.Color.SetColor(System.Drawing.Color.White);
-            cell.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            cell.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(20, 50, 90));
+            cell.Style.Font.FontColor = XLColor.White;
+            cell.Style.Fill.BackgroundColor = XLColor.FromArgb(20, 50, 90);
         }
     }
 
-    private void AplicarEstiloFilaDatosExcel(ExcelWorksheet ws, int row, int colCount, bool isAlternate)
+    private void AplicarEstiloFilaDatosExcel(IXLWorksheet ws, int row, int colCount, bool isAlternate)
     {
         if (isAlternate)
         {
-            ws.Cells[row, 1, row, colCount].Style.Fill.PatternType = ExcelFillStyle.Solid;
-            ws.Cells[row, 1, row, colCount].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(240, 240, 240));
+            ws.Range(row, 1, row, colCount).Style.Fill.BackgroundColor = XLColor.FromArgb(240, 240, 240);
         }
     }
 
-    private void FormatoNumerico(ExcelWorksheet ws, int row, int col)
+    private void FormatoNumerico(IXLWorksheet ws, int row, int col)
     {
-        ws.Cells[row, col].Style.Numberformat.Format = "#,##0.00";
+        ws.Cell(row, col).Style.NumberFormat.Format = "#,##0.00";
     }
     #endregion
 
@@ -107,8 +102,8 @@ public class ExportService : IExportService
     // =======================================================
     public byte[] ExportarBalanceGeneralExcel(BalanceGeneralDto dto, string nombreEmpresa)
     {
-        using var package = new ExcelPackage();
-        var ws = ConfigurarReporteExcel(package, nombreEmpresa, "BALANCE GENERAL", $"Al {dto.FechaCorte:dd/MM/yyyy} - Gestión {dto.Gestion}", 3);
+        using var workbook = new XLWorkbook();
+        var ws = ConfigurarReporteExcel(workbook, nombreEmpresa, "BALANCE GENERAL", $"Al {dto.FechaCorte:dd/MM/yyyy} - Gestión {dto.Gestion}", 3);
         AplicarEstiloHeaderExcel(ws, 5, "Código", "Cuenta", "Saldo");
 
         int row = 6;
@@ -119,58 +114,60 @@ public class ExportService : IExportService
             foreach(var n in nodos)
             {
                 AplicarEstiloFilaDatosExcel(ws, row, 3, isAlt);
-                ws.Cells[row, 1].Value = n.Codigo;
-                ws.Cells[row, 2].Value = n.Nombre;
-                ws.Cells[row, 2].Style.Indent = indent;
-                ws.Cells[row, 3].Value = n.Saldo;
+                ws.Cell(row, 1).Value = n.Codigo;
+                ws.Cell(row, 2).Value = n.Nombre;
+                ws.Cell(row, 2).Style.Alignment.Indent = indent;
+                ws.Cell(row, 3).Value = n.Saldo;
                 FormatoNumerico(ws, row, 3);
-                if (n.EsAgrupador) ws.Cells[row, 1, row, 3].Style.Font.Bold = true;
+                if (n.EsAgrupador) ws.Range(row, 1, row, 3).Style.Font.Bold = true;
                 row++;
                 isAlt = !isAlt;
                 EscribirNodos(n.SubCuentas, indent + 1);
             }
         }
 
-        ws.Cells[row, 1].Value = "ACTIVOS";
-        ws.Cells[row, 1, row, 3].Style.Font.Bold = true;
+        ws.Cell(row, 1).Value = "ACTIVOS";
+        ws.Range(row, 1, row, 3).Style.Font.Bold = true;
         row++;
         EscribirNodos(dto.Activos, 0);
-        
-        ws.Cells[row, 2].Value = "TOTAL ACTIVOS";
-        ws.Cells[row, 3].Value = dto.TotalActivos;
-        ws.Cells[row, 2, row, 3].Style.Font.Bold = true;
+
+        ws.Cell(row, 2).Value = "TOTAL ACTIVOS";
+        ws.Cell(row, 3).Value = dto.TotalActivos;
+        ws.Range(row, 2, row, 3).Style.Font.Bold = true;
         FormatoNumerico(ws, row, 3);
         row += 2;
 
-        ws.Cells[row, 1].Value = "PASIVOS";
-        ws.Cells[row, 1, row, 3].Style.Font.Bold = true;
+        ws.Cell(row, 1).Value = "PASIVOS";
+        ws.Range(row, 1, row, 3).Style.Font.Bold = true;
         row++;
         EscribirNodos(dto.Pasivos, 0);
 
-        ws.Cells[row, 2].Value = "TOTAL PASIVOS";
-        ws.Cells[row, 3].Value = dto.TotalPasivos;
-        ws.Cells[row, 2, row, 3].Style.Font.Bold = true;
+        ws.Cell(row, 2).Value = "TOTAL PASIVOS";
+        ws.Cell(row, 3).Value = dto.TotalPasivos;
+        ws.Range(row, 2, row, 3).Style.Font.Bold = true;
         FormatoNumerico(ws, row, 3);
         row += 2;
 
-        ws.Cells[row, 1].Value = "PATRIMONIO";
-        ws.Cells[row, 1, row, 3].Style.Font.Bold = true;
+        ws.Cell(row, 1).Value = "PATRIMONIO";
+        ws.Range(row, 1, row, 3).Style.Font.Bold = true;
         row++;
         EscribirNodos(dto.Patrimonio, 0);
 
-        ws.Cells[row, 2].Value = "TOTAL PATRIMONIO";
-        ws.Cells[row, 3].Value = dto.TotalPatrimonio;
-        ws.Cells[row, 2, row, 3].Style.Font.Bold = true;
+        ws.Cell(row, 2).Value = "TOTAL PATRIMONIO";
+        ws.Cell(row, 3).Value = dto.TotalPatrimonio;
+        ws.Range(row, 2, row, 3).Style.Font.Bold = true;
         FormatoNumerico(ws, row, 3);
         row += 2;
 
-        ws.Cells[row, 2].Value = "TOTAL PASIVO + PATRIMONIO";
-        ws.Cells[row, 3].Value = dto.TotalPasivoPatrimonio;
-        ws.Cells[row, 2, row, 3].Style.Font.Bold = true;
+        ws.Cell(row, 2).Value = "TOTAL PASIVO + PATRIMONIO";
+        ws.Cell(row, 3).Value = dto.TotalPasivoPatrimonio;
+        ws.Range(row, 2, row, 3).Style.Font.Bold = true;
         FormatoNumerico(ws, row, 3);
 
-        ws.Cells.AutoFitColumns();
-        return package.GetAsByteArray();
+        ws.Columns().AdjustToContents();
+        using var ms = new MemoryStream();
+        workbook.SaveAs(ms);
+        return ms.ToArray();
     }
 
     public byte[] ExportarBalanceGeneralPdf(BalanceGeneralDto dto, string nombreEmpresa)
@@ -214,8 +211,8 @@ public class ExportService : IExportService
     // =======================================================
     public byte[] ExportarEstadoResultadosExcel(EstadoResultadosDto dto, string nombreEmpresa)
     {
-        using var package = new ExcelPackage();
-        var ws = ConfigurarReporteExcel(package, nombreEmpresa, "ESTADO DE RESULTADOS", $"Del {dto.FechaDesde:dd/MM/yyyy} al {dto.FechaHasta:dd/MM/yyyy} - Gestión {dto.Gestion}", 3);
+        using var workbook = new XLWorkbook();
+        var ws = ConfigurarReporteExcel(workbook, nombreEmpresa, "ESTADO DE RESULTADOS", $"Del {dto.FechaDesde:dd/MM/yyyy} al {dto.FechaHasta:dd/MM/yyyy} - Gestión {dto.Gestion}", 3);
         AplicarEstiloHeaderExcel(ws, 5, "Código", "Cuenta", "Saldo");
 
         int row = 6;
@@ -226,64 +223,66 @@ public class ExportService : IExportService
             foreach(var n in nodos)
             {
                 AplicarEstiloFilaDatosExcel(ws, row, 3, isAlt);
-                ws.Cells[row, 1].Value = n.Codigo;
-                ws.Cells[row, 2].Value = n.Nombre;
-                ws.Cells[row, 2].Style.Indent = indent;
-                ws.Cells[row, 3].Value = n.Saldo;
+                ws.Cell(row, 1).Value = n.Codigo;
+                ws.Cell(row, 2).Value = n.Nombre;
+                ws.Cell(row, 2).Style.Alignment.Indent = indent;
+                ws.Cell(row, 3).Value = n.Saldo;
                 FormatoNumerico(ws, row, 3);
-                if (n.EsAgrupador) ws.Cells[row, 1, row, 3].Style.Font.Bold = true;
+                if (n.EsAgrupador) ws.Range(row, 1, row, 3).Style.Font.Bold = true;
                 row++;
                 isAlt = !isAlt;
                 EscribirNodos(n.SubCuentas, indent + 1);
             }
         }
 
-        ws.Cells[row, 1].Value = "INGRESOS";
-        ws.Cells[row, 1, row, 3].Style.Font.Bold = true;
+        ws.Cell(row, 1).Value = "INGRESOS";
+        ws.Range(row, 1, row, 3).Style.Font.Bold = true;
         row++;
         EscribirNodos(dto.Ingresos, 0);
-        
-        ws.Cells[row, 2].Value = "TOTAL INGRESOS";
-        ws.Cells[row, 3].Value = dto.TotalIngresos;
-        ws.Cells[row, 2, row, 3].Style.Font.Bold = true;
+
+        ws.Cell(row, 2).Value = "TOTAL INGRESOS";
+        ws.Cell(row, 3).Value = dto.TotalIngresos;
+        ws.Range(row, 2, row, 3).Style.Font.Bold = true;
         FormatoNumerico(ws, row, 3);
         row += 2;
 
-        ws.Cells[row, 1].Value = "COSTOS";
-        ws.Cells[row, 1, row, 3].Style.Font.Bold = true;
+        ws.Cell(row, 1).Value = "COSTOS";
+        ws.Range(row, 1, row, 3).Style.Font.Bold = true;
         row++;
         EscribirNodos(dto.Costos, 0);
 
-        ws.Cells[row, 2].Value = "TOTAL COSTOS";
-        ws.Cells[row, 3].Value = dto.TotalCostos;
-        ws.Cells[row, 2, row, 3].Style.Font.Bold = true;
+        ws.Cell(row, 2).Value = "TOTAL COSTOS";
+        ws.Cell(row, 3).Value = dto.TotalCostos;
+        ws.Range(row, 2, row, 3).Style.Font.Bold = true;
         FormatoNumerico(ws, row, 3);
         row += 2;
 
-        ws.Cells[row, 2].Value = "UTILIDAD BRUTA";
-        ws.Cells[row, 3].Value = dto.UtilidadBruta;
-        ws.Cells[row, 2, row, 3].Style.Font.Bold = true;
+        ws.Cell(row, 2).Value = "UTILIDAD BRUTA";
+        ws.Cell(row, 3).Value = dto.UtilidadBruta;
+        ws.Range(row, 2, row, 3).Style.Font.Bold = true;
         FormatoNumerico(ws, row, 3);
         row += 2;
 
-        ws.Cells[row, 1].Value = "GASTOS";
-        ws.Cells[row, 1, row, 3].Style.Font.Bold = true;
+        ws.Cell(row, 1).Value = "GASTOS";
+        ws.Range(row, 1, row, 3).Style.Font.Bold = true;
         row++;
         EscribirNodos(dto.Gastos, 0);
 
-        ws.Cells[row, 2].Value = "TOTAL GASTOS";
-        ws.Cells[row, 3].Value = dto.TotalGastos;
-        ws.Cells[row, 2, row, 3].Style.Font.Bold = true;
+        ws.Cell(row, 2).Value = "TOTAL GASTOS";
+        ws.Cell(row, 3).Value = dto.TotalGastos;
+        ws.Range(row, 2, row, 3).Style.Font.Bold = true;
         FormatoNumerico(ws, row, 3);
         row += 2;
 
-        ws.Cells[row, 2].Value = "UTILIDAD NETA";
-        ws.Cells[row, 3].Value = dto.UtilidadNeta;
-        ws.Cells[row, 2, row, 3].Style.Font.Bold = true;
+        ws.Cell(row, 2).Value = "UTILIDAD NETA";
+        ws.Cell(row, 3).Value = dto.UtilidadNeta;
+        ws.Range(row, 2, row, 3).Style.Font.Bold = true;
         FormatoNumerico(ws, row, 3);
 
-        ws.Cells.AutoFitColumns();
-        return package.GetAsByteArray();
+        ws.Columns().AdjustToContents();
+        using var ms = new MemoryStream();
+        workbook.SaveAs(ms);
+        return ms.ToArray();
     }
 
     public byte[] ExportarEstadoResultadosPdf(EstadoResultadosDto dto, string nombreEmpresa)
@@ -329,8 +328,8 @@ public class ExportService : IExportService
     // =======================================================
     public byte[] ExportarLibroDiarioExcel(LibroDiarioDto dto, string nombreEmpresa)
     {
-        using var package = new ExcelPackage();
-        var ws = ConfigurarReporteExcel(package, nombreEmpresa, "LIBRO DIARIO", $"Del {dto.FechaDesde:dd/MM/yyyy} al {dto.FechaHasta:dd/MM/yyyy}", 6);
+        using var workbook = new XLWorkbook();
+        var ws = ConfigurarReporteExcel(workbook, nombreEmpresa, "LIBRO DIARIO", $"Del {dto.FechaDesde:dd/MM/yyyy} al {dto.FechaHasta:dd/MM/yyyy}", 6);
         AplicarEstiloHeaderExcel(ws, 5, "Fecha", "Número", "Código Cuenta", "Nombre Cuenta", "Debe", "Haber");
 
         int row = 6;
@@ -339,44 +338,46 @@ public class ExportService : IExportService
         foreach (var entrada in dto.Entradas)
         {
             AplicarEstiloFilaDatosExcel(ws, row, 6, isAlt);
-            ws.Cells[row, 1].Value = entrada.Fecha.ToString("dd/MM/yyyy");
-            ws.Cells[row, 2].Value = entrada.Numero;
-            ws.Cells[row, 4].Value = entrada.Glosa;
-            ws.Cells[row, 4].Style.Font.Italic = true;
+            ws.Cell(row, 1).Value = entrada.Fecha.ToString("dd/MM/yyyy");
+            ws.Cell(row, 2).Value = entrada.Numero;
+            ws.Cell(row, 4).Value = entrada.Glosa;
+            ws.Cell(row, 4).Style.Font.Italic = true;
             row++;
 
             foreach (var linea in entrada.Lineas)
             {
                 AplicarEstiloFilaDatosExcel(ws, row, 6, isAlt);
-                ws.Cells[row, 3].Value = linea.CuentaCodigo;
-                ws.Cells[row, 4].Value = linea.CuentaNombre;
-                ws.Cells[row, 5].Value = linea.Debe;
-                ws.Cells[row, 6].Value = linea.Haber;
+                ws.Cell(row, 3).Value = linea.CuentaCodigo;
+                ws.Cell(row, 4).Value = linea.CuentaNombre;
+                ws.Cell(row, 5).Value = linea.Debe;
+                ws.Cell(row, 6).Value = linea.Haber;
                 FormatoNumerico(ws, row, 5);
                 FormatoNumerico(ws, row, 6);
                 row++;
             }
-            
+
             AplicarEstiloFilaDatosExcel(ws, row, 6, isAlt);
-            ws.Cells[row, 4].Value = "Total Asiento:";
-            ws.Cells[row, 5].Value = entrada.TotalDebe;
-            ws.Cells[row, 6].Value = entrada.TotalHaber;
-            ws.Cells[row, 4, row, 6].Style.Font.Bold = true;
+            ws.Cell(row, 4).Value = "Total Asiento:";
+            ws.Cell(row, 5).Value = entrada.TotalDebe;
+            ws.Cell(row, 6).Value = entrada.TotalHaber;
+            ws.Range(row, 4, row, 6).Style.Font.Bold = true;
             FormatoNumerico(ws, row, 5);
             FormatoNumerico(ws, row, 6);
             row += 2;
             isAlt = !isAlt;
         }
 
-        ws.Cells[row, 4].Value = "TOTAL GENERAL:";
-        ws.Cells[row, 5].Value = dto.TotalDebe;
-        ws.Cells[row, 6].Value = dto.TotalHaber;
-        ws.Cells[row, 4, row, 6].Style.Font.Bold = true;
+        ws.Cell(row, 4).Value = "TOTAL GENERAL:";
+        ws.Cell(row, 5).Value = dto.TotalDebe;
+        ws.Cell(row, 6).Value = dto.TotalHaber;
+        ws.Range(row, 4, row, 6).Style.Font.Bold = true;
         FormatoNumerico(ws, row, 5);
         FormatoNumerico(ws, row, 6);
 
-        ws.Cells.AutoFitColumns();
-        return package.GetAsByteArray();
+        ws.Columns().AdjustToContents();
+        using var ms = new MemoryStream();
+        workbook.SaveAs(ms);
+        return ms.ToArray();
     }
 
     public byte[] ExportarLibroDiarioPdf(LibroDiarioDto dto, string nombreEmpresa)
@@ -440,8 +441,8 @@ public class ExportService : IExportService
     // =======================================================
     public byte[] ExportarSumasYSaldosExcel(SumasYSaldosDto dto, string nombreEmpresa)
     {
-        using var package = new ExcelPackage();
-        var ws = ConfigurarReporteExcel(package, nombreEmpresa, "BALANCE DE COMPROBACIÓN DE SUMAS Y SALDOS", $"Del {dto.FechaDesde:dd/MM/yyyy} al {dto.FechaHasta:dd/MM/yyyy} - Gestión {dto.Gestion}", 6);
+        using var workbook = new XLWorkbook();
+        var ws = ConfigurarReporteExcel(workbook, nombreEmpresa, "BALANCE DE COMPROBACIÓN DE SUMAS Y SALDOS", $"Del {dto.FechaDesde:dd/MM/yyyy} al {dto.FechaHasta:dd/MM/yyyy} - Gestión {dto.Gestion}", 6);
         AplicarEstiloHeaderExcel(ws, 5, "Código", "Cuenta", "Suma Debe", "Suma Haber", "Saldo Deudor", "Saldo Acreedor");
 
         int row = 6;
@@ -450,12 +451,12 @@ public class ExportService : IExportService
         foreach(var linea in dto.Lineas)
         {
             AplicarEstiloFilaDatosExcel(ws, row, 6, isAlt);
-            ws.Cells[row, 1].Value = linea.Codigo;
-            ws.Cells[row, 2].Value = linea.Nombre;
-            ws.Cells[row, 3].Value = linea.SumaDebe;
-            ws.Cells[row, 4].Value = linea.SumaHaber;
-            ws.Cells[row, 5].Value = linea.SaldoDeudor;
-            ws.Cells[row, 6].Value = linea.SaldoAcreedor;
+            ws.Cell(row, 1).Value = linea.Codigo;
+            ws.Cell(row, 2).Value = linea.Nombre;
+            ws.Cell(row, 3).Value = linea.SumaDebe;
+            ws.Cell(row, 4).Value = linea.SumaHaber;
+            ws.Cell(row, 5).Value = linea.SaldoDeudor;
+            ws.Cell(row, 6).Value = linea.SaldoAcreedor;
             FormatoNumerico(ws, row, 3);
             FormatoNumerico(ws, row, 4);
             FormatoNumerico(ws, row, 5);
@@ -464,19 +465,21 @@ public class ExportService : IExportService
             isAlt = !isAlt;
         }
 
-        ws.Cells[row, 2].Value = "TOTALES:";
-        ws.Cells[row, 3].Value = dto.TotalSumaDebe;
-        ws.Cells[row, 4].Value = dto.TotalSumaHaber;
-        ws.Cells[row, 5].Value = dto.TotalSaldoDeudor;
-        ws.Cells[row, 6].Value = dto.TotalSaldoAcreedor;
-        ws.Cells[row, 2, row, 6].Style.Font.Bold = true;
+        ws.Cell(row, 2).Value = "TOTALES:";
+        ws.Cell(row, 3).Value = dto.TotalSumaDebe;
+        ws.Cell(row, 4).Value = dto.TotalSumaHaber;
+        ws.Cell(row, 5).Value = dto.TotalSaldoDeudor;
+        ws.Cell(row, 6).Value = dto.TotalSaldoAcreedor;
+        ws.Range(row, 2, row, 6).Style.Font.Bold = true;
         FormatoNumerico(ws, row, 3);
         FormatoNumerico(ws, row, 4);
         FormatoNumerico(ws, row, 5);
         FormatoNumerico(ws, row, 6);
 
-        ws.Cells.AutoFitColumns();
-        return package.GetAsByteArray();
+        ws.Columns().AdjustToContents();
+        using var ms = new MemoryStream();
+        workbook.SaveAs(ms);
+        return ms.ToArray();
     }
 
     // =======================================================
@@ -484,33 +487,33 @@ public class ExportService : IExportService
     // =======================================================
     public byte[] ExportarFlujoDEfectivoExcel(FlujoDEfectivoDto dto, string nombreEmpresa)
     {
-        using var package = new ExcelPackage();
-        var ws = ConfigurarReporteExcel(package, nombreEmpresa, "ESTADO DE FLUJO DE EFECTIVO", $"Del {dto.Desde:dd/MM/yyyy} al {dto.Hasta:dd/MM/yyyy}", 3);
+        using var workbook = new XLWorkbook();
+        var ws = ConfigurarReporteExcel(workbook, nombreEmpresa, "ESTADO DE FLUJO DE EFECTIVO", $"Del {dto.Desde:dd/MM/yyyy} al {dto.Hasta:dd/MM/yyyy}", 3);
         AplicarEstiloHeaderExcel(ws, 5, "Código", "Cuenta", "Monto");
 
         int row = 6;
         bool isAlt = false;
-        
+
         void EscribirSeccion(string titulo, List<FlujoDEfectivoLineaDto> lineas, decimal total)
         {
-            ws.Cells[row, 1].Value = titulo;
-            ws.Cells[row, 1, row, 3].Style.Font.Bold = true;
+            ws.Cell(row, 1).Value = titulo;
+            ws.Range(row, 1, row, 3).Style.Font.Bold = true;
             row++;
 
             foreach(var l in lineas)
             {
                 AplicarEstiloFilaDatosExcel(ws, row, 3, isAlt);
-                ws.Cells[row, 1].Value = l.CodigoCuenta;
-                ws.Cells[row, 2].Value = l.NombreCuenta;
-                ws.Cells[row, 3].Value = l.Monto;
+                ws.Cell(row, 1).Value = l.CodigoCuenta;
+                ws.Cell(row, 2).Value = l.NombreCuenta;
+                ws.Cell(row, 3).Value = l.Monto;
                 FormatoNumerico(ws, row, 3);
                 row++;
                 isAlt = !isAlt;
             }
-            
-            ws.Cells[row, 2].Value = $"TOTAL {titulo}";
-            ws.Cells[row, 3].Value = total;
-            ws.Cells[row, 2, row, 3].Style.Font.Bold = true;
+
+            ws.Cell(row, 2).Value = $"TOTAL {titulo}";
+            ws.Cell(row, 3).Value = total;
+            ws.Range(row, 2, row, 3).Style.Font.Bold = true;
             FormatoNumerico(ws, row, 3);
             row += 2;
         }
@@ -519,24 +522,26 @@ public class ExportService : IExportService
         EscribirSeccion("ACTIVIDADES DE INVERSIÓN", dto.LineasInversion, dto.TotalInversion);
         EscribirSeccion("ACTIVIDADES DE FINANCIACIÓN", dto.LineasFinanciacion, dto.TotalFinanciacion);
 
-        ws.Cells[row, 2].Value = "VARIACIÓN NETA EFECTIVO";
-        ws.Cells[row, 3].Value = dto.VariacionNetaEfectivo;
-        ws.Cells[row, 2, row, 3].Style.Font.Bold = true;
-        FormatoNumerico(ws, row, 3);
-        row++;
-        
-        ws.Cells[row, 2].Value = "SALDO INICIAL EFECTIVO";
-        ws.Cells[row, 3].Value = dto.SaldoInicialEfectivo;
+        ws.Cell(row, 2).Value = "VARIACIÓN NETA EFECTIVO";
+        ws.Cell(row, 3).Value = dto.VariacionNetaEfectivo;
+        ws.Range(row, 2, row, 3).Style.Font.Bold = true;
         FormatoNumerico(ws, row, 3);
         row++;
 
-        ws.Cells[row, 2].Value = "SALDO FINAL EFECTIVO";
-        ws.Cells[row, 3].Value = dto.SaldoFinalEfectivo;
-        ws.Cells[row, 2, row, 3].Style.Font.Bold = true;
+        ws.Cell(row, 2).Value = "SALDO INICIAL EFECTIVO";
+        ws.Cell(row, 3).Value = dto.SaldoInicialEfectivo;
+        FormatoNumerico(ws, row, 3);
+        row++;
+
+        ws.Cell(row, 2).Value = "SALDO FINAL EFECTIVO";
+        ws.Cell(row, 3).Value = dto.SaldoFinalEfectivo;
+        ws.Range(row, 2, row, 3).Style.Font.Bold = true;
         FormatoNumerico(ws, row, 3);
 
-        ws.Cells.AutoFitColumns();
-        return package.GetAsByteArray();
+        ws.Columns().AdjustToContents();
+        using var ms = new MemoryStream();
+        workbook.SaveAs(ms);
+        return ms.ToArray();
     }
 
     public byte[] ExportarFlujoDEfectivoPdf(FlujoDEfectivoDto dto, string nombreEmpresa)
@@ -574,27 +579,27 @@ public class ExportService : IExportService
     // =======================================================
     public byte[] ExportarLibroMayorExcel(LibroMayorDto dto, string nombreEmpresa)
     {
-        using var package = new ExcelPackage();
-        var ws = ConfigurarReporteExcel(package, nombreEmpresa, "LIBRO MAYOR", $"Cuenta: {dto.CodigoCuenta} - {dto.NombreCuenta}", 6);
+        using var workbook = new XLWorkbook();
+        var ws = ConfigurarReporteExcel(workbook, nombreEmpresa, "LIBRO MAYOR", $"Cuenta: {dto.CodigoCuenta} - {dto.NombreCuenta}", 6);
         AplicarEstiloHeaderExcel(ws, 5, "Fecha", "Número Asiento", "Glosa", "Debe", "Haber", "Saldo Progresivo");
 
         int row = 6;
         bool isAlt = false;
 
-        ws.Cells[row, 1].Value = $"Saldo Anterior: {dto.SaldoAnterior:N2}";
-        ws.Cells[row, 1, row, 6].Merge = true;
-        ws.Cells[row, 1].Style.Font.Bold = true;
+        ws.Cell(row, 1).Value = $"Saldo Anterior: {dto.SaldoAnterior:N2}";
+        ws.Range(row, 1, row, 6).Merge();
+        ws.Cell(row, 1).Style.Font.Bold = true;
         row++;
 
         foreach(var linea in dto.Lineas)
         {
             AplicarEstiloFilaDatosExcel(ws, row, 6, isAlt);
-            ws.Cells[row, 1].Value = linea.Fecha.ToString("dd/MM/yyyy");
-            ws.Cells[row, 2].Value = linea.NumeroAsiento;
-            ws.Cells[row, 3].Value = linea.Glosa;
-            ws.Cells[row, 4].Value = linea.Debe;
-            ws.Cells[row, 5].Value = linea.Haber;
-            ws.Cells[row, 6].Value = linea.SaldoProgresivo;
+            ws.Cell(row, 1).Value = linea.Fecha.ToString("dd/MM/yyyy");
+            ws.Cell(row, 2).Value = linea.NumeroAsiento;
+            ws.Cell(row, 3).Value = linea.Glosa;
+            ws.Cell(row, 4).Value = linea.Debe;
+            ws.Cell(row, 5).Value = linea.Haber;
+            ws.Cell(row, 6).Value = linea.SaldoProgresivo;
             FormatoNumerico(ws, row, 4);
             FormatoNumerico(ws, row, 5);
             FormatoNumerico(ws, row, 6);
@@ -602,21 +607,23 @@ public class ExportService : IExportService
             isAlt = !isAlt;
         }
 
-        ws.Cells[row, 3].Value = "TOTAL PERÍODO:";
-        ws.Cells[row, 4].Value = dto.TotalDebe;
-        ws.Cells[row, 5].Value = dto.TotalHaber;
-        ws.Cells[row, 3, row, 5].Style.Font.Bold = true;
+        ws.Cell(row, 3).Value = "TOTAL PERÍODO:";
+        ws.Cell(row, 4).Value = dto.TotalDebe;
+        ws.Cell(row, 5).Value = dto.TotalHaber;
+        ws.Range(row, 3, row, 5).Style.Font.Bold = true;
         FormatoNumerico(ws, row, 4);
         FormatoNumerico(ws, row, 5);
         row++;
-        
-         ws.Cells[row, 5].Value = "SALDO FINAL:";
-         ws.Cells[row, 6].Value = dto.SaldoFinal;
-         ws.Cells[row, 5, row, 6].Style.Font.Bold = true;
+
+         ws.Cell(row, 5).Value = "SALDO FINAL:";
+         ws.Cell(row, 6).Value = dto.SaldoFinal;
+         ws.Range(row, 5, row, 6).Style.Font.Bold = true;
          FormatoNumerico(ws, row, 6);
 
-        ws.Cells.AutoFitColumns();
-        return package.GetAsByteArray();
+        ws.Columns().AdjustToContents();
+        using var ms = new MemoryStream();
+        workbook.SaveAs(ms);
+        return ms.ToArray();
     }
 
     public byte[] ExportarLibroMayorPdf(LibroMayorDto dto, string nombreEmpresa)

@@ -40,9 +40,13 @@
                     </button>
                 </div>
                 <div class="col-md-auto">
-                    <button class="btn btn-sm btn-success" @onclick="ExportarExcel" disabled="@(exportando || data == null)">
+                    <button class="btn btn-sm btn-success" @onclick="ExportarExcel" disabled="@(exportando || _exportandoPdf || data == null)">
                         @if (exportando) { <span class="spinner-border spinner-border-sm me-1"></span> }
                         <i class="bi bi-file-earmark-excel"></i> Excel
+                    </button>
+                    <button class="btn btn-sm btn-danger ms-1" @onclick="ExportarPdfConConfirmacion" disabled="@(exportando || _exportandoPdf || data == null)">
+                        @if (_exportandoPdf) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        <i class="bi bi-file-earmark-pdf"></i> PDF
                     </button>
                 </div>
                 <div class="col-md-auto">
@@ -59,6 +63,27 @@
         <div class="alert alert-danger alert-dismissible fade show">
             <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
             <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (showModalPdf)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning text-dark">
+                        <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill"></i> Confirmación</h5>
+                        <button type="button" class="btn-close" @onclick="() => showModalPdf = false"></button>
+                    </div>
+                    <div class="modal-body">
+                        El PDF puede ser grande y tardar más tiempo en generarse. ¿Desea continuar?
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="() => showModalPdf = false">Cancelar</button>
+                        <button type="button" class="btn btn-primary" @onclick="ExportarPdfConfirmado">Continuar</button>
+                    </div>
+                </div>
+            </div>
         </div>
     }
 
@@ -175,6 +200,8 @@
     private LibroDiarioDto? data;
     private bool loading;
     private bool exportando;
+    private bool _exportandoPdf;
+    private bool showModalPdf = false;
     private string? errorMessage;
 
     private async Task Generar()
@@ -205,6 +232,38 @@
         }
         catch (Exception ex) { errorMessage = ex.Message; }
         finally { exportando = false; }
+    }
+
+    private void ExportarPdfConConfirmacion()
+    {
+        if ((fechaHasta - fechaDesde).TotalDays > 31)
+        {
+            showModalPdf = true;
+        }
+        else
+        {
+            _ = ExportarPdfReal();
+        }
+    }
+
+    private async Task ExportarPdfConfirmado()
+    {
+        showModalPdf = false;
+        await ExportarPdfReal();
+    }
+
+    private async Task ExportarPdfReal()
+    {
+        _exportandoPdf = true;
+        StateHasChanged();
+        try
+        {
+            var estadoQuery = string.IsNullOrEmpty(filtroEstado) ? "" : $"&estado={filtroEstado}";
+            var url = $"api/v1/contabilidad/estados-financieros/libro-diario/export?desde={fechaDesde:yyyy-MM-dd}&hasta={fechaHasta:yyyy-MM-dd}{estadoQuery}&format=pdf";
+            await JS.InvokeVoidAsync("downloadFile", url, $"Libro_Diario_{fechaDesde:yyyyMMdd}_{fechaHasta:yyyyMMdd}.pdf");
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { _exportandoPdf = false; StateHasChanged(); }
     }
 
     private async Task Imprimir()

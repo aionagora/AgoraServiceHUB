@@ -41,6 +41,14 @@
                         @if (loading) { <span class="spinner-border spinner-border-sm me-1"></span> }
                         <i class="bi bi-search"></i> Consultar
                     </button>
+                    <div class="btn-group ms-2">
+                        <button class="btn btn-success btn-sm" @onclick="ExportarExcel" disabled="@(data == null)">
+                            <i class="bi bi-file-earmark-excel"></i> Excel
+                        </button>
+                        <button class="btn btn-danger btn-sm" @onclick="ExportarPdf" disabled="@(data == null)">
+                            <i class="bi bi-file-earmark-pdf"></i> PDF
+                        </button>
+                    </div>
                 </div>
                 <div class="col-md-auto">
                     <button class="btn btn-sm btn-outline-secondary" @onclick="Imprimir" disabled="@(data == null)">
@@ -170,5 +178,38 @@
     private async Task Imprimir()
     {
         await JS.InvokeVoidAsync("eval", "window.print()");
+    }
+
+    private async Task ExportarExcel()
+    {
+        if (!cuentaId.HasValue) return;
+        string filename = ConstruirNombreArchivo("xlsx");
+        var url = $"api/v1/contabilidad/estados-financieros/libro-mayor/export?cuentaContableId={cuentaId.Value}&desde={desde:yyyy-MM-dd}&hasta={hasta:yyyy-MM-dd}&format=xlsx";
+        await JS.InvokeVoidAsync("downloadFile", url, filename);
+    }
+
+    private async Task ExportarPdf()
+    {
+        if (!cuentaId.HasValue) return;
+        string filename = ConstruirNombreArchivo("pdf");
+        var url = $"api/v1/contabilidad/estados-financieros/libro-mayor/export?cuentaContableId={cuentaId.Value}&desde={desde:yyyy-MM-dd}&hasta={hasta:yyyy-MM-dd}&format=pdf";
+        await JS.InvokeVoidAsync("downloadFile", url, filename);
+    }
+
+    private string ConstruirNombreArchivo(string extension)
+    {
+        string cuentaFiltro = "";
+        if (cuentaId.HasValue)
+        {
+            var cta = cuentas.FirstOrDefault(c => c.CuentaContableId == cuentaId.Value);
+            if (cta != null)
+            {
+                cuentaFiltro = $"_{cta.Codigo}-{cta.Nombre}";
+                cuentaFiltro = cuentaFiltro.Replace("  ", " ").Replace(" ", "_").Replace("/", "-").Replace("\\", "-").Replace(":", "");
+                cuentaFiltro = new string(cuentaFiltro.Where(c => !System.IO.Path.GetInvalidFileNameChars().Contains(c)).ToArray());
+                while (cuentaFiltro.Contains("__")) cuentaFiltro = cuentaFiltro.Replace("__", "_");
+            }
+        }
+        return $"LibroMayor{cuentaFiltro}_{desde:yyyyMMdd}_{hasta:yyyyMMdd}.{extension}";
     }
 }

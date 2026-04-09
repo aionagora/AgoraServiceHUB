@@ -160,18 +160,8 @@
 
     private async Task ExportarExcel()
     {
-        exportando = true;
-        try
-        {
-            var bytes = await ReporteService.ExportSumasYSaldosExcelAsync(fechaDesde, fechaHasta);
-            if (bytes != null)
-                await JS.InvokeVoidAsync("downloadFile",
-                    $"Sumas_Saldos_{fechaDesde:yyyyMMdd}_{fechaHasta:yyyyMMdd}.xlsx",
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    Convert.ToBase64String(bytes));
-        }
-        catch (Exception ex) { errorMessage = ex.Message; }
-        finally { exportando = false; }
+        var url = $"api/v1/contabilidad/estados-financieros/sumas-saldos/export?desde={fechaDesde:yyyy-MM-dd}&hasta={fechaHasta:yyyy-MM-dd}&format=xlsx";
+        await JS.InvokeVoidAsync("downloadFile", url, "SumasYSaldos.xlsx");
     }
 
     private async Task Imprimir()

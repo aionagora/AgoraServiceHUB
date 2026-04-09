@@ -71,6 +71,7 @@ public static class DependencyInjection
         services.AddScoped<IEstadoFinancieroService, EstadoFinancieroService>();
         services.AddScoped<ICentroCostoService, CentroCostoService>();
         services.AddScoped<IComprobanteDocumentoService, ComprobanteDocumentoService>();
+        services.AddScoped<ICierreContableService, CierreContableService>();
 
         // WF: Workflow
         services.AddScoped<IWorkflowService, WorkflowService>();

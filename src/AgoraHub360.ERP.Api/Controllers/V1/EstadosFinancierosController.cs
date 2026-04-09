@@ -6,9 +6,8 @@ using AgoraHub360.ERP.Shared.DTOs.Contabilidad;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using OfficeOpenXml;
-using OfficeOpenXml.Style;
-using System.Drawing;
+using Microsoft.Extensions.Logging;
+using ClosedXML.Excel;
 
 [ApiController]
 [ApiVersion("1.0")]
@@ -19,13 +18,14 @@ public class EstadosFinancierosController : ControllerBase
     private readonly IEstadoFinancieroService _service;
     private readonly IExportService _exportService;
     private readonly IEmpresaService _empresaService;
+    private readonly ILogger<EstadosFinancierosController> _logger;
 
-    public EstadosFinancierosController(IEstadoFinancieroService service, IExportService exportService, IEmpresaService empresaService)
+    public EstadosFinancierosController(IEstadoFinancieroService service, IExportService exportService, IEmpresaService empresaService, ILogger<EstadosFinancierosController> logger)
     {
         _service = service;
         _exportService = exportService;
         _empresaService = empresaService;
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        _logger = logger;
     }
 
 
@@ -45,8 +45,15 @@ public class EstadosFinancierosController : ControllerBase
     [HttpGet("balance-general/export")]
     public async Task<IActionResult> ExportBalanceGeneralExcel([FromQuery] DateTime fechaCorte, [FromQuery] string format = "xlsx", CancellationToken ct = default)
     {
+        format = (format ?? "xlsx").Trim().ToLowerInvariant();
+        if (format != "xlsx" && format != "pdf")
+            return BadRequest(ApiResponse<string>.Fail("El formato permitido es xlsx o pdf."));
+
         var claim = User.Claims.FirstOrDefault(c => c.Type == "EmpresaId")?.Value;
         if (!int.TryParse(claim, out int empresaId)) return Unauthorized();
+
+        _logger.LogInformation("Exportación de {Reporte} por usuario {Usuario} empresa {EmpresaId} formato {Formato} fecha de corte {FechaCorte}",
+            "Balance General", User.Identity?.Name ?? "Desconocido", empresaId, format, fechaCorte.ToString("yyyy-MM-dd"));
 
         var r = await _service.GetBalanceGeneralAsync(fechaCorte, ct);
         if (!r.IsSuccess) return BadRequest(ApiResponse<string>.Fail(r.Error!));
@@ -59,7 +66,7 @@ public class EstadosFinancierosController : ControllerBase
         string mime;
         string filename;
 
-        if (format.ToLower() == "pdf")
+        if (format == "pdf")
         {
             bytes = _exportService.ExportarBalanceGeneralPdf(data, nombreEmpresa);
             mime = "application/pdf";
@@ -91,81 +98,89 @@ public class EstadosFinancierosController : ControllerBase
     [HttpGet("estado-resultados/excel")]
     public async Task<IActionResult> ExportEstadoResultadosExcel([FromQuery] DateTime desde, [FromQuery] DateTime hasta, CancellationToken ct)
     {
+        var claim = User.Claims.FirstOrDefault(c => c.Type == "EmpresaId")?.Value;
+        int.TryParse(claim ?? "0", out int empresaId);
+
+        _logger.LogInformation("Exportación de {Reporte} por usuario {Usuario} empresa {EmpresaId} formato {Formato} desde {Desde} hasta {Hasta}",
+            "Estado de Resultados", User.Identity?.Name ?? "Desconocido", empresaId, "xlsx", desde.ToString("yyyy-MM-dd"), hasta.ToString("yyyy-MM-dd"));
+
         var r = await _service.GetEstadoResultadosAsync(desde, hasta, ct);
         if (!r.IsSuccess) return BadRequest(ApiResponse<string>.Fail(r.Error!));
         var data = r.Value!;
 
-        using var pkg = new ExcelPackage();
-        var ws = pkg.Workbook.Worksheets.Add("Estado de Resultados");
+        using var wb = new XLWorkbook();
+        var ws = wb.Worksheets.Add("Estado de Resultados");
 
-        ws.Cells[1, 1].Value = data.Empresa;
-        ws.Cells[1, 1, 1, 3].Merge = true;
-        ws.Cells[1, 1].Style.Font.Bold = true;
-        ws.Cells[1, 1].Style.Font.Size = 14;
+        ws.Cell(1, 1).Value = data.Empresa;
+        ws.Range(1, 1, 1, 3).Merge();
+        ws.Cell(1, 1).Style.Font.Bold = true;
+        ws.Cell(1, 1).Style.Font.FontSize = 14;
 
-        ws.Cells[2, 1].Value = "ESTADO DE RESULTADOS";
-        ws.Cells[2, 1, 2, 3].Merge = true;
-        ws.Cells[2, 1].Style.Font.Bold = true;
-        ws.Cells[2, 1].Style.Font.Size = 12;
+        ws.Cell(2, 1).Value = "ESTADO DE RESULTADOS";
+        ws.Range(2, 1, 2, 3).Merge();
+        ws.Cell(2, 1).Style.Font.Bold = true;
+        ws.Cell(2, 1).Style.Font.FontSize = 12;
 
-        ws.Cells[3, 1].Value = $"Del {data.FechaDesde:dd/MM/yyyy} al {data.FechaHasta:dd/MM/yyyy} — Gestión {data.Gestion}";
-        ws.Cells[3, 1, 3, 3].Merge = true;
+        ws.Cell(3, 1).Value = $"Del {data.FechaDesde:dd/MM/yyyy} al {data.FechaHasta:dd/MM/yyyy} — Gestión {data.Gestion}";
+        ws.Range(3, 1, 3, 3).Merge();
 
         int row = 5;
         SetHeader(ws, ref row, "Código", "Cuenta", "Monto");
 
         // INGRESOS
         row++;
-        ws.Cells[row, 1].Value = "INGRESOS";
-        ws.Cells[row, 1].Style.Font.Bold = true;
+        ws.Cell(row, 1).Value = "INGRESOS";
+        ws.Cell(row, 1).Style.Font.Bold = true;
         row++;
         WriteTreeToExcel(ws, data.Ingresos, ref row);
         WriteTotalRow(ws, ref row, "TOTAL INGRESOS", data.TotalIngresos);
 
         // COSTOS
         row++;
-        ws.Cells[row, 1].Value = "COSTOS";
-        ws.Cells[row, 1].Style.Font.Bold = true;
+        ws.Cell(row, 1).Value = "COSTOS";
+        ws.Cell(row, 1).Style.Font.Bold = true;
         row++;
         WriteTreeToExcel(ws, data.Costos, ref row);
         WriteTotalRow(ws, ref row, "TOTAL COSTOS", data.TotalCostos);
 
         // UTILIDAD BRUTA
         row++;
-        ws.Cells[row, 2].Value = "UTILIDAD BRUTA";
-        ws.Cells[row, 2].Style.Font.Bold = true;
-        ws.Cells[row, 2].Style.Font.Size = 11;
-        ws.Cells[row, 3].Value = data.UtilidadBruta;
-        ws.Cells[row, 3].Style.Font.Bold = true;
-        ws.Cells[row, 3].Style.Numberformat.Format = "#,##0.00";
-        ws.Cells[row, 3].Style.Font.Color.SetColor(data.UtilidadBruta >= 0 ? Color.DarkGreen : Color.Red);
+        ws.Cell(row, 2).Value = "UTILIDAD BRUTA";
+        ws.Cell(row, 2).Style.Font.Bold = true;
+        ws.Cell(row, 2).Style.Font.FontSize = 11;
+        ws.Cell(row, 3).Value = data.UtilidadBruta;
+        ws.Cell(row, 3).Style.Font.Bold = true;
+        ws.Cell(row, 3).Style.NumberFormat.Format = "#,##0.00";
+        ws.Cell(row, 3).Style.Font.FontColor = data.UtilidadBruta >= 0 ? XLColor.DarkGreen : XLColor.Red;
         row += 2;
 
         // GASTOS
-        ws.Cells[row, 1].Value = "GASTOS";
-        ws.Cells[row, 1].Style.Font.Bold = true;
+        ws.Cell(row, 1).Value = "GASTOS";
+        ws.Cell(row, 1).Style.Font.Bold = true;
         row++;
         WriteTreeToExcel(ws, data.Gastos, ref row);
         WriteTotalRow(ws, ref row, "TOTAL GASTOS", data.TotalGastos);
 
         // UTILIDAD NETA
         row += 2;
-        ws.Cells[row, 2].Value = "UTILIDAD (PÉRDIDA) NETA";
-        ws.Cells[row, 2].Style.Font.Bold = true;
-        ws.Cells[row, 2].Style.Font.Size = 12;
-        ws.Cells[row, 3].Value = data.UtilidadNeta;
-        ws.Cells[row, 3].Style.Font.Bold = true;
-        ws.Cells[row, 3].Style.Font.Size = 12;
-        ws.Cells[row, 3].Style.Numberformat.Format = "#,##0.00";
-        ws.Cells[row, 3].Style.Font.Color.SetColor(data.UtilidadNeta >= 0 ? Color.DarkGreen : Color.Red);
-        ws.Cells[row, 3].Style.Border.Top.Style = ExcelBorderStyle.Double;
-        ws.Cells[row, 3].Style.Border.Bottom.Style = ExcelBorderStyle.Double;
+        ws.Cell(row, 2).Value = "UTILIDAD (PÉRDIDA) NETA";
+        ws.Cell(row, 2).Style.Font.Bold = true;
+        ws.Cell(row, 2).Style.Font.FontSize = 12;
+        ws.Cell(row, 3).Value = data.UtilidadNeta;
+        ws.Cell(row, 3).Style.Font.Bold = true;
+        ws.Cell(row, 3).Style.Font.FontSize = 12;
+        ws.Cell(row, 3).Style.NumberFormat.Format = "#,##0.00";
+        ws.Cell(row, 3).Style.Font.FontColor = data.UtilidadNeta >= 0 ? XLColor.DarkGreen : XLColor.Red;
+        ws.Cell(row, 3).Style.Border.TopBorder = XLBorderStyleValues.Double;
+        ws.Cell(row, 3).Style.Border.BottomBorder = XLBorderStyleValues.Double;
 
         ws.Column(1).Width = 18;
         ws.Column(2).Width = 45;
         ws.Column(3).Width = 20;
 
-        return File(pkg.GetAsByteArray(),
+        using var ms = new MemoryStream();
+        wb.SaveAs(ms);
+        return File(ms.ToArray(),
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             $"Estado_Resultados_{data.FechaDesde:yyyyMMdd}_{data.FechaHasta:yyyyMMdd}.xlsx");
     }
@@ -186,10 +201,15 @@ public class EstadosFinancierosController : ControllerBase
     [HttpGet("sumas-saldos/export")]
     public async Task<IActionResult> ExportSumasYSaldosExcel([FromQuery] DateTime desde, [FromQuery] DateTime hasta, [FromQuery] string format = "xlsx", CancellationToken ct = default)
     {
-        if (format.ToLower() == "pdf") return BadRequest(ApiResponse<string>.Fail("Formato PDF no implementado para Sumas y Saldos."));
+        format = (format ?? "xlsx").Trim().ToLowerInvariant();
+        if (format != "xlsx")
+            return BadRequest(ApiResponse<string>.Fail("El reporte Sumas y Saldos solo permite exportación en formato xlsx."));
 
         var claim = User.Claims.FirstOrDefault(c => c.Type == "EmpresaId")?.Value;
         if (!int.TryParse(claim, out int empresaId)) return Unauthorized();
+
+        _logger.LogInformation("Exportación de {Reporte} por usuario {Usuario} empresa {EmpresaId} formato {Formato} desde {Desde} hasta {Hasta}",
+            "Sumas y Saldos", User.Identity?.Name ?? "Desconocido", empresaId, format, desde.ToString("yyyy-MM-dd"), hasta.ToString("yyyy-MM-dd"));
 
         var r = await _service.GetSumasYSaldosAsync(desde, hasta, ct);
         if (!r.IsSuccess) return BadRequest(ApiResponse<string>.Fail(r.Error!));
@@ -221,8 +241,15 @@ public class EstadosFinancierosController : ControllerBase
     [HttpGet("libro-diario/export")]
     public async Task<IActionResult> ExportLibroDiarioExcel([FromQuery] DateTime desde, [FromQuery] DateTime hasta, [FromQuery] string? estado, [FromQuery] string format = "xlsx", CancellationToken ct = default)
     {
+        format = (format ?? "xlsx").Trim().ToLowerInvariant();
+        if (format != "xlsx" && format != "pdf")
+            return BadRequest(ApiResponse<string>.Fail("El formato permitido es xlsx o pdf."));
+
         var claim = User.Claims.FirstOrDefault(c => c.Type == "EmpresaId")?.Value;
         if (!int.TryParse(claim, out int empresaId)) return Unauthorized();
+
+        _logger.LogInformation("Exportación de {Reporte} por usuario {Usuario} empresa {EmpresaId} formato {Formato} desde {Desde} hasta {Hasta}",
+            "Libro Diario", User.Identity?.Name ?? "Desconocido", empresaId, format, desde.ToString("yyyy-MM-dd"), hasta.ToString("yyyy-MM-dd"));
 
         var r = await _service.GetLibroDiarioAsync(desde, hasta, estado, ct);
         if (!r.IsSuccess) return BadRequest(ApiResponse<string>.Fail(r.Error!));
@@ -235,7 +262,7 @@ public class EstadosFinancierosController : ControllerBase
         string mime;
         string filename;
 
-        if (format.ToLower() == "pdf")
+        if (format == "pdf")
         {
             bytes = _exportService.ExportarLibroDiarioPdf(data, nombreEmpresa);
             mime = "application/pdf";
@@ -267,10 +294,17 @@ public class EstadosFinancierosController : ControllerBase
     }
 
     [HttpGet("flujo-efectivo/export")]
-    public async Task<IActionResult> ExportFlujoDEfectivoExcel([FromQuery] DateTime desde, [FromQuery] DateTime hasta, [FromQuery] string format = "xlsx", CancellationToken ct = default)
+    public async Task<IActionResult> ExportFlujoEfectivo([FromQuery] DateTime desde, [FromQuery] DateTime hasta, [FromQuery] string format = "xlsx", CancellationToken ct = default)
     {
+        format = (format ?? "xlsx").Trim().ToLowerInvariant();
+        if (format != "xlsx" && format != "pdf")
+            return BadRequest(ApiResponse<string>.Fail("El formato permitido es xlsx o pdf."));
+
         var claim = User.Claims.FirstOrDefault(c => c.Type == "EmpresaId")?.Value;
         if (!int.TryParse(claim, out int empresaId)) return Unauthorized();
+
+        _logger.LogInformation("Exportación de {Reporte} por usuario {Usuario} empresa {EmpresaId} formato {Formato} desde {Desde} hasta {Hasta}",
+            "Flujo de Efectivo", User.Identity?.Name ?? "Desconocido", empresaId, format, desde.ToString("yyyy-MM-dd"), hasta.ToString("yyyy-MM-dd"));
 
         var dto = await _service.GetFlujoDEfectivoAsync(empresaId, desde, hasta, ct);
 
@@ -281,17 +315,17 @@ public class EstadosFinancierosController : ControllerBase
         string mime;
         string filename;
 
-        if (format.ToLower() == "pdf")
+        if (format == "pdf")
         {
             bytes = _exportService.ExportarFlujoDEfectivoPdf(dto, nombreEmpresa);
             mime = "application/pdf";
-            filename = $"Flujo_Efectivo_{dto.Desde:yyyyMMdd}_{dto.Hasta:yyyyMMdd}.pdf";
+            filename = $"FlujoEfectivo_{desde:yyyyMMdd}.pdf";
         }
         else
         {
             bytes = _exportService.ExportarFlujoDEfectivoExcel(dto, nombreEmpresa);
             mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-            filename = $"Flujo_Efectivo_{dto.Desde:yyyyMMdd}_{dto.Hasta:yyyyMMdd}.xlsx";
+            filename = $"FlujoEfectivo_{desde:yyyyMMdd}.xlsx";
         }
 
         return File(bytes, mime, filename);
@@ -320,10 +354,17 @@ public class EstadosFinancierosController : ControllerBase
     }
 
     [HttpGet("libro-mayor/export")]
-    public async Task<IActionResult> ExportLibroMayorExcel([FromQuery] int cuentaContableId, [FromQuery] DateTime desde, [FromQuery] DateTime hasta, [FromQuery] string format = "xlsx", CancellationToken ct = default)
+    public async Task<IActionResult> ExportLibroMayor([FromQuery] int cuentaContableId, [FromQuery] DateTime desde, [FromQuery] DateTime hasta, [FromQuery] string format = "xlsx", CancellationToken ct = default)
     {
+        format = (format ?? "xlsx").Trim().ToLowerInvariant();
+        if (format != "xlsx" && format != "pdf")
+            return BadRequest(ApiResponse<string>.Fail("El formato permitido es xlsx o pdf."));
+
         var claim = User.Claims.FirstOrDefault(c => c.Type == "EmpresaId")?.Value;
         if (!int.TryParse(claim, out int empresaId)) return Unauthorized();
+
+        _logger.LogInformation("Exportación de {Reporte} por usuario {Usuario} empresa {EmpresaId} formato {Formato} desde {Desde} hasta {Hasta}",
+            "Libro Mayor", User.Identity?.Name ?? "Desconocido", empresaId, format, desde.ToString("yyyy-MM-dd"), hasta.ToString("yyyy-MM-dd"));
 
         try
         {
@@ -336,17 +377,17 @@ public class EstadosFinancierosController : ControllerBase
             string mime;
             string filename;
 
-            if (format.ToLower() == "pdf")
+            if (format == "pdf")
             {
                 bytes = _exportService.ExportarLibroMayorPdf(dto, nombreEmpresa);
                 mime = "application/pdf";
-                filename = $"Libro_Mayor_{dto.CodigoCuenta}_{desde:yyyyMMdd}_{hasta:yyyyMMdd}.pdf";
+                filename = $"LibroMayor_{desde:yyyyMMdd}.pdf";
             }
             else
             {
                 bytes = _exportService.ExportarLibroMayorExcel(dto, nombreEmpresa);
                 mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-                filename = $"Libro_Mayor_{dto.CodigoCuenta}_{desde:yyyyMMdd}_{hasta:yyyyMMdd}.xlsx";
+                filename = $"LibroMayor_{desde:yyyyMMdd}.xlsx";
             }
 
             return File(bytes, mime, filename);
@@ -358,21 +399,21 @@ public class EstadosFinancierosController : ControllerBase
     }
     // ????????????????????????????????????????????
 
-    private static void SetHeader(ExcelWorksheet ws, ref int row, params string[] cols)
+    private static void SetHeader(IXLWorksheet ws, ref int row, params string[] cols)
     {
         for (int c = 0; c < cols.Length; c++)
         {
-            ws.Cells[row, c + 1].Value = cols[c];
-            ws.Cells[row, c + 1].Style.Font.Bold = true;
-            ws.Cells[row, c + 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
-            ws.Cells[row, c + 1].Style.Fill.BackgroundColor.SetColor(Color.FromArgb(79, 129, 189));
-            ws.Cells[row, c + 1].Style.Font.Color.SetColor(Color.White);
-            ws.Cells[row, c + 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            var cell = ws.Cell(row, c + 1);
+            cell.Value = cols[c];
+            cell.Style.Font.Bold = true;
+            cell.Style.Fill.BackgroundColor = XLColor.FromArgb(79, 129, 189);
+            cell.Style.Font.FontColor = XLColor.White;
+            cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
         }
         row++;
     }
 
-    private static void WriteTreeToExcel(ExcelWorksheet ws, List<BalanceGrupoDto> items, ref int row)
+    private static void WriteTreeToExcel(IXLWorksheet ws, List<BalanceGrupoDto> items, ref int row)
     {
         foreach (var item in items)
         {
@@ -380,32 +421,32 @@ public class EstadosFinancierosController : ControllerBase
         }
     }
 
-    private static void WriteNodeToExcel(ExcelWorksheet ws, BalanceGrupoDto node, ref int row)
+    private static void WriteNodeToExcel(IXLWorksheet ws, BalanceGrupoDto node, ref int row)
     {
-        ws.Cells[row, 1].Value = node.Codigo;
-        ws.Cells[row, 2].Value = node.Nombre;
-        ws.Cells[row, 2].Style.Indent = Math.Max(0, node.Nivel - 1);
-        ws.Cells[row, 3].Value = node.Saldo;
-        ws.Cells[row, 3].Style.Numberformat.Format = "#,##0.00";
+        ws.Cell(row, 1).Value = node.Codigo;
+        ws.Cell(row, 2).Value = node.Nombre;
+        ws.Cell(row, 2).Style.Alignment.Indent = Math.Max(0, node.Nivel - 1);
+        ws.Cell(row, 3).Value = node.Saldo;
+        ws.Cell(row, 3).Style.NumberFormat.Format = "#,##0.00";
         if (node.EsAgrupador)
         {
-            ws.Cells[row, 1].Style.Font.Bold = true;
-            ws.Cells[row, 2].Style.Font.Bold = true;
-            ws.Cells[row, 3].Style.Font.Bold = true;
+            ws.Cell(row, 1).Style.Font.Bold = true;
+            ws.Cell(row, 2).Style.Font.Bold = true;
+            ws.Cell(row, 3).Style.Font.Bold = true;
         }
         row++;
         foreach (var child in node.SubCuentas)
             WriteNodeToExcel(ws, child, ref row);
     }
 
-    private static void WriteTotalRow(ExcelWorksheet ws, ref int row, string label, decimal amount)
+    private static void WriteTotalRow(IXLWorksheet ws, ref int row, string label, decimal amount)
     {
-        ws.Cells[row, 2].Value = label;
-        ws.Cells[row, 2].Style.Font.Bold = true;
-        ws.Cells[row, 3].Value = amount;
-        ws.Cells[row, 3].Style.Font.Bold = true;
-        ws.Cells[row, 3].Style.Numberformat.Format = "#,##0.00";
-        ws.Cells[row, 3].Style.Border.Top.Style = ExcelBorderStyle.Double;
+        ws.Cell(row, 2).Value = label;
+        ws.Cell(row, 2).Style.Font.Bold = true;
+        ws.Cell(row, 3).Value = amount;
+        ws.Cell(row, 3).Style.Font.Bold = true;
+        ws.Cell(row, 3).Style.NumberFormat.Format = "#,##0.00";
+        ws.Cell(row, 3).Style.Border.TopBorder = XLBorderStyleValues.Double;
         row++;
     }
 }

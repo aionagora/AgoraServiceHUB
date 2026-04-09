@@ -1,6 +1,7 @@
 @page "/contabilidad/balance-general"
 @attribute [Authorize]
 @inject EstadoFinancieroHttpService ReporteService
+@inject HttpExportEstadosFinancierosService ExportService
 @inject IJSRuntime JS
 
 <PageTitle>Balance General - AgoraHub360 ERP</PageTitle>
@@ -25,14 +26,11 @@
                         @if (loading) { <span class="spinner-border spinner-border-sm me-1"></span> }
                         <i class="bi bi-calculator"></i> Generar
                     </button>
-                    <div class="btn-group ms-2">
-                        <button class="btn btn-success btn-sm" @onclick="ExportarExcel" disabled="@(data == null)">
-                            <i class="bi bi-file-earmark-excel"></i> Excel
-                        </button>
-                        <button class="btn btn-danger btn-sm" @onclick="ExportarPdf" disabled="@(data == null)">
-                            <i class="bi bi-file-earmark-pdf"></i> PDF
-                        </button>
-                    </div>
+                    <ExportButtons Disabled="@(data == null)" 
+                                   ExportandoExcel="_exportandoExcel" 
+                                   ExportandoPdf="_exportandoPdf" 
+                                   OnExcel="ExportarExcel" 
+                                   OnPdf="ExportarPdf" />
                 </div>
                 <div class="col-md-auto">
                     <button class="btn btn-sm btn-outline-secondary" @onclick="Imprimir" disabled="@(data == null)">
@@ -118,6 +116,8 @@
     private BalanceGeneralDto? data;
     private bool loading;
     private string? errorMessage;
+    private bool _exportandoExcel;
+    private bool _exportandoPdf;
 
     private async Task Generar()
     {
@@ -133,14 +133,30 @@
 
     private async Task ExportarExcel()
     {
-        var url = $"api/v1/contabilidad/estados-financieros/balance-general/export?fechaCorte={fechaCorte:yyyy-MM-dd}&format=xlsx";
-        await JS.InvokeVoidAsync("downloadFile", url, "BalanceGeneral.xlsx");
+        try
+        {
+            _exportandoExcel = true;
+            var url = ExportService.GetBalanceGeneralExportUrl(fechaCorte, "xlsx");
+            await JS.InvokeVoidAsync("downloadFile", url, "BalanceGeneral.xlsx");
+        }
+        finally
+        {
+            _exportandoExcel = false;
+        }
     }
 
     private async Task ExportarPdf()
     {
-        var url = $"api/v1/contabilidad/estados-financieros/balance-general/export?fechaCorte={fechaCorte:yyyy-MM-dd}&format=pdf";
-        await JS.InvokeVoidAsync("downloadFile", url, "BalanceGeneral.pdf");
+        try
+        {
+            _exportandoPdf = true;
+            var url = ExportService.GetBalanceGeneralExportUrl(fechaCorte, "pdf");
+            await JS.InvokeVoidAsync("downloadFile", url, "BalanceGeneral.pdf");
+        }
+        finally
+        {
+            _exportandoPdf = false;
+        }
     }
 
     private async Task Imprimir()

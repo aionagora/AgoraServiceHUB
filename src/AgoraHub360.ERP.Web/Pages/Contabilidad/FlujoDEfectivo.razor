@@ -30,6 +30,14 @@
                         @if (loading) { <span class="spinner-border spinner-border-sm me-1"></span> }
                         <i class="bi bi-calculator"></i> Generar
                     </button>
+                    <div class="btn-group ms-2">
+                        <button class="btn btn-success btn-sm" @onclick="ExportarExcel" disabled="@(data == null)">
+                            <i class="bi bi-file-earmark-excel"></i> Excel
+                        </button>
+                        <button class="btn btn-danger btn-sm" @onclick="ExportarPdf" disabled="@(data == null)">
+                            <i class="bi bi-file-earmark-pdf"></i> PDF
+                        </button>
+                    </div>
                 </div>
                 <div class="col-md-auto">
                     <button class="btn btn-sm btn-outline-secondary" @onclick="Imprimir" disabled="@(data == null)">
@@ -188,5 +196,17 @@
     private async Task Imprimir()
     {
         await JS.InvokeVoidAsync("eval", "window.print()");
+    }
+
+    private async Task ExportarExcel()
+    {
+        var url = $"api/v1/contabilidad/estados-financieros/flujo-efectivo/export?desde={desde:yyyy-MM-dd}&hasta={hasta:yyyy-MM-dd}&format=xlsx";
+        await JS.InvokeVoidAsync("downloadFile", url, "FlujoDEfectivo.xlsx");
+    }
+
+    private async Task ExportarPdf()
+    {
+        var url = $"api/v1/contabilidad/estados-financieros/flujo-efectivo/export?desde={desde:yyyy-MM-dd}&hasta={hasta:yyyy-MM-dd}&format=pdf";
+        await JS.InvokeVoidAsync("downloadFile", url, "FlujoDEfectivo.pdf");
     }
 }

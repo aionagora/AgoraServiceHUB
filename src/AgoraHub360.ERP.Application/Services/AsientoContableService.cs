@@ -22,6 +22,7 @@ public class AsientoContableService : IAsientoContableService
     private readonly IRepository<CentroCosto> _centroCostoRepo;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
+    private readonly IServiceProvider _serviceProvider;
 
     public AsientoContableService(
         IRepository<AsientoContable> asientoRepo,
@@ -34,7 +35,8 @@ public class AsientoContableService : IAsientoContableService
         IRepository<NumeracionDocumento> numRepo,
         IRepository<CentroCosto> centroCostoRepo,
         IUnitOfWork unitOfWork,
-        ICurrentUserService currentUser)
+        ICurrentUserService currentUser,
+        IServiceProvider serviceProvider)
     {
         _asientoRepo     = asientoRepo;
         _lineaRepo       = lineaRepo;
@@ -47,6 +49,7 @@ public class AsientoContableService : IAsientoContableService
         _centroCostoRepo = centroCostoRepo;
         _unitOfWork      = unitOfWork;
         _currentUser     = currentUser;
+        _serviceProvider = serviceProvider;
     }
 
     // ??????????????????????????????????????????????????????????????????
@@ -110,6 +113,9 @@ public class AsientoContableService : IAsientoContableService
         var periodError = await ValidarPeriodoAbiertoAsync(empresaId.Value, dto.Fecha, ct);
         if (periodError != null)
             return Result<AsientoContableDto>.Failure(periodError);
+
+        // Validate cierre contable
+        await ValidarCierreContableAsync(empresaId.Value, dto.Fecha.Year, ct);
 
         // Validate lines
         var lineError = ValidarLineas(dto.Lineas);
@@ -210,6 +216,12 @@ public class AsientoContableService : IAsientoContableService
         if (periodError != null)
             return Result<AsientoContableDto>.Failure(periodError);
 
+        await ValidarCierreContableAsync(empresaId.Value, asiento.Fecha.Year, ct);
+        if (asiento.Fecha.Year != dto.Fecha.Year)
+        {
+            await ValidarCierreContableAsync(empresaId.Value, dto.Fecha.Year, ct);
+        }
+
         var lineError = ValidarLineas(dto.Lineas);
         if (lineError != null)
             return Result<AsientoContableDto>.Failure(lineError);
@@ -297,6 +309,9 @@ public class AsientoContableService : IAsientoContableService
 
         var hoy = DateTime.Today;
         var gestion = hoy.Year;
+
+        await ValidarCierreContableAsync(empresaId.Value, gestion, ct);
+
         var numero = await GenerarNumeroComprobanteAsync(empresaId.Value, tipoComp, gestion, ct);
 
         var copia = new AsientoContable
@@ -366,6 +381,8 @@ public class AsientoContableService : IAsientoContableService
         if (periodError != null)
             return Result<AsientoContableDto>.Failure(periodError);
 
+        await ValidarCierreContableAsync(empresaId.Value, asiento.Fecha.Year, ct);
+
         var lineas = await _lineaRepo.FindAsync(l => l.AsientoContableId == id && l.Activo, ct);
         if (lineas.Count < 2)
             return Result<AsientoContableDto>.Failure("Un comprobante requiere al menos 2 líneas.");
@@ -414,6 +431,8 @@ public class AsientoContableService : IAsientoContableService
         if (asiento.Estado != "Contabilizado")
             return Result<AsientoContableDto>.Failure($"Solo comprobantes Contabilizados pueden anularse. Estado actual: {asiento.Estado}.");
 
+        await ValidarCierreContableAsync(empresaId.Value, asiento.Fecha.Year, ct);
+
         var lineas = await _lineaRepo.FindAsync(l => l.AsientoContableId == id && l.Activo, ct);
         foreach (var linea in lineas)
         {
@@ -450,6 +469,8 @@ public class AsientoContableService : IAsientoContableService
 
         if (asiento.Estado != "Borrador")
             return Result<bool>.Failure("Solo comprobantes en Borrador pueden eliminarse.");
+
+        await ValidarCierreContableAsync(empresaId.Value, asiento.Fecha.Year, ct);
 
         asiento.Activo = false;
         await _asientoRepo.UpdateAsync(asiento, ct);
@@ -612,6 +633,16 @@ public class AsientoContableService : IAsientoContableService
         if (periodo.Estado == "Cerrado")
             return $"El per\u00edodo '{periodo.Nombre}' est\u00e1 cerrado (cerrado el {periodo.FechaCierre:dd/MM/yyyy} por {periodo.CerradoPorNombre}). Debe reabrirlo primero.";
         return null;
+    }
+
+    private async Task ValidarCierreContableAsync(int empresaId, int gestion, CancellationToken ct)
+    {
+        var cierreContableService = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<ICierreContableService>(_serviceProvider);
+        var existeCierre = await cierreContableService.ExisteCierreAsync(empresaId, gestion, ct);
+        if (existeCierre)
+        {
+            throw new InvalidOperationException($"La gestión {gestion} ya cuenta con un cierre contable definitivo.");
+        }
     }
 
     private async Task<string> GenerarNumeroComprobanteAsync(int empresaId, TipoComprobante tipo, int gestion, CancellationToken ct)
