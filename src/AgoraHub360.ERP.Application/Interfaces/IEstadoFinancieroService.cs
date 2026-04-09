@@ -9,4 +9,5 @@ public interface IEstadoFinancieroService
     Task<Result<EstadoResultadosDto>> GetEstadoResultadosAsync(DateTime desde, DateTime hasta, CancellationToken ct = default);
     Task<Result<SumasYSaldosDto>> GetSumasYSaldosAsync(DateTime desde, DateTime hasta, CancellationToken ct = default);
     Task<Result<LibroDiarioDto>> GetLibroDiarioAsync(DateTime desde, DateTime hasta, string? estado = null, CancellationToken ct = default);
+    Task<FlujoDEfectivoDto> GetFlujoDEfectivoAsync(int empresaId, DateTime desde, DateTime hasta, CancellationToken ct = default);
 }

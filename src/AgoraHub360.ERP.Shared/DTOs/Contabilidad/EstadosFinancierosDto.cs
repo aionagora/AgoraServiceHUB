@@ -123,7 +123,7 @@ public class LibroDiarioLineaDto
 
 public class FlujoDEfectivoDto
 {
-    public Guid EmpresaId { get; set; }
+    public int EmpresaId { get; set; }
     public DateTime Desde { get; set; }
     public DateTime Hasta { get; set; }
     public decimal TotalOperacional { get; set; }

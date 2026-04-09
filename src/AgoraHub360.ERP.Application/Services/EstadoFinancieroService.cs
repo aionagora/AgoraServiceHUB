@@ -247,6 +247,122 @@ public class EstadoFinancieroService : IEstadoFinancieroService
     }
 
     // ????????????????????????????????????????????
+    // FLUJO DE EFECTIVO
+    // ????????????????????????????????????????????
+    public async Task<FlujoDEfectivoDto> GetFlujoDEfectivoAsync(int empresaId, DateTime desde, DateTime hasta, CancellationToken ct = default)
+    {
+        // 7. Calcular Saldo Inicial Efectivo
+        var asientosCaja = await _asientoRepo.FindAsync(
+            a => a.EmpresaId == empresaId && a.Activo 
+                && a.Estado == "Contabilizado" 
+                && a.Fecha < desde, ct);
+
+        var asientosCajaIds = asientosCaja.Select(a => a.AsientoContableId).ToHashSet();
+        decimal saldoInicialEfectivo = 0;
+
+        if (asientosCajaIds.Count > 0)
+        {
+            var lineasCaja = await _lineaRepo.FindAsync(l => asientosCajaIds.Contains(l.AsientoContableId) && l.Activo, ct);
+            var cuentasCajaIds = lineasCaja.Select(l => l.CuentaContableId).Distinct().ToList();
+            var cuentasCaja = cuentasCajaIds.Count > 0 
+                ? await _cuentaRepo.FindAsync(c => cuentasCajaIds.Contains(c.CuentaContableId) && c.Codigo.StartsWith("1.1.01"), ct) 
+                : new List<CuentaContable>();
+
+            var cuentasCajaMap = cuentasCaja.ToDictionary(c => c.CuentaContableId);
+            foreach (var l in lineasCaja)
+            {
+                if (cuentasCajaMap.TryGetValue(l.CuentaContableId, out var c))
+                {
+                    var neto = l.Debe - l.Haber;
+                    if (c.Naturaleza == NaturalezaCuenta.Acreedora)
+                        neto = -neto;
+                    saldoInicialEfectivo += neto;
+                }
+            }
+        }
+
+        // 1 & 2. Movimientos del periodo
+        var asientosPeriodo = await _asientoRepo.FindAsync(
+            a => a.EmpresaId == empresaId && a.Activo
+                && a.Estado == "Contabilizado"
+                && a.Fecha >= desde && a.Fecha <= hasta.AddDays(1).AddSeconds(-1), ct);
+
+        var asientoPeriodoIds = asientosPeriodo.Select(a => a.AsientoContableId).ToHashSet();
+        var lineasPeriodo = asientoPeriodoIds.Count > 0
+            ? await _lineaRepo.FindAsync(l => asientoPeriodoIds.Contains(l.AsientoContableId) && l.Activo, ct)
+            : new List<AsientoContableLinea>();
+
+        var cuentasIds = lineasPeriodo.Select(l => l.CuentaContableId).Distinct().ToList();
+        var cuentas = cuentasIds.Count > 0 
+            ? await _cuentaRepo.FindAsync(c => cuentasIds.Contains(c.CuentaContableId), ct) 
+            : new List<CuentaContable>();
+
+        var cuentasMap = cuentas.ToDictionary(c => c.CuentaContableId);
+
+        var lineasOperacional = new List<FlujoDEfectivoLineaDto>();
+        var lineasInversion = new List<FlujoDEfectivoLineaDto>();
+        var lineasFinanciacion = new List<FlujoDEfectivoLineaDto>();
+
+        // 4, 5, 6
+        var groupedLineas = lineasPeriodo.GroupBy(l => l.CuentaContableId);
+        foreach (var group in groupedLineas)
+        {
+            if (!cuentasMap.TryGetValue(group.Key, out var cuenta)) continue;
+
+            // 3. Excluir NoAplica
+            if (cuenta.ClasificacionFlujo == ClasificacionFlujoEfectivo.NoAplica) continue;
+
+            var neto = group.Sum(l => l.Debe) - group.Sum(l => l.Haber);
+            if (cuenta.Naturaleza == NaturalezaCuenta.Acreedora)
+                neto = -neto;
+
+            if (neto == 0) continue;
+
+            var lineaDto = new FlujoDEfectivoLineaDto
+            {
+                CodigoCuenta = cuenta.Codigo,
+                NombreCuenta = cuenta.Nombre,
+                Monto = neto
+            };
+
+            switch (cuenta.ClasificacionFlujo)
+            {
+                case ClasificacionFlujoEfectivo.Operacional:
+                    lineasOperacional.Add(lineaDto);
+                    break;
+                case ClasificacionFlujoEfectivo.Inversion:
+                    lineasInversion.Add(lineaDto);
+                    break;
+                case ClasificacionFlujoEfectivo.Financiacion:
+                    lineasFinanciacion.Add(lineaDto);
+                    break;
+            }
+        }
+
+        var totalOp = lineasOperacional.Sum(l => l.Monto);
+        var totalInv = lineasInversion.Sum(l => l.Monto);
+        var totalFin = lineasFinanciacion.Sum(l => l.Monto);
+        var variacion = totalOp + totalInv + totalFin;
+
+        // 8. Construir DTO
+        return new FlujoDEfectivoDto
+        {
+            EmpresaId = empresaId,
+            Desde = desde,
+            Hasta = hasta,
+            LineasOperacional = lineasOperacional,
+            LineasInversion = lineasInversion,
+            LineasFinanciacion = lineasFinanciacion,
+            TotalOperacional = totalOp,
+            TotalInversion = totalInv,
+            TotalFinanciacion = totalFin,
+            VariacionNetaEfectivo = variacion,
+            SaldoInicialEfectivo = saldoInicialEfectivo,
+            SaldoFinalEfectivo = saldoInicialEfectivo + variacion
+        };
+    }
+
+    // ????????????????????????????????????????????
     // HELPERS
     // ????????????????????????????????????????????
 
