@@ -16,6 +16,10 @@ public class CuentaContableConfiguration : IEntityTypeConfiguration<CuentaContab
         builder.Property(c => c.Nombre).IsRequired().HasMaxLength(200);
         builder.Property(c => c.Descripcion).HasMaxLength(500);
         builder.Property(c => c.SaldoActual).HasColumnType("decimal(18,4)");
+        builder.Property(c => c.ClasificacionFlujo)
+            .HasConversion<int>()
+            .HasDefaultValue(ClasificacionFlujoEfectivo.NoAplica)
+            .HasColumnName("ClasificacionFlujo");
         builder.Property(c => c.CreadoPor).HasMaxLength(100);
         builder.Property(c => c.ModificadoPor).HasMaxLength(100);
 

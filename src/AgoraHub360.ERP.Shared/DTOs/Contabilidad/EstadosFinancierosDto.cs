@@ -116,3 +116,31 @@ public class LibroDiarioLineaDto
     public decimal Debe { get; set; }
     public decimal Haber { get; set; }
 }
+
+// ????????????????????????????????????????????????????????????
+// Flujo de Efectivo
+// ????????????????????????????????????????????????????????????
+
+public class FlujoDEfectivoDto
+{
+    public Guid EmpresaId { get; set; }
+    public DateTime Desde { get; set; }
+    public DateTime Hasta { get; set; }
+    public decimal TotalOperacional { get; set; }
+    public decimal TotalInversion { get; set; }
+    public decimal TotalFinanciacion { get; set; }
+    public decimal VariacionNetaEfectivo { get; set; }
+    public decimal SaldoInicialEfectivo { get; set; }
+    public decimal SaldoFinalEfectivo { get; set; }
+    public List<FlujoDEfectivoLineaDto> LineasOperacional { get; set; } = new();
+    public List<FlujoDEfectivoLineaDto> LineasInversion { get; set; } = new();
+    public List<FlujoDEfectivoLineaDto> LineasFinanciacion { get; set; } = new();
+}
+
+public class FlujoDEfectivoLineaDto
+{
+    public string CodigoCuenta { get; set; } = string.Empty;
+    public string NombreCuenta { get; set; } = string.Empty;
+    public decimal Monto { get; set; }
+}
+

@@ -3,6 +3,14 @@ namespace AgoraHub360.ERP.Domain.Entities.ACC;
 using AgoraHub360.ERP.Domain.Common;
 using AgoraHub360.ERP.Domain.Enums;
 
+public enum ClasificacionFlujoEfectivo
+{
+    NoAplica = 0,
+    Operacional = 1,
+    Inversion = 2,
+    Financiacion = 3
+}
+
 /// <summary>
 /// Cuenta del Plan de Cuentas contable.
 /// Estructura jerárquica N-nivel con código estructurado (ej: 1.1.3.01).
@@ -39,6 +47,15 @@ public class CuentaContable : TenantEntity
     /// <summary>Saldo actual de la cuenta (se actualiza con cada asiento).</summary>
     public decimal SaldoActual { get; set; }
 
+    /// <summary>Clasificación para el estado del flujo de efectivo.</summary>
+    public ClasificacionFlujoEfectivo ClasificacionFlujo { get; private set; } = ClasificacionFlujoEfectivo.NoAplica;
+
     // Navegación
     public ICollection<CuentaContable> SubCuentas { get; set; } = new List<CuentaContable>();
+
+    /// <summary>Actualiza la clasificación para el flujo de efectivo.</summary>
+    public void ActualizarClasificacionFlujo(ClasificacionFlujoEfectivo clasificacion)
+    {
+        ClasificacionFlujo = clasificacion;
+    }
 }
