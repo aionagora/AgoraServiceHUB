@@ -1,15 +1,14 @@
 namespace AgoraHub360.ERP.Infrastructure;
 
 using Microsoft.Extensions.DependencyInjection;
+using AgoraHub360.ERP.Application.Interfaces;
+using AgoraHub360.ERP.Infrastructure.Services;
 
-/// <summary>
-/// Registro de servicios de infraestructura (servicios externos, email, storage, etc.).
-/// </summary>
 public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services)
     {
-        // Registrar servicios de infraestructura aquí
+        services.AddScoped<IExportService, ExportService>();
         return services;
     }
 }
