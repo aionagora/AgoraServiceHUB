@@ -62,6 +62,8 @@ builder.Services.AddScoped<PeriodoContableHttpService>();
 builder.Services.AddScoped<PlantillaContableHttpService>();
 builder.Services.AddScoped<EstadoFinancieroHttpService>();
 builder.Services.AddScoped<CentroCostoHttpService>();
+builder.Services.AddScoped<HttpFlujoDEfectivoService>();
+builder.Services.AddScoped<HttpLibroMayorService>();
 
 // ──── Servicios HTTP Compras ────
 builder.Services.AddScoped<OrdenPedidoHttpService>();
