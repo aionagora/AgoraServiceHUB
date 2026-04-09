@@ -136,6 +136,9 @@ builder.Services
     .AddHealthChecks()
     .AddDbContextCheck<AgoraDbContext>("database");
 
+// ──── Configuración de QuestPDF ────
+QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;
+
 // ════════════════════════════════════════════
 var app = builder.Build();
 // ════════════════════════════════════════════
