@@ -3,7 +3,7 @@ namespace AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Common;
 
 /// <summary>
-/// Unit of measure — tenant-scoped per company.
+/// Unit of measure â€” tenant-scoped per company.
 /// Each company can define its own UOM codes and conversions.
 /// </summary>
 public class Uom : TenantEntity

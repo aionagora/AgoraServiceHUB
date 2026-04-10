@@ -1,0 +1,39 @@
+<div class="btn-group ms-2">
+    <button class="btn btn-success btn-sm" @onclick="OnExcel" disabled="@(Disabled || ExportandoExcel || ExportandoPdf)">
+        @if (ExportandoExcel)
+        {
+            <span class="spinner-border spinner-border-sm me-1"></span>
+            <span>Exportando...</span>
+        }
+        else
+        {
+            <i class="bi bi-file-earmark-excel"></i>
+            <span> Excel</span>
+        }
+    </button>
+
+    @if (MostrarPdf)
+    {
+        <button class="btn btn-danger btn-sm" @onclick="OnPdf" disabled="@(Disabled || ExportandoExcel || ExportandoPdf)">
+            @if (ExportandoPdf)
+            {
+                <span class="spinner-border spinner-border-sm me-1"></span>
+                <span>Exportando...</span>
+            }
+            else
+            {
+                <i class="bi bi-file-earmark-pdf"></i>
+                <span> PDF</span>
+            }
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter] public EventCallback OnExcel { get; set; }
+    [Parameter] public EventCallback OnPdf { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool ExportandoExcel { get; set; }
+    [Parameter] public bool ExportandoPdf { get; set; }
+    [Parameter] public bool MostrarPdf { get; set; } = true;
+}

@@ -36,7 +36,7 @@ public class ExpedienteImportacionHttpService
         if (!r.IsSuccessStatusCode)
             return ApiResponse<ExpedienteImportacionDto>.Fail($"Error HTTP {(int)r.StatusCode}: {await r.Content.ReadAsStringAsync()}");
         return await r.Content.ReadFromJsonAsync<ApiResponse<ExpedienteImportacionDto>>()
-            ?? ApiResponse<ExpedienteImportacionDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<ExpedienteImportacionDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<ExpedienteImportacionDto>> UpdateEmbarqueAsync(long id, UpdateExpedienteEmbarqueDto dto)
@@ -45,7 +45,7 @@ public class ExpedienteImportacionHttpService
         if (!r.IsSuccessStatusCode)
             return ApiResponse<ExpedienteImportacionDto>.Fail($"Error HTTP {(int)r.StatusCode}: {await r.Content.ReadAsStringAsync()}");
         return await r.Content.ReadFromJsonAsync<ApiResponse<ExpedienteImportacionDto>>()
-            ?? ApiResponse<ExpedienteImportacionDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<ExpedienteImportacionDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<ExpedienteImportacionDto>> ConfirmarSalidaAsync(long id, DateTime fechaSalida)
@@ -54,7 +54,7 @@ public class ExpedienteImportacionHttpService
         if (!r.IsSuccessStatusCode)
             return ApiResponse<ExpedienteImportacionDto>.Fail($"Error HTTP {(int)r.StatusCode}: {await r.Content.ReadAsStringAsync()}");
         return await r.Content.ReadFromJsonAsync<ApiResponse<ExpedienteImportacionDto>>()
-            ?? ApiResponse<ExpedienteImportacionDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<ExpedienteImportacionDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<ExpedienteImportacionDto>> RegistrarArriboAsync(long id, RegistrarArriboDto dto)
@@ -63,7 +63,7 @@ public class ExpedienteImportacionHttpService
         if (!r.IsSuccessStatusCode)
             return ApiResponse<ExpedienteImportacionDto>.Fail($"Error HTTP {(int)r.StatusCode}: {await r.Content.ReadAsStringAsync()}");
         return await r.Content.ReadFromJsonAsync<ApiResponse<ExpedienteImportacionDto>>()
-            ?? ApiResponse<ExpedienteImportacionDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<ExpedienteImportacionDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<ExpedienteImportacionDto>> IniciarDespachoAduaneroAsync(long id, RegistrarDespachoAduaneroDto dto)
@@ -72,7 +72,7 @@ public class ExpedienteImportacionHttpService
         if (!r.IsSuccessStatusCode)
             return ApiResponse<ExpedienteImportacionDto>.Fail($"Error HTTP {(int)r.StatusCode}: {await r.Content.ReadAsStringAsync()}");
         return await r.Content.ReadFromJsonAsync<ApiResponse<ExpedienteImportacionDto>>()
-            ?? ApiResponse<ExpedienteImportacionDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<ExpedienteImportacionDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<ExpedienteImportacionDto>> RegistrarObservacionAduanaAsync(long id, RegistrarObservacionAduanaDto dto)
@@ -81,7 +81,7 @@ public class ExpedienteImportacionHttpService
         if (!r.IsSuccessStatusCode)
             return ApiResponse<ExpedienteImportacionDto>.Fail($"Error HTTP {(int)r.StatusCode}: {await r.Content.ReadAsStringAsync()}");
         return await r.Content.ReadFromJsonAsync<ApiResponse<ExpedienteImportacionDto>>()
-            ?? ApiResponse<ExpedienteImportacionDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<ExpedienteImportacionDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<ExpedienteImportacionDto>> SubsanarObservacionAsync(long id, string? observaciones = null)
@@ -92,7 +92,7 @@ public class ExpedienteImportacionHttpService
         if (!r.IsSuccessStatusCode)
             return ApiResponse<ExpedienteImportacionDto>.Fail($"Error HTTP {(int)r.StatusCode}: {await r.Content.ReadAsStringAsync()}");
         return await r.Content.ReadFromJsonAsync<ApiResponse<ExpedienteImportacionDto>>()
-            ?? ApiResponse<ExpedienteImportacionDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<ExpedienteImportacionDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<ExpedienteImportacionDto>> RegistrarLevanteAsync(long id, RegistrarLevanteDto dto)
@@ -101,7 +101,7 @@ public class ExpedienteImportacionHttpService
         if (!r.IsSuccessStatusCode)
             return ApiResponse<ExpedienteImportacionDto>.Fail($"Error HTTP {(int)r.StatusCode}: {await r.Content.ReadAsStringAsync()}");
         return await r.Content.ReadFromJsonAsync<ApiResponse<ExpedienteImportacionDto>>()
-            ?? ApiResponse<ExpedienteImportacionDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<ExpedienteImportacionDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<ExpedienteImportacionDto>> AddHitoAsync(long id, AddHitoExpedienteDto dto)
@@ -110,7 +110,7 @@ public class ExpedienteImportacionHttpService
         if (!r.IsSuccessStatusCode)
             return ApiResponse<ExpedienteImportacionDto>.Fail($"Error HTTP {(int)r.StatusCode}: {await r.Content.ReadAsStringAsync()}");
         return await r.Content.ReadFromJsonAsync<ApiResponse<ExpedienteImportacionDto>>()
-            ?? ApiResponse<ExpedienteImportacionDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<ExpedienteImportacionDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<ExpedienteImportacionDto>> CerrarAsync(long id)
@@ -119,7 +119,7 @@ public class ExpedienteImportacionHttpService
         if (!r.IsSuccessStatusCode)
             return ApiResponse<ExpedienteImportacionDto>.Fail($"Error HTTP {(int)r.StatusCode}: {await r.Content.ReadAsStringAsync()}");
         return await r.Content.ReadFromJsonAsync<ApiResponse<ExpedienteImportacionDto>>()
-            ?? ApiResponse<ExpedienteImportacionDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<ExpedienteImportacionDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<bool>> DeleteAsync(long id)
@@ -128,6 +128,6 @@ public class ExpedienteImportacionHttpService
         if (!r.IsSuccessStatusCode)
             return ApiResponse<bool>.Fail($"Error HTTP {(int)r.StatusCode}: {await r.Content.ReadAsStringAsync()}");
         return await r.Content.ReadFromJsonAsync<ApiResponse<bool>>()
-            ?? ApiResponse<bool>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<bool>.Fail("Error de comunicaci贸n.");
     }
 }

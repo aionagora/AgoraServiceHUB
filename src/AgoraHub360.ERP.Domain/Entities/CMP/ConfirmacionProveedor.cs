@@ -4,10 +4,10 @@ using AgoraHub360.ERP.Domain.Common;
 using AgoraHub360.ERP.Domain.Enums;
 
 /// <summary>
-/// Confirmación del Proveedor – Proforma Invoice (PI) o aceptación de condiciones.
+/// ConfirmaciÃ³n del Proveedor â€“ Proforma Invoice (PI) o aceptaciÃ³n de condiciones.
 /// Representa el paso [4] del flujo: proveedor acepta o negocia la OC.
 /// Flujo: Borrador ? CondicionesOK (? OC ConfirmadaProveedor)
-///                 | EnNegociacion (? ajuste OC y reenvío).
+///                 | EnNegociacion (? ajuste OC y reenvÃ­o).
 /// </summary>
 public class ConfirmacionProveedor : TenantEntity
 {
@@ -16,18 +16,18 @@ public class ConfirmacionProveedor : TenantEntity
     public long OrdenCompraId { get; set; }
     public OrdenCompra? OrdenCompra { get; set; }
 
-    /// <summary>Número de Proforma Invoice del proveedor.</summary>
+    /// <summary>NÃºmero de Proforma Invoice del proveedor.</summary>
     public string? NumeroProforma { get; set; }
 
     public DateTime FechaConfirmacion { get; set; }
 
-    /// <summary>¿El proveedor confirmó las condiciones tal como estaban en la OC?</summary>
+    /// <summary>Â¿El proveedor confirmÃ³ las condiciones tal como estaban en la OC?</summary>
     public bool CondicionesOK { get; set; }
 
-    /// <summary>Observaciones del proveedor (motivos de negociación, ajustes propuestos).</summary>
+    /// <summary>Observaciones del proveedor (motivos de negociaciÃ³n, ajustes propuestos).</summary>
     public string? ObservacionesProveedor { get; set; }
 
-    /// <summary>Fecha de entrega comprometida por el proveedor en la confirmación.</summary>
+    /// <summary>Fecha de entrega comprometida por el proveedor en la confirmaciÃ³n.</summary>
     public DateTime? FechaEntregaComprometida { get; set; }
 
     /// <summary>Estado resultante: ConfirmadaProveedor o EnNegociacion.</summary>
@@ -35,6 +35,6 @@ public class ConfirmacionProveedor : TenantEntity
 
     public string? Observaciones { get; set; }
 
-    /// <summary>Número de iteración de negociación (1 = primera respuesta, 2 = tras primera renegociación, etc.).</summary>
+    /// <summary>NÃºmero de iteraciÃ³n de negociaciÃ³n (1 = primera respuesta, 2 = tras primera renegociaciÃ³n, etc.).</summary>
     public int IteracionNegociacion { get; set; } = 1;
 }

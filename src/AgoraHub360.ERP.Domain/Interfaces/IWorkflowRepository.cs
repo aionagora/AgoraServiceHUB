@@ -3,7 +3,7 @@ namespace AgoraHub360.ERP.Domain.Interfaces;
 using AgoraHub360.ERP.Domain.Entities.Workflow;
 
 /// <summary>
-/// Repositorio especializado para el módulo Workflow.
+/// Repositorio especializado para el mÃ³dulo Workflow.
 /// Expone operaciones de acceso a datos optimizadas para
 /// <see cref="Tarea"/> y <see cref="PlantillaTarea"/>.
 /// Todas las queries respetan el scope de empresa (EmpresaId).
@@ -14,7 +14,7 @@ public interface IWorkflowRepository
 
     /// <summary>
     /// Devuelve todas las tareas activas de un documento, ordenadas por Orden.
-    /// Usa el índice IX_Tareas_Entity ? Index Seek O(log n).
+    /// Usa el Ã­ndice IX_Tareas_Entity ? Index Seek O(log n).
     /// </summary>
     Task<List<Tarea>> GetByEntityAsync(string entityType, int entityId, int empresaId,
         CancellationToken ct = default);
@@ -27,15 +27,15 @@ public interface IWorkflowRepository
         CancellationToken ct = default);
 
     /// <summary>
-    /// Devuelve la tarea con el código indicado para un documento específico.
-    /// El código es único por (EntityType, EntityId, Codigo, EmpresaId).
+    /// Devuelve la tarea con el cÃ³digo indicado para un documento especÃ­fico.
+    /// El cÃ³digo es Ãºnico por (EntityType, EntityId, Codigo, EmpresaId).
     /// </summary>
     Task<Tarea?> GetByCodigoAsync(string entityType, int entityId, string codigo, int empresaId,
         CancellationToken ct = default);
 
     /// <summary>
     /// Comprueba si ya existen tareas para el documento indicado.
-    /// Útil para evitar doble generación de hitos.
+    /// Ãštil para evitar doble generaciÃ³n de hitos.
     /// </summary>
     Task<bool> ExisteEntityAsync(string entityType, int entityId, int empresaId,
         CancellationToken ct = default);
@@ -44,7 +44,7 @@ public interface IWorkflowRepository
 
     /// <summary>
     /// Devuelve las plantillas para un EntityType + SubTipo, aplicando fallback:
-    /// 1º busca plantillas propias de la empresa (<paramref name="empresaId"/>),
+    /// 1Âº busca plantillas propias de la empresa (<paramref name="empresaId"/>),
     /// si no hay ? devuelve las globales (EmpresaId = null).
     /// Solo se incluyen plantillas cuyo SubTipo coincida exactamente
     /// o cuyo SubTipo sea null (aplica a todos los sub-tipos).
@@ -52,7 +52,7 @@ public interface IWorkflowRepository
     Task<List<PlantillaTarea>> GetPlantillasAsync(string entityType, string? subTipo, int? empresaId,
         CancellationToken ct = default);
 
-    // ?? Resúmenes / Agregados ?????????????????????????????????????????????????
+    // ?? ResÃºmenes / Agregados ?????????????????????????????????????????????????
 
     /// <summary>
     /// Devuelve un diccionario [Estado ? cantidad] con el conteo de tareas
@@ -74,8 +74,8 @@ public interface IWorkflowRepository
     Task UpdateAsync(Tarea tarea, CancellationToken ct = default);
 
     /// <summary>
-    /// Desactiva lógicamente (Activo = false) todas las tareas de un documento.
-    /// Operación usada al anular o eliminar el documento padre.
+    /// Desactiva lÃ³gicamente (Activo = false) todas las tareas de un documento.
+    /// OperaciÃ³n usada al anular o eliminar el documento padre.
     /// No llama a SaveChanges.
     /// </summary>
     Task DesactivarPorEntityAsync(string entityType, int entityId, int empresaId,
@@ -83,7 +83,7 @@ public interface IWorkflowRepository
 
     // ?? ABM de PlantillaTarea (empresa) ???????????????????????????????????????
 
-    /// <summary>Devuelve todas las plantillas activas de una empresa más las globales.</summary>
+    /// <summary>Devuelve todas las plantillas activas de una empresa mÃ¡s las globales.</summary>
     Task<List<PlantillaTarea>> GetAllPlantillasAsync(int empresaId, CancellationToken ct = default);
 
     /// <summary>Devuelve una plantilla por Id, validando que pertenezca a la empresa.</summary>

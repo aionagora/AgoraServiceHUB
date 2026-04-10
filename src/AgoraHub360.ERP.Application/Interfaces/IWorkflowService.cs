@@ -4,8 +4,8 @@ using AgoraHub360.ERP.Application.Common;
 using AgoraHub360.ERP.Shared.DTOs.Workflow;
 
 /// <summary>
-/// Servicio de aplicaci髇 para el m骴ulo Workflow.
-/// Orquesta la creaci髇, avance y consulta de tareas sobre documentos del ERP.
+/// Servicio de aplicaci贸n para el m贸dulo Workflow.
+/// Orquesta la creaci贸n, avance y consulta de tareas sobre documentos del ERP.
 /// </summary>
 public interface IWorkflowService
 {
@@ -25,7 +25,7 @@ public interface IWorkflowService
     Task<Result<bool>> GenerarHitosInicialesAsync(
         GenerarHitosDto dto, CancellationToken ct = default);
 
-    /// <summary>Actualizaci髇 parcial (patch) de una tarea.</summary>
+    /// <summary>Actualizaci贸n parcial (patch) de una tarea.</summary>
     Task<Result<TareaDto>> UpdateTareaAsync(
         int id, TareaUpdateDto dto, int empresaId, CancellationToken ct = default);
 
@@ -33,11 +33,11 @@ public interface IWorkflowService
     Task<Result<bool>> ReordenarTareasAsync(
         int empresaId, ReordenarTareasDto dto, CancellationToken ct = default);
 
-    /// <summary>Desactiva l骻icamente todas las tareas de un documento.</summary>
+    /// <summary>Desactiva l贸gicamente todas las tareas de un documento.</summary>
     Task<Result<bool>> DesactivarTareasAsync(
         string entityType, int entityId, int empresaId, CancellationToken ct = default);
 
-    /// <summary>Resumen de progreso: conteos por estado, porcentaje y pr髕ima fecha.</summary>
+    /// <summary>Resumen de progreso: conteos por estado, porcentaje y pr贸xima fecha.</summary>
     Task<Result<TareaResumenDto>> GetResumenAsync(
         string entityType, int entityId, int empresaId, CancellationToken ct = default);
 
@@ -59,7 +59,7 @@ public interface IWorkflowService
     Task<Result<PlantillaTareaDto>> UpdatePlantillaAsync(
         int id, PlantillaTareaUpdateDto dto, int empresaId, CancellationToken ct = default);
 
-    /// <summary>Desactiva l骻icamente una plantilla de empresa.</summary>
+    /// <summary>Desactiva l贸gicamente una plantilla de empresa.</summary>
     Task<Result<bool>> DeletePlantillaAsync(
         int id, int empresaId, CancellationToken ct = default);
 }

@@ -258,7 +258,7 @@ public class HojaImportacionService : IHojaImportacionService
 
         var totalGastos = gastos.Sum(g => g.MontoBase);
 
-        // Get OC and received lines – support both single-OC and expediente-linked hojas
+        // Get OC and received lines â€“ support both single-OC and expediente-linked hojas
         if (!hoja.OrdenCompraId.HasValue && !hoja.ExpedienteImportacionId.HasValue)
             return Result<HojaImportacionDto>.Failure("Import sheet has no associated purchase order or expedition.");
 
@@ -299,8 +299,8 @@ public class HojaImportacionService : IHojaImportacionService
         {
             decimal factor = hoja.MetodoDistribucion switch
             {
-                1 => 0, // Peso — not implemented yet, fallback to value
-                2 => 0, // Volumen — not implemented yet, fallback to value
+                1 => 0, // Peso â€” not implemented yet, fallback to value
+                2 => 0, // Volumen â€” not implemented yet, fallback to value
                 3 => linea.PrecioUnitario * linea.CantidadRecepcionada, // By FOB value
                 4 => linea.CantidadRecepcionada, // By units
                 _ => linea.PrecioUnitario * linea.CantidadRecepcionada
@@ -388,7 +388,7 @@ public class HojaImportacionService : IHojaImportacionService
         await _hojaRepo.UpdateAsync(hoja, ct);
         await _unitOfWork.SaveChangesAsync(ct);
 
-        // ?? Contabilización automática ??
+        // ?? ContabilizaciÃ³n automÃ¡tica ??
         var glosa = oc?.Numero ?? $"EXP-{hoja.ExpedienteImportacionId}";
         await _contabilizacion.ContabilizarDocumentoAsync(
             tipoDocumento: "Importacion",
@@ -507,8 +507,8 @@ public class HojaImportacionService : IHojaImportacionService
                     l.ImportacionLineaId,
                     l.OrdenCompraLineaId,
                     ocl?.NumeroLinea ?? 0,
-                    cpMap.GetValueOrDefault(ocl?.CompanyProductId ?? 0, "—"),
-                    ocl?.Descripcion ?? "—",
+                    cpMap.GetValueOrDefault(ocl?.CompanyProductId ?? 0, "â€”"),
+                    ocl?.Descripcion ?? "â€”",
                     ocl?.CantidadRecepcionada ?? 0,
                     l.CostoFobUnitario, l.CostoFobTotal,
                     l.FactorDistribucion, l.GastoAsignado,

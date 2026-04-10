@@ -241,42 +241,42 @@ public class PlantillaContableService : IPlantillaContableService
 
         int count = 0;
 
-        // ?? Plantilla: Recepción de Compra ??
-        count += await SeedPlantilla(empresaId.Value, "REC", "Recepción de Compra", "Recepcion",
-            "Recepción {Numero} — OC {OrigenReferencia}",
+        // ?? Plantilla: RecepciÃ³n de Compra ??
+        count += await SeedPlantilla(empresaId.Value, "REC", "RecepciÃ³n de Compra", "Recepcion",
+            "RecepciÃ³n {Numero} â€” OC {OrigenReferencia}",
             new[]
             {
-                ("1.1.3.01", "Debe", "Subtotal", 1m, "Inventario de Mercaderías"),
-                ("1.1.4.01", "Debe", "Impuesto", 1m, "Crédito Fiscal IVA"),
+                ("1.1.3.01", "Debe", "Subtotal", 1m, "Inventario de MercaderÃ­as"),
+                ("1.1.4.01", "Debe", "Impuesto", 1m, "CrÃ©dito Fiscal IVA"),
                 ("2.1.1.01", "Haber", "Total", 1m, "Proveedores por Pagar"),
             }, cMap, ct);
 
-        // ?? Plantilla: Liquidación de Importación ??
-        count += await SeedPlantilla(empresaId.Value, "IMP", "Liquidación de Importación", "Importacion",
-            "Liquidación importación {Numero} — OC {OrigenReferencia}",
+        // ?? Plantilla: LiquidaciÃ³n de ImportaciÃ³n ??
+        count += await SeedPlantilla(empresaId.Value, "IMP", "LiquidaciÃ³n de ImportaciÃ³n", "Importacion",
+            "LiquidaciÃ³n importaciÃ³n {Numero} â€” OC {OrigenReferencia}",
             new[]
             {
-                ("1.1.3.01", "Debe", "GastoAsignado", 1m, "Inventario — Gastos de importación"),
-                ("2.1.1.01", "Haber", "GastoAsignado", 1m, "Gastos de importación por pagar"),
+                ("1.1.3.01", "Debe", "GastoAsignado", 1m, "Inventario â€” Gastos de importaciÃ³n"),
+                ("2.1.1.01", "Haber", "GastoAsignado", 1m, "Gastos de importaciÃ³n por pagar"),
             }, cMap, ct);
 
         // ?? Plantilla: Venta (futura) ??
         count += await SeedPlantilla(empresaId.Value, "VTA", "Venta / Factura", "Venta",
-            "Venta {Numero} — Cliente {OrigenReferencia}",
+            "Venta {Numero} â€” Cliente {OrigenReferencia}",
             new[]
             {
                 ("1.1.2.01", "Debe", "Total", 1m, "Clientes por Cobrar"),
-                ("2.1.3.01", "Haber", "Impuesto", 1m, "Débito Fiscal IVA"),
-                ("4.1.1.01", "Haber", "Subtotal", 1m, "Ventas de Mercaderías"),
+                ("2.1.3.01", "Haber", "Impuesto", 1m, "DÃ©bito Fiscal IVA"),
+                ("4.1.1.01", "Haber", "Subtotal", 1m, "Ventas de MercaderÃ­as"),
             }, cMap, ct);
 
         // ?? Plantilla: Costo de Venta (futura) ??
-        count += await SeedPlantilla(empresaId.Value, "CMV", "Costo de Mercaderías Vendidas", "CostoVenta",
+        count += await SeedPlantilla(empresaId.Value, "CMV", "Costo de MercaderÃ­as Vendidas", "CostoVenta",
             "Costo de venta {Numero}",
             new[]
             {
                 ("6.1.1.01", "Debe", "CostoTotal", 1m, "Costo de Ventas"),
-                ("1.1.3.01", "Haber", "CostoTotal", 1m, "Inventario de Mercaderías"),
+                ("1.1.3.01", "Haber", "CostoTotal", 1m, "Inventario de MercaderÃ­as"),
             }, cMap, ct);
 
         // ?? Plantilla: Ajuste de Inventario ??
@@ -284,8 +284,8 @@ public class PlantillaContableService : IPlantillaContableService
             "Ajuste de inventario {Numero}",
             new[]
             {
-                ("1.1.3.01", "Debe", "Total", 1m, "Inventario — Ajuste positivo"),
-                ("5.1.2.10", "Haber", "Total", 1m, "Gastos varios — Ajuste"),
+                ("1.1.3.01", "Debe", "Total", 1m, "Inventario â€” Ajuste positivo"),
+                ("5.1.2.10", "Haber", "Total", 1m, "Gastos varios â€” Ajuste"),
             }, cMap, ct);
 
         return Result<int>.Success(count);
@@ -360,8 +360,8 @@ public class PlantillaContableService : IPlantillaContableService
                     PlantillaContableLineaId = l.PlantillaContableLineaId,
                     NumeroLinea = l.NumeroLinea,
                     CuentaContableId = l.CuentaContableId,
-                    CuentaCodigo = cuenta?.Codigo ?? "—",
-                    CuentaNombre = cuenta?.Nombre ?? "—",
+                    CuentaCodigo = cuenta?.Codigo ?? "â€”",
+                    CuentaNombre = cuenta?.Nombre ?? "â€”",
                     TipoMovimiento = l.TipoMovimiento,
                     CampoMonto = l.CampoMonto,
                     Factor = l.Factor,

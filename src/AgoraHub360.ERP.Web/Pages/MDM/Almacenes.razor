@@ -13,7 +13,7 @@
         </div>
         <div class="col-auto">
             <button class="btn btn-primary" @onclick="ShowCreateModal">
-                <i class="bi bi-plus-circle"></i> Nuevo Almacén
+                <i class="bi bi-plus-circle"></i> Nuevo AlmacÃ©n
             </button>
         </div>
     </div>
@@ -46,7 +46,7 @@
     else if (almacenes.Count == 0)
     {
         <div class="alert alert-info">
-            <i class="bi bi-info-circle"></i> No hay almacenes registrados. Crea el primer almacén usando el botón "Nuevo Almacén".
+            <i class="bi bi-info-circle"></i> No hay almacenes registrados. Crea el primer almacÃ©n usando el botÃ³n "Nuevo AlmacÃ©n".
         </div>
     }
     else
@@ -58,11 +58,11 @@
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Código</th>
+                                <th>CÃ³digo</th>
                                 <th>Nombre</th>
-                                <th>Dirección</th>
+                                <th>DirecciÃ³n</th>
                                 <th>Responsable</th>
-                                <th>Teléfono</th>
+                                <th>TelÃ©fono</th>
                                 <th>Estado</th>
                                 <th class="text-end">Acciones</th>
                             </tr>
@@ -112,7 +112,7 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Nuevo Almacén</h5>
+                    <h5 class="modal-title">Nuevo AlmacÃ©n</h5>
                     <button type="button" class="btn-close" @onclick="CloseCreateModal"></button>
                 </div>
                 <div class="modal-body">
@@ -122,21 +122,21 @@
 
                         <div class="row">
                             <div class="col-md-4 mb-3">
-                                <label class="form-label">Código *</label>
+                                <label class="form-label">CÃ³digo *</label>
                                 <InputText class="form-control" @bind-Value="createDto.Codigo" placeholder="ALM-001" />
                                 <ValidationMessage For="@(() => createDto.Codigo)" />
                             </div>
 
                             <div class="col-md-8 mb-3">
                                 <label class="form-label">Nombre *</label>
-                                <InputText class="form-control" @bind-Value="createDto.Nombre" placeholder="Nombre del almacén" />
+                                <InputText class="form-control" @bind-Value="createDto.Nombre" placeholder="Nombre del almacÃ©n" />
                                 <ValidationMessage For="@(() => createDto.Nombre)" />
                             </div>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Dirección</label>
-                            <InputTextArea class="form-control" @bind-Value="createDto.Direccion" rows="2" placeholder="Dirección del almacén" />
+                            <label class="form-label">DirecciÃ³n</label>
+                            <InputTextArea class="form-control" @bind-Value="createDto.Direccion" rows="2" placeholder="DirecciÃ³n del almacÃ©n" />
                             <ValidationMessage For="@(() => createDto.Direccion)" />
                         </div>
 
@@ -148,7 +148,7 @@
                             </div>
 
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Teléfono</label>
+                                <label class="form-label">TelÃ©fono</label>
                                 <InputText class="form-control" @bind-Value="createDto.Telefono" placeholder="77123456" />
                                 <ValidationMessage For="@(() => createDto.Telefono)" />
                             </div>
@@ -178,7 +178,7 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Editar Almacén</h5>
+                    <h5 class="modal-title">Editar AlmacÃ©n</h5>
                     <button type="button" class="btn-close" @onclick="CloseEditModal"></button>
                 </div>
                 <div class="modal-body">
@@ -188,21 +188,21 @@
 
                         <div class="row">
                             <div class="col-md-4 mb-3">
-                                <label class="form-label">Código *</label>
+                                <label class="form-label">CÃ³digo *</label>
                                 <InputText class="form-control" @bind-Value="updateDto.Codigo" placeholder="ALM-001" />
                                 <ValidationMessage For="@(() => updateDto.Codigo)" />
                             </div>
 
                             <div class="col-md-8 mb-3">
                                 <label class="form-label">Nombre *</label>
-                                <InputText class="form-control" @bind-Value="updateDto.Nombre" placeholder="Nombre del almacén" />
+                                <InputText class="form-control" @bind-Value="updateDto.Nombre" placeholder="Nombre del almacÃ©n" />
                                 <ValidationMessage For="@(() => updateDto.Nombre)" />
                             </div>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Dirección</label>
-                            <InputTextArea class="form-control" @bind-Value="updateDto.Direccion" rows="2" placeholder="Dirección del almacén" />
+                            <label class="form-label">DirecciÃ³n</label>
+                            <InputTextArea class="form-control" @bind-Value="updateDto.Direccion" rows="2" placeholder="DirecciÃ³n del almacÃ©n" />
                             <ValidationMessage For="@(() => updateDto.Direccion)" />
                         </div>
 
@@ -214,7 +214,7 @@
                             </div>
 
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Teléfono</label>
+                                <label class="form-label">TelÃ©fono</label>
                                 <InputText class="form-control" @bind-Value="updateDto.Telefono" placeholder="77123456" />
                                 <ValidationMessage For="@(() => updateDto.Telefono)" />
                             </div>
@@ -320,7 +320,7 @@
 
             if (response.Success)
             {
-                successMessage = "Almacén creado exitosamente";
+                successMessage = "AlmacÃ©n creado exitosamente";
                 CloseCreateModal();
                 await LoadAlmacenes();
             }
@@ -351,7 +351,7 @@
 
             if (response.Success)
             {
-                successMessage = "Almacén actualizado exitosamente";
+                successMessage = "AlmacÃ©n actualizado exitosamente";
                 CloseEditModal();
                 await LoadAlmacenes();
             }
@@ -372,7 +372,7 @@
 
     private async Task DeleteAlmacen(AlmacenDto almacen)
     {
-        if (!await JS.InvokeAsync<bool>("confirm", $"¿Eliminar el almacén '{almacen.Nombre}'?"))
+        if (!await JS.InvokeAsync<bool>("confirm", $"Â¿Eliminar el almacÃ©n '{almacen.Nombre}'?"))
             return;
 
         try
@@ -383,7 +383,7 @@
             var response = await AlmacenService.DeleteAsync(almacen.Id);
             if (response.Success)
             {
-                successMessage = "Almacén eliminado exitosamente";
+                successMessage = "AlmacÃ©n eliminado exitosamente";
                 await LoadAlmacenes();
             }
             else

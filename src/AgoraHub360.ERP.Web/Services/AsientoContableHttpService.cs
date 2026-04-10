@@ -71,7 +71,7 @@ public class AsientoContableHttpService
         return await ParseResponse<bool>(response);
     }
 
-    // ?? Cat·logos ??
+    // ?? Cat√°logos ??
     public async Task<List<TipoComprobanteDto>> GetTiposComprobanteAsync()
     {
         var r = await _http.GetFromJsonAsync<ApiResponse<List<TipoComprobanteDto>>>($"{Base}/tipos-comprobante");
@@ -146,7 +146,7 @@ public class AsientoContableHttpService
     }
 
     /// <summary>
-    /// Exporta listado detallado plano (una fila por lÌnea) para migraciÛn
+    /// Exporta listado detallado plano (una fila por l√≠nea) para migraci√≥n
     /// </summary>
     public async Task<byte[]?> ExportarExcelPlanoAsync(
         DateTime? desde = null, DateTime? hasta = null,
@@ -210,7 +210,7 @@ public class AsientoContableHttpService
         return await ParseResponse<ComprobanteDocumentoDto>(adjResponse);
     }
 
-    /// <summary>Elimina el vÌnculo de un documento adjunto a un comprobante.</summary>
+    /// <summary>Elimina el v√≠nculo de un documento adjunto a un comprobante.</summary>
     public async Task<ApiResponse<bool>> RemoverDocumentoAsync(long comprobanteId, int docId)
     {
         var response = await _http.DeleteAsync($"{Base}/{comprobanteId}/documentos/{docId}");
@@ -225,6 +225,6 @@ public class AsientoContableHttpService
             return ApiResponse<T>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<T>>()
-            ?? ApiResponse<T>.Fail("Error de comunicaciÛn.");
+            ?? ApiResponse<T>.Fail("Error de comunicaci√≥n.");
     }
 }

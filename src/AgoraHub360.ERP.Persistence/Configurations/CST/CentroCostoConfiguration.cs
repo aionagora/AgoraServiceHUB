@@ -26,7 +26,7 @@ public class CentroCostoConfiguration : IEntityTypeConfiguration<CentroCosto>
         builder.Property(c => c.CreadoPor).HasMaxLength(100);
         builder.Property(c => c.ModificadoPor).HasMaxLength(100);
 
-        // Índice único por empresa + código
+        // Ãndice Ãºnico por empresa + cÃ³digo
         builder.HasIndex(c => new { c.EmpresaId, c.Codigo }).IsUnique();
         builder.HasIndex(c => c.EmpresaId);
 
@@ -36,7 +36,7 @@ public class CentroCostoConfiguration : IEntityTypeConfiguration<CentroCosto>
             .HasForeignKey(c => c.EmpresaId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Auto-referencia jerárquica
+        // Auto-referencia jerÃ¡rquica
         builder.HasOne(c => c.Parent)
             .WithMany(c => c.Children)
             .HasForeignKey(c => c.ParentId)

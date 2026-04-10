@@ -4,7 +4,7 @@ using AgoraHub360.ERP.Shared.DTOs.Workflow;
 using FluentValidation;
 
 // ?????????????????????????????????????????????????????????????????????????????
-// VALIDADORES FLUENT VALIDATION — Módulo Workflow
+// VALIDADORES FLUENT VALIDATION â€” MÃ³dulo Workflow
 // ?????????????????????????????????????????????????????????????????????????????
 
 /// <summary>Tipos de documento reconocidos por el motor de workflow.</summary>
@@ -17,9 +17,9 @@ file static class EntityTypes
 // ?? Validador 1: TareaCreateValidator ????????????????????????????????????????
 
 /// <summary>
-/// Valida el DTO de creación manual de una tarea.
+/// Valida el DTO de creaciÃ³n manual de una tarea.
 /// Garantiza que EntityType sea reconocido y que Codigo use solo
-/// mayúsculas, números y guiones (evita valores free-text incoherentes).
+/// mayÃºsculas, nÃºmeros y guiones (evita valores free-text incoherentes).
 /// </summary>
 public sealed class TareaCreateValidator : AbstractValidator<TareaCreateDto>
 {
@@ -41,7 +41,7 @@ public sealed class TareaCreateValidator : AbstractValidator<TareaCreateDto>
             .NotEmpty()
             .MaximumLength(20)
             .Matches(@"^[A-Z0-9\-]+$")
-            .WithMessage("Código solo puede contener mayúsculas, números y guiones");
+            .WithMessage("CÃ³digo solo puede contener mayÃºsculas, nÃºmeros y guiones");
 
         RuleFor(x => x.Descripcion)
             .NotEmpty()
@@ -49,7 +49,7 @@ public sealed class TareaCreateValidator : AbstractValidator<TareaCreateDto>
 
         RuleFor(x => x.FechaPlan)
             .Must(f => !f.HasValue || f.Value >= DateOnly.FromDateTime(DateTime.Today.AddYears(-1)))
-            .WithMessage("FechaPlan no puede ser anterior a hace un año");
+            .WithMessage("FechaPlan no puede ser anterior a hace un aÃ±o");
 
         When(x => x.Observaciones is not null, () =>
             RuleFor(x => x.Observaciones)
@@ -61,7 +61,7 @@ public sealed class TareaCreateValidator : AbstractValidator<TareaCreateDto>
 
 /// <summary>
 /// Valida el DTO para completar un hito.
-/// Impide registrar una FechaReal futura (no se puede confirmar algo que aún no ocurrió).
+/// Impide registrar una FechaReal futura (no se puede confirmar algo que aÃºn no ocurriÃ³).
 /// </summary>
 public sealed class CompletarTareaValidator : AbstractValidator<CompletarTareaDto>
 {

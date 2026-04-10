@@ -1,0 +1,215 @@
+@page "/contabilidad/libro-mayor"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@inject AgoraHub360.ERP.Web.Services.HttpLibroMayorService LibroMayorSvc
+@inject AgoraHub360.ERP.Web.Services.CuentaContableHttpService CuentaSvc
+@inject IJSRuntime JS
+@using AgoraHub360.ERP.Shared.DTOs.Contabilidad
+
+<PageTitle>Libro Mayor - AgoraHub360 ERP</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3><i class="bi bi-journal-text"></i> Libro Mayor</h3>
+            <p class="text-muted mb-0">Detalle de movimientos por cuenta contable</p>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-body py-2">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label mb-1 small">Cuenta Contable</label>
+                    <select class="form-select form-select-sm" @bind="cuentaId">
+                        <option value="">-- Seleccione una cuenta --</option>
+                        @foreach (var c in cuentas)
+                        {
+                            <option value="@c.CuentaContableId">@c.Codigo - @c.Nombre</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label mb-1 small">Desde</label>
+                    <input type="date" class="form-control form-control-sm" @bind="desde" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label mb-1 small">Hasta</label>
+                    <input type="date" class="form-control form-control-sm" @bind="hasta" />
+                </div>
+                <div class="col-md-auto">
+                    <button class="btn btn-sm btn-primary" @onclick="Generar" disabled="@(loading || cuentaId == null)">
+                        @if (loading) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        <i class="bi bi-search"></i> Consultar
+                    </button>
+                    <div class="btn-group ms-2">
+                        <button class="btn btn-success btn-sm" @onclick="ExportarExcel" disabled="@(data == null)">
+                            <i class="bi bi-file-earmark-excel"></i> Excel
+                        </button>
+                        <button class="btn btn-danger btn-sm" @onclick="ExportarPdf" disabled="@(data == null)">
+                            <i class="bi bi-file-earmark-pdf"></i> PDF
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-auto">
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="Imprimir" disabled="@(data == null)">
+                        <i class="bi bi-printer"></i> Imprimir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (data != null)
+    {
+        <div id="printArea">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <h5>LIBRO MAYOR</h5>
+                        <h6 class="text-primary fw-bold">Cuenta: @data.CodigoCuenta - @data.NombreCuenta</h6>
+                        <p class="text-muted mb-0">Del @desde.ToString("dd/MM/yyyy") al @hasta.ToString("dd/MM/yyyy")</p>
+                        <p class="small text-muted">(Expresado en Bolivianos)</p>
+                    </div>
+
+                    <div class="d-flex justify-content-end mb-2">
+                        <span class="fw-bold bg-light px-3 py-1 border rounded">Saldo Anterior: @data.SaldoAnterior.ToString("N2")</span>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered table-hover align-middle">
+                            <thead class="table-light text-center">
+                                <tr>
+                                    <th style="width: 10%;">Fecha</th>
+                                    <th style="width: 12%;">N.Asiento</th>
+                                    <th>Glosa / Descripción</th>
+                                    <th style="width: 12%;">Debe</th>
+                                    <th style="width: 12%;">Haber</th>
+                                    <th style="width: 12%;">Saldo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (data.Lineas.Any())
+                                {
+                                    @foreach (var l in data.Lineas)
+                                    {
+                                        <tr>
+                                            <td class="text-center">@l.Fecha.ToString("dd/MM/yyyy")</td>
+                                            <td class="text-center">@l.NumeroAsiento</td>
+                                            <td>@l.Glosa</td>
+                                            <td class="text-end text-primary">@l.Debe.ToString("N2")</td>
+                                            <td class="text-end text-danger">@l.Haber.ToString("N2")</td>
+                                            <td class="text-end fw-semibold">@l.SaldoProgresivo.ToString("N2")</td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted fst-italic py-3">Sin movimientos en el período consultado.</td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="table-light fw-bold text-end border-top border-2">
+                                <tr>
+                                    <td colspan="3" class="text-end">TOTAL PERÍODO:</td>
+                                    <td class="text-primary">@data.TotalDebe.ToString("N2")</td>
+                                    <td class="text-danger">@data.TotalHaber.ToString("N2")</td>
+                                    <td></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="5" class="text-end text-uppercase fs-6">Saldo Final:</td>
+                                    <td class="fs-6 @(data.SaldoFinal >= 0 ? "text-success" : "text-danger")">@data.SaldoFinal.ToString("N2")</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private DateTime desde = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+    private DateTime hasta = DateTime.Today;
+    private int? cuentaId;
+    
+    private List<AgoraHub360.ERP.Shared.DTOs.Contabilidad.CuentaContableDto> cuentas = new();
+    private LibroMayorDto? data;
+    
+    private bool loading;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            cuentas = await CuentaSvc.GetAllAsync(permiteMovimientos: true);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Error al cargar cuentas contables: " + ex.Message;
+        }
+    }
+
+    private async Task Generar()
+    {
+        if (!cuentaId.HasValue) return;
+
+        loading = true; 
+        errorMessage = null;
+        try
+        {
+            data = await LibroMayorSvc.GetLibroMayorAsync(cuentaId.Value, desde, hasta);
+            if (data == null) errorMessage = "No se pudo generar el Libro Mayor.";
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { loading = false; }
+    }
+
+    private async Task Imprimir()
+    {
+        await JS.InvokeVoidAsync("eval", "window.print()");
+    }
+
+    private async Task ExportarExcel()
+    {
+        if (!cuentaId.HasValue) return;
+        string filename = ConstruirNombreArchivo("xlsx");
+        var url = $"api/v1/contabilidad/estados-financieros/libro-mayor/export?cuentaContableId={cuentaId.Value}&desde={desde:yyyy-MM-dd}&hasta={hasta:yyyy-MM-dd}&format=xlsx";
+        await JS.InvokeVoidAsync("downloadFile", url, filename);
+    }
+
+    private async Task ExportarPdf()
+    {
+        if (!cuentaId.HasValue) return;
+        string filename = ConstruirNombreArchivo("pdf");
+        var url = $"api/v1/contabilidad/estados-financieros/libro-mayor/export?cuentaContableId={cuentaId.Value}&desde={desde:yyyy-MM-dd}&hasta={hasta:yyyy-MM-dd}&format=pdf";
+        await JS.InvokeVoidAsync("downloadFile", url, filename);
+    }
+
+    private string ConstruirNombreArchivo(string extension)
+    {
+        string cuentaFiltro = "";
+        if (cuentaId.HasValue)
+        {
+            var cta = cuentas.FirstOrDefault(c => c.CuentaContableId == cuentaId.Value);
+            if (cta != null)
+            {
+                cuentaFiltro = $"_{cta.Codigo}-{cta.Nombre}";
+                cuentaFiltro = cuentaFiltro.Replace("  ", " ").Replace(" ", "_").Replace("/", "-").Replace("\\", "-").Replace(":", "");
+                cuentaFiltro = new string(cuentaFiltro.Where(c => !System.IO.Path.GetInvalidFileNameChars().Contains(c)).ToArray());
+                while (cuentaFiltro.Contains("__")) cuentaFiltro = cuentaFiltro.Replace("__", "_");
+            }
+        }
+        return $"LibroMayor{cuentaFiltro}_{desde:yyyyMMdd}_{hasta:yyyyMMdd}.{extension}";
+    }
+}

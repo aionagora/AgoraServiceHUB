@@ -24,14 +24,14 @@
             <button type="button"
                     class="btn btn-sm btn-outline-secondary border-start-0"
                     @onclick="ClearSelection"
-                    title="Limpiar selección"
+                    title="Limpiar selecciÃ³n"
                     tabindex="-1">
                 <i class="bi bi-x" style="font-size:.85rem"></i>
             </button>
         }
     </div>
 
-    @* ?? Pill de selección activa ?? *@
+    @* ?? Pill de selecciÃ³n activa ?? *@
     @if (_selected is not null)
     {
         <div class="mt-1 d-flex align-items-center gap-1">
@@ -72,7 +72,7 @@
                         @onmouseover="e => OnItemHover(cuenta, true)"
                         @onmouseout="e => OnItemHover(cuenta, false)">
 
-                    @* Código en monospace *@
+                    @* CÃ³digo en monospace *@
                     <code style="font-size:.72rem;min-width:60px;color:#374151;padding-top:1px;flex-shrink:0">
                         @cuenta.Codigo
                     </code>
@@ -129,7 +129,7 @@
     public EventCallback<CuentaContableDto?> ValueChanged { get; set; }
 
     [Parameter]
-    public string Placeholder { get; set; } = "Buscar cuenta por código o nombre…";
+    public string Placeholder { get; set; } = "Buscar cuenta por cÃ³digo o nombreâ€¦";
 
     [Parameter]
     public bool Disabled { get; set; }
@@ -186,7 +186,7 @@
     {
         _searchText = e.Value?.ToString() ?? string.Empty;
 
-        // Limpiar selección si el usuario borra el texto
+        // Limpiar selecciÃ³n si el usuario borra el texto
         if (string.IsNullOrWhiteSpace(_searchText) && _selected is not null)
         {
             _selected = null;

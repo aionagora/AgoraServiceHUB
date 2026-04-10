@@ -12,15 +12,15 @@ public interface IRecepcionCompraService
         DateTime? fechaHasta = null,
         CancellationToken ct = default);
 
-    /// <summary>Obtiene una recepción con sus líneas por Id.</summary>
+    /// <summary>Obtiene una recepciÃ³n con sus lÃ­neas por Id.</summary>
     Task<Result<RecepcionCompraDto>> GetByIdAsync(long id, CancellationToken ct = default);
 
     /// <summary>
-    /// Crea una recepción, actualiza CantidadRecepcionada en las líneas de OC,
+    /// Crea una recepciÃ³n, actualiza CantidadRecepcionada en las lÃ­neas de OC,
     /// genera movimientos de inventario Receipt y actualiza stock/WAC.
     /// </summary>
     Task<Result<RecepcionCompraDto>> CreateAsync(CreateRecepcionCompraDto dto, CancellationToken ct = default);
 
-    /// <summary>Anula una recepción no confirmada (soft-delete).</summary>
+    /// <summary>Anula una recepciÃ³n no confirmada (soft-delete).</summary>
     Task<Result<bool>> DeleteAsync(long id, CancellationToken ct = default);
 }

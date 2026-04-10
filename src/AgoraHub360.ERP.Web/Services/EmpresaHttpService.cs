@@ -73,7 +73,7 @@ public class EmpresaHttpService
 
     /// <summary>
     /// Seeds default MDM data (catalog, UoMs, statuses) for the current user's company.
-    /// Idempotent — safe to call multiple times.
+    /// Idempotent â€” safe to call multiple times.
     /// </summary>
     public async Task<ApiResponse<bool>> SeedMyCompanyAsync()
     {
@@ -84,6 +84,6 @@ public class EmpresaHttpService
             return ApiResponse<bool>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<bool>>()
-            ?? ApiResponse<bool>.Fail("Error de comunicación con el servidor.");
+            ?? ApiResponse<bool>.Fail("Error de comunicaciÃ³n con el servidor.");
     }
 }

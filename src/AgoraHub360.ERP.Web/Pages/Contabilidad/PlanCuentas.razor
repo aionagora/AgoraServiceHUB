@@ -9,12 +9,12 @@
     <div class="row mb-3">
         <div class="col">
             <h3><i class="bi bi-journal-bookmark-fill"></i> Plan de Cuentas</h3>
-            <p class="text-muted mb-0">Estructura jer·rquica del plan de cuentas contable</p>
+            <p class="text-muted mb-0">Estructura jer√°rquica del plan de cuentas contable</p>
         </div>
         <div class="col-auto d-flex gap-2">
             <button class="btn btn-outline-success" @onclick="SeedPlanCuentas" disabled="@seeding">
                 @if (seeding) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                <i class="bi bi-magic"></i> Generar Plan Est·ndar
+                <i class="bi bi-magic"></i> Generar Plan Est√°ndar
             </button>
             <button class="btn btn-primary" @onclick="ShowCreateModal">
                 <i class="bi bi-plus-circle"></i> Nueva Cuenta
@@ -43,12 +43,12 @@
             <div class="row g-2 align-items-end">
                 <div class="col-md-3">
                     <label class="form-label mb-1 small">Buscar</label>
-                    <input class="form-control form-control-sm" @bind="searchText" @bind:event="oninput" placeholder="CÛdigo o nombre..." />
+                    <input class="form-control form-control-sm" @bind="searchText" @bind:event="oninput" placeholder="C√≥digo o nombre..." />
                 </div>
                 <div class="col-md-2">
                     <label class="form-label mb-1 small">Vista</label>
                     <select class="form-select form-select-sm" @bind="viewMode">
-                        <option value="tree">¡rbol</option>
+                        <option value="tree">√Årbol</option>
                         <option value="flat">Lista plana</option>
                     </select>
                 </div>
@@ -78,7 +78,7 @@
             {
                 <div class="text-center py-5">
                     <i class="bi bi-journal-x" style="font-size:2.5rem;"></i>
-                    <p class="text-muted mt-3">No hay cuentas contables. Use <strong>"Generar Plan Est·ndar"</strong> para crear el plan de cuentas Bolivia/NIIF.</p>
+                    <p class="text-muted mt-3">No hay cuentas contables. Use <strong>"Generar Plan Est√°ndar"</strong> para crear el plan de cuentas Bolivia/NIIF.</p>
                 </div>
             }
             else if (viewMode == "tree")
@@ -87,7 +87,7 @@
                     <table class="table table-sm table-hover mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>CÛdigo</th>
+                                <th>C√≥digo</th>
                                 <th>Nombre</th>
                                 <th>Tipo</th>
                                 <th>Naturaleza</th>
@@ -127,8 +127,8 @@
                                         </td>
                                         <td><span class="badge @GetTipoBadge(row.Cuenta.Tipo)">@row.Cuenta.Tipo</span></td>
                                         <td><small>@row.Cuenta.Naturaleza</small></td>
-                                        <td class="text-center">@(row.Cuenta.PermiteMovimientos ? "?" : "ó")</td>
-                                        <td class="text-end">@(row.Cuenta.SaldoActual != 0 ? row.Cuenta.SaldoActual.ToString("N2") : "ó")</td>
+                                        <td class="text-center">@(row.Cuenta.PermiteMovimientos ? "?" : "‚Äî")</td>
+                                        <td class="text-end">@(row.Cuenta.SaldoActual != 0 ? row.Cuenta.SaldoActual.ToString("N2") : "‚Äî")</td>
                                         <td class="text-end">
                                             <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditModal(row.Cuenta)" title="Editar"><i class="bi bi-pencil"></i></button>
                                             @if (!row.Cuenta.PermiteMovimientos)
@@ -153,7 +153,7 @@
                     <table class="table table-sm table-hover mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th>CÛdigo</th>
+                                <th>C√≥digo</th>
                                 <th>Nombre</th>
                                 <th>Tipo</th>
                                 <th>Naturaleza</th>
@@ -173,9 +173,9 @@
                                     <td><span class="badge @GetTipoBadge(c.Tipo)">@c.Tipo</span></td>
                                     <td><small>@c.Naturaleza</small></td>
                                     <td><span class="badge bg-light text-dark">N@c.Nivel</span></td>
-                                    <td><small class="text-muted">@(c.CuentaPadreCodigo ?? "ó")</small></td>
-                                    <td class="text-center">@(c.PermiteMovimientos ? "?" : "ó")</td>
-                                    <td class="text-end">@(c.SaldoActual != 0 ? c.SaldoActual.ToString("N2") : "ó")</td>
+                                    <td><small class="text-muted">@(c.CuentaPadreCodigo ?? "‚Äî")</small></td>
+                                    <td class="text-center">@(c.PermiteMovimientos ? "?" : "‚Äî")</td>
+                                    <td class="text-end">@(c.SaldoActual != 0 ? c.SaldoActual.ToString("N2") : "‚Äî")</td>
                                     <td class="text-end">
                                         <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditModal(c)" title="Editar"><i class="bi bi-pencil"></i></button>
                                         <button class="btn btn-sm btn-outline-success ms-1" @onclick="() => ShowCreateChildModal(c)" title="Agregar subcuenta"><i class="bi bi-plus"></i></button>
@@ -208,14 +208,14 @@
                     @if (!isEditing)
                     {
                         <div class="mb-3">
-                            <label class="form-label">CÛdigo *</label>
+                            <label class="form-label">C√≥digo *</label>
                             <input class="form-control" @bind="formCodigo" placeholder="Ej: 1.1.3.06" />
                         </div>
                     }
                     else
                     {
                         <div class="mb-3">
-                            <label class="form-label">CÛdigo</label>
+                            <label class="form-label">C√≥digo</label>
                             <input class="form-control" value="@formCodigo" disabled />
                         </div>
                     }
@@ -253,10 +253,10 @@
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Cuenta Padre</label>
                                 <select class="form-select" @bind="formPadreId">
-                                    <option value="">ó Ninguna (raÌz) ó</option>
+                                    <option value="">‚Äî Ninguna (ra√≠z) ‚Äî</option>
                                     @foreach (var c in allCuentas.Where(x => !x.PermiteMovimientos).OrderBy(x => x.Codigo))
                                     {
-                                        <option value="@c.CuentaContableId">@c.Codigo ó @c.Nombre</option>
+                                        <option value="@c.CuentaContableId">@c.Codigo ‚Äî @c.Nombre</option>
                                     }
                                 </select>
                             </div>
@@ -269,7 +269,7 @@
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">DescripciÛn</label>
+                        <label class="form-label">Descripci√≥n</label>
                         <textarea class="form-control" rows="2" @bind="formDescripcion"></textarea>
                     </div>
                 </div>
@@ -353,7 +353,7 @@
     private bool IsRowVisible(FlatTreeRow row)
     {
         if (row.Depth == 0) return true;
-        // Walk up parentCode chain ó all ancestors must be expanded
+        // Walk up parentCode chain ‚Äî all ancestors must be expanded
         var current = row;
         while (current.ParentCode != null)
         {
@@ -478,7 +478,7 @@
 
     private async Task DeleteCuenta(CuentaContableDto cuenta)
     {
-        if (!await JS.InvokeAsync<bool>("confirm", $"øEliminar cuenta {cuenta.Codigo} ó {cuenta.Nombre}?")) return;
+        if (!await JS.InvokeAsync<bool>("confirm", $"¬øEliminar cuenta {cuenta.Codigo} ‚Äî {cuenta.Nombre}?")) return;
         try
         {
             var r = await CuentaService.DeleteAsync(cuenta.CuentaContableId);
@@ -490,7 +490,7 @@
 
     private async Task SeedPlanCuentas()
     {
-        if (!await JS.InvokeAsync<bool>("confirm", "øGenerar el plan de cuentas est·ndar Bolivia/NIIF? Esto crear· ~100 cuentas predefinidas.")) return;
+        if (!await JS.InvokeAsync<bool>("confirm", "¬øGenerar el plan de cuentas est√°ndar Bolivia/NIIF? Esto crear√° ~100 cuentas predefinidas.")) return;
         seeding = true; errorMessage = null;
         try
         {

@@ -47,7 +47,7 @@ public class AsientoContableDto
     public List<AsientoContableLineaDto> Lineas { get; set; } = new();
 }
 
-/// <summary>DTO de lectura para línea de comprobante.</summary>
+/// <summary>DTO de lectura para lÃ­nea de comprobante.</summary>
 public class AsientoContableLineaDto
 {
     public long AsientoContableLineaId { get; set; }
@@ -60,7 +60,7 @@ public class AsientoContableLineaDto
     public string? Glosa { get; set; }
     public string? Referencia { get; set; }
 
-    // Centro de costo analítico (nullable — compatible con datos existentes)
+    // Centro de costo analÃ­tico (nullable â€” compatible con datos existentes)
     public int? CentroCostoId { get; set; }
     public string? CentroCostoCodigo { get; set; }
     public string? CentroCostoNombre { get; set; }
@@ -95,7 +95,7 @@ public class UpdateAsientoContableDto
     public List<CreateAsientoLineaDto> Lineas { get; set; } = new();
 }
 
-/// <summary>DTO para crear una línea de comprobante.</summary>
+/// <summary>DTO para crear una lÃ­nea de comprobante.</summary>
 public class CreateAsientoLineaDto
 {
     public int CuentaContableId { get; set; }
@@ -104,7 +104,7 @@ public class CreateAsientoLineaDto
     public string? Glosa { get; set; }
     public string? Referencia { get; set; }
 
-    /// <summary>Centro de costo analítico opcional. Null = sin centro de costo.</summary>
+    /// <summary>Centro de costo analÃ­tico opcional. Null = sin centro de costo.</summary>
     public int? CentroCostoId { get; set; }
 }
 

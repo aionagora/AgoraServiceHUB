@@ -24,7 +24,7 @@ public class ProductCodeHttpService
         if (!response.IsSuccessStatusCode)
             return ApiResponse<ProductCodeDto>.Fail($"HTTP {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
         return await response.Content.ReadFromJsonAsync<ApiResponse<ProductCodeDto>>()
-            ?? ApiResponse<ProductCodeDto>.Fail("Error de comunicación.");
+            ?? ApiResponse<ProductCodeDto>.Fail("Error de comunicaciÃ³n.");
     }
 
     public async Task<ApiResponse<bool>> DeleteAsync(long id)
@@ -33,6 +33,6 @@ public class ProductCodeHttpService
         if (!response.IsSuccessStatusCode)
             return ApiResponse<bool>.Fail($"HTTP {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
         return await response.Content.ReadFromJsonAsync<ApiResponse<bool>>()
-            ?? ApiResponse<bool>.Fail("Error de comunicación.");
+            ?? ApiResponse<bool>.Fail("Error de comunicaciÃ³n.");
     }
 }

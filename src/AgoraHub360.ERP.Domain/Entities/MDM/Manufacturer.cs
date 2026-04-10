@@ -2,7 +2,7 @@ namespace AgoraHub360.ERP.Domain.Entities.MDM;
 
 using AgoraHub360.ERP.Domain.Common;
 
-/// <summary>Product manufacturer — tenant-scoped per company.</summary>
+/// <summary>Product manufacturer â€” tenant-scoped per company.</summary>
 public class Manufacturer : TenantEntity
 {
     public long ManufacturerId { get; set; }

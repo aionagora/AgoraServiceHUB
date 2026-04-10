@@ -31,6 +31,7 @@ builder.Services.AddScoped<UsuarioHttpService>();
 builder.Services.AddScoped<AuditLogHttpService>();
 builder.Services.AddScoped<ParametroHttpService>();
 builder.Services.AddScoped<NumeracionHttpService>();
+builder.Services.AddScoped<CierreContableHttpService>();
 
 // ──── Servicios HTTP MDM (legacy) ────
 builder.Services.AddScoped<CategoriaProductoHttpService>();
@@ -61,7 +62,10 @@ builder.Services.AddScoped<AsientoContableHttpService>();
 builder.Services.AddScoped<PeriodoContableHttpService>();
 builder.Services.AddScoped<PlantillaContableHttpService>();
 builder.Services.AddScoped<EstadoFinancieroHttpService>();
+builder.Services.AddScoped<HttpExportEstadosFinancierosService>();
 builder.Services.AddScoped<CentroCostoHttpService>();
+builder.Services.AddScoped<HttpFlujoDEfectivoService>();
+builder.Services.AddScoped<HttpLibroMayorService>();
 
 // ──── Servicios HTTP Compras ────
 builder.Services.AddScoped<OrdenPedidoHttpService>();

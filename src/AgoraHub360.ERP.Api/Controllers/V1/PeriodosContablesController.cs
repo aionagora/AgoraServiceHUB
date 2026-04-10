@@ -35,7 +35,7 @@ public class PeriodosContablesController : ControllerBase
         var result = await _service.GenerarPeriodosAsync(dto.Anio, ct);
         if (!result.IsSuccess)
             return BadRequest(ApiResponse<int>.Fail(result.Error!));
-        return Ok(ApiResponse<int>.Ok(result.Value!, $"{result.Value} períodos generados para {dto.Anio}."));
+        return Ok(ApiResponse<int>.Ok(result.Value!, $"{result.Value} perÃ­odos generados para {dto.Anio}."));
     }
 
     [HttpPost("{id:int}/cerrar")]
@@ -44,7 +44,7 @@ public class PeriodosContablesController : ControllerBase
         var result = await _service.CerrarAsync(id, ct);
         if (!result.IsSuccess)
             return BadRequest(ApiResponse<PeriodoContableDto>.Fail(result.Error!));
-        return Ok(ApiResponse<PeriodoContableDto>.Ok(result.Value!, $"Período {result.Value!.Nombre} cerrado."));
+        return Ok(ApiResponse<PeriodoContableDto>.Ok(result.Value!, $"PerÃ­odo {result.Value!.Nombre} cerrado."));
     }
 
     [HttpPost("{id:int}/reabrir")]
@@ -53,6 +53,6 @@ public class PeriodosContablesController : ControllerBase
         var result = await _service.ReabrirAsync(id, ct);
         if (!result.IsSuccess)
             return BadRequest(ApiResponse<PeriodoContableDto>.Fail(result.Error!));
-        return Ok(ApiResponse<PeriodoContableDto>.Ok(result.Value!, $"Período {result.Value!.Nombre} reabierto."));
+        return Ok(ApiResponse<PeriodoContableDto>.Ok(result.Value!, $"PerÃ­odo {result.Value!.Nombre} reabierto."));
     }
 }

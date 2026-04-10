@@ -67,7 +67,7 @@
                             {
                                 <tr>
                                     <td><strong>@b.Name</strong></td>
-                                    <td><small class="text-muted">@(b.LogoUrl ?? "—")</small></td>
+                                    <td><small class="text-muted">@(b.LogoUrl ?? "â€”")</small></td>
                                     <td>
                                         <span class="badge @(b.Activo ? "bg-success" : "bg-secondary")">
                                             @(b.Activo ? "Activo" : "Inactivo")
@@ -226,7 +226,7 @@
 
     private async Task Delete(BrandDto b)
     {
-        if (!await JS.InvokeAsync<bool>("confirm", $"¿Eliminar marca '{b.Name}'?")) return;
+        if (!await JS.InvokeAsync<bool>("confirm", $"Â¿Eliminar marca '{b.Name}'?")) return;
         try
         {
             var r = await BrandService.DeleteAsync(b.BrandId);

@@ -43,24 +43,24 @@ public interface IExpedienteImportacionService
     Task<Result<ExpedienteImportacionDto>> IniciarDespachoAduaneroAsync(long id, RegistrarDespachoAduaneroDto dto, CancellationToken ct = default);
 
     /// <summary>
-    /// Registra observación/aforo aduanero: EnAduana ? ObservacionAduana.
+    /// Registra observaciÃ³n/aforo aduanero: EnAduana ? ObservacionAduana.
     /// </summary>
     Task<Result<ExpedienteImportacionDto>> RegistrarObservacionAduanaAsync(long id, RegistrarObservacionAduanaDto dto, CancellationToken ct = default);
 
     /// <summary>
-    /// Subsana observación y vuelve a despacho: ObservacionAduana ? EnAduana.
+    /// Subsana observaciÃ³n y vuelve a despacho: ObservacionAduana ? EnAduana.
     /// </summary>
     Task<Result<ExpedienteImportacionDto>> SubsanarObservacionAsync(long id, string? observaciones, CancellationToken ct = default);
 
     /// <summary>
-    /// Registra levante/liberación aduanera: EnAduana ? Liberado.
+    /// Registra levante/liberaciÃ³n aduanera: EnAduana ? Liberado.
     /// </summary>
     Task<Result<ExpedienteImportacionDto>> RegistrarLevanteAsync(long id, RegistrarLevanteDto dto, CancellationToken ct = default);
 
     /// <summary>Agrega un hito de tracking al expediente.</summary>
     Task<Result<ExpedienteImportacionDto>> AddHitoAsync(long id, AddHitoExpedienteDto dto, CancellationToken ct = default);
 
-    /// <summary>Cierra el expediente (Liberado ? Cerrado) cuando todas las OCs están cerradas.</summary>
+    /// <summary>Cierra el expediente (Liberado ? Cerrado) cuando todas las OCs estÃ¡n cerradas.</summary>
     Task<Result<ExpedienteImportacionDto>> CerrarAsync(long id, CancellationToken ct = default);
 
     /// <summary>Elimina (soft-delete) un expediente en Borrador.</summary>

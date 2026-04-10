@@ -4,7 +4,7 @@ using AgoraHub360.ERP.Domain.Common;
 using AgoraHub360.ERP.Domain.Entities.MDM;
 
 /// <summary>
-/// L韓ea de detalle de una Orden de Pedido.
+/// L铆nea de detalle de una Orden de Pedido.
 /// </summary>
 public class OrdenPedidoLinea : AuditableEntity
 {
@@ -22,21 +22,21 @@ public class OrdenPedidoLinea : AuditableEntity
     /// <summary>Cantidad solicitada.</summary>
     public decimal CantidadSolicitada { get; set; }
 
-    /// <summary>Cantidad disponible en stock al momento de la revisi髇.</summary>
+    /// <summary>Cantidad disponible en stock al momento de la revisi贸n.</summary>
     public decimal? CantidadStockDisponible { get; set; }
 
-    /// <summary>Cantidad en tr醤sito (OCs aprobadas pendientes de recepci髇).</summary>
+    /// <summary>Cantidad en tr谩nsito (OCs aprobadas pendientes de recepci贸n).</summary>
     public decimal? CantidadEnTransito { get; set; }
 
-    /// <summary>Cantidad que se requiere comprar (CantidadSolicitada - Stock - Tr醤sito, ? 0).</summary>
+    /// <summary>Cantidad que se requiere comprar (CantidadSolicitada - Stock - Tr谩nsito, ? 0).</summary>
     public decimal? CantidadAComprar { get; set; }
 
     public string? Notas { get; set; }
 
-    // Navegaci髇
+    // Navegaci贸n
     public OrdenPedido? OrdenPedido { get; set; }
 
-    /// <summary>Calcula la cantidad a comprar luego de la revisi髇 de stock.</summary>
+    /// <summary>Calcula la cantidad a comprar luego de la revisi贸n de stock.</summary>
     public void CalcularCantidadAComprar()
     {
         var disponible = (CantidadStockDisponible ?? 0) + (CantidadEnTransito ?? 0);

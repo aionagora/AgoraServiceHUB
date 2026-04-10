@@ -3,7 +3,7 @@ namespace AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Common;
 
 /// <summary>
-/// Product master record — tenant-scoped.
+/// Product master record â€” tenant-scoped.
 /// Each product belongs to a specific company and catalog.
 /// </summary>
 public class Product : TenantEntity

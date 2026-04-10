@@ -101,7 +101,7 @@ public class UsuariosController : ControllerBase
     }
 
     /// <summary>
-    /// Resetea la contraseña de cualquier usuario. Solo Admin.
+    /// Resetea la contraseÃ±a de cualquier usuario. Solo Admin.
     /// </summary>
     [HttpPut("{id:int}/reset-password")]
     [Authorize(Roles = "Admin")]
@@ -111,6 +111,6 @@ public class UsuariosController : ControllerBase
         if (!result.IsSuccess)
             return NotFound(ApiResponse<bool>.Fail(result.Error!));
 
-        return Ok(ApiResponse<bool>.Ok(true, "Contraseña reseteada exitosamente."));
+        return Ok(ApiResponse<bool>.Ok(true, "ContraseÃ±a reseteada exitosamente."));
     }
 }

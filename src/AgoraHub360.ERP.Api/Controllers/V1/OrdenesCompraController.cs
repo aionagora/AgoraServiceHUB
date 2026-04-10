@@ -35,7 +35,7 @@ public class OrdenesCompraController : ControllerBase
         return Ok(ApiResponse<IReadOnlyList<OrdenCompraDto>>.Ok(result.Value!));
     }
 
-    /// <summary>Obtiene una OC por Id con sus líneas.</summary>
+    /// <summary>Obtiene una OC por Id con sus lÃ­neas.</summary>
     [HttpGet("{id:long}")]
     public async Task<IActionResult> GetById(long id, CancellationToken ct)
     {
@@ -68,34 +68,34 @@ public class OrdenesCompraController : ControllerBase
         return Ok(ApiResponse<OrdenCompraDto>.Ok(result.Value!, "Orden de compra actualizada."));
     }
 
-    /// <summary>Agrega una línea a una OC en Borrador.</summary>
+    /// <summary>Agrega una lÃ­nea a una OC en Borrador.</summary>
     [HttpPost("{id:long}/lineas")]
     public async Task<IActionResult> AddLinea(long id, [FromBody] AddOrdenCompraLineaDto dto, CancellationToken ct)
     {
         var result = await _service.AddLineaAsync(id, dto, ct);
         if (!result.IsSuccess)
             return BadRequest(ApiResponse<OrdenCompraDto>.Fail(result.Error!));
-        return Ok(ApiResponse<OrdenCompraDto>.Ok(result.Value!, "Línea agregada."));
+        return Ok(ApiResponse<OrdenCompraDto>.Ok(result.Value!, "LÃ­nea agregada."));
     }
 
-    /// <summary>Actualiza una línea existente.</summary>
+    /// <summary>Actualiza una lÃ­nea existente.</summary>
     [HttpPut("{id:long}/lineas/{lineaId:long}")]
     public async Task<IActionResult> UpdateLinea(long id, long lineaId, [FromBody] UpdateOrdenCompraLineaDto dto, CancellationToken ct)
     {
         var result = await _service.UpdateLineaAsync(id, lineaId, dto, ct);
         if (!result.IsSuccess)
             return BadRequest(ApiResponse<OrdenCompraDto>.Fail(result.Error!));
-        return Ok(ApiResponse<OrdenCompraDto>.Ok(result.Value!, "Línea actualizada."));
+        return Ok(ApiResponse<OrdenCompraDto>.Ok(result.Value!, "LÃ­nea actualizada."));
     }
 
-    /// <summary>Elimina una línea de una OC en Borrador.</summary>
+    /// <summary>Elimina una lÃ­nea de una OC en Borrador.</summary>
     [HttpDelete("{id:long}/lineas/{lineaId:long}")]
     public async Task<IActionResult> RemoveLinea(long id, long lineaId, CancellationToken ct)
     {
         var result = await _service.RemoveLineaAsync(id, lineaId, ct);
         if (!result.IsSuccess)
             return BadRequest(ApiResponse<OrdenCompraDto>.Fail(result.Error!));
-        return Ok(ApiResponse<OrdenCompraDto>.Ok(result.Value!, "Línea eliminada."));
+        return Ok(ApiResponse<OrdenCompraDto>.Ok(result.Value!, "LÃ­nea eliminada."));
     }
 
     /// <summary>Cambia el estado de la OC (Confirmar, Aprobar, Anular).</summary>
@@ -118,14 +118,14 @@ public class OrdenesCompraController : ControllerBase
         return Ok(ApiResponse<OrdenCompraDto>.Ok(result.Value!, dto.Aprobado ? "OC aprobada." : "OC rechazada."));
     }
 
-    /// <summary>Gate [4]: registra confirmación o negociación del proveedor (PI).</summary>
+    /// <summary>Gate [4]: registra confirmaciÃ³n o negociaciÃ³n del proveedor (PI).</summary>
     [HttpPost("{id:long}/confirmacion-proveedor")]
     public async Task<IActionResult> RegistrarConfirmacionProveedor(long id, [FromBody] RegistrarConfirmacionProveedorDto dto, CancellationToken ct)
     {
         var result = await _service.RegistrarConfirmacionProveedorAsync(id, dto, ct);
         if (!result.IsSuccess)
             return BadRequest(ApiResponse<ConfirmacionProveedorDto>.Fail(result.Error!));
-        return Ok(ApiResponse<ConfirmacionProveedorDto>.Ok(result.Value!, "Confirmación del proveedor registrada."));
+        return Ok(ApiResponse<ConfirmacionProveedorDto>.Ok(result.Value!, "ConfirmaciÃ³n del proveedor registrada."));
     }
 
     /// <summary>Historial de confirmaciones/negociaciones del proveedor.</summary>
@@ -148,7 +148,7 @@ public class OrdenesCompraController : ControllerBase
         return Ok(ApiResponse<PagoOrdenCompraDto>.Ok(result.Value!, "Pago programado."));
     }
 
-    /// <summary>Registra la ejecución de un pago programado.</summary>
+    /// <summary>Registra la ejecuciÃ³n de un pago programado.</summary>
     [HttpPost("{id:long}/pagos/{pagoId:long}/ejecutar")]
     public async Task<IActionResult> EjecutarPago(long id, long pagoId, [FromBody] EjecutarPagoDto dto, CancellationToken ct)
     {

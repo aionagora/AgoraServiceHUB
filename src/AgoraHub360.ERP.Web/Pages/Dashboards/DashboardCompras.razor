@@ -6,8 +6,8 @@
 
 <div class="page-header d-flex justify-content-between align-items-center">
     <div>
-        <h1><i class="bi bi-cart-check-fill me-2 text-primary"></i>Dashboard — Compras</h1>
-        <p class="text-muted mb-0">Flujo completo: Pedido Interno ? OC ? Recepción ? Expediente ? Liquidación</p>
+        <h1><i class="bi bi-cart-check-fill me-2 text-primary"></i>Dashboard â€” Compras</h1>
+        <p class="text-muted mb-0">Flujo completo: Pedido Interno ? OC ? RecepciÃ³n ? Expediente ? LiquidaciÃ³n</p>
     </div>
     <button class="btn btn-sm btn-outline-secondary" @onclick="Refresh" disabled="@loading">
         <i class="bi bi-arrow-clockwise"></i> Actualizar
@@ -34,7 +34,7 @@ else
         </div>
         <div class="col-sm-6 col-xl-2">
             <div class="stat-card text-center">
-                <div class="stat-label">Órdenes de Compra</div>
+                <div class="stat-label">Ã“rdenes de Compra</div>
                 <div class="stat-value text-primary">@kpis.OcTotal</div>
                 <div class="mt-1">
                     @if (kpis.OcAprobadas > 0) { <span class="badge bg-primary">@kpis.OcAprobadas aprob.</span> }
@@ -61,7 +61,7 @@ else
                 <div class="stat-label">Expedientes</div>
                 <div class="stat-value @(kpis.ExpEnAduana > 0 ? "text-warning" : "text-muted")">@(kpis.ExpEnTransito + kpis.ExpEnAduana + kpis.ExpLiberados)</div>
                 <div>
-                    @if (kpis.ExpEnTransito > 0) { <span class="badge bg-info text-dark" style="font-size:.65rem">@kpis.ExpEnTransito tráns.</span> }
+                    @if (kpis.ExpEnTransito > 0) { <span class="badge bg-info text-dark" style="font-size:.65rem">@kpis.ExpEnTransito trÃ¡ns.</span> }
                     @if (kpis.ExpEnAduana > 0) { <span class="badge bg-warning text-dark ms-1" style="font-size:.65rem">@kpis.ExpEnAduana aduana</span> }
                 </div>
             </div>
@@ -70,7 +70,7 @@ else
             <div class="stat-card text-center">
                 <div class="stat-label">Hojas sin liquidar</div>
                 <div class="stat-value @(kpis.HojasNoLiquidadas > 0 ? "text-danger" : "text-muted")">@kpis.HojasNoLiquidadas</div>
-                @if (kpis.HojasNoLiquidadas > 0) { <span class="badge bg-danger">Requieren acción</span> }
+                @if (kpis.HojasNoLiquidadas > 0) { <span class="badge bg-danger">Requieren acciÃ³n</span> }
             </div>
         </div>
     </div>
@@ -83,14 +83,14 @@ else
                 <div class="card-body">
                     <div class="d-flex flex-column gap-2">
                         @RenderFunnelStep("1. Pedido Interno", kpis.OpBorrador + kpis.OpEnRevision + kpis.OpPendienteAprobacion + kpis.OpAprobadas, kpis.OpPendienteAprobacion, "bi-clipboard2-check-fill", "bg-secondary", "/compras/pedidos",
-                            kpis.OpPendienteAprobacion > 0 ? $"{kpis.OpPendienteAprobacion} requieren aprobación" : null)
-                        @RenderFunnelStep("2. Órdenes de Compra", kpis.OcTotal, kpis.OcBorrador, "bi-cart-fill", "bg-primary", "/compras/ordenes",
+                            kpis.OpPendienteAprobacion > 0 ? $"{kpis.OpPendienteAprobacion} requieren aprobaciÃ³n" : null)
+                        @RenderFunnelStep("2. Ã“rdenes de Compra", kpis.OcTotal, kpis.OcBorrador, "bi-cart-fill", "bg-primary", "/compras/ordenes",
                             kpis.OcBorrador > 0 ? $"{kpis.OcBorrador} en borrador" : null)
                         @RenderFunnelStep("3. Recepciones (mes)", kpis.RecepcionesMes, kpis.RecepcionesConDif, "bi-box-seam", "bg-info", "/compras/recepciones",
                             kpis.RecepcionesConDif > 0 ? $"{kpis.RecepcionesConDif} con diferencias" : null)
                         @RenderFunnelStep("4. Expedientes activos", kpis.ExpEnTransito + kpis.ExpEnAduana + kpis.ExpLiberados, kpis.ExpEnAduana, "bi-globe-americas", "bg-warning text-dark", "/compras/expedientes",
                             kpis.ExpEnAduana > 0 ? $"{kpis.ExpEnAduana} en aduana" : null)
-                        @RenderFunnelStep("5. Hojas importación pendientes", kpis.HojasNoLiquidadas, kpis.HojasNoLiquidadas, "bi-receipt-cutoff", "bg-danger", "/compras/importaciones",
+                        @RenderFunnelStep("5. Hojas importaciÃ³n pendientes", kpis.HojasNoLiquidadas, kpis.HojasNoLiquidadas, "bi-receipt-cutoff", "bg-danger", "/compras/importaciones",
                             kpis.HojasNoLiquidadas > 0 ? "Pendientes de liquidar" : null)
                     </div>
                 </div>
@@ -98,12 +98,12 @@ else
         </div>
         <div class="col-lg-4">
             <div class="card h-100">
-                <div class="card-header py-3"><i class="bi bi-bell-fill text-warning me-1"></i>OC que requieren acción</div>
+                <div class="card-header py-3"><i class="bi bi-bell-fill text-warning me-1"></i>OC que requieren acciÃ³n</div>
                 <div class="card-body p-0">
                     @if (kpis.OcPendientesAccion.Count == 0)
                     {
                         <div class="text-center text-muted py-4 small">
-                            <i class="bi bi-check-circle-fill text-success fs-3 d-block mb-2"></i>Ninguna OC pendiente de acción
+                            <i class="bi bi-check-circle-fill text-success fs-3 d-block mb-2"></i>Ninguna OC pendiente de acciÃ³n
                         </div>
                     }
                     else
@@ -115,7 +115,7 @@ else
                                     <div class="d-flex justify-content-between align-items-start">
                                         <div>
                                             <strong class="small">@oc.Numero</strong>
-                                            <div class="text-muted" style="font-size:.75rem">@oc.ProveedorNombre · @oc.FechaEmision.ToString("dd/MM/yyyy")</div>
+                                            <div class="text-muted" style="font-size:.75rem">@oc.ProveedorNombre Â· @oc.FechaEmision.ToString("dd/MM/yyyy")</div>
                                         </div>
                                         <div class="text-end">
                                             <span class="badge @GetOcBadge(oc.Estado)">@oc.Estado</span>
@@ -128,7 +128,7 @@ else
                         @if (kpis.OcPendientesAccion.Count > 6)
                         {
                             <div class="text-center py-2">
-                                <a href="/compras/ordenes" class="btn btn-sm btn-link">Ver @(kpis.OcPendientesAccion.Count - 6) más</a>
+                                <a href="/compras/ordenes" class="btn btn-sm btn-link">Ver @(kpis.OcPendientesAccion.Count - 6) mÃ¡s</a>
                             </div>
                         }
                     }
@@ -154,16 +154,16 @@ else
                     {
                         <table class="table table-sm table-hover mb-0">
                             <thead class="table-light">
-                                <tr><th>Nº</th><th>Origen ? Destino</th><th>ETD</th><th>ETA</th><th>Estado</th></tr>
+                                <tr><th>NÂº</th><th>Origen ? Destino</th><th>ETD</th><th>ETA</th><th>Estado</th></tr>
                             </thead>
                             <tbody>
                                 @foreach (var e in kpis.ExpedientesActivos)
                                 {
                                     <tr>
                                         <td><strong>@e.Numero</strong></td>
-                                        <td class="small">@(e.PaisOrigen ?? "—") ? @(e.PuertoDestino ?? "—")</td>
-                                        <td class="small">@(e.ETD?.ToString("dd/MM") ?? "—")</td>
-                                        <td class="small @(e.ETA < DateTime.Today && e.Estado != "Liberado" ? "text-danger fw-bold" : "")">@(e.ETA?.ToString("dd/MM") ?? "—")</td>
+                                        <td class="small">@(e.PaisOrigen ?? "â€”") ? @(e.PuertoDestino ?? "â€”")</td>
+                                        <td class="small">@(e.ETD?.ToString("dd/MM") ?? "â€”")</td>
+                                        <td class="small @(e.ETA < DateTime.Today && e.Estado != "Liberado" ? "text-danger fw-bold" : "")">@(e.ETA?.ToString("dd/MM") ?? "â€”")</td>
                                         <td><span class="badge @GetExpBadge(e.Estado)" style="font-size:.7rem">@GetExpLabel(e.Estado)</span></td>
                                     </tr>
                                 }
@@ -176,7 +176,7 @@ else
         <div class="col-lg-6">
             <div class="card">
                 <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                    <span><i class="bi bi-box-seam me-1"></i>Últimas Recepciones</span>
+                    <span><i class="bi bi-box-seam me-1"></i>Ãšltimas Recepciones</span>
                     <a href="/compras/recepciones" class="btn btn-sm btn-link py-0">Ver todas</a>
                 </div>
                 <div class="card-body p-0">
@@ -188,7 +188,7 @@ else
                     {
                         <table class="table table-sm table-hover mb-0">
                             <thead class="table-light">
-                                <tr><th>Nº</th><th>Fecha</th><th>OC</th><th>Almacén</th><th>Estado</th></tr>
+                                <tr><th>NÂº</th><th>Fecha</th><th>OC</th><th>AlmacÃ©n</th><th>Estado</th></tr>
                             </thead>
                             <tbody>
                                 @foreach (var r in kpis.UltimasRecepciones)
@@ -270,7 +270,7 @@ else
 
     private static string GetExpLabel(string estado) => estado switch
     {
-        "EnTransito"        => "En Tránsito",
+        "EnTransito"        => "En TrÃ¡nsito",
         "EnAduana"          => "En Aduana",
         "ObservacionAduana" => "Obs. Aduana",
         _                   => estado

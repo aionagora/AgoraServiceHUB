@@ -4,15 +4,15 @@ using AgoraHub360.ERP.Domain.Common;
 using AgoraHub360.ERP.Domain.Entities.CST;
 
 /// <summary>
-/// Línea de un asiento contable.
-/// Cada línea afecta una cuenta con un monto al Debe o al Haber.
+/// LÃ­nea de un asiento contable.
+/// Cada lÃ­nea afecta una cuenta con un monto al Debe o al Haber.
 /// </summary>
 public class AsientoContableLinea : AuditableEntity
 {
     public long AsientoContableLineaId { get; set; }
     public long AsientoContableId { get; set; }
 
-    /// <summary>Número de línea secuencial.</summary>
+    /// <summary>NÃºmero de lÃ­nea secuencial.</summary>
     public int NumeroLinea { get; set; }
 
     /// <summary>Cuenta contable afectada.</summary>
@@ -25,16 +25,16 @@ public class AsientoContableLinea : AuditableEntity
     /// <summary>Monto al Haber (credit).</summary>
     public decimal Haber { get; set; }
 
-    /// <summary>Glosa/detalle de la línea.</summary>
+    /// <summary>Glosa/detalle de la lÃ­nea.</summary>
     public string? Glosa { get; set; }
 
-    /// <summary>Referencia adicional (ej: número de factura, proveedor).</summary>
+    /// <summary>Referencia adicional (ej: nÃºmero de factura, proveedor).</summary>
     public string? Referencia { get; set; }
 
-    /// <summary>Centro de costo analítico opcional para la línea.</summary>
+    /// <summary>Centro de costo analÃ­tico opcional para la lÃ­nea.</summary>
     public int? CentroCostoId { get; set; }
     public CentroCosto? CentroCosto { get; set; }
 
-    // Navegación
+    // NavegaciÃ³n
     public AsientoContable? AsientoContable { get; set; }
 }

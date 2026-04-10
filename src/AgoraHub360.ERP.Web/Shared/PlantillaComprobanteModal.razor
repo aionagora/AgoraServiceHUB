@@ -19,7 +19,7 @@
                             <i class="bi bi-file-earmark-ruled me-2" style="color:#7c3aed"></i>
                             Seleccionar Plantilla Contable
                         </h5>
-                        <small class="text-muted">Las lÌneas se agregar·n al comprobante actual</small>
+                        <small class="text-muted">Las l√≠neas se agregar√°n al comprobante actual</small>
                     </div>
                     <button type="button" class="btn-close" @onclick="Close"></button>
                 </div>
@@ -29,7 +29,7 @@
                     <div class="input-group input-group-sm">
                         <span class="input-group-text bg-white"><i class="bi bi-search text-secondary"></i></span>
                         <input type="text" class="form-control"
-                               placeholder="Buscar por nombre o cÛdigo..."
+                               placeholder="Buscar por nombre o c√≥digo..."
                                value="@_search"
                                @oninput="OnSearchInput" />
                         @if (!string.IsNullOrEmpty(_search))
@@ -103,18 +103,18 @@
                                                 }
                                             </div>
 
-                                            @* Tipo documento + lÌnea count *@
+                                            @* Tipo documento + l√≠nea count *@
                                             <div class="d-flex align-items-center gap-2 mb-2">
                                                 <span class="badge bg-secondary rounded-pill" style="font-size:.65rem">
                                                     @p.TipoDocumento
                                                 </span>
                                                 <span class="text-muted" style="font-size:.75rem">
                                                     <i class="bi bi-list-ol me-1"></i>@p.Lineas.Count
-                                                    @(p.Lineas.Count == 1 ? "lÌnea" : "lÌneas")
+                                                    @(p.Lineas.Count == 1 ? "l√≠nea" : "l√≠neas")
                                                 </span>
                                             </div>
 
-                                            @* DescripciÛn *@
+                                            @* Descripci√≥n *@
                                             @if (!string.IsNullOrEmpty(p.Descripcion))
                                             {
                                                 <p class="text-muted mb-2" style="font-size:.75rem;line-height:1.3">
@@ -130,7 +130,7 @@
                                                           style="background:@(l.TipoMovimiento == "Debe" ? "#eff6ff" : "#f0fdf4");
                                                                  color:@(l.TipoMovimiento == "Debe" ? "#1d4ed8" : "#15803d");
                                                                  font-size:.65rem;font-family:ui-monospace,monospace"
-                                                          title="@l.CuentaNombre ó @l.TipoMovimiento">
+                                                          title="@l.CuentaNombre ‚Äî @l.TipoMovimiento">
                                                         @l.CuentaCodigo
                                                         <span style="font-size:.6rem;opacity:.7">(@l.TipoMovimiento[0])</span>
                                                     </span>
@@ -168,7 +168,7 @@
                                 disabled="@(_selected is null)"
                                 @onclick="Confirm">
                             <i class="bi bi-plus-circle me-1"></i>
-                            Agregar lÌneas
+                            Agregar l√≠neas
                             @if (_selected is not null)
                             {
                                 <span class="badge bg-white text-primary rounded-pill ms-1"
@@ -189,8 +189,8 @@
     // ?? Parameters ????????????????????????????????????????????????????????????
 
     /// <summary>
-    /// Se invoca al confirmar la selecciÛn.
-    /// Recibe la lista de lÌneas de la plantilla elegida.
+    /// Se invoca al confirmar la selecci√≥n.
+    /// Recibe la lista de l√≠neas de la plantilla elegida.
     /// </summary>
     [Parameter, EditorRequired]
     public EventCallback<List<PlantillaContableLineaDto>> OnSeleccionar { get; set; }

@@ -3,13 +3,13 @@
 @inject ExpedienteImportacionHttpService ExpService
 @inject OrdenCompraHttpService OcService
 
-<PageTitle>Expedientes de Importación - AgoraHub360 ERP</PageTitle>
+<PageTitle>Expedientes de ImportaciÃ³n - AgoraHub360 ERP</PageTitle>
 
 <div class="container-fluid">
     <div class="row mb-3">
         <div class="col">
-            <h3><i class="bi bi-globe-americas"></i> Expedientes de Importación</h3>
-            <p class="text-muted mb-0">Tracking completo del ciclo de importación (embarque ? levante)</p>
+            <h3><i class="bi bi-globe-americas"></i> Expedientes de ImportaciÃ³n</h3>
+            <p class="text-muted mb-0">Tracking completo del ciclo de importaciÃ³n (embarque ? levante)</p>
         </div>
         <div class="col-auto">
             <button class="btn btn-primary" @onclick="ShowCreateModal">
@@ -42,10 +42,10 @@
                     <select class="form-select form-select-sm" @bind="filtroEstado">
                         <option value="">Todos</option>
                         <option value="Borrador">Borrador</option>
-                        <option value="EnTransito">En Tránsito</option>
+                        <option value="EnTransito">En TrÃ¡nsito</option>
                         <option value="Arribado">Arribado</option>
                         <option value="EnAduana">En Aduana</option>
-                        <option value="ObservacionAduana">Con Observación</option>
+                        <option value="ObservacionAduana">Con ObservaciÃ³n</option>
                         <option value="Liberado">Liberado</option>
                         <option value="Cerrado">Cerrado</option>
                     </select>
@@ -84,7 +84,7 @@
             {
                 <div class="text-center py-5">
                     <i class="bi bi-inbox" style="font-size:2.5rem;"></i>
-                    <p class="text-muted mt-3">No hay expedientes de importación registrados.</p>
+                    <p class="text-muted mt-3">No hay expedientes de importaciÃ³n registrados.</p>
                 </div>
             }
             else
@@ -94,7 +94,7 @@
                         <thead class="table-light">
                             <tr>
                                 <th style="width:40px"></th>
-                                <th>Número</th>
+                                <th>NÃºmero</th>
                                 <th>Incoterm</th>
                                 <th>Forwarder</th>
                                 <th>Origen</th>
@@ -114,16 +114,16 @@
                                         </button>
                                     </td>
                                     <td><strong>@exp.Numero</strong></td>
-                                    <td>@(exp.Incoterm ?? "—")</td>
-                                    <td>@(exp.Forwarder ?? "—")</td>
-                                    <td>@(exp.PaisOrigen ?? "—")</td>
-                                    <td>@(exp.ETD?.ToString("dd/MM/yy") ?? "—")</td>
-                                    <td>@(exp.ETA?.ToString("dd/MM/yy") ?? "—")</td>
+                                    <td>@(exp.Incoterm ?? "â€”")</td>
+                                    <td>@(exp.Forwarder ?? "â€”")</td>
+                                    <td>@(exp.PaisOrigen ?? "â€”")</td>
+                                    <td>@(exp.ETD?.ToString("dd/MM/yy") ?? "â€”")</td>
+                                    <td>@(exp.ETA?.ToString("dd/MM/yy") ?? "â€”")</td>
                                     <td>
                                         <span class="badge @GetEstadoBadge(exp.Estado)">@GetEstadoLabel(exp.Estado)</span>
                                         @if (exp.TuvoObservacionAduana)
                                         {
-                                            <span class="badge bg-warning text-dark ms-1" title="Tuvo observación aduanera">
+                                            <span class="badge bg-warning text-dark ms-1" title="Tuvo observaciÃ³n aduanera">
                                                 <i class="bi bi-exclamation-triangle-fill"></i>
                                             </span>
                                         }
@@ -158,7 +158,7 @@
                                         }
                                         @if (exp.Estado == "EnAduana")
                                         {
-                                            <button class="btn btn-sm btn-outline-danger me-1" @onclick="() => ShowObservacionModal(exp)" title="Registrar observación">
+                                            <button class="btn btn-sm btn-outline-danger me-1" @onclick="() => ShowObservacionModal(exp)" title="Registrar observaciÃ³n">
                                                 <i class="bi bi-exclamation-triangle"></i>
                                             </button>
                                             <button class="btn btn-sm btn-outline-success" @onclick="() => ShowLevanteModal(exp)" title="Registrar levante">
@@ -167,7 +167,7 @@
                                         }
                                         @if (exp.Estado == "ObservacionAduana")
                                         {
-                                            <button class="btn btn-sm btn-outline-info" @onclick="() => SubsanarObservacion(exp)" title="Subsanar observación">
+                                            <button class="btn btn-sm btn-outline-info" @onclick="() => SubsanarObservacion(exp)" title="Subsanar observaciÃ³n">
                                                 <i class="bi bi-arrow-counterclockwise"></i> Subsanar
                                             </button>
                                         }
@@ -194,17 +194,17 @@
                                                     <div class="col-md-6">
                                                         <h6><i class="bi bi-info-circle"></i> Detalle del Embarque</h6>
                                                         <table class="table table-sm table-borderless mb-0">
-                                                            <tr><th class="w-50">Transporte</th><td>@(exp.ModalidadTransporte ?? "—")</td></tr>
-                                                            <tr><th>Puerto Origen</th><td>@(exp.PuertoOrigen ?? "—")</td></tr>
-                                                            <tr><th>Puerto Destino</th><td>@(exp.PuertoDestino ?? "—")</td></tr>
-                                                            <tr><th>BL / AWB</th><td>@(exp.NumeroBLAWB ?? "—")</td></tr>
-                                                            <tr><th>ATD</th><td>@(exp.ATD?.ToString("dd/MM/yyyy") ?? "—")</td></tr>
-                                                            <tr><th>ATA</th><td>@(exp.ATA?.ToString("dd/MM/yyyy") ?? "—")</td></tr>
-                                                            <tr><th>DUI / DIM</th><td>@(exp.NumeroDUIDIM ?? "—")</td></tr>
-                                                            <tr><th>Despachante</th><td>@(exp.Despachante ?? "—")</td></tr>
-                                                            <tr><th>Total Tributos</th><td>@(exp.TotalTributos?.ToString("N2") ?? "—")</td></tr>
-                                                            <tr><th>Levante</th><td>@(exp.FechaLevante?.ToString("dd/MM/yyyy") ?? "—")</td></tr>
-                                                            <tr><th>Seguro</th><td>@(exp.Aseguradora ?? "—") @(exp.NumeroPólizaSeguro != null ? $"#{exp.NumeroPólizaSeguro}" : "")</td></tr>
+                                                            <tr><th class="w-50">Transporte</th><td>@(exp.ModalidadTransporte ?? "â€”")</td></tr>
+                                                            <tr><th>Puerto Origen</th><td>@(exp.PuertoOrigen ?? "â€”")</td></tr>
+                                                            <tr><th>Puerto Destino</th><td>@(exp.PuertoDestino ?? "â€”")</td></tr>
+                                                            <tr><th>BL / AWB</th><td>@(exp.NumeroBLAWB ?? "â€”")</td></tr>
+                                                            <tr><th>ATD</th><td>@(exp.ATD?.ToString("dd/MM/yyyy") ?? "â€”")</td></tr>
+                                                            <tr><th>ATA</th><td>@(exp.ATA?.ToString("dd/MM/yyyy") ?? "â€”")</td></tr>
+                                                            <tr><th>DUI / DIM</th><td>@(exp.NumeroDUIDIM ?? "â€”")</td></tr>
+                                                            <tr><th>Despachante</th><td>@(exp.Despachante ?? "â€”")</td></tr>
+                                                            <tr><th>Total Tributos</th><td>@(exp.TotalTributos?.ToString("N2") ?? "â€”")</td></tr>
+                                                            <tr><th>Levante</th><td>@(exp.FechaLevante?.ToString("dd/MM/yyyy") ?? "â€”")</td></tr>
+                                                            <tr><th>Seguro</th><td>@(exp.Aseguradora ?? "â€”") @(exp.NumeroPÃ³lizaSeguro != null ? $"#{exp.NumeroPÃ³lizaSeguro}" : "")</td></tr>
                                                         </table>
                                                         @if (!string.IsNullOrEmpty(exp.DetalleObservacionAduana))
                                                         {
@@ -214,7 +214,7 @@
                                                         }
                                                     </div>
                                                     <div class="col-md-6">
-                                                        <h6><i class="bi bi-cart-check"></i> Órdenes de Compra vinculadas</h6>
+                                                        <h6><i class="bi bi-cart-check"></i> Ã“rdenes de Compra vinculadas</h6>
                                                         @if (exp.OrdenesCompraNumeros.Count == 0)
                                                         {
                                                             <p class="text-muted small">Sin OCs vinculadas.</p>
@@ -244,7 +244,7 @@
                                                                         <strong>@h.TipoHito</strong>
                                                                         @if (!string.IsNullOrEmpty(h.Descripcion))
                                                                         {
-                                                                            <span class="text-muted small ms-1">— @h.Descripcion</span>
+                                                                            <span class="text-muted small ms-1">â€” @h.Descripcion</span>
                                                                         }
                                                                     </li>
                                                                 }
@@ -274,15 +274,15 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-globe-americas"></i> Nuevo Expediente de Importación</h5>
+                    <h5 class="modal-title"><i class="bi bi-globe-americas"></i> Nuevo Expediente de ImportaciÃ³n</h5>
                     <button type="button" class="btn-close" @onclick="CloseModal"></button>
                 </div>
                 <div class="modal-body">
                     @if (!string.IsNullOrEmpty(modalError)) { <div class="alert alert-danger py-2">@modalError</div> }
                     <div class="row g-3">
                         <div class="col-12">
-                            <label class="form-label">Órdenes de Compra a vincular <span class="text-danger">*</span></label>
-                            <p class="text-muted small mb-2">Seleccione una o más OC aprobadas para este expediente.</p>
+                            <label class="form-label">Ã“rdenes de Compra a vincular <span class="text-danger">*</span></label>
+                            <p class="text-muted small mb-2">Seleccione una o mÃ¡s OC aprobadas para este expediente.</p>
                             <div style="max-height:180px;overflow-y:auto;border:1px solid #dee2e6;border-radius:.375rem;padding:.5rem">
                                 @foreach (var oc in ordenesAprobadas)
                                 {
@@ -291,7 +291,7 @@
                                                checked="@selectedOcIds.Contains(oc.OrdenCompraId)"
                                                @onchange="e => ToggleOc(oc.OrdenCompraId, (bool)e.Value!)" />
                                         <label class="form-check-label small" for="oc_@oc.OrdenCompraId">
-                                            <strong>@oc.Numero</strong> — @oc.ProveedorNombre (@oc.MonedaId @oc.Total.ToString("N2"))
+                                            <strong>@oc.Numero</strong> â€” @oc.ProveedorNombre (@oc.MonedaId @oc.Total.ToString("N2"))
                                         </label>
                                     </div>
                                 }
@@ -304,7 +304,7 @@
                         <div class="col-md-3">
                             <label class="form-label">Incoterm</label>
                             <select class="form-select" @bind="formIncoterm">
-                                <option value="">— Seleccionar —</option>
+                                <option value="">â€” Seleccionar â€”</option>
                                 <option>EXW</option><option>FCA</option><option>CPT</option><option>CIP</option>
                                 <option>DAP</option><option>DPU</option><option>DDP</option>
                                 <option>FAS</option><option>FOB</option><option>CFR</option><option>CIF</option>
@@ -313,15 +313,15 @@
                         <div class="col-md-3">
                             <label class="form-label">Modalidad Transporte</label>
                             <select class="form-select" @bind="formModalidadTransporte">
-                                <option value="">— Seleccionar —</option>
-                                <option value="Maritimo">Marítimo</option>
-                                <option value="Aereo">Aéreo</option>
+                                <option value="">â€” Seleccionar â€”</option>
+                                <option value="Maritimo">MarÃ­timo</option>
+                                <option value="Aereo">AÃ©reo</option>
                                 <option value="Terrestre">Terrestre</option>
                                 <option value="Multimodal">Multimodal</option>
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">País Origen</label>
+                            <label class="form-label">PaÃ­s Origen</label>
                             <input type="text" class="form-control" @bind="formPaisOrigen" placeholder="ej. China" />
                         </div>
                         <div class="col-md-3">
@@ -341,7 +341,7 @@
                             <input type="text" class="form-control" @bind="formAseguradora" />
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">Póliza Seguro</label>
+                            <label class="form-label">PÃ³liza Seguro</label>
                             <input type="text" class="form-control" @bind="formPolizaSeguro" />
                         </div>
                         <div class="col-12">
@@ -369,7 +369,7 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-ship"></i> Datos de Embarque — @selectedExp.Numero</h5>
+                    <h5 class="modal-title"><i class="bi bi-ship"></i> Datos de Embarque â€” @selectedExp.Numero</h5>
                     <button type="button" class="btn-close" @onclick="CloseModal"></button>
                 </div>
                 <div class="modal-body">
@@ -378,7 +378,7 @@
                         <div class="col-md-3">
                             <label class="form-label">Incoterm</label>
                             <select class="form-select" @bind="formIncoterm">
-                                <option value="">—</option>
+                                <option value="">â€”</option>
                                 <option>EXW</option><option>FCA</option><option>CPT</option><option>CIP</option>
                                 <option>DAP</option><option>DPU</option><option>DDP</option>
                                 <option>FAS</option><option>FOB</option><option>CFR</option><option>CIF</option>
@@ -387,15 +387,15 @@
                         <div class="col-md-3">
                             <label class="form-label">Modalidad</label>
                             <select class="form-select" @bind="formModalidadTransporte">
-                                <option value="">—</option>
-                                <option value="Maritimo">Marítimo</option>
-                                <option value="Aereo">Aéreo</option>
+                                <option value="">â€”</option>
+                                <option value="Maritimo">MarÃ­timo</option>
+                                <option value="Aereo">AÃ©reo</option>
                                 <option value="Terrestre">Terrestre</option>
                                 <option value="Multimodal">Multimodal</option>
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">País Origen</label>
+                            <label class="form-label">PaÃ­s Origen</label>
                             <input type="text" class="form-control" @bind="formPaisOrigen" />
                         </div>
                         <div class="col-md-3">
@@ -415,7 +415,7 @@
                             <input type="text" class="form-control" @bind="formAseguradora" />
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">Póliza Seguro</label>
+                            <label class="form-label">PÃ³liza Seguro</label>
                             <input type="text" class="form-control" @bind="formPolizaSeguro" />
                         </div>
                         <div class="col-md-3">
@@ -455,7 +455,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-arrow-right-circle"></i> Confirmar Salida — @selectedExp.Numero</h5>
+                    <h5 class="modal-title"><i class="bi bi-arrow-right-circle"></i> Confirmar Salida â€” @selectedExp.Numero</h5>
                     <button type="button" class="btn-close" @onclick="CloseModal"></button>
                 </div>
                 <div class="modal-body">
@@ -467,7 +467,7 @@
                     <button class="btn btn-secondary" @onclick="CloseModal" disabled="@saving">Cancelar</button>
                     <button class="btn btn-success" @onclick="ConfirmarSalida" disabled="@saving">
                         @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                        Confirmar Salida ? En Tránsito
+                        Confirmar Salida ? En TrÃ¡nsito
                     </button>
                 </div>
             </div>
@@ -482,7 +482,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-geo-alt-fill"></i> Registrar Arribo — @selectedExp.Numero</h5>
+                    <h5 class="modal-title"><i class="bi bi-geo-alt-fill"></i> Registrar Arribo â€” @selectedExp.Numero</h5>
                     <button type="button" class="btn-close" @onclick="CloseModal"></button>
                 </div>
                 <div class="modal-body">
@@ -515,14 +515,14 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-building"></i> Despacho Aduanero — @selectedExp.Numero</h5>
+                    <h5 class="modal-title"><i class="bi bi-building"></i> Despacho Aduanero â€” @selectedExp.Numero</h5>
                     <button type="button" class="btn-close" @onclick="CloseModal"></button>
                 </div>
                 <div class="modal-body">
                     @if (!string.IsNullOrEmpty(modalError)) { <div class="alert alert-danger py-2">@modalError</div> }
                     <div class="row g-3">
                         <div class="col-md-6">
-                            <label class="form-label">Número DUI/DIM <span class="text-danger">*</span></label>
+                            <label class="form-label">NÃºmero DUI/DIM <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" @bind="formDUIDIM" />
                         </div>
                         <div class="col-md-6">
@@ -530,7 +530,7 @@
                             <input type="text" class="form-control" @bind="formDespachante" />
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Fecha Presentación <span class="text-danger">*</span></label>
+                            <label class="form-label">Fecha PresentaciÃ³n <span class="text-danger">*</span></label>
                             <input type="date" class="form-control" @bind="formFechaDespacho" />
                         </div>
                         <div class="col-md-6">
@@ -555,21 +555,21 @@
     </div>
 }
 
-@* ?? Modal: Observación Aduana ?? *@
+@* ?? Modal: ObservaciÃ³n Aduana ?? *@
 @if (showObservacionModal && selectedExp is not null)
 {
     <div class="modal fade show d-block" style="background:rgba(0,0,0,.5)">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle text-warning"></i> Observación Aduanera — @selectedExp.Numero</h5>
+                    <h5 class="modal-title"><i class="bi bi-exclamation-triangle text-warning"></i> ObservaciÃ³n Aduanera â€” @selectedExp.Numero</h5>
                     <button type="button" class="btn-close" @onclick="CloseModal"></button>
                 </div>
                 <div class="modal-body">
                     @if (!string.IsNullOrEmpty(modalError)) { <div class="alert alert-danger py-2">@modalError</div> }
                     <div class="mb-3">
-                        <label class="form-label">Detalle de la Observación <span class="text-danger">*</span></label>
-                        <textarea class="form-control" rows="3" @bind="formObsAduana" placeholder="Describa la observación o aforo aduanero..."></textarea>
+                        <label class="form-label">Detalle de la ObservaciÃ³n <span class="text-danger">*</span></label>
+                        <textarea class="form-control" rows="3" @bind="formObsAduana" placeholder="Describa la observaciÃ³n o aforo aduanero..."></textarea>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Observaciones adicionales</label>
@@ -580,7 +580,7 @@
                     <button class="btn btn-secondary" @onclick="CloseModal" disabled="@saving">Cancelar</button>
                     <button class="btn btn-danger" @onclick="ConfirmarObservacion" disabled="@saving">
                         @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                        Registrar Observación
+                        Registrar ObservaciÃ³n
                     </button>
                 </div>
             </div>
@@ -595,7 +595,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-check-circle text-success"></i> Registrar Levante — @selectedExp.Numero</h5>
+                    <h5 class="modal-title"><i class="bi bi-check-circle text-success"></i> Registrar Levante â€” @selectedExp.Numero</h5>
                     <button type="button" class="btn-close" @onclick="CloseModal"></button>
                 </div>
                 <div class="modal-body">
@@ -628,7 +628,7 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-plus-circle"></i> Agregar Hito — @selectedExp.Numero</h5>
+                    <h5 class="modal-title"><i class="bi bi-plus-circle"></i> Agregar Hito â€” @selectedExp.Numero</h5>
                     <button type="button" class="btn-close" @onclick="CloseModal"></button>
                 </div>
                 <div class="modal-body">
@@ -636,14 +636,14 @@
                     <div class="mb-3">
                         <label class="form-label">Tipo de Hito <span class="text-danger">*</span></label>
                         <select class="form-select" @bind="formTipoHito">
-                            <option value="">— Seleccionar —</option>
+                            <option value="">â€” Seleccionar â€”</option>
                             <option value="ETD">ETD (Salida estimada)</option>
                             <option value="ATD">ATD (Salida real)</option>
                             <option value="ETA">ETA (Arribo estimado)</option>
                             <option value="ATA">ATA (Arribo real)</option>
-                            <option value="Aduana">Presentación Aduana</option>
+                            <option value="Aduana">PresentaciÃ³n Aduana</option>
                             <option value="Levante">Levante</option>
-                            <option value="Entrega">Entrega en almacén</option>
+                            <option value="Entrega">Entrega en almacÃ©n</option>
                             <option value="Otro">Otro</option>
                         </select>
                     </div>
@@ -652,12 +652,12 @@
                         <input type="date" class="form-control" @bind="formFechaHito" />
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Descripción</label>
+                        <label class="form-label">DescripciÃ³n</label>
                         <input type="text" class="form-control" @bind="formDescripcionHito" />
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Referencia Documento</label>
-                        <input type="text" class="form-control" @bind="formRefDocHito" placeholder="Nº BL, DUI, etc." />
+                        <input type="text" class="form-control" @bind="formRefDocHito" placeholder="NÂº BL, DUI, etc." />
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -724,7 +724,7 @@
     private string formDespachante = "";
     private DateTime formFechaDespacho = DateTime.Today;
     private decimal formTotalTributos;
-    // Observación
+    // ObservaciÃ³n
     private string formObsAduana = "";
     // Levante
     private DateTime formFechaLevante = DateTime.Today;
@@ -759,7 +759,7 @@
         showCreateModal = true;
     }
 
-    // Alias para evitar colisión con propiedad del mismo nombre
+    // Alias para evitar colisiÃ³n con propiedad del mismo nombre
     private async void ShowCreateModal() => await ShowCreateModal_();
 
     private void ShowEmbarqueModal(ExpedienteImportacionDto exp)
@@ -772,7 +772,7 @@
         formPuertoDestino = exp.PuertoDestino;
         formForwarder = exp.Forwarder;
         formAseguradora = exp.Aseguradora;
-        formPolizaSeguro = exp.NumeroPólizaSeguro;
+        formPolizaSeguro = exp.NumeroPÃ³lizaSeguro;
         formBLAWB = exp.NumeroBLAWB;
         formETD = exp.ETD;
         formETA = exp.ETA;
@@ -909,7 +909,7 @@
         try
         {
             var r = await ExpService.ConfirmarSalidaAsync(selectedExp!.ExpedienteImportacionId, formFechaSalida);
-            if (r.Success) { successMessage = $"Expediente {selectedExp.Numero} en tránsito."; CloseModal(); await LoadData(); }
+            if (r.Success) { successMessage = $"Expediente {selectedExp.Numero} en trÃ¡nsito."; CloseModal(); await LoadData(); }
             else modalError = r.Message;
         }
         catch (Exception ex) { modalError = ex.Message; }
@@ -935,7 +935,7 @@
         saving = true; modalError = null;
         try
         {
-            if (string.IsNullOrWhiteSpace(formDUIDIM)) { modalError = "El número DUI/DIM es requerido."; return; }
+            if (string.IsNullOrWhiteSpace(formDUIDIM)) { modalError = "El nÃºmero DUI/DIM es requerido."; return; }
             if (string.IsNullOrWhiteSpace(formDespachante)) { modalError = "El despachante es requerido."; return; }
             var r = await ExpService.IniciarDespachoAduaneroAsync(selectedExp!.ExpedienteImportacionId,
                 new RegistrarDespachoAduaneroDto(formDUIDIM, formDespachante, formFechaDespacho, formTotalTributos, formObservaciones));
@@ -951,10 +951,10 @@
         saving = true; modalError = null;
         try
         {
-            if (string.IsNullOrWhiteSpace(formObsAduana)) { modalError = "Ingrese el detalle de la observación."; return; }
+            if (string.IsNullOrWhiteSpace(formObsAduana)) { modalError = "Ingrese el detalle de la observaciÃ³n."; return; }
             var r = await ExpService.RegistrarObservacionAduanaAsync(selectedExp!.ExpedienteImportacionId,
                 new RegistrarObservacionAduanaDto(formObsAduana, formObservaciones));
-            if (r.Success) { successMessage = "Observación aduanera registrada."; CloseModal(); await LoadData(); }
+            if (r.Success) { successMessage = "ObservaciÃ³n aduanera registrada."; CloseModal(); await LoadData(); }
             else modalError = r.Message;
         }
         catch (Exception ex) { modalError = ex.Message; }
@@ -964,7 +964,7 @@
     private async Task SubsanarObservacion(ExpedienteImportacionDto exp)
     {
         var r = await ExpService.SubsanarObservacionAsync(exp.ExpedienteImportacionId);
-        if (r.Success) { successMessage = $"Observación subsanada. {exp.Numero} vuelve a despacho aduanero."; await LoadData(); }
+        if (r.Success) { successMessage = $"ObservaciÃ³n subsanada. {exp.Numero} vuelve a despacho aduanero."; await LoadData(); }
         else errorMessage = r.Message;
     }
 
@@ -1026,7 +1026,7 @@
 
     private static string GetEstadoLabel(string estado) => estado switch
     {
-        "EnTransito"        => "En Tránsito",
+        "EnTransito"        => "En TrÃ¡nsito",
         "EnAduana"          => "En Aduana",
         "ObservacionAduana" => "Obs. Aduana",
         _                   => estado

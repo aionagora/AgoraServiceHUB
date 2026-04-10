@@ -211,8 +211,8 @@ public class EstadoFinancieroService : IEstadoFinancieroService
                     cuentaMap.TryGetValue(l.CuentaContableId, out var cuenta);
                     return new LibroDiarioLineaDto
                     {
-                        CuentaCodigo = cuenta?.Codigo ?? "—",
-                        CuentaNombre = cuenta?.Nombre ?? "—",
+                        CuentaCodigo = cuenta?.Codigo ?? "â€”",
+                        CuentaNombre = cuenta?.Nombre ?? "â€”",
                         Glosa = l.Glosa,
                         Debe = l.Debe,
                         Haber = l.Haber
@@ -222,7 +222,7 @@ public class EstadoFinancieroService : IEstadoFinancieroService
             entradas.Add(new LibroDiarioEntradaDto
             {
                 AsientoContableId = a.AsientoContableId,
-                TipoComprobante = a.Numero.Split('-').FirstOrDefault() ?? "—",
+                TipoComprobante = a.Numero.Split('-').FirstOrDefault() ?? "â€”",
                 Numero = a.Numero,
                 Fecha = a.Fecha,
                 Concepto = a.Concepto,
@@ -244,6 +244,214 @@ public class EstadoFinancieroService : IEstadoFinancieroService
             TotalDebe = entradas.Sum(e => e.TotalDebe),
             TotalHaber = entradas.Sum(e => e.TotalHaber)
         });
+    }
+
+    // ????????????????????????????????????????????
+    // FLUJO DE EFECTIVO
+    // ????????????????????????????????????????????
+    public async Task<FlujoDEfectivoDto> GetFlujoDEfectivoAsync(int empresaId, DateTime desde, DateTime hasta, CancellationToken ct = default)
+    {
+        // 7. Calcular Saldo Inicial Efectivo
+        var asientosCaja = await _asientoRepo.FindAsync(
+            a => a.EmpresaId == empresaId && a.Activo 
+                && a.Estado == "Contabilizado" 
+                && a.Fecha < desde, ct);
+
+        var asientosCajaIds = asientosCaja.Select(a => a.AsientoContableId).ToHashSet();
+        decimal saldoInicialEfectivo = 0;
+
+        if (asientosCajaIds.Count > 0)
+        {
+            var lineasCaja = await _lineaRepo.FindAsync(l => asientosCajaIds.Contains(l.AsientoContableId) && l.Activo, ct);
+            var cuentasCajaIds = lineasCaja.Select(l => l.CuentaContableId).Distinct().ToList();
+            var cuentasCaja = cuentasCajaIds.Count > 0 
+                ? await _cuentaRepo.FindAsync(c => cuentasCajaIds.Contains(c.CuentaContableId) && c.Codigo.StartsWith("1.1.01"), ct) 
+                : new List<CuentaContable>();
+
+            var cuentasCajaMap = cuentasCaja.ToDictionary(c => c.CuentaContableId);
+            foreach (var l in lineasCaja)
+            {
+                if (cuentasCajaMap.TryGetValue(l.CuentaContableId, out var c))
+                {
+                    var neto = l.Debe - l.Haber;
+                    if (c.Naturaleza == NaturalezaCuenta.Acreedora)
+                        neto = -neto;
+                    saldoInicialEfectivo += neto;
+                }
+            }
+        }
+
+        // 1 & 2. Movimientos del periodo
+        var asientosPeriodo = await _asientoRepo.FindAsync(
+            a => a.EmpresaId == empresaId && a.Activo
+                && a.Estado == "Contabilizado"
+                && a.Fecha >= desde && a.Fecha <= hasta.AddDays(1).AddSeconds(-1), ct);
+
+        var asientoPeriodoIds = asientosPeriodo.Select(a => a.AsientoContableId).ToHashSet();
+        var lineasPeriodo = asientoPeriodoIds.Count > 0
+            ? await _lineaRepo.FindAsync(l => asientoPeriodoIds.Contains(l.AsientoContableId) && l.Activo, ct)
+            : new List<AsientoContableLinea>();
+
+        var cuentasIds = lineasPeriodo.Select(l => l.CuentaContableId).Distinct().ToList();
+        var cuentas = cuentasIds.Count > 0 
+            ? await _cuentaRepo.FindAsync(c => cuentasIds.Contains(c.CuentaContableId), ct) 
+            : new List<CuentaContable>();
+
+        var cuentasMap = cuentas.ToDictionary(c => c.CuentaContableId);
+
+        var lineasOperacional = new List<FlujoDEfectivoLineaDto>();
+        var lineasInversion = new List<FlujoDEfectivoLineaDto>();
+        var lineasFinanciacion = new List<FlujoDEfectivoLineaDto>();
+
+        // 4, 5, 6
+        var groupedLineas = lineasPeriodo.GroupBy(l => l.CuentaContableId);
+        foreach (var group in groupedLineas)
+        {
+            if (!cuentasMap.TryGetValue(group.Key, out var cuenta)) continue;
+
+            // 3. Excluir NoAplica
+            if (cuenta.ClasificacionFlujo == ClasificacionFlujoEfectivo.NoAplica) continue;
+
+            var neto = group.Sum(l => l.Debe) - group.Sum(l => l.Haber);
+            if (cuenta.Naturaleza == NaturalezaCuenta.Acreedora)
+                neto = -neto;
+
+            if (neto == 0) continue;
+
+            var lineaDto = new FlujoDEfectivoLineaDto
+            {
+                CodigoCuenta = cuenta.Codigo,
+                NombreCuenta = cuenta.Nombre,
+                Monto = neto
+            };
+
+            switch (cuenta.ClasificacionFlujo)
+            {
+                case ClasificacionFlujoEfectivo.Operacional:
+                    lineasOperacional.Add(lineaDto);
+                    break;
+                case ClasificacionFlujoEfectivo.Inversion:
+                    lineasInversion.Add(lineaDto);
+                    break;
+                case ClasificacionFlujoEfectivo.Financiacion:
+                    lineasFinanciacion.Add(lineaDto);
+                    break;
+            }
+        }
+
+        var totalOp = lineasOperacional.Sum(l => l.Monto);
+        var totalInv = lineasInversion.Sum(l => l.Monto);
+        var totalFin = lineasFinanciacion.Sum(l => l.Monto);
+        var variacion = totalOp + totalInv + totalFin;
+
+        // 8. Construir DTO
+        return new FlujoDEfectivoDto
+        {
+            EmpresaId = empresaId,
+            Desde = desde,
+            Hasta = hasta,
+            LineasOperacional = lineasOperacional,
+            LineasInversion = lineasInversion,
+            LineasFinanciacion = lineasFinanciacion,
+            TotalOperacional = totalOp,
+            TotalInversion = totalInv,
+            TotalFinanciacion = totalFin,
+            VariacionNetaEfectivo = variacion,
+            SaldoInicialEfectivo = saldoInicialEfectivo,
+            SaldoFinalEfectivo = saldoInicialEfectivo + variacion
+        };
+    }
+
+    // ????????????????????????????????????????????
+    // LIBRO MAYOR
+    // ????????????????????????????????????????????
+    public async Task<LibroMayorDto> GetLibroMayorAsync(int empresaId, int cuentaContableId, DateTime desde, DateTime hasta, CancellationToken ct = default)
+    {
+        var cuenta = await _cuentaRepo.GetByIdAsync(cuentaContableId, ct);
+        if (cuenta == null || cuenta.EmpresaId != empresaId)
+        {
+            throw new Exception("Cuenta contable no encontrada.");
+        }
+
+        // Calcular Saldo Anterior
+        var asientosAnteriores = await _asientoRepo.FindAsync(
+            a => a.EmpresaId == empresaId && a.Activo
+                && a.Estado == "Contabilizado"
+                && a.Fecha < desde, ct);
+
+        var asientosAnterioresIds = asientosAnteriores.Select(a => a.AsientoContableId).ToHashSet();
+        decimal saldoAnterior = 0;
+
+        if (asientosAnterioresIds.Count > 0)
+        {
+            var lineasAnteriores = await _lineaRepo.FindAsync(l => asientosAnterioresIds.Contains(l.AsientoContableId) && l.CuentaContableId == cuentaContableId && l.Activo, ct);
+            foreach (var l in lineasAnteriores)
+            {
+                if (cuenta.Naturaleza == NaturalezaCuenta.Deudora)
+                    saldoAnterior += l.Debe - l.Haber;
+                else
+                    saldoAnterior += l.Haber - l.Debe;
+            }
+        }
+
+        // Consultar movimientos del periodo
+        var asientosPeriodo = await _asientoRepo.FindAsync(
+            a => a.EmpresaId == empresaId && a.Activo
+                && a.Estado == "Contabilizado"
+                && a.Fecha >= desde && a.Fecha <= hasta.AddDays(1).AddSeconds(-1), ct);
+
+        var asientoPeriodoIds = asientosPeriodo.Select(a => a.AsientoContableId).ToHashSet();
+        var lineasPeriodo = asientoPeriodoIds.Count > 0
+            ? await _lineaRepo.FindAsync(l => asientoPeriodoIds.Contains(l.AsientoContableId) && l.CuentaContableId == cuentaContableId && l.Activo, ct)
+            : new List<AsientoContableLinea>();
+
+        var asientosMap = asientosPeriodo.ToDictionary(a => a.AsientoContableId);
+
+        var lineasDto = new List<LibroMayorLineaDto>();
+        decimal saldoProgresivo = saldoAnterior;
+        decimal totalDebe = 0;
+        decimal totalHaber = 0;
+
+        // Ordenar lÃ­neas
+        var lineasOrdenadas = lineasPeriodo
+            .OrderBy(l => asientosMap.ContainsKey(l.AsientoContableId) ? asientosMap[l.AsientoContableId].Fecha : DateTime.MinValue)
+            .ThenBy(l => l.AsientoContableLineaId) // Orden estable adicional
+            .ToList();
+
+        foreach (var l in lineasOrdenadas)
+        {
+            var asientoInfo = asientosMap.TryGetValue(l.AsientoContableId, out var asient) ? asient : null;
+
+            totalDebe += l.Debe;
+            totalHaber += l.Haber;
+
+            if (cuenta.Naturaleza == NaturalezaCuenta.Deudora)
+                saldoProgresivo += l.Debe - l.Haber;
+            else
+                saldoProgresivo += l.Haber - l.Debe;
+
+            lineasDto.Add(new LibroMayorLineaDto
+            {
+                Fecha = asientoInfo?.Fecha ?? DateTime.MinValue,
+                NumeroAsiento = asientoInfo?.Numero ?? string.Empty,
+                Glosa = string.IsNullOrWhiteSpace(l.Glosa) ? (asientoInfo?.Glosa ?? string.Empty) : l.Glosa,
+                Debe = l.Debe,
+                Haber = l.Haber,
+                SaldoProgresivo = saldoProgresivo
+            });
+        }
+
+        return new LibroMayorDto
+        {
+            CuentaContableId = cuenta.CuentaContableId,
+            CodigoCuenta = cuenta.Codigo,
+            NombreCuenta = cuenta.Nombre,
+            SaldoAnterior = saldoAnterior,
+            TotalDebe = totalDebe,
+            TotalHaber = totalHaber,
+            SaldoFinal = saldoProgresivo,
+            Lineas = lineasDto
+        };
     }
 
     // ????????????????????????????????????????????

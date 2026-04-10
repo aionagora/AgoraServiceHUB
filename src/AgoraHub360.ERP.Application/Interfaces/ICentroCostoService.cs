@@ -15,7 +15,7 @@ public interface ICentroCostoService
     /// <summary>Crea un nuevo centro de costo.</summary>
     Task<Result<CentroCostoDto>> CreateAsync(CreateCentroCostoDto dto, CancellationToken ct = default);
 
-    /// <summary>Actualiza nombre, descripción o padre de un centro de costo existente.</summary>
+    /// <summary>Actualiza nombre, descripciÃ³n o padre de un centro de costo existente.</summary>
     Task<Result<CentroCostoDto>> UpdateAsync(int id, UpdateCentroCostoDto dto, CancellationToken ct = default);
 
     /// <summary>Soft-delete de un centro de costo sin hijos activos.</summary>

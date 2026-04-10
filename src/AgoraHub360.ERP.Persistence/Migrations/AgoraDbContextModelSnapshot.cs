@@ -221,6 +221,12 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Property<bool>("Activo")
                         .HasColumnType("bit");
 
+                    b.Property<int>("ClasificacionFlujo")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0)
+                        .HasColumnName("ClasificacionFlujo");
+
                     b.Property<string>("Codigo")
                         .IsRequired()
                         .HasMaxLength(30)

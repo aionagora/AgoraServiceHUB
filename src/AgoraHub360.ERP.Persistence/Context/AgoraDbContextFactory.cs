@@ -8,13 +8,13 @@ using System.IO;
 /// <summary>
 /// Factory para crear AgoraDbContext en design-time (migraciones).
 /// Usa el constructor sin ICurrentUserService para evitar dependencias de runtime.
-/// Lee la cadena de conexión desde appsettings.json del proyecto API.
+/// Lee la cadena de conexiÃ³n desde appsettings.json del proyecto API.
 /// </summary>
 public class AgoraDbContextFactory : IDesignTimeDbContextFactory<AgoraDbContext>
 {
     public AgoraDbContext CreateDbContext(string[] args)
     {
-        // Construir configuración desde appsettings.json
+        // Construir configuraciÃ³n desde appsettings.json
         var configuration = new ConfigurationBuilder()
             .SetBasePath(Path.Combine(Directory.GetCurrentDirectory(), "..", "AgoraHub360.ERP.Api"))
             .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)

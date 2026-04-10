@@ -1,7 +1,7 @@
 namespace AgoraHub360.ERP.Domain.Enums;
 
 /// <summary>
-/// Tipo de cuenta contable según la ecuación contable fundamental.
+/// Tipo de cuenta contable segÃºn la ecuaciÃ³n contable fundamental.
 /// </summary>
 public enum TipoCuenta : byte
 {

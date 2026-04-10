@@ -8,8 +8,8 @@
 <div class="container-fluid">
     <div class="row mb-3">
         <div class="col">
-            <h3><i class="bi bi-table"></i> Balance de Comprobación — Sumas y Saldos</h3>
-            <p class="text-muted mb-0">Verificación de partida doble por período</p>
+            <h3><i class="bi bi-table"></i> Balance de ComprobaciÃ³n â€” Sumas y Saldos</h3>
+            <p class="text-muted mb-0">VerificaciÃ³n de partida doble por perÃ­odo</p>
         </div>
     </div>
 
@@ -60,8 +60,8 @@
                 <div class="card-body">
                     <div class="text-center mb-4">
                         <h4 class="fw-bold">@data.Empresa</h4>
-                        <h5>BALANCE DE COMPROBACIÓN — SUMAS Y SALDOS</h5>
-                        <p class="text-muted">Del @data.FechaDesde.ToString("dd/MM/yyyy") al @data.FechaHasta.ToString("dd/MM/yyyy") — Gestión @data.Gestion</p>
+                        <h5>BALANCE DE COMPROBACIÃ“N â€” SUMAS Y SALDOS</h5>
+                        <p class="text-muted">Del @data.FechaDesde.ToString("dd/MM/yyyy") al @data.FechaHasta.ToString("dd/MM/yyyy") â€” GestiÃ³n @data.Gestion</p>
                         <p class="small text-muted">(Expresado en Bolivianos)</p>
                     </div>
 
@@ -69,7 +69,7 @@
                         <table class="table table-bordered table-sm mb-0">
                             <thead class="table-dark">
                                 <tr>
-                                    <th rowspan="2" class="align-middle text-center">Código</th>
+                                    <th rowspan="2" class="align-middle text-center">CÃ³digo</th>
                                     <th rowspan="2" class="align-middle">Nombre de la Cuenta</th>
                                     <th colspan="2" class="text-center">SUMAS</th>
                                     <th colspan="2" class="text-center">SALDOS</th>
@@ -84,7 +84,7 @@
                             <tbody>
                                 @if (data.Lineas.Count == 0)
                                 {
-                                    <tr><td colspan="6" class="text-center text-muted py-4">No hay movimientos en el período seleccionado.</td></tr>
+                                    <tr><td colspan="6" class="text-center text-muted py-4">No hay movimientos en el perÃ­odo seleccionado.</td></tr>
                                 }
                                 @foreach (var l in data.Lineas)
                                 {
@@ -117,7 +117,7 @@
                         }
                         else
                         {
-                            <span class="badge bg-danger fs-6"><i class="bi bi-exclamation-triangle-fill"></i> Las sumas NO cuadran — Diferencia: @Math.Abs(data.TotalSumaDebe - data.TotalSumaHaber).ToString("N2")</span>
+                            <span class="badge bg-danger fs-6"><i class="bi bi-exclamation-triangle-fill"></i> Las sumas NO cuadran â€” Diferencia: @Math.Abs(data.TotalSumaDebe - data.TotalSumaHaber).ToString("N2")</span>
                         }
                         @if (data.TotalSaldoDeudor == data.TotalSaldoAcreedor)
                         {
@@ -125,12 +125,12 @@
                         }
                         else
                         {
-                            <span class="badge bg-danger fs-6 ms-2"><i class="bi bi-exclamation-triangle-fill"></i> Los saldos NO cuadran — Diferencia: @Math.Abs(data.TotalSaldoDeudor - data.TotalSaldoAcreedor).ToString("N2")</span>
+                            <span class="badge bg-danger fs-6 ms-2"><i class="bi bi-exclamation-triangle-fill"></i> Los saldos NO cuadran â€” Diferencia: @Math.Abs(data.TotalSaldoDeudor - data.TotalSaldoAcreedor).ToString("N2")</span>
                         }
                     </div>
 
                     <div class="mt-3 text-muted small">
-                        <strong>@data.Lineas.Count</strong> cuentas con movimientos en el período.
+                        <strong>@data.Lineas.Count</strong> cuentas con movimientos en el perÃ­odo.
                     </div>
                 </div>
             </div>
@@ -160,18 +160,8 @@
 
     private async Task ExportarExcel()
     {
-        exportando = true;
-        try
-        {
-            var bytes = await ReporteService.ExportSumasYSaldosExcelAsync(fechaDesde, fechaHasta);
-            if (bytes != null)
-                await JS.InvokeVoidAsync("downloadFile",
-                    $"Sumas_Saldos_{fechaDesde:yyyyMMdd}_{fechaHasta:yyyyMMdd}.xlsx",
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    Convert.ToBase64String(bytes));
-        }
-        catch (Exception ex) { errorMessage = ex.Message; }
-        finally { exportando = false; }
+        var url = $"api/v1/contabilidad/estados-financieros/sumas-saldos/export?desde={fechaDesde:yyyy-MM-dd}&hasta={fechaHasta:yyyy-MM-dd}&format=xlsx";
+        await JS.InvokeVoidAsync("downloadFile", url, "SumasYSaldos.xlsx");
     }
 
     private async Task Imprimir()

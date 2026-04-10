@@ -109,7 +109,7 @@ public class EmpresasController : ControllerBase
 
     /// <summary>
     /// Seeds default MDM data (catalog, UoMs, statuses) for a given company.
-    /// Idempotent — skips if data already exists.
+    /// Idempotent â€” skips if data already exists.
     /// </summary>
     [HttpPost("{id:int}/seed")]
     public async Task<IActionResult> SeedDefaultData(int id, CancellationToken ct)

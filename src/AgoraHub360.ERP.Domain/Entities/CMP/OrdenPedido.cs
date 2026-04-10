@@ -6,7 +6,7 @@ using AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Enums;
 
 /// <summary>
-/// Orden de Pedido (OP) — Demanda interna de una sucursal o área.
+/// Orden de Pedido (OP) â€” Demanda interna de una sucursal o Ã¡rea.
 /// Flujo: Borrador ? EnRevision ? (AbastecidoConStock | PendienteAprobacion ? Aprobado ? [OC])
 ///        | Anulado | Rechazado.
 /// </summary>
@@ -14,12 +14,12 @@ public class OrdenPedido : TenantEntity
 {
     public long OrdenPedidoId { get; set; }
 
-    /// <summary>Número único generado desde NumeracionDocumento (ej: OP-000001).</summary>
+    /// <summary>NÃºmero Ãºnico generado desde NumeracionDocumento (ej: OP-000001).</summary>
     public string Numero { get; set; } = string.Empty;
 
     public DateTime FechaEmision { get; set; }
 
-    /// <summary>Fecha en la que el solicitante necesita los ítems.</summary>
+    /// <summary>Fecha en la que el solicitante necesita los Ã­tems.</summary>
     public DateTime? FechaRequerida { get; set; }
 
     /// <summary>Usuario que origina la solicitud (FK a Usuarios).</summary>
@@ -29,10 +29,10 @@ public class OrdenPedido : TenantEntity
     /// <summary>Centro de costo al que se imputa la solicitud.</summary>
     public string? CentroCosto { get; set; }
 
-    /// <summary>Nivel de urgencia: Normal, Urgente, Crítico.</summary>
+    /// <summary>Nivel de urgencia: Normal, Urgente, CrÃ­tico.</summary>
     public NivelUrgencia Urgencia { get; set; } = NivelUrgencia.Normal;
 
-    /// <summary>Almacén destino donde se requiere el stock.</summary>
+    /// <summary>AlmacÃ©n destino donde se requiere el stock.</summary>
     public int AlmacenDestinoId { get; set; }
     public Almacen? AlmacenDestino { get; set; }
 
@@ -44,16 +44,16 @@ public class OrdenPedido : TenantEntity
     public string? MotivoRechazo { get; set; }
 
     /// <summary>
-    /// Resultado de la validación de stock.
-    /// True = stock/tránsito cubre la demanda ? se cierra con AbastecidoConStock.
+    /// Resultado de la validaciÃ³n de stock.
+    /// True = stock/trÃ¡nsito cubre la demanda ? se cierra con AbastecidoConStock.
     /// False = requiere compra ? pasa a Compras Central.
     /// </summary>
     public bool? StockCubre { get; set; }
 
-    /// <summary>Observaciones de la revisión de stock realizada por Compras.</summary>
+    /// <summary>Observaciones de la revisiÃ³n de stock realizada por Compras.</summary>
     public string? ObservacionesRevisionStock { get; set; }
 
-    // Navegación
+    // NavegaciÃ³n
     public ICollection<OrdenPedidoLinea> Lineas { get; set; } = new List<OrdenPedidoLinea>();
 
     /// <summary>OCs generadas a partir de esta OP.</summary>

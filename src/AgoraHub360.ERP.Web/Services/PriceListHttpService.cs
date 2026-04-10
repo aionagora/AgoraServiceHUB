@@ -23,7 +23,7 @@ public class PriceListHttpService
         if (!response.IsSuccessStatusCode)
             return ApiResponse<PriceListDto>.Fail($"HTTP {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
         return await response.Content.ReadFromJsonAsync<ApiResponse<PriceListDto>>()
-            ?? ApiResponse<PriceListDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<PriceListDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<PriceListDto>> UpdateAsync(long id, UpdatePriceListDto dto)
@@ -32,7 +32,7 @@ public class PriceListHttpService
         if (!response.IsSuccessStatusCode)
             return ApiResponse<PriceListDto>.Fail($"HTTP {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
         return await response.Content.ReadFromJsonAsync<ApiResponse<PriceListDto>>()
-            ?? ApiResponse<PriceListDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<PriceListDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<bool>> DeleteAsync(long id)
@@ -41,7 +41,7 @@ public class PriceListHttpService
         if (!response.IsSuccessStatusCode)
             return ApiResponse<bool>.Fail($"HTTP {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
         return await response.Content.ReadFromJsonAsync<ApiResponse<bool>>()
-            ?? ApiResponse<bool>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<bool>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<List<PriceListItemDto>> GetItemsAsync(long priceListId)
@@ -57,7 +57,7 @@ public class PriceListHttpService
         if (!response.IsSuccessStatusCode)
             return ApiResponse<PriceListItemDto>.Fail($"HTTP {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
         return await response.Content.ReadFromJsonAsync<ApiResponse<PriceListItemDto>>()
-            ?? ApiResponse<PriceListItemDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<PriceListItemDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<bool>> DeleteItemAsync(long priceListId, long itemId)
@@ -66,6 +66,6 @@ public class PriceListHttpService
         if (!response.IsSuccessStatusCode)
             return ApiResponse<bool>.Fail($"HTTP {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
         return await response.Content.ReadFromJsonAsync<ApiResponse<bool>>()
-            ?? ApiResponse<bool>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<bool>.Fail("Error de comunicaci贸n.");
     }
 }
