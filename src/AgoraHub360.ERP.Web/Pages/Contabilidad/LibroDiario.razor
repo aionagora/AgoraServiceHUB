@@ -6,14 +6,14 @@
 <PageTitle>Libro Diario - AgoraHub360 ERP</PageTitle>
 
 <div class="container-fluid">
-    <div class="row mb-3">
+    <div class="row mb-3 d-print-none">
         <div class="col">
             <h3><i class="bi bi-journal-bookmark-fill"></i> Libro Diario</h3>
             <p class="text-muted mb-0">Registro cronológico de comprobantes contables</p>
         </div>
     </div>
 
-    <div class="card mb-3">
+    <div class="card mb-3 d-print-none">
         <div class="card-body py-2">
             <div class="row g-2 align-items-end">
                 <div class="col-md-2">
@@ -225,7 +225,7 @@
             var estado = string.IsNullOrEmpty(filtroEstado) ? null : filtroEstado;
             var bytes = await ReporteService.ExportLibroDiarioExcelAsync(fechaDesde, fechaHasta, estado);
             if (bytes != null)
-                await JS.InvokeVoidAsync("downloadFile",
+                await JS.InvokeVoidAsync("downloadFileFromBase64",
                     $"Libro_Diario_{fechaDesde:yyyyMMdd}_{fechaHasta:yyyyMMdd}.xlsx",
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     Convert.ToBase64String(bytes));
@@ -260,7 +260,7 @@
         {
             var estadoQuery = string.IsNullOrEmpty(filtroEstado) ? "" : $"&estado={filtroEstado}";
             var url = $"api/v1/contabilidad/estados-financieros/libro-diario/export?desde={fechaDesde:yyyy-MM-dd}&hasta={fechaHasta:yyyy-MM-dd}{estadoQuery}&format=pdf";
-            await JS.InvokeVoidAsync("downloadFile", url, $"Libro_Diario_{fechaDesde:yyyyMMdd}_{fechaHasta:yyyyMMdd}.pdf");
+            await JS.InvokeVoidAsync("downloadFileFromBase64", url, $"Libro_Diario_{fechaDesde:yyyyMMdd}_{fechaHasta:yyyyMMdd}.pdf");
         }
         catch (Exception ex) { errorMessage = ex.Message; }
         finally { _exportandoPdf = false; StateHasChanged(); }
@@ -279,3 +279,4 @@
         _ => "bg-secondary"
     };
 }
+

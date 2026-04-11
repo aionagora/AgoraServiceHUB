@@ -667,9 +667,17 @@ kbd {
 
 /* ══════════════ @media print ══════════════ */
 @media print {
-    /* Ocultar todo excepto el documento */
-    body > *               { display: none !important; }
-    .vp-backdrop           { display: block !important; position: static !important; background: none !important; }
+    /* Ocultar barra lateral y superior */
+    .sidebar { display: none !important; }
+    .topbar { display: none !important; }
+
+    /* Ocultar elementos marcados para no imprimir */
+    .d-print-none { display: none !important; }
+
+    /* Ocultar contenedor principal si hay un backdrop modal visible (usando :has si es posible, o de otra forma el modal se imprime encima) */
+    body:has(.vp-backdrop) .app-layout { display: none !important; }
+
+    .vp-backdrop           { position: static !important; background: none !important; }
     .vp-dialog             { max-width: 100% !important; margin: 0 !important; box-shadow: none !important; }
     .vp-content            { box-shadow: none !important; border: none !important; }
     .vp-toolbar            { display: none !important; }

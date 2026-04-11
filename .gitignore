@@ -52,3 +52,5 @@ publish/
 /src/AgoraHub360.ERP.Web/Pages/Logistica/HojasRuta.razor
 /`src/AgoraHub360.ERP.Application/Services/NumeracionDocumentoService.cs`
 /src/AgoraHub360.ERP.Web/Services/HojaRutaHttpService.cs
+/src/AgoraHub360.ERP.Application/Interfaces
+/src/AgoraHub360.ERP.Shared/DTOs/Contabilidad/ConsolidacionFinancieraDto.cs

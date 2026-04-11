@@ -21,6 +21,25 @@ window.downloadFile = async (url, filename) => {
   window.URL.revokeObjectURL(blobUrl);
 };
 
+window.downloadFileFromBase64 = (filename, contentType, base64) => {
+    const byteCharacters = atob(base64);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: contentType });
+    const url = URL.createObjectURL(blob);
+    
+    const anchorElement = document.createElement('a');
+    anchorElement.href = url;
+    anchorElement.download = filename;
+    document.body.appendChild(anchorElement);
+    anchorElement.click();
+    document.body.removeChild(anchorElement);
+    URL.revokeObjectURL(url);
+};
+
 window.downloadFileFromResponse = async (url, fallbackFilename) => {
     const response = await fetch(url, {
         method: "GET",
