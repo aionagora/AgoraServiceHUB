@@ -125,6 +125,7 @@ public class AgoraDbContext : DbContext, IUnitOfWork
 
     // ── ACC: Contabilidad ────────────────────────────────────────────────────
     public DbSet<CuentaContable> CuentasContables => Set<CuentaContable>();
+    public DbSet<CierreContable> CierresContables => Set<CierreContable>();
     public DbSet<AsientoContable> AsientosContables => Set<AsientoContable>();
     public DbSet<AsientoContableLinea> AsientoContableLineas => Set<AsientoContableLinea>();
     public DbSet<PeriodoContable> PeriodosContables => Set<PeriodoContable>();

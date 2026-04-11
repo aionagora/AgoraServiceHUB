@@ -1268,7 +1268,7 @@
             {
                 var fileBytes = await AsientoService.ExportarExcelIndividualAsync(editingId);
                 if (fileBytes is { Length: > 0 })
-                    await JS.InvokeVoidAsync("downloadFile", $"Comprobante_{numSafe}.xlsx",
+                    await JS.InvokeVoidAsync("downloadFileFromBase64", $"Comprobante_{numSafe}.xlsx",
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         Convert.ToBase64String(fileBytes));
                 else errorMessage = "No se pudo generar el archivo Excel.";
@@ -1279,7 +1279,7 @@
             {
                 var fileBytes = await AsientoService.ExportarExcelPlanoAsync(search: formNumero);
                 if (fileBytes is { Length: > 0 })
-                    await JS.InvokeVoidAsync("downloadFile", $"Comprobante_Plano_{numSafe}.xlsx",
+                    await JS.InvokeVoidAsync("downloadFileFromBase64", $"Comprobante_Plano_{numSafe}.xlsx",
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         Convert.ToBase64String(fileBytes));
                 else errorMessage = "No se pudo generar el archivo Excel plano.";
@@ -1297,7 +1297,7 @@
                 default: throw new Exception("Formato no reconocido.");
             }
             var bytes = System.Text.Encoding.UTF8.GetBytes(content);
-            await JS.InvokeVoidAsync("downloadFile", fileName, mimeType, Convert.ToBase64String(bytes));
+            await JS.InvokeVoidAsync("downloadFileFromBase64", fileName, mimeType, Convert.ToBase64String(bytes));
             successMessage = $"Archivo {formato.ToUpper()} generado.";
         }
         catch (Exception ex) { errorMessage = $"Error al exportar: {ex.Message}"; }
@@ -1343,3 +1343,4 @@
     };
 
 }
+

@@ -6,14 +6,14 @@
 <PageTitle>Estado de Resultados - AgoraHub360 ERP</PageTitle>
 
 <div class="container-fluid">
-    <div class="row mb-3">
+    <div class="row mb-3 d-print-none">
         <div class="col">
             <h3><i class="bi bi-graph-up-arrow"></i> Estado de Resultados</h3>
             <p class="text-muted mb-0">Estado de Pérdidas y Ganancias</p>
         </div>
     </div>
 
-    <div class="card mb-3">
+    <div class="card mb-3 d-print-none">
         <div class="card-body py-2">
             <div class="row g-2 align-items-end">
                 <div class="col-md-2">
@@ -137,7 +137,7 @@
         {
             var bytes = await ReporteService.ExportEstadoResultadosExcelAsync(fechaDesde, fechaHasta);
             if (bytes != null)
-                await JS.InvokeVoidAsync("downloadFile",
+                await JS.InvokeVoidAsync("downloadFileFromBase64",
                     $"Estado_Resultados_{fechaDesde:yyyyMMdd}_{fechaHasta:yyyyMMdd}.xlsx",
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     Convert.ToBase64String(bytes));
@@ -182,3 +182,4 @@
             RenderNodo(builder, child, indent + 1);
     }
 }
+
