@@ -173,10 +173,12 @@ public class ContabilizacionService : IContabilizacionService
             OrigenTipo = tipoDocumento,
             OrigenId = origenId,
             OrigenReferencia = origenReferencia,
-            TotalDebe = totalDebe,
-            TotalHaber = totalHaber,
             Activo = true
         };
+
+        asiento.EstablecerTotales(totalDebe, totalHaber);
+        if (!asiento.EstaCuadrado())
+            return Result<AsientoContableDto>.Failure("El asiento de contabilización automática no cuadra según las reglas de dominio.");
 
         await _asientoRepo.AddAsync(asiento, ct);
         await _unitOfWork.SaveChangesAsync(ct);

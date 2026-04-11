@@ -77,12 +77,38 @@ public class AsientoContable : TenantEntity
 
     // ?? Totales ??
     /// <summary>Total Debe (calculado).</summary>
-    public decimal TotalDebe { get; set; }
+    public decimal TotalDebe { get; private set; }
 
     /// <summary>Total Haber (calculado).</summary>
-    public decimal TotalHaber { get; set; }
+    public decimal TotalHaber { get; private set; }
 
     // Navegación
     public ICollection<AsientoContableLinea> Lineas { get; set; } = new List<AsientoContableLinea>();
     public ICollection<ComprobanteDocumento> Documentos { get; set; } = new List<ComprobanteDocumento>();
+
+    // ?? Lógica de Dominio ??
+
+    /// <summary>
+    /// Recalcula los totales del asiento en base a sus líneas.
+    /// </summary>
+    public void RecalcularTotales()
+    {
+        TotalDebe = Lineas.Sum(l => l.Debe);
+        TotalHaber = Lineas.Sum(l => l.Haber);
+    }
+
+    /// <summary>
+    /// Recalcula los totales explícitamente desde una lista externa de líneas
+    /// y actualiza los totales. Útil para Carga Manual/DTOs antes de persistir.
+    /// </summary>
+    public void EstablecerTotales(decimal debe, decimal haber)
+    {
+        TotalDebe = debe;
+        TotalHaber = haber;
+    }
+
+    /// <summary>
+    /// Verifica si el asiento cumple con la partida doble.
+    /// </summary>
+    public bool EstaCuadrado() => TotalDebe == TotalHaber;
 }

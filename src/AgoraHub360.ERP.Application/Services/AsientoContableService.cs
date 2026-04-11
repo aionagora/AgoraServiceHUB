@@ -178,10 +178,12 @@ public class AsientoContableService : IAsientoContableService
             OrigenTipo = dto.OrigenTipo,
             OrigenId = dto.OrigenId,
             OrigenReferencia = dto.OrigenReferencia,
-            TotalDebe = totalDebe,
-            TotalHaber = totalHaber,
             Activo = true
         };
+
+        asiento.EstablecerTotales(totalDebe, totalHaber);
+        if (!asiento.EstaCuadrado())
+            return Result<AsientoContableDto>.Failure("El comprobante no cuadra de acuerdo a las reglas de dominio.");
 
         await _asientoRepo.AddAsync(asiento, ct);
         await _unitOfWork.SaveChangesAsync(ct);
@@ -270,8 +272,9 @@ public class AsientoContableService : IAsientoContableService
         asiento.ValorTipoCambio = valorTc;
         asiento.TipoPagoId = dto.TipoPagoId;
         asiento.NumeroDocumentoPago = dto.NumeroDocumentoPago;
-        asiento.TotalDebe = totalDebe;
-        asiento.TotalHaber = totalHaber;
+        asiento.EstablecerTotales(totalDebe, totalHaber);
+        if (!asiento.EstaCuadrado())
+            return Result<AsientoContableDto>.Failure("El comprobante no cuadra.");
 
         await _asientoRepo.UpdateAsync(asiento, ct);
 
@@ -331,10 +334,10 @@ public class AsientoContableService : IAsientoContableService
             NumeroDocumentoPago = null,
             RegistradoPorId = _currentUser.UserIdInt,
             RegistradoPorNombre = _currentUser.UserName,
-            TotalDebe = original.TotalDebe,
-            TotalHaber = original.TotalHaber,
             Activo = true
         };
+
+        copia.EstablecerTotales(original.TotalDebe, original.TotalHaber);
 
         await _asientoRepo.AddAsync(copia, ct);
         await _unitOfWork.SaveChangesAsync(ct);
@@ -407,8 +410,10 @@ public class AsientoContableService : IAsientoContableService
         }
 
         asiento.Estado = "Contabilizado";
-        asiento.TotalDebe = totalDebe;
-        asiento.TotalHaber = totalHaber;
+        asiento.EstablecerTotales(totalDebe, totalHaber);
+        if (!asiento.EstaCuadrado())
+            return Result<AsientoContableDto>.Failure("El comprobante no cuadra de acuerdo a las reglas de dominio al intentar contabilizar.");
+
         await _asientoRepo.UpdateAsync(asiento, ct);
         await _unitOfWork.SaveChangesAsync(ct);
 
