@@ -3,13 +3,47 @@ namespace AgoraHub360.ERP.Infrastructure.Services;
 using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Shared.DTOs.Contabilidad;
 using ClosedXML.Excel;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 public class AsientoExportService : IAsientoExportService
 {
+    private readonly ILogger<AsientoExportService> _logger;
+
+    public AsientoExportService(ILogger<AsientoExportService> logger)
+    {
+        _logger = logger;
+    }
+
+    public Task<byte[]> ExportarExcelAsync(IEnumerable<AsientoContableDto> asientos, CancellationToken ct = default)
+    {
+        _logger.LogInformation("Exportando {count} asientos a Excel listado", asientos.Count());
+        return Task.FromResult(ExportarExcel(asientos.ToList()));
+    }
+
+    public Task<string> GenerarCsvAsync(IEnumerable<AsientoContableDto> asientos)
+    {
+        _logger.LogInformation("Exportando {count} asientos a CSV", asientos.Count());
+        return Task.FromResult(AgoraHub360.ERP.Shared.Utils.ExportFormatHelper.GenerarCsvListado(asientos.ToList()));
+    }
+
+    public Task<string> GenerarJsonAsync(IEnumerable<AsientoContableDto> asientos)
+    {
+        _logger.LogInformation("Exportando {count} asientos a JSON", asientos.Count());
+        return Task.FromResult(AgoraHub360.ERP.Shared.Utils.ExportFormatHelper.GenerarJsonPlano(asientos.ToList()));
+    }
+
+    public Task<string> GenerarXmlAsync(IEnumerable<AsientoContableDto> asientos)
+    {
+        _logger.LogInformation("Exportando {count} asientos a XML", asientos.Count());
+        return Task.FromResult(AgoraHub360.ERP.Shared.Utils.ExportFormatHelper.GenerarXmlPlano(asientos.ToList()));
+    }
+
     public byte[] ExportarExcel(IReadOnlyList<AsientoContableDto> asientos)
     {
         using var workbook = new XLWorkbook();

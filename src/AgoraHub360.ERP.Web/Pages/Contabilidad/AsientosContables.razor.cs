@@ -100,17 +100,38 @@ public partial class AsientosContables
         exportando = true; errorMessage = null;
         try
         {
-            string content; string fileName; string mimeType;
-            switch (formato)
+            var tipoId = filtroTipoComp > 0 ? (int?)filtroTipoComp : null;
+            var fileBytes = await AsientoService.ExportarFormatosAsync(
+                formato, filtroDesde, filtroHasta,
+                string.IsNullOrEmpty(filtroEstado) ? null : filtroEstado, tipoId,
+                string.IsNullOrEmpty(filtroSearch) ? null : filtroSearch);
+
+            if (fileBytes is { Length: > 0 })
             {
-                case "json": content = ExportFormatHelper.GenerarJsonPlano(asientos);  fileName = "Comprobantes.json"; mimeType = "application/json"; break;
-                case "xml":  content = ExportFormatHelper.GenerarXmlPlano(asientos);   fileName = "Comprobantes.xml";  mimeType = "application/xml";  break;
-                case "csv":  content = ExportFormatHelper.GenerarCsvListado(asientos); fileName = "Comprobantes.csv";  mimeType = "text/csv";         break;
-                default: throw new Exception("Formato no reconocido.");
+                var ts = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                string fileName = formato switch
+                {
+                    "json" => $"Comprobantes_{ts}.json",
+                    "xml" => $"Comprobantes_{ts}.xml",
+                    "csv" => $"Comprobantes_{ts}.csv",
+                    _ => $"Comprobantes_{ts}.txt"
+                };
+
+                string mimeType = formato switch
+                {
+                    "json" => "application/json",
+                    "xml" => "application/xml",
+                    "csv" => "text/csv",
+                    _ => "text/plain"
+                };
+
+                await JS.InvokeVoidAsync("downloadFile", fileName, mimeType, Convert.ToBase64String(fileBytes));
+                successMessage = $"Archivo {formato.ToUpper()} generado.";
             }
-            var bytes = System.Text.Encoding.UTF8.GetBytes(content);
-            await JS.InvokeVoidAsync("downloadFile", fileName, mimeType, Convert.ToBase64String(bytes));
-            successMessage = $"Archivo {formato.ToUpper()} generado.";
+            else
+            {
+                errorMessage = $"No se pudo generar el archivo {formato.ToUpper()}.";
+            }
         }
         catch (Exception ex) { errorMessage = ex.Message; }
         finally { exportando = false; }

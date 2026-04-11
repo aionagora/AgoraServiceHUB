@@ -124,17 +124,15 @@ public class AsientosContablesController : ControllerBase
         return r.IsSuccess ? Ok(ApiResponse<int>.Ok(r.Value!, $"{r.Value} catálogos generados.")) : BadRequest(ApiResponse<int>.Fail(r.Error!));
     }
 
-    /// <summary>
-    /// Exporta los comprobantes contables filtrados a un archivo Excel
-    /// </summary>
-    [HttpGet("exportar-excel")]
-    public async Task<IActionResult> ExportarExcel(
-        [FromQuery] DateTime? desde, 
-        [FromQuery] DateTime? hasta,
-        [FromQuery] string? estado, 
-        [FromQuery] int? tipoComprobanteId,
-        [FromQuery] string? search, 
-        CancellationToken ct)
+    [HttpGet("exportar")]
+    public async Task<IActionResult> ExportarAsync(
+        [FromQuery] string formato = "excel",
+        [FromQuery] DateTime? desde = null,
+        [FromQuery] DateTime? hasta = null,
+        [FromQuery] string? estado = null,
+        [FromQuery] int? tipoComprobanteId = null,
+        [FromQuery] string? search = null,
+        CancellationToken ct = default)
     {
         try
         {
@@ -142,16 +140,36 @@ public class AsientosContablesController : ControllerBase
             if (!result.IsSuccess)
                 return BadRequest(ApiResponse<string>.Fail(result.Error!));
 
-            var fileBytes = _exportService.ExportarExcel(result.Value!);
-            var fileName = $"Comprobantes_Contables_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+            var asientos = result.Value!;
 
-            return File(fileBytes, 
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
-                fileName);
+            return formato.ToLower() switch
+            {
+                "excel" => File(
+                    await _exportService.ExportarExcelAsync(asientos, ct),
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    $"asientos_{DateTime.Today:yyyyMMdd}.xlsx"),
+
+                "csv" => File(
+                    System.Text.Encoding.UTF8.GetBytes(await _exportService.GenerarCsvAsync(asientos)),
+                    "text/csv",
+                    $"asientos_{DateTime.Today:yyyyMMdd}.csv"),
+
+                "json" => File(
+                    System.Text.Encoding.UTF8.GetBytes(await _exportService.GenerarJsonAsync(asientos)),
+                    "application/json",
+                    $"asientos_{DateTime.Today:yyyyMMdd}.json"),
+
+                "xml" => File(
+                    System.Text.Encoding.UTF8.GetBytes(await _exportService.GenerarXmlAsync(asientos)),
+                    "application/xml",
+                    $"asientos_{DateTime.Today:yyyyMMdd}.xml"),
+
+                _ => BadRequest("Formato no soportado. Use: excel, csv, json, xml")
+            };
         }
         catch (Exception ex)
         {
-            return StatusCode(500, ApiResponse<string>.Fail($"Error al generar Excel: {ex.Message}"));
+            return StatusCode(500, ApiResponse<string>.Fail($"Error al generar exportación: {ex.Message}"));
         }
     }
 

@@ -392,9 +392,13 @@ public class AsientoContableService : IAsientoContableService
 
         var totalDebe = lineas.Sum(l => l.Debe);
         var totalHaber = lineas.Sum(l => l.Haber);
-        if (totalDebe != totalHaber)
-            return Result<AsientoContableDto>.Failure(
-                $"El comprobante no cuadra. Debe: {totalDebe:N2}, Haber: {totalHaber:N2}.");
+        asiento.EstablecerTotales(totalDebe, totalHaber);
+
+        var contabilizarResult = asiento.Contabilizar(_currentUser.UserName);
+        if (!contabilizarResult.IsSuccess)
+        {
+            return Result<AsientoContableDto>.Failure(contabilizarResult.Error!);
+        }
 
         foreach (var linea in lineas)
         {
@@ -408,11 +412,6 @@ public class AsientoContableService : IAsientoContableService
 
             await _cuentaRepo.UpdateAsync(cuenta, ct);
         }
-
-        asiento.Estado = "Contabilizado";
-        asiento.EstablecerTotales(totalDebe, totalHaber);
-        if (!asiento.EstaCuadrado())
-            return Result<AsientoContableDto>.Failure("El comprobante no cuadra de acuerdo a las reglas de dominio al intentar contabilizar.");
 
         await _asientoRepo.UpdateAsync(asiento, ct);
         await _unitOfWork.SaveChangesAsync(ct);
@@ -433,10 +432,13 @@ public class AsientoContableService : IAsientoContableService
         if (asiento is null || asiento.EmpresaId != empresaId.Value || !asiento.Activo)
             return Result<AsientoContableDto>.Failure("Comprobante no encontrado.");
 
-        if (asiento.Estado != "Contabilizado")
-            return Result<AsientoContableDto>.Failure($"Solo comprobantes Contabilizados pueden anularse. Estado actual: {asiento.Estado}.");
-
         await ValidarCierreContableAsync(empresaId.Value, asiento.Fecha.Year, ct);
+
+        var anularResult = asiento.Anular("Anulado por usuario");
+        if (!anularResult.IsSuccess)
+        {
+            return Result<AsientoContableDto>.Failure(anularResult.Error!);
+        }
 
         var lineas = await _lineaRepo.FindAsync(l => l.AsientoContableId == id && l.Activo, ct);
         foreach (var linea in lineas)
@@ -452,7 +454,6 @@ public class AsientoContableService : IAsientoContableService
             await _cuentaRepo.UpdateAsync(cuenta, ct);
         }
 
-        asiento.Estado = "Anulado";
         await _asientoRepo.UpdateAsync(asiento, ct);
         await _unitOfWork.SaveChangesAsync(ct);
 

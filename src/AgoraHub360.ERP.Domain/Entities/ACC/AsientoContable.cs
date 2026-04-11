@@ -88,13 +88,68 @@ public class AsientoContable : TenantEntity
 
     // ?? Lógica de Dominio ??
 
-    /// <summary>
-    /// Recalcula los totales del asiento en base a sus líneas.
-    /// </summary>
-    public void RecalcularTotales()
+    public void AgregarLinea(AsientoContableLinea linea)
     {
-        TotalDebe = Lineas.Sum(l => l.Debe);
-        TotalHaber = Lineas.Sum(l => l.Haber);
+        if (Estado != "Borrador")
+            throw new Exceptions.DomainException("No se pueden agregar líneas a un asiento que no está en Borrador.");
+
+        Lineas.Add(linea);
+        TotalDebe += linea.Debe;
+        TotalHaber += linea.Haber;
+    }
+
+    public void EliminarLinea(long lineaId)
+    {
+        if (Estado != "Borrador")
+            throw new Exceptions.DomainException("No se pueden eliminar líneas de un asiento que no está en Borrador.");
+
+        var linea = Lineas.FirstOrDefault(l => l.AsientoContableLineaId == lineaId)
+            ?? throw new Exceptions.DomainException($"Línea {lineaId} no encontrada en el asiento.");
+
+        Lineas.Remove(linea);
+        TotalDebe -= linea.Debe;
+        TotalHaber -= linea.Haber;
+    }
+
+    public Common.Result ValidarCuadratura()
+    {
+        var diferencia = Math.Abs(TotalDebe - TotalHaber);
+        if (diferencia > 0.01m)
+            return Common.Result.Failure($"El comprobante no cuadra. Debe: {TotalDebe:N2}, Haber: {TotalHaber:N2}. Diferencia: {diferencia:N2}.");
+
+        return Common.Result.Success();
+    }
+
+    public Common.Result Contabilizar(string? registradoPorNombre = null)
+    {
+        if (Estado != "Borrador")
+            return Common.Result.Failure($"Solo se puede contabilizar un asiento en Borrador. Estado actual: {Estado}");
+
+        var cuadratura = ValidarCuadratura();
+        if (!cuadratura.IsSuccess)
+            return cuadratura;
+
+        Estado = "Contabilizado";
+        if (!string.IsNullOrEmpty(registradoPorNombre))
+        {
+            RegistradoPorNombre = registradoPorNombre;
+        }
+
+        return Common.Result.Success();
+    }
+
+    public Common.Result Anular(string motivo)
+    {
+        if (Estado == "Anulado")
+            return Common.Result.Failure("El asiento ya está anulado.");
+
+        if (Estado == "Borrador")
+            return Common.Result.Failure("Un asiento en Borrador debe eliminarse, no anularse.");
+
+        Estado = "Anulado";
+        Glosa = $"[ANULADO: {motivo}] {Glosa}";
+
+        return Common.Result.Success();
     }
 
     /// <summary>
@@ -110,5 +165,5 @@ public class AsientoContable : TenantEntity
     /// <summary>
     /// Verifica si el asiento cumple con la partida doble.
     /// </summary>
-    public bool EstaCuadrado() => TotalDebe == TotalHaber;
+    public bool EstaCuadrado() => ValidarCuadratura().IsSuccess;
 }

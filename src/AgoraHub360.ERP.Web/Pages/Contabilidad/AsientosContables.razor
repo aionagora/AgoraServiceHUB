@@ -1287,18 +1287,33 @@
                 return;
             }
 
-            var dto = BuildDtoDesdeFormulario();
-            var lista = new List<AsientoContableDto> { dto };
-            string content; string fileName; string mimeType;
-            switch (formato)
+            var exportBytes = await AsientoService.ExportarFormatosAsync(
+                formato: formato, search: formNumero);
+
+            if (exportBytes is { Length: > 0 })
             {
-                case "json": content = ExportFormatHelper.GenerarJsonPlano(lista);  fileName = $"Comprobante_{numSafe}.json"; mimeType = "application/json"; break;
-                case "xml":  content = ExportFormatHelper.GenerarXmlPlano(lista);   fileName = $"Comprobante_{numSafe}.xml";  mimeType = "application/xml";  break;
-                case "csv":  content = ExportFormatHelper.GenerarCsvListado(lista); fileName = $"Comprobante_{numSafe}.csv";  mimeType = "text/csv";         break;
-                default: throw new Exception("Formato no reconocido.");
+                string fileName = formato switch
+                {
+                    "json" => $"Comprobante_{numSafe}.json",
+                    "xml" => $"Comprobante_{numSafe}.xml",
+                    "csv" => $"Comprobante_{numSafe}.csv",
+                    _ => $"Comprobante_{numSafe}.txt"
+                };
+
+                string mimeType = formato switch
+                {
+                    "json" => "application/json",
+                    "xml" => "application/xml",
+                    "csv" => "text/csv",
+                    _ => "text/plain"
+                };
+
+                await JS.InvokeVoidAsync("downloadFileFromBase64", fileName, mimeType, Convert.ToBase64String(exportBytes));
             }
-            var bytes = System.Text.Encoding.UTF8.GetBytes(content);
-            await JS.InvokeVoidAsync("downloadFileFromBase64", fileName, mimeType, Convert.ToBase64String(bytes));
+            else
+            {
+                errorMessage = $"No se pudo generar el archivo {formato.ToUpper()} del comprobante.";
+            }
             successMessage = $"Archivo {formato.ToUpper()} generado.";
         }
         catch (Exception ex) { errorMessage = $"Error al exportar: {ex.Message}"; }
