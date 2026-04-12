@@ -14,6 +14,9 @@ using AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Entities.PRC;
 using AgoraHub360.ERP.Domain.Entities.RUL;
 using AgoraHub360.ERP.Domain.Entities.VER;
+using AgoraHub360.ERP.Domain.Entities.TRB;
+using AgoraHub360.ERP.Domain.Entities.ACT;
+using AgoraHub360.ERP.Domain.Entities.BNC;
 using AgoraHub360.ERP.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -134,6 +137,8 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     public DbSet<TipoComprobante> TiposComprobante => Set<TipoComprobante>();
     public DbSet<TipoCambio> TiposCambio => Set<TipoCambio>();
     public DbSet<TipoPago> TiposPago => Set<TipoPago>();
+    public DbSet<PresupuestoContable> PresupuestosContables => Set<PresupuestoContable>();
+    public DbSet<PresupuestoContableLinea> PresupuestosContablesLineas => Set<PresupuestoContableLinea>();
 
     // ── LOG: Logística ────────────────────────────────────────────────────────
     public DbSet<HojaRuta> HojasRuta => Set<HojaRuta>();
@@ -142,6 +147,17 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     // ── WF: Workflow ──────────────────────────────────────────────────────────
     public DbSet<Tarea> Tareas => Set<Tarea>();
     public DbSet<PlantillaTarea> PlantillasTareas => Set<PlantillaTarea>();
+
+    // ── TRB: Tributario ───────────────────────────────────────────────────────
+    public DbSet<RegistroImpuesto> RegistrosImpuesto => Set<RegistroImpuesto>();
+
+    // ── ACT: Activos Fijos ────────────────────────────────────────────────────
+    public DbSet<ActivoFijo> ActivosFijos => Set<ActivoFijo>();
+    public DbSet<DepreciacionMensual> DepreciacionesMensuales => Set<DepreciacionMensual>();
+
+    // ── BNC: Conciliacion Bancaria ────────────────────────────────────────────
+    public DbSet<ExtractoBancario> ExtractosBancarios => Set<ExtractoBancario>();
+    public DbSet<ConciliacionBancaria> ConciliacionesBancarias => Set<ConciliacionBancaria>();
 
     // ── Audit ─────────────────────────────────────────────────────────────────
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();

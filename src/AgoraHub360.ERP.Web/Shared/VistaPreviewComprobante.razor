@@ -65,6 +65,10 @@
                                 <span class="vp-field-label">Registro</span>
                                 <span class="vp-field-value">@Comprobante.TipoRegistro</span>
                             </div>
+                            <div class="vp-field">
+                                <span class="vp-field-label">Estado</span>
+                                <span class="vp-field-value fw-bold">@Comprobante.Estado</span>
+                            </div>
                             @if (Comprobante.ValorTipoCambio.HasValue)
                             {
                                 <div class="vp-field">
@@ -297,7 +301,7 @@
 
     private async Task Imprimir()
     {
-        await JS.InvokeVoidAsync("window.print");
+        await JS.InvokeVoidAsync("printElement", "vp-printable");
     }
 
     private void Close()
