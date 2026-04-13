@@ -1,5 +1,6 @@
 using System.Text;
 using AgoraHub360.ERP.Api.Auth;
+using AgoraHub360.ERP.Api.BackgroundServices;
 using AgoraHub360.ERP.Api.Middleware;
 using AgoraHub360.ERP.Api.Services;
 using AgoraHub360.ERP.Application;
@@ -135,6 +136,9 @@ builder.Services.AddCors(options =>
 builder.Services
     .AddHealthChecks()
     .AddDbContextCheck<AgoraDbContext>("database");
+
+// ──── Background Services ────
+builder.Services.AddHostedService<PeriodoContableNotificadorService>();
 
 // ──── Configuración de QuestPDF ────
 QuestPDF.Settings.License = QuestPDF.Infrastructure.LicenseType.Community;

@@ -76,6 +76,10 @@ public static class DependencyInjection
         services.AddScoped<IComprobanteDocumentoService, ComprobanteDocumentoService>();
         services.AddScoped<ICierreContableService, CierreContableService>();
 
+        // Notificaciones
+        services.AddScoped<INotificacionService, LogNotificacionService>();
+        services.AddScoped<IPeriodoContableNotificacionService, PeriodoContableNotificacionService>();
+
         // TRB: Tributario
         services.AddScoped<IImpuestoService, ImpuestoService>();
 
