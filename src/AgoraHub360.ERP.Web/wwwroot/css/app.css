@@ -674,8 +674,12 @@ kbd {
     /* Ocultar elementos marcados para no imprimir */
     .d-print-none { display: none !important; }
 
-    /* Ocultar contenedor principal si hay un backdrop modal visible (usando :has si es posible, o de otra forma el modal se imprime encima) */
-    body:has(.vp-backdrop) .app-layout { display: none !important; }
+    /* Para evitar blank pages al intentar imprimir un modal (que estÃ¡ dentro del layout),
+       es mejor resetear la estructura o directamente usar window.open como se hace desde JS.
+       Si se usa Ctrl+P, ocultaremos todo el layout y solo mostraremos el modal si es posible,
+       pero la regla anterior body:has() ocultaba hasta el propio modal. 
+       Por eso la eliminamos para no romper la pÃ¡gina entera. */
+    /* body:has(.vp-backdrop) .app-layout { display: none !important; } */
 
     .vp-backdrop           { position: static !important; background: none !important; }
     .vp-dialog             { max-width: 100% !important; margin: 0 !important; box-shadow: none !important; }

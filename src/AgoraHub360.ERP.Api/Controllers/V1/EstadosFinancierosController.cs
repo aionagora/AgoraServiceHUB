@@ -33,6 +33,22 @@ public class EstadosFinancierosController : ControllerBase
     // BALANCE GENERAL
     // ????????????????????????????????????????????
 
+    [HttpGet("ratios")]
+    [ProducesResponseType(typeof(ApiResponse<RatiosFinancierosDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<RatiosFinancierosDto>), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> GetRatiosFinancieros([FromQuery] DateTime fechaCorte, CancellationToken ct)
+    {
+        var result = await _service.GetRatiosFinancierosAsync(fechaCorte, ct);
+        if (!result.IsSuccess)
+        {
+            return BadRequest(ApiResponse<RatiosFinancierosDto>.Fail(result.Error! ?? "Error al calcular los ratios financieros."));
+        }
+
+        return Ok(ApiResponse<RatiosFinancierosDto>.Ok(result.Value!));
+    }
+
     [HttpGet("balance-general")]
     public async Task<IActionResult> GetBalanceGeneral([FromQuery] DateTime fechaCorte, CancellationToken ct)
     {

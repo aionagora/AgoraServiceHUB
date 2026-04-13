@@ -105,7 +105,8 @@ public class AsientoContableHttpService
     {
         try
         {
-            var url = $"{Base}/exportar-excel?";
+            // TODO: Eliminar este método o renombrarlo en el próximo refactor ya que ahora existe ExportarFormatosAsync
+            var url = $"{Base}/exportar?formato=excel&";
             if (desde.HasValue) url += $"desde={desde.Value:yyyy-MM-dd}&";
             if (hasta.HasValue) url += $"hasta={hasta.Value:yyyy-MM-dd}&";
             if (!string.IsNullOrEmpty(estado)) url += $"estado={Uri.EscapeDataString(estado)}&";
@@ -113,12 +114,40 @@ public class AsientoContableHttpService
             if (!string.IsNullOrEmpty(search)) url += $"search={Uri.EscapeDataString(search)}&";
 
             var response = await _http.GetAsync(url.TrimEnd('&', '?'));
-            
+
             if (response.IsSuccessStatusCode)
             {
                 return await response.Content.ReadAsByteArrayAsync();
             }
-            
+
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Exporta los asientos filtrados al formato especificado (excel, csv, json, xml).
+    /// Devuelve el contenido como byte array y los nombres correctos deben resolverse en el UI.
+    /// </summary>
+    public async Task<byte[]?> ExportarFormatosAsync(
+        string formato = "excel", DateTime? desde = null, DateTime? hasta = null,
+        string? estado = null, int? tipoComprobanteId = null, string? search = null)
+    {
+        try
+        {
+            var url = $"{Base}/exportar?formato={formato}&";
+            if (desde.HasValue) url += $"desde={desde.Value:yyyy-MM-dd}&";
+            if (hasta.HasValue) url += $"hasta={hasta.Value:yyyy-MM-dd}&";
+            if (!string.IsNullOrEmpty(estado)) url += $"estado={Uri.EscapeDataString(estado)}&";
+            if (tipoComprobanteId.HasValue) url += $"tipoComprobanteId={tipoComprobanteId}&";
+            if (!string.IsNullOrEmpty(search)) url += $"search={Uri.EscapeDataString(search)}&";
+
+            var response = await _http.GetAsync(url.TrimEnd('&', '?'));
+            if (response.IsSuccessStatusCode)
+                return await response.Content.ReadAsByteArrayAsync();
             return null;
         }
         catch

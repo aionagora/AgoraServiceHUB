@@ -77,12 +77,93 @@ public class AsientoContable : TenantEntity
 
     // ?? Totales ??
     /// <summary>Total Debe (calculado).</summary>
-    public decimal TotalDebe { get; set; }
+    public decimal TotalDebe { get; private set; }
 
     /// <summary>Total Haber (calculado).</summary>
-    public decimal TotalHaber { get; set; }
+    public decimal TotalHaber { get; private set; }
 
     // Navegación
     public ICollection<AsientoContableLinea> Lineas { get; set; } = new List<AsientoContableLinea>();
     public ICollection<ComprobanteDocumento> Documentos { get; set; } = new List<ComprobanteDocumento>();
+
+    // ?? Lógica de Dominio ??
+
+    public void AgregarLinea(AsientoContableLinea linea)
+    {
+        if (Estado != "Borrador")
+            throw new Exceptions.DomainException("No se pueden agregar líneas a un asiento que no está en Borrador.");
+
+        Lineas.Add(linea);
+        TotalDebe += linea.Debe;
+        TotalHaber += linea.Haber;
+    }
+
+    public void EliminarLinea(long lineaId)
+    {
+        if (Estado != "Borrador")
+            throw new Exceptions.DomainException("No se pueden eliminar líneas de un asiento que no está en Borrador.");
+
+        var linea = Lineas.FirstOrDefault(l => l.AsientoContableLineaId == lineaId)
+            ?? throw new Exceptions.DomainException($"Línea {lineaId} no encontrada en el asiento.");
+
+        Lineas.Remove(linea);
+        TotalDebe -= linea.Debe;
+        TotalHaber -= linea.Haber;
+    }
+
+    public Common.Result ValidarCuadratura()
+    {
+        var diferencia = Math.Abs(TotalDebe - TotalHaber);
+        if (diferencia > 0.01m)
+            return Common.Result.Failure($"El comprobante no cuadra. Debe: {TotalDebe:N2}, Haber: {TotalHaber:N2}. Diferencia: {diferencia:N2}.");
+
+        return Common.Result.Success();
+    }
+
+    public Common.Result Contabilizar(string? registradoPorNombre = null)
+    {
+        if (Estado != "Borrador")
+            return Common.Result.Failure($"Solo se puede contabilizar un asiento en Borrador. Estado actual: {Estado}");
+
+        var cuadratura = ValidarCuadratura();
+        if (!cuadratura.IsSuccess)
+            return cuadratura;
+
+        Estado = "Contabilizado";
+        if (!string.IsNullOrEmpty(registradoPorNombre))
+        {
+            RegistradoPorNombre = registradoPorNombre;
+        }
+
+        return Common.Result.Success();
+    }
+
+    public Common.Result Anular(string motivo)
+    {
+        if (Estado == "Anulado")
+            return Common.Result.Failure("El asiento ya está anulado.");
+
+        if (Estado == "Borrador")
+            return Common.Result.Failure("Un asiento en Borrador debe eliminarse, no anularse.");
+
+        Estado = "Anulado";
+        Glosa = $"[ANULADO: {motivo}] {Glosa}";
+
+        return Common.Result.Success();
+    }
+
+    /// <summary>
+    /// Recalcula los totales explícitamente desde una lista externa de líneas
+    /// y actualiza los totales. Útil para Carga Manual/DTOs antes de persistir.
+    /// </summary>
+    public void EstablecerTotales(decimal debe, decimal haber)
+    {
+        TotalDebe = debe;
+        TotalHaber = haber;
+    }
+
+    /// <summary>
+    /// Verifica si el asiento cumple con la partida doble.
+    /// </summary>
+    public bool EstaCuadrado() => ValidarCuadratura().IsSuccess;
 }

@@ -455,7 +455,131 @@ public class EstadoFinancieroService : IEstadoFinancieroService
     }
 
     // ????????????????????????????????????????????
-    // HELPERS
+    // RATIOS FINANCIEROS
+    // ????????????????????????????????????????????
+    public async Task<Result<RatiosFinancierosDto>> GetRatiosFinancierosAsync(DateTime fechaCorte, CancellationToken ct = default)
+    {
+        var empresaId = _currentUser.EmpresaId ?? throw new AgoraHub360.ERP.Domain.Exceptions.DomainException("No se pudo obtener la empresa actual.");
+
+        // Reutilizamos métodos existentes
+        // Para Ratios necesitamos Balance General a la fecha de corte
+        // Y Estado de Resultados de los últimos 12 meses (Tiempos TTM - Trailing Twelve Months) como convención o anual
+        var desde = new DateTime(fechaCorte.Year, 1, 1); // Asumimos anual para ingresos de este año
+        var balanceResult = await GetBalanceGeneralAsync(fechaCorte, ct);
+        var estadoResultadosResult = await GetEstadoResultadosAsync(desde, fechaCorte, ct);
+
+        if (!balanceResult.IsSuccess) return Result<RatiosFinancierosDto>.Failure(balanceResult.Error!);
+        if (!estadoResultadosResult.IsSuccess) return Result<RatiosFinancierosDto>.Failure(estadoResultadosResult.Error!);
+
+        var balance = balanceResult.Value!;
+        var resultados = estadoResultadosResult.Value!;
+
+        // LIQUIDEZ
+        decimal activoCorriente = ObtenerSaldoRubroBalance(balance.Activos, "1.1"); // TODO: Ajustar código al plan real de Activo Corriente
+        decimal pasivoCorriente = ObtenerSaldoRubroBalance(balance.Pasivos, "2.1"); // TODO: Ajustar código de Pasivo Corriente
+        decimal inventario = ObtenerSaldoRubroBalance(balance.Activos, "1.1.03"); // TODO: Ajustar
+        decimal cajaYBancos = ObtenerSaldoRubroBalance(balance.Activos, "1.1.01"); // TODO: Ajustar
+
+        // ENDEUDAMIENTO
+        decimal activoTotal = balance.TotalActivos;
+        decimal pasivoTotal = balance.TotalPasivos;
+        decimal patrimonioNeto = balance.TotalPatrimonio;
+
+        // RENTABILIDAD & ACTIVIDAD
+        decimal utilidadNeta = resultados.UtilidadNeta;
+        decimal ventas = ObtenerSaldoRubroBalance(resultados.Ingresos, "4.1"); // TODO
+        decimal costoVentas = ObtenerSaldoRubroBalance(resultados.Costos, "5.1"); // TODO
+        decimal ebit = resultados.UtilidadBruta - resultados.TotalGastos;
+
+        // EBITDA = EBIT + Depreciacion + Amortizacion
+        // TODO: Mapear códigos de depreciación en el proyecto
+        decimal depreciacion = 0m; 
+        decimal amortizacion = 0m;
+        decimal ebitda = ebit + depreciacion + amortizacion;
+
+        // ACTIVIDAD (Adicional)
+        // TODO: Requerimos inventario promedio (inicio y fin), aquí usaremos el estático para no romper la fluidez
+        decimal inventarioPromedio = inventario == 0 ? 1 : inventario; // Evitar zero
+        decimal cuentasPorCobrar = ObtenerSaldoRubroBalance(balance.Activos, "1.1.02");
+
+        var dto = new RatiosFinancierosDto
+        {
+            FechaCorte = fechaCorte,
+
+            // LIQUIDEZ
+            LiquidezCorriente = SafeDivide(activoCorriente, pasivoCorriente),
+            PruebaAcida = SafeDivide(activoCorriente - inventario, pasivoCorriente),
+            RatioEfectivo = SafeDivide(cajaYBancos, pasivoCorriente),
+
+            // RENTABILIDAD
+            ROE = SafeDivide(utilidadNeta, patrimonioNeto),
+            ROA = SafeDivide(utilidadNeta, activoTotal),
+            MargenBruto = SafeDivide(ventas - costoVentas, ventas),
+            MargenNeto = SafeDivide(utilidadNeta, ventas),
+            EBITDA = ebitda,
+
+            // ENDEUDAMIENTO
+            RatioEndeudamiento = SafeDivide(pasivoTotal, activoTotal),
+            ApalancamientoFinanciero = SafeDivide(activoTotal, patrimonioNeto),
+
+            // ACTIVIDAD
+            RotacionInventario = SafeDivide(costoVentas, inventarioPromedio),
+            DiasInventario = SafeDivide(365m, SafeDivide(costoVentas, inventarioPromedio) == 0 ? 1 : SafeDivide(costoVentas, inventarioPromedio)),
+            RotacionCxC = SafeDivide(ventas, cuentasPorCobrar == 0 ? 1 : cuentasPorCobrar),
+            DiasCobro = SafeDivide(365m, SafeDivide(ventas, cuentasPorCobrar == 0 ? 1 : cuentasPorCobrar))
+        };
+
+        dto.Interpretaciones = ConstruirInterpretaciones(dto);
+
+        return Result<RatiosFinancierosDto>.Success(dto);
+    }
+
+    // ????????????????????????????????????????????
+    // HELPERS RATIOS
+    // ????????????????????????????????????????????
+
+    private decimal ObtenerSaldoRubroBalance(List<BalanceGrupoDto> grupos, string prefijoCodigo)
+    {
+        var match = grupos.FirstOrDefault(g => g.Codigo.StartsWith(prefijoCodigo));
+        if (match != null) return match.Saldo;
+
+        // Búsqueda recursiva
+        foreach (var grupo in grupos)
+        {
+            var recursiveMatch = ObtenerSaldoRubroBalance(grupo.SubCuentas, prefijoCodigo);
+            if (recursiveMatch != 0) return recursiveMatch;
+        }
+
+        return 0m;
+    }
+
+    private static decimal SafeDivide(decimal numerador, decimal denominador)
+    {
+        if (denominador == 0) return 0;
+        return Math.Round(numerador / denominador, 4);
+    }
+
+    private Dictionary<string, string> ConstruirInterpretaciones(RatiosFinancierosDto dto)
+    {
+        var map = new Dictionary<string, string>();
+
+        if (dto.LiquidezCorriente > 1.5m) map["LiquidezCorriente"] = "Saludable";
+        else if (dto.LiquidezCorriente >= 1.0m) map["LiquidezCorriente"] = "Atención";
+        else map["LiquidezCorriente"] = "Crítico";
+
+        if (dto.ROE > 0.15m) map["ROE"] = "Saludable";
+        else if (dto.ROE >= 0.05m) map["ROE"] = "Atención";
+        else map["ROE"] = "Crítico";
+
+        if (dto.RatioEndeudamiento < 0.40m) map["RatioEndeudamiento"] = "Saludable";
+        else if (dto.RatioEndeudamiento <= 0.60m) map["RatioEndeudamiento"] = "Atención";
+        else map["RatioEndeudamiento"] = "Crítico";
+
+        return map;
+    }
+
+    // ????????????????????????????????????????????
+    // HELPERS GENÉRICOS DE ESTADOS
     // ????????????????????????????????????????????
 
     private async Task<Dictionary<int, decimal>> CalcularSaldosAlAsync(int empresaId, DateTime fechaCorte, CancellationToken ct)

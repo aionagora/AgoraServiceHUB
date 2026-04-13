@@ -73,6 +73,18 @@ public static class DependencyInjection
         services.AddScoped<IComprobanteDocumentoService, ComprobanteDocumentoService>();
         services.AddScoped<ICierreContableService, CierreContableService>();
 
+        // TRB: Tributario
+        services.AddScoped<IImpuestoService, ImpuestoService>();
+
+        // ACT: Activos Fijos
+        services.AddScoped<IActivoFijoService, ActivoFijoService>();
+
+        // ACC: Presupuestos
+        services.AddScoped<IPresupuestoService, PresupuestoService>();
+
+        // BNC: Conciliación Bancaria
+        services.AddScoped<IConciliacionBancariaService, ConciliacionBancariaService>();
+
         // WF: Workflow
         services.AddScoped<IWorkflowService, WorkflowService>();
 
