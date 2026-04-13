@@ -4,6 +4,7 @@ using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Domain.Entities.ACC;
 using AgoraHub360.ERP.Domain.Entities.CST;
 using AgoraHub360.ERP.Domain.Interfaces;
+using AgoraHub360.ERP.Shared.DTOs.Contabilidad;
 using AgoraHub360.ERP.Shared.DTOs.Contabilidad.Importacion;
 using ClosedXML.Excel;
 using Microsoft.Extensions.Logging;
@@ -29,34 +30,25 @@ public class AsientoImportService : IAsientoImportService
     private const int ColGlosaLinea = 8;       // H
     private const int ColCentroCosto = 9;      // I
 
-    private readonly IRepository<AsientoContable> _asientoRepo;
-    private readonly IRepository<AsientoContableLinea> _lineaRepo;
     private readonly IRepository<CuentaContable> _cuentaRepo;
     private readonly IRepository<CentroCosto> _centroCostoRepo;
     private readonly IRepository<TipoComprobante> _tipoCompRepo;
-    private readonly IRepository<PeriodoContable> _periodoRepo;
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly IAsientoContableService _asientoService;
     private readonly ICurrentUserService _currentUser;
     private readonly ILogger<AsientoImportService> _logger;
 
     public AsientoImportService(
-        IRepository<AsientoContable> asientoRepo,
-        IRepository<AsientoContableLinea> lineaRepo,
         IRepository<CuentaContable> cuentaRepo,
         IRepository<CentroCosto> centroCostoRepo,
         IRepository<TipoComprobante> tipoCompRepo,
-        IRepository<PeriodoContable> periodoRepo,
-        IUnitOfWork unitOfWork,
+        IAsientoContableService asientoService,
         ICurrentUserService currentUser,
         ILogger<AsientoImportService> logger)
     {
-        _asientoRepo     = asientoRepo;
-        _lineaRepo       = lineaRepo;
         _cuentaRepo      = cuentaRepo;
         _centroCostoRepo = centroCostoRepo;
         _tipoCompRepo    = tipoCompRepo;
-        _periodoRepo     = periodoRepo;
-        _unitOfWork      = unitOfWork;
+        _asientoService  = asientoService;
         _currentUser     = currentUser;
         _logger          = logger;
     }
@@ -370,38 +362,16 @@ public class AsientoImportService : IAsientoImportService
         bool contabilizar, CancellationToken ct)
     {
         var tipoComp = tiposCache[grupo.TipoComprobante.ToUpperInvariant()];
-        var gestion  = grupo.Fecha.Year;
 
-        var numero = await GenerarNumeroComprobanteAsync(empresaId, tipoComp, gestion, ct);
-
-        var totalDebe  = grupo.Filas.Sum(f => f.Debe);
-        var totalHaber = grupo.Filas.Sum(f => f.Haber);
-
-        var asiento = new AsientoContable
+        var dto = new CreateAsientoContableDto
         {
-            EmpresaId           = empresaId,
-            TipoComprobanteId   = tipoComp.TipoComprobanteId,
-            Numero              = numero,
-            Fecha               = grupo.Fecha,
-            Gestion             = gestion,
-            TipoRegistro        = "Manual",
-            Estado              = "Borrador",
-            Glosa               = grupo.Glosa,
-            RegistradoPorId     = _currentUser.UserIdInt,
-            RegistradoPorNombre = _currentUser.UserName,
-            OrigenTipo          = "ImportacionExcel",
-            Activo              = true
+            TipoComprobanteId = tipoComp.TipoComprobanteId,
+            Fecha = grupo.Fecha,
+            Glosa = grupo.Glosa,
+            OrigenTipo = "ImportacionExcel",
+            Lineas = new List<CreateAsientoLineaDto>()
         };
 
-        asiento.EstablecerTotales(totalDebe, totalHaber);
-
-        if (contabilizar)
-            asiento.Contabilizar(_currentUser.UserName);
-
-        await _asientoRepo.AddAsync(asiento, ct);
-        await _unitOfWork.SaveChangesAsync(ct);
-
-        int lineNum = 1;
         foreach (var fila in grupo.Filas.OrderBy(f => f.NumeroLinea ?? f.NumeroFila))
         {
             var cuenta = cuentasCache[fila.CodigoCuenta];
@@ -413,25 +383,34 @@ public class AsientoImportService : IAsientoImportService
                 centroCostoId = cc.Id;
             }
 
-            await _lineaRepo.AddAsync(new AsientoContableLinea
+            dto.Lineas.Add(new CreateAsientoLineaDto
             {
-                AsientoContableId = asiento.AsientoContableId,
-                NumeroLinea       = fila.NumeroLinea ?? lineNum,
-                CuentaContableId  = cuenta.CuentaContableId,
-                Debe              = fila.Debe,
-                Haber             = fila.Haber,
-                Glosa             = string.IsNullOrWhiteSpace(fila.GlosaLinea) ? grupo.Glosa : fila.GlosaLinea,
-                CentroCostoId     = centroCostoId,
-                Activo            = true
-            }, ct);
-            lineNum++;
+                CuentaContableId = cuenta.CuentaContableId,
+                Debe = fila.Debe,
+                Haber = fila.Haber,
+                Glosa = string.IsNullOrWhiteSpace(fila.GlosaLinea) ? grupo.Glosa : fila.GlosaLinea,
+                CentroCostoId = centroCostoId
+            });
         }
 
-        await _unitOfWork.SaveChangesAsync(ct);
+        var result = await _asientoService.CreateAsync(dto, ct);
+        if (!result.IsSuccess)
+        {
+            throw new InvalidOperationException(result.Error);
+        }
+
+        if (contabilizar)
+        {
+            var contabilizarResult = await _asientoService.ContabilizarAsync(result.Value!.AsientoContableId, ct);
+            if (!contabilizarResult.IsSuccess)
+            {
+                throw new InvalidOperationException(contabilizarResult.Error);
+            }
+        }
 
         _logger.LogDebug(
-            "Asiento {Numero} creado: {Lineas} líneas, Debe={Debe:N2} Haber={Haber:N2}",
-            numero, grupo.Filas.Count, totalDebe, totalHaber);
+            "Asiento creado: {Lineas} líneas, Total Debe={Debe:N2}",
+            grupo.Filas.Count, dto.Lineas.Sum(l => l.Debe));
 
         return (1, grupo.Filas.Count);
     }
@@ -467,23 +446,11 @@ public class AsientoImportService : IAsientoImportService
         return tipos.ToDictionary(t => t.Codigo.ToUpperInvariant(), t => t);
     }
 
-    private async Task<string> GenerarNumeroComprobanteAsync(
-        int empresaId, TipoComprobante tipo, int gestion, CancellationToken ct)
-    {
-        var existentes = await _asientoRepo.FindAsync(
-            a => a.EmpresaId == empresaId
-                 && a.TipoComprobanteId == tipo.TipoComprobanteId
-                 && a.Gestion == gestion, ct);
-
-        var siguiente = existentes.Count + 1;
-        return $"{tipo.Prefijo}-{siguiente:D4}";
-    }
-
     // ─────────────────────────────────────────────────────────────
     // Plantilla de importación
     // ─────────────────────────────────────────────────────────────
 
-    public byte[] GenerarPlantillaImportacion()
+    public Task<byte[]> GenerarPlantillaAsync(CancellationToken ct = default)
     {
         using var workbook = new XLWorkbook();
         var ws = workbook.Worksheets.Add(NombreHoja);
@@ -505,28 +472,43 @@ public class AsientoImportService : IAsientoImportService
             cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
         }
 
-        // Fila de ejemplo
-        ws.Cell(2, 1).Value = DateTime.Today;
+        ws.SheetView.FreezeRows(1);
+
+        // Fila de ejemplo 1
+        ws.Cell(2, 1).Value = new DateTime(2026, 4, 1);
         ws.Cell(2, 1).Style.DateFormat.Format = "dd/MM/yyyy";
-        ws.Cell(2, 2).Value = "ING";
-        ws.Cell(2, 3).Value = "Venta de mercadería";
+        ws.Cell(2, 2).Value = "CI";
+        ws.Cell(2, 3).Value = "Apertura de caja";
         ws.Cell(2, 4).Value = 1;
-        ws.Cell(2, 5).Value = "1.1.1.01";
-        ws.Cell(2, 6).Value = 1000.00m;
+        ws.Cell(2, 5).Value = "1.1.01.01";
+        ws.Cell(2, 6).Value = 1000m;
         ws.Cell(2, 7).Value = 0m;
-        ws.Cell(2, 8).Value = "Cobro cliente X";
+        ws.Cell(2, 8).Value = "Caja inicial";
         ws.Cell(2, 9).Value = "";
 
-        ws.Cell(3, 1).Value = DateTime.Today;
+        // Fila de ejemplo 2
+        ws.Cell(3, 1).Value = new DateTime(2026, 4, 1);
         ws.Cell(3, 1).Style.DateFormat.Format = "dd/MM/yyyy";
-        ws.Cell(3, 2).Value = "ING";
-        ws.Cell(3, 3).Value = "Venta de mercadería";
+        ws.Cell(3, 2).Value = "CI";
+        ws.Cell(3, 3).Value = "Apertura de caja";
         ws.Cell(3, 4).Value = 2;
-        ws.Cell(3, 5).Value = "4.1.1.01";
+        ws.Cell(3, 5).Value = "3.1.01.01";
         ws.Cell(3, 6).Value = 0m;
-        ws.Cell(3, 7).Value = 1000.00m;
-        ws.Cell(3, 8).Value = "Ingreso por venta";
-        ws.Cell(3, 9).Value = "CC-VEN-01";
+        ws.Cell(3, 7).Value = 1000m;
+        ws.Cell(3, 8).Value = "Capital inicial";
+        ws.Cell(3, 9).Value = "";
+
+        // Fila de ejemplo 3
+        ws.Cell(4, 1).Value = new DateTime(2026, 4, 2);
+        ws.Cell(4, 1).Style.DateFormat.Format = "dd/MM/yyyy";
+        ws.Cell(4, 2).Value = "CE";
+        ws.Cell(4, 3).Value = "Pago de servicios";
+        ws.Cell(4, 4).Value = 1;
+        ws.Cell(4, 5).Value = "5.1.02.01";
+        ws.Cell(4, 6).Value = 200m;
+        ws.Cell(4, 7).Value = 0m;
+        ws.Cell(4, 8).Value = "Pago energía";
+        ws.Cell(4, 9).Value = "ADM";
 
         // Formato de columnas numéricas
         ws.Column(6).Style.NumberFormat.Format = "#,##0.00";
@@ -536,7 +518,7 @@ public class AsientoImportService : IAsientoImportService
 
         using var ms = new MemoryStream();
         workbook.SaveAs(ms);
-        return ms.ToArray();
+        return Task.FromResult(ms.ToArray());
     }
 
     // ─────────────────────────────────────────────────────────────

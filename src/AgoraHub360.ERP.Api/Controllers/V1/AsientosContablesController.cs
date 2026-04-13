@@ -285,6 +285,9 @@ public class AsientosContablesController : ControllerBase
     /// </summary>
     [HttpPost("importar")]
     [Consumes("multipart/form-data")]
+    [ProducesResponseType(typeof(ApiResponse<ImportValidacionDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<ImportResultDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> ImportarAsientosAsync(
         IFormFile archivo,
         [FromQuery] bool soloValidar = false,
@@ -317,12 +320,13 @@ public class AsientosContablesController : ControllerBase
     /// Descarga una plantilla Excel vacía con los encabezados esperados para la importación masiva.
     /// </summary>
     [HttpGet("plantilla-importacion")]
-    public IActionResult DescargarPlantillaImportacion()
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+    public async Task<IActionResult> DescargarPlantillaImportacionAsync(CancellationToken ct = default)
     {
-        var archivo = _importService.GenerarPlantillaImportacion();
+        var archivo = await _importService.GenerarPlantillaAsync(ct);
         return File(
             archivo,
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "Plantilla_Importacion_Asientos.xlsx");
+            "plantilla_importacion_asientos.xlsx");
     }
 }
