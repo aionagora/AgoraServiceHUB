@@ -10,6 +10,7 @@ public static class DependencyInjection
     {
         services.AddScoped<IExportService, ExportService>();
         services.AddScoped<IAsientoExportService, AsientoExportService>();
+        services.AddScoped<IAsientoImportService, AsientoImportService>();
         return services;
     }
 }
