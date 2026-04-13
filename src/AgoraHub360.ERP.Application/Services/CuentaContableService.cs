@@ -6,21 +6,29 @@ using AgoraHub360.ERP.Domain.Entities.ACC;
 using AgoraHub360.ERP.Domain.Enums;
 using AgoraHub360.ERP.Domain.Interfaces;
 using AgoraHub360.ERP.Shared.DTOs.Contabilidad;
+using Microsoft.Extensions.Caching.Memory;
 
 public class CuentaContableService : ICuentaContableService
 {
     private readonly IRepository<CuentaContable> _repo;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
+    private readonly IMemoryCache _cache;
+
+    private const string CacheKeyPrefix = "plan-cuentas";
+    private static readonly TimeSpan CacheTTL = TimeSpan.FromMinutes(30);
+    private static readonly TimeSpan CacheSlidingExpiration = TimeSpan.FromMinutes(10);
 
     public CuentaContableService(
         IRepository<CuentaContable> repo,
         IUnitOfWork unitOfWork,
-        ICurrentUserService currentUser)
+        ICurrentUserService currentUser,
+        IMemoryCache cache)
     {
         _repo = repo;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _cache = cache;
     }
 
     public async Task<Result<IReadOnlyList<CuentaContableDto>>> GetAllAsync(
@@ -30,18 +38,20 @@ public class CuentaContableService : ICuentaContableService
         if (!empresaId.HasValue)
             return Result<IReadOnlyList<CuentaContableDto>>.Failure("No active company.");
 
-        var cuentas = await _repo.FindAsync(
-            c => c.EmpresaId == empresaId.Value && c.Activo
-                && (!tipo.HasValue || (byte)c.Tipo == tipo.Value)
-                && (!permiteMovimientos.HasValue || c.PermiteMovimientos == permiteMovimientos.Value)
-                && (string.IsNullOrEmpty(search) || c.Codigo.Contains(search) || c.Nombre.Contains(search)),
-            ct);
+        var flatList = await GetFlatCachedAsync(empresaId.Value, ct);
 
-        var all = cuentas.OrderBy(c => c.Codigo).ToList();
-        var padreMap = all.ToDictionary(c => c.CuentaContableId);
+        // Apply optional filters in-memory over the cached flat list
+        var filtered = flatList.AsEnumerable();
+        if (tipo.HasValue)
+            filtered = filtered.Where(c => c.Tipo == ((TipoCuenta)tipo.Value).ToString());
+        if (permiteMovimientos.HasValue)
+            filtered = filtered.Where(c => c.PermiteMovimientos == permiteMovimientos.Value);
+        if (!string.IsNullOrEmpty(search))
+            filtered = filtered.Where(c =>
+                c.Codigo.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                c.Nombre.Contains(search, StringComparison.OrdinalIgnoreCase));
 
-        var dtos = all.Select(c => MapToDto(c, padreMap)).ToList().AsReadOnly();
-        return Result<IReadOnlyList<CuentaContableDto>>.Success(dtos);
+        return Result<IReadOnlyList<CuentaContableDto>>.Success(filtered.ToList().AsReadOnly());
     }
 
     public async Task<Result<IReadOnlyList<CuentaContableDto>>> GetTreeAsync(CancellationToken ct)
@@ -50,26 +60,33 @@ public class CuentaContableService : ICuentaContableService
         if (!empresaId.HasValue)
             return Result<IReadOnlyList<CuentaContableDto>>.Failure("No active company.");
 
-        var cuentas = await _repo.FindAsync(
-            c => c.EmpresaId == empresaId.Value && c.Activo, ct);
+        var treeKey = $"{CacheKeyPrefix}-tree-{empresaId.Value}";
 
-        var all = cuentas.OrderBy(c => c.Codigo).ToList();
-        var padreMap = all.ToDictionary(c => c.CuentaContableId);
-
-        // Build tree
-        var dtoMap = all.ToDictionary(c => c.CuentaContableId, c => MapToDto(c, padreMap));
-        var roots = new List<CuentaContableDto>();
-
-        foreach (var dto in dtoMap.Values)
+        if (!_cache.TryGetValue(treeKey, out IReadOnlyList<CuentaContableDto>? cachedTree) || cachedTree is null)
         {
-            var entity = all.First(c => c.CuentaContableId == dto.CuentaContableId);
-            if (entity.CuentaPadreId.HasValue && dtoMap.TryGetValue(entity.CuentaPadreId.Value, out var padre))
-                padre.SubCuentas.Add(dto);
-            else
-                roots.Add(dto);
+            var flatList = await GetFlatCachedAsync(empresaId.Value, ct);
+
+            var dtoMap = flatList.ToDictionary(c => c.CuentaContableId);
+            var roots = new List<CuentaContableDto>();
+
+            foreach (var dto in dtoMap.Values)
+            {
+                if (dto.CuentaPadreId.HasValue && dtoMap.TryGetValue(dto.CuentaPadreId.Value, out var padre))
+                    padre.SubCuentas.Add(dto);
+                else
+                    roots.Add(dto);
+            }
+
+            cachedTree = roots.AsReadOnly();
+            _cache.Set(treeKey, cachedTree, new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = CacheTTL,
+                SlidingExpiration = CacheSlidingExpiration,
+                Priority = CacheItemPriority.High
+            });
         }
 
-        return Result<IReadOnlyList<CuentaContableDto>>.Success(roots.AsReadOnly());
+        return Result<IReadOnlyList<CuentaContableDto>>.Success(cachedTree);
     }
 
     public async Task<Result<CuentaContableDto>> GetByIdAsync(int id, CancellationToken ct)
@@ -127,6 +144,7 @@ public class CuentaContableService : ICuentaContableService
 
         await _repo.AddAsync(cuenta, ct);
         await _unitOfWork.SaveChangesAsync(ct);
+        InvalidateCache(empresaId.Value);
 
         return Result<CuentaContableDto>.Success(MapToDto(cuenta, new Dictionary<int, CuentaContable>()));
     }
@@ -157,6 +175,7 @@ public class CuentaContableService : ICuentaContableService
 
         await _repo.UpdateAsync(cuenta, ct);
         await _unitOfWork.SaveChangesAsync(ct);
+        InvalidateCache(empresaId.Value);
 
         var all = await _repo.FindAsync(c => c.EmpresaId == empresaId.Value && c.Activo, ct);
         return Result<CuentaContableDto>.Success(MapToDto(cuenta, all.ToDictionary(c => c.CuentaContableId)));
@@ -183,6 +202,7 @@ public class CuentaContableService : ICuentaContableService
         cuenta.Activo = false;
         await _repo.UpdateAsync(cuenta, ct);
         await _unitOfWork.SaveChangesAsync(ct);
+        InvalidateCache(empresaId.Value);
 
         return Result<bool>.Success(true);
     }
@@ -232,10 +252,42 @@ public class CuentaContableService : ICuentaContableService
                 codeMap[s.Codigo] = s.CuentaContableId;
         }
 
+        InvalidateCache(empresaId.Value);
         return Result<int>.Success(cuentas.Count);
     }
 
-    // ?? Helpers ??
+    // ── Cache helpers ──
+
+    private async Task<IReadOnlyList<CuentaContableDto>> GetFlatCachedAsync(int empresaId, CancellationToken ct)
+    {
+        var flatKey = $"{CacheKeyPrefix}-{empresaId}";
+
+        if (!_cache.TryGetValue(flatKey, out IReadOnlyList<CuentaContableDto>? cached) || cached is null)
+        {
+            var cuentas = await _repo.FindAsync(
+                c => c.EmpresaId == empresaId && c.Activo, ct);
+
+            var all = cuentas.OrderBy(c => c.Codigo).ToList();
+            var padreMap = all.ToDictionary(c => c.CuentaContableId);
+
+            cached = all.Select(c => MapToDto(c, padreMap)).ToList().AsReadOnly();
+
+            _cache.Set(flatKey, cached, new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = CacheTTL,
+                SlidingExpiration = CacheSlidingExpiration,
+                Priority = CacheItemPriority.High
+            });
+        }
+
+        return cached;
+    }
+
+    private void InvalidateCache(int empresaId)
+    {
+        _cache.Remove($"{CacheKeyPrefix}-{empresaId}");
+        _cache.Remove($"{CacheKeyPrefix}-tree-{empresaId}");
+    }
 
     private static CuentaContableDto MapToDto(CuentaContable c, Dictionary<int, CuentaContable> padreMap)
     {

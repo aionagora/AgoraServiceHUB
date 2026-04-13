@@ -10,7 +10,10 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
-        // ?? Validadores FluentValidation ??????????????????????????????????????
+        // MemoryCache for plan de cuentas and similar catalog structures
+        services.AddMemoryCache();
+
+        // ?? Validadores FluentValidation??????????????????????????????????????
         // Registra todos los AbstractValidator<T> del assembly Application.
         services.AddValidatorsFromAssemblyContaining<TareaCreateValidator>();
 
@@ -72,6 +75,10 @@ public static class DependencyInjection
         services.AddScoped<ICentroCostoService, CentroCostoService>();
         services.AddScoped<IComprobanteDocumentoService, ComprobanteDocumentoService>();
         services.AddScoped<ICierreContableService, CierreContableService>();
+
+        // Notificaciones
+        services.AddScoped<INotificacionService, LogNotificacionService>();
+        services.AddScoped<IPeriodoContableNotificacionService, PeriodoContableNotificacionService>();
 
         // TRB: Tributario
         services.AddScoped<IImpuestoService, ImpuestoService>();
