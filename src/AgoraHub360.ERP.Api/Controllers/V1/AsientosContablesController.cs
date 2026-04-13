@@ -312,4 +312,17 @@ public class AsientosContablesController : ControllerBase
         var resultado = await _importService.ImportarAsync(stream, empresaId.Value, contabilizarInmediatamente, ct);
         return Ok(ApiResponse<ImportResultDto>.Ok(resultado));
     }
+
+    /// <summary>
+    /// Descarga una plantilla Excel vacía con los encabezados esperados para la importación masiva.
+    /// </summary>
+    [HttpGet("plantilla-importacion")]
+    public IActionResult DescargarPlantillaImportacion()
+    {
+        var archivo = _importService.GenerarPlantillaImportacion();
+        return File(
+            archivo,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "Plantilla_Importacion_Asientos.xlsx");
+    }
 }

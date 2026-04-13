@@ -479,7 +479,67 @@ public class AsientoImportService : IAsientoImportService
         return $"{tipo.Prefijo}-{siguiente:D4}";
     }
 
-    // ────────────────────────��────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
+    // Plantilla de importación
+    // ─────────────────────────────────────────────────────────────
+
+    public byte[] GenerarPlantillaImportacion()
+    {
+        using var workbook = new XLWorkbook();
+        var ws = workbook.Worksheets.Add(NombreHoja);
+
+        // Encabezados
+        string[] headers =
+        [
+            "Fecha", "TipoComprobante", "Glosa general", "NumeroLinea",
+            "CodigoCuenta", "Debe", "Haber", "Glosa linea", "CodigoCentroCosto"
+        ];
+
+        for (int i = 0; i < headers.Length; i++)
+        {
+            var cell = ws.Cell(1, i + 1);
+            cell.Value = headers[i];
+            cell.Style.Font.Bold = true;
+            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#4472C4");
+            cell.Style.Font.FontColor = XLColor.White;
+            cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+        }
+
+        // Fila de ejemplo
+        ws.Cell(2, 1).Value = DateTime.Today;
+        ws.Cell(2, 1).Style.DateFormat.Format = "dd/MM/yyyy";
+        ws.Cell(2, 2).Value = "ING";
+        ws.Cell(2, 3).Value = "Venta de mercadería";
+        ws.Cell(2, 4).Value = 1;
+        ws.Cell(2, 5).Value = "1.1.1.01";
+        ws.Cell(2, 6).Value = 1000.00m;
+        ws.Cell(2, 7).Value = 0m;
+        ws.Cell(2, 8).Value = "Cobro cliente X";
+        ws.Cell(2, 9).Value = "";
+
+        ws.Cell(3, 1).Value = DateTime.Today;
+        ws.Cell(3, 1).Style.DateFormat.Format = "dd/MM/yyyy";
+        ws.Cell(3, 2).Value = "ING";
+        ws.Cell(3, 3).Value = "Venta de mercadería";
+        ws.Cell(3, 4).Value = 2;
+        ws.Cell(3, 5).Value = "4.1.1.01";
+        ws.Cell(3, 6).Value = 0m;
+        ws.Cell(3, 7).Value = 1000.00m;
+        ws.Cell(3, 8).Value = "Ingreso por venta";
+        ws.Cell(3, 9).Value = "CC-VEN-01";
+
+        // Formato de columnas numéricas
+        ws.Column(6).Style.NumberFormat.Format = "#,##0.00";
+        ws.Column(7).Style.NumberFormat.Format = "#,##0.00";
+
+        ws.Columns().AdjustToContents();
+
+        using var ms = new MemoryStream();
+        workbook.SaveAs(ms);
+        return ms.ToArray();
+    }
+
+    // ─────────────────────────────────────────────────────────────
     // DTOs internos de lectura
     // ─────────────────────────────────────────────────────────────
 
