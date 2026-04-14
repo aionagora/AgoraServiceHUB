@@ -1,0 +1,187 @@
+@page "/contabilidad/asientos/importar"
+@attribute [Authorize]
+@inject AsientoContableHttpService AsientoService
+@inject FileDownloadService FileDownload
+
+<PageTitle>Carga Masiva de Asientos - AgoraHub360 ERP</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3><i class="bi bi-file-earmark-excel"></i> Carga Masiva de Asientos</h3>
+            <p class="text-muted mb-0">Importación de comprobantes contables desde archivo Excel</p>
+        </div>
+        <div class="col-auto">
+            <a href="/contabilidad/asientos" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Volver a Comprobantes
+            </a>
+            <button class="btn btn-outline-success ms-2" @onclick="DescargarPlantilla" disabled="@descargandoPlantilla">
+                @if (descargandoPlantilla) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                <i class="bi bi-download"></i> Descargar plantilla
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle-fill"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-md-5">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-upload"></i> Seleccionar Archivo</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Archivo Excel (.xlsx)</label>
+                        <InputFile OnChange="OnInputFileChange" class="form-control" accept=".xlsx" />
+                    </div>
+
+                    @if (archivoSeleccionado != null)
+                    {
+                        <div class="mb-3 p-3 bg-light border rounded">
+                            <strong><i class="bi bi-file-earmark-spreadsheet text-success"></i> @archivoSeleccionado.Name</strong>
+                            <br />
+                            <small class="text-muted">Tamaño: @(archivoSeleccionado.Size / 1024) KB</small>
+                        </div>
+                        
+                        <div class="form-check mb-4">
+                            <input class="form-check-input" type="checkbox" id="chkContabilizar" @bind="contabilizarInmediatamente">
+                            <label class="form-check-label" for="chkContabilizar">
+                                <strong>Contabilizar inmediatamente</strong>
+                                <br/>
+                                <small class="text-muted">Si se marca, los asientos quedarán en estado Contabilizado afectando saldos. Si no, quedarán en estado Borrador.</small>
+                            </label>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-primary" @onclick="ValidarArchivo" disabled="@(procesando || fileStream == null)">
+                                @if (validando) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                <i class="bi bi-check-circle"></i> 1. Validar Archivo
+                            </button>
+
+                            <button class="btn btn-success" @onclick="ImportarArchivo" disabled="@(!puedeImportar || procesando)">
+                                @if (importando) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                <i class="bi bi-play-circle"></i> 2. Importar Asientos
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center p-4 text-muted border-dashed rounded">
+                            <i class="bi bi-cloud-upload fs-1 d-block mb-2"></i>
+                            Seleccione un archivo para continuar
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-7">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-journal-check"></i> Resultados de la Operación</h5>
+                </div>
+                <div class="card-body">
+                    @if (validacionResult != null)
+                    {
+                        <div class="alert @(validacionResult.EsValido ? "alert-success" : "alert-warning") mb-4">
+                            <div class="d-flex align-items-center">
+                                <i class="bi @(validacionResult.EsValido ? "bi-check-circle-fill" : "bi-exclamation-triangle-fill") fs-3 me-3"></i>
+                                <div>
+                                    <h5 class="mb-1">Resultado de Validación</h5>
+                                    <p class="mb-0">
+                                        Asientos detectados: <strong>@validacionResult.TotalAsientosDetectados</strong> |
+                                        Filas leídas: <strong>@validacionResult.TotalFilas</strong>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        @if (validacionResult.Errores != null && validacionResult.Errores.Any())
+                        {
+                            <h6 class="text-danger border-bottom pb-2 mb-3">Errores detectados (@validacionResult.Errores.Count)</h6>
+                            <div class="table-responsive" style="max-height: 400px;">
+                                <table class="table table-sm table-bordered table-striped">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 80px;">Fila</th>
+                                            <th>Mensaje</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var error in validacionResult.Errores)
+                                        {
+                                            <tr>
+                                                <td class="text-center text-danger font-monospace">@(error.Fila?.ToString() ?? "Gral")</td>
+                                                <td>@error.Mensaje</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    }
+                    else if (importacionResult != null)
+                    {
+                        <div class="alert @(importacionResult.TotalErrores == 0 ? "alert-success" : "alert-warning") mb-4">
+                            <div class="d-flex align-items-center">
+                                <i class="bi @(importacionResult.TotalErrores == 0 ? "bi-check-circle-fill" : "bi-exclamation-triangle-fill") fs-3 me-3"></i>
+                                <div>
+                                    <h5 class="mb-1">Resultado de Importación</h5>
+                                    <p class="mb-0">
+                                        Asientos creados: <strong>@importacionResult.TotalAsientosImportados</strong> |
+                                        Líneas creadas: <strong>@importacionResult.TotalLineasImportadas</strong>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        @if (importacionResult.Errores != null && importacionResult.Errores.Any())
+                        {
+                            <h6 class="text-danger border-bottom pb-2 mb-3">Errores durante la importación (@importacionResult.TotalErrores)</h6>
+                            <div class="table-responsive" style="max-height: 400px;">
+                                <table class="table table-sm table-bordered table-striped">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 80px;">Fila</th>
+                                            <th>Mensaje</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var error in importacionResult.Errores)
+                                        {
+                                            <tr>
+                                                <td class="text-center text-danger font-monospace">@(error.Fila?.ToString() ?? "Gral")</td>
+                                                <td>@error.Mensaje</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center p-5 text-muted">
+                            <i class="bi bi-info-circle fs-1 d-block mb-3 text-primary opacity-50"></i>
+                            Seleccione un archivo y haga clic en <strong>Validar Archivo</strong> para ver los resultados aquí.
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

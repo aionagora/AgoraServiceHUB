@@ -1,6 +1,7 @@
 @page "/contabilidad/libro-diario"
 @attribute [Authorize]
 @inject EstadoFinancieroHttpService ReporteService
+@inject FileDownloadService FileDownload
 @inject IJSRuntime JS
 
 <PageTitle>Libro Diario - AgoraHub360 ERP</PageTitle>
@@ -225,10 +226,10 @@
             var estado = string.IsNullOrEmpty(filtroEstado) ? null : filtroEstado;
             var bytes = await ReporteService.ExportLibroDiarioExcelAsync(fechaDesde, fechaHasta, estado);
             if (bytes != null)
-                await JS.InvokeVoidAsync("downloadFileFromBase64",
+                await FileDownload.DownloadFromBase64Async(
                     $"Libro_Diario_{fechaDesde:yyyyMMdd}_{fechaHasta:yyyyMMdd}.xlsx",
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    Convert.ToBase64String(bytes));
+                    bytes);
         }
         catch (Exception ex) { errorMessage = ex.Message; }
         finally { exportando = false; }
@@ -260,7 +261,7 @@
         {
             var estadoQuery = string.IsNullOrEmpty(filtroEstado) ? "" : $"&estado={filtroEstado}";
             var url = $"api/v1/contabilidad/estados-financieros/libro-diario/export?desde={fechaDesde:yyyy-MM-dd}&hasta={fechaHasta:yyyy-MM-dd}{estadoQuery}&format=pdf";
-            await JS.InvokeVoidAsync("downloadFileFromBase64", url, $"Libro_Diario_{fechaDesde:yyyyMMdd}_{fechaHasta:yyyyMMdd}.pdf");
+            await FileDownload.DownloadFromApiAsync(url, $"Libro_Diario_{fechaDesde:yyyyMMdd}_{fechaHasta:yyyyMMdd}.pdf");
         }
         catch (Exception ex) { errorMessage = ex.Message; }
         finally { _exportandoPdf = false; StateHasChanged(); }

@@ -1,6 +1,7 @@
 @page "/contabilidad/sumas-saldos"
 @attribute [Authorize]
 @inject EstadoFinancieroHttpService ReporteService
+@inject FileDownloadService FileDownload
 @inject IJSRuntime JS
 
 <PageTitle>Sumas y Saldos - AgoraHub360 ERP</PageTitle>
@@ -160,8 +161,12 @@
 
     private async Task ExportarExcel()
     {
-        var url = $"api/v1/contabilidad/estados-financieros/sumas-saldos/export?desde={fechaDesde:yyyy-MM-dd}&hasta={fechaHasta:yyyy-MM-dd}&format=xlsx";
-        await JS.InvokeVoidAsync("downloadFile", url, "SumasYSaldos.xlsx");
+        try
+        {
+            var url = $"api/v1/contabilidad/estados-financieros/sumas-saldos/export?desde={fechaDesde:yyyy-MM-dd}&hasta={fechaHasta:yyyy-MM-dd}&format=xlsx";
+            await FileDownload.DownloadFromApiAsync(url, $"SumasYSaldos_{fechaDesde:yyyyMMdd}_{fechaHasta:yyyyMMdd}.xlsx");
+        }
+        catch (Exception ex) { errorMessage = $"Error al exportar Excel: {ex.Message}"; }
     }
 
     private async Task Imprimir()

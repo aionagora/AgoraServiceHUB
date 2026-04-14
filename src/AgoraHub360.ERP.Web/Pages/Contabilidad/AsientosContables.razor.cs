@@ -1,7 +1,6 @@
 using AgoraHub360.ERP.Shared.DTOs.Contabilidad;
 using AgoraHub360.ERP.Shared.Utils;
 using Microsoft.AspNetCore.Components.Web;
-using Microsoft.JSInterop;
 
 namespace AgoraHub360.ERP.Web.Pages.Contabilidad;
 
@@ -59,10 +58,10 @@ public partial class AsientosContables
             if (fileBytes is { Length: > 0 })
             {
                 var ts = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                await JS.InvokeVoidAsync("downloadFile",
+                await FileDownload.DownloadFromBase64Async(
                     $"Comprobantes_{ts}.xlsx",
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    Convert.ToBase64String(fileBytes));
+                    fileBytes);
                 successMessage = "Archivo Excel generado exitosamente.";
             }
             else errorMessage = "No se pudo generar el archivo Excel.";
@@ -83,10 +82,10 @@ public partial class AsientosContables
             if (fileBytes is { Length: > 0 })
             {
                 var ts = DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                await JS.InvokeVoidAsync("downloadFile",
+                await FileDownload.DownloadFromBase64Async(
                     $"Comprobantes_Plano_{ts}.xlsx",
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    Convert.ToBase64String(fileBytes));
+                    fileBytes);
                 successMessage = "Archivo Excel plano generado exitosamente.";
             }
             else errorMessage = "No se pudo generar el archivo Excel plano.";
@@ -125,7 +124,7 @@ public partial class AsientosContables
                     _ => "text/plain"
                 };
 
-                await JS.InvokeVoidAsync("downloadFile", fileName, mimeType, Convert.ToBase64String(fileBytes));
+                await FileDownload.DownloadFromBase64Async(fileName, mimeType, fileBytes);
                 successMessage = $"Archivo {formato.ToUpper()} generado.";
             }
             else

@@ -3,6 +3,7 @@ namespace AgoraHub360.ERP.Web.Services;
 using System.Net.Http.Json;
 using AgoraHub360.ERP.Shared.DTOs;
 using AgoraHub360.ERP.Shared.DTOs.Contabilidad;
+using AgoraHub360.ERP.Shared.DTOs.Contabilidad.Importacion;
 using AgoraHub360.ERP.Shared.DTOs.DOC;
 
 public class AsientoContableHttpService
@@ -246,14 +247,87 @@ public class AsientoContableHttpService
         return await ParseResponse<bool>(response);
     }
 
+    // ── Importación ───────────────────────────────────────────────────────────────
+
+    public async Task<byte[]?> DescargarPlantillaImportacionAsync()
+    {
+        try
+        {
+            var response = await _http.GetAsync($"{Base}/plantilla-importacion");
+            if (response.IsSuccessStatusCode)
+                return await response.Content.ReadAsByteArrayAsync();
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public async Task<ApiResponse<ImportValidacionDto>> ValidarImportacionAsync(Stream fileStream, string fileName)
+    {
+        try 
+        {
+            using var content = new MultipartFormDataContent();
+            using var sc = new StreamContent(fileStream);
+            content.Add(sc, "archivo", fileName);
+
+            var response = await _http.PostAsync($"{Base}/importar?soloValidar=true", content);
+            return await ParseResponse<ImportValidacionDto>(response);
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<ImportValidacionDto>.Fail($"Error interno al llamar al servidor: {ex.Message}");
+        }
+    }
+
+    public async Task<ApiResponse<ImportResultDto>> ImportarAsync(Stream fileStream, string fileName, bool contabilizarInmediatamente)
+    {
+        try 
+        {
+            using var content = new MultipartFormDataContent();
+            using var sc = new StreamContent(fileStream);
+            content.Add(sc, "archivo", fileName);
+
+            var response = await _http.PostAsync($"{Base}/importar?soloValidar=false&contabilizarInmediatamente={contabilizarInmediatamente}", content);
+            return await ParseResponse<ImportResultDto>(response);
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<ImportResultDto>.Fail($"Error interno al llamar al servidor: {ex.Message}");
+        }
+    }
+
     private static async Task<ApiResponse<T>> ParseResponse<T>(HttpResponseMessage response)
     {
         if (!response.IsSuccessStatusCode)
         {
             var body = await response.Content.ReadAsStringAsync();
+            try
+            {
+                // Attempt to parse as ApiResponse to get the actual API error message
+                var parsedResponse = System.Text.Json.JsonSerializer.Deserialize<ApiResponse<T>>(body, new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (parsedResponse != null && !string.IsNullOrEmpty(parsedResponse.Message))
+                {
+                    return parsedResponse;
+                }
+            }
+            catch
+            {
+                // Ignore parse errors and fallback to raw body
+            }
+
             return ApiResponse<T>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
-        return await response.Content.ReadFromJsonAsync<ApiResponse<T>>()
-            ?? ApiResponse<T>.Fail("Error de comunicación.");
+
+        try
+        {
+            return await response.Content.ReadFromJsonAsync<ApiResponse<T>>()
+                ?? ApiResponse<T>.Fail("Error de comunicación. No se recibió respuesta válida del servidor.");
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<T>.Fail($"Error al procesar la respuesta del servidor: {ex.Message}");
+        }
     }
 }

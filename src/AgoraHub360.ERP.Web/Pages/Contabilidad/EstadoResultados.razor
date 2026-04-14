@@ -1,6 +1,7 @@
 @page "/contabilidad/estado-resultados"
 @attribute [Authorize]
 @inject EstadoFinancieroHttpService ReporteService
+@inject FileDownloadService FileDownload
 @inject IJSRuntime JS
 
 <PageTitle>Estado de Resultados - AgoraHub360 ERP</PageTitle>
@@ -137,10 +138,10 @@
         {
             var bytes = await ReporteService.ExportEstadoResultadosExcelAsync(fechaDesde, fechaHasta);
             if (bytes != null)
-                await JS.InvokeVoidAsync("downloadFileFromBase64",
+                await FileDownload.DownloadFromBase64Async(
                     $"Estado_Resultados_{fechaDesde:yyyyMMdd}_{fechaHasta:yyyyMMdd}.xlsx",
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    Convert.ToBase64String(bytes));
+                    bytes);
         }
         catch (Exception ex) { errorMessage = ex.Message; }
         finally { exportando = false; }

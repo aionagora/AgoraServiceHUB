@@ -23,6 +23,7 @@ builder.Services.AddScoped<JwtAuthStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<JwtAuthStateProvider>());
 
 // ──── Servicios HTTP ────
+builder.Services.AddScoped<FileDownloadService>();
 builder.Services.AddScoped<AuthHttpService>();
 builder.Services.AddScoped<EmpresaHttpService>();
 builder.Services.AddScoped<EmpresaStateService>();

@@ -1,6 +1,7 @@
 @page "/contabilidad/flujo-efectivo"
 @attribute [Microsoft.AspNetCore.Authorization.Authorize]
 @inject AgoraHub360.ERP.Web.Services.HttpFlujoDEfectivoService FlujoDEfectivoSvc
+@inject AgoraHub360.ERP.Web.Services.FileDownloadService FileDownload
 @inject IJSRuntime JS
 @using AgoraHub360.ERP.Shared.DTOs.Contabilidad
 
@@ -200,13 +201,21 @@
 
     private async Task ExportarExcel()
     {
-        var url = $"api/v1/contabilidad/estados-financieros/flujo-efectivo/export?desde={desde:yyyy-MM-dd}&hasta={hasta:yyyy-MM-dd}&format=xlsx";
-        await JS.InvokeVoidAsync("downloadFile", url, "FlujoDEfectivo.xlsx");
+        try
+        {
+            var url = $"api/v1/contabilidad/estados-financieros/flujo-efectivo/export?desde={desde:yyyy-MM-dd}&hasta={hasta:yyyy-MM-dd}&format=xlsx";
+            await FileDownload.DownloadFromApiAsync(url, $"FlujoDEfectivo_{desde:yyyyMMdd}.xlsx");
+        }
+        catch (Exception ex) { errorMessage = $"Error al exportar Excel: {ex.Message}"; }
     }
 
     private async Task ExportarPdf()
     {
-        var url = $"api/v1/contabilidad/estados-financieros/flujo-efectivo/export?desde={desde:yyyy-MM-dd}&hasta={hasta:yyyy-MM-dd}&format=pdf";
-        await JS.InvokeVoidAsync("downloadFile", url, "FlujoDEfectivo.pdf");
+        try
+        {
+            var url = $"api/v1/contabilidad/estados-financieros/flujo-efectivo/export?desde={desde:yyyy-MM-dd}&hasta={hasta:yyyy-MM-dd}&format=pdf";
+            await FileDownload.DownloadFromApiAsync(url, $"FlujoDEfectivo_{desde:yyyyMMdd}.pdf");
+        }
+        catch (Exception ex) { errorMessage = $"Error al exportar PDF: {ex.Message}"; }
     }
 }
