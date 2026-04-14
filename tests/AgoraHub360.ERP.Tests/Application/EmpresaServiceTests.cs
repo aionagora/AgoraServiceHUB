@@ -138,6 +138,10 @@ public class EmpresaServiceTests
             return Task.FromResult(1);
         }
 
+        public Task BeginTransactionAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public Task CommitTransactionAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public Task RollbackTransactionAsync(CancellationToken ct = default) => Task.CompletedTask;
+
         public void Dispose() { }
     }
 

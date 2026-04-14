@@ -19,6 +19,7 @@ using AgoraHub360.ERP.Domain.Entities.ACT;
 using AgoraHub360.ERP.Domain.Entities.BNC;
 using AgoraHub360.ERP.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 /// <summary>
 /// Main ERP DbContext with multi-tenant support and automatic auditing.
@@ -27,6 +28,7 @@ using Microsoft.EntityFrameworkCore;
 public class AgoraDbContext : DbContext, IUnitOfWork
 {
     private readonly int? _empresaId;
+    private IDbContextTransaction? _currentTransaction;
 
     public AgoraDbContext(
         DbContextOptions<AgoraDbContext> options,
@@ -194,5 +196,31 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     {
         modelBuilder.Entity<T>().HasQueryFilter(e => _empresaId == null || e.EmpresaId == _empresaId);
         modelBuilder.Entity<T>().HasIndex(e => e.EmpresaId);
+    }
+
+    // ── Soporte transaccional explícito ──────────────────────────────────────
+
+    public async Task BeginTransactionAsync(CancellationToken cancellationToken = default)
+    {
+        if (_currentTransaction is not null) return;
+        _currentTransaction = await Database.BeginTransactionAsync(cancellationToken);
+    }
+
+    public async Task CommitTransactionAsync(CancellationToken cancellationToken = default)
+    {
+        if (_currentTransaction is null)
+            throw new InvalidOperationException("No hay una transacción activa para confirmar.");
+
+        await _currentTransaction.CommitAsync(cancellationToken);
+        await _currentTransaction.DisposeAsync();
+        _currentTransaction = null;
+    }
+
+    public async Task RollbackTransactionAsync(CancellationToken cancellationToken = default)
+    {
+        if (_currentTransaction is null) return;
+        await _currentTransaction.RollbackAsync(cancellationToken);
+        await _currentTransaction.DisposeAsync();
+        _currentTransaction = null;
     }
 }
