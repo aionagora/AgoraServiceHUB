@@ -150,12 +150,24 @@ public class ContabilizacionService : IContabilizacionService
                 return Result<AsientoContableDto>.Failure("No hay tipos de comprobante configurados. Ejecute 'Generar Catálogos' primero.");
         }
 
-        // ?? 7. Generate entry number ??
+        // ?? 7. Generate entry number — scoped by Empresa+Gestion+Tipo+Mes ??
         var gestion = fecha.Year;
-        var existentes = await _asientoRepo.FindAsync(
-            a => a.EmpresaId == empresaId.Value && a.TipoComprobanteId == tipoComp.TipoComprobanteId
-                && a.Gestion == gestion, ct);
-        var numero = $"{tipoComp.Prefijo}-{(existentes.Count + 1):D4}";
+        var mes = fecha.Month;
+        var prefijoMes = $"{tipoComp.Prefijo}-{mes:D2}-";
+
+        var enMismoPeriodo = await _asientoRepo.FindAsync(
+            a => a.EmpresaId == empresaId.Value
+              && a.Gestion == gestion
+              && a.Numero.StartsWith(prefijoMes), ct);
+
+        var maxSeq = 0;
+        foreach (var a in enMismoPeriodo)
+        {
+            var lastDash = a.Numero.LastIndexOf('-');
+            if (lastDash >= 0 && int.TryParse(a.Numero[(lastDash + 1)..], out int n) && n > maxSeq)
+                maxSeq = n;
+        }
+        var numero = $"{tipoComp.Prefijo}-{mes:D2}-{(maxSeq + 1):D4}";
 
         // ?? 8. Create journal entry ??
         var asiento = new AsientoContable

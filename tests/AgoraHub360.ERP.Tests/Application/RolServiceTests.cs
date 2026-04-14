@@ -84,6 +84,8 @@ public class RolServiceTests
         public Task BeginTransactionAsync(CancellationToken ct = default) => Task.CompletedTask;
         public Task CommitTransactionAsync(CancellationToken ct = default) => Task.CompletedTask;
         public Task RollbackTransactionAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public Task ExecuteInTransactionAsync(Func<Task> op, CancellationToken ct = default) => op();
+        public Task<T> ExecuteInTransactionAsync<T>(Func<Task<T>> op, CancellationToken ct = default) => op();
         public void Dispose() { }
     }
 }

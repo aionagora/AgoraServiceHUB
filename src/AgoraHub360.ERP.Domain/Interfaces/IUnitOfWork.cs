@@ -15,4 +15,14 @@ public interface IUnitOfWork : IDisposable
 
     /// <summary>Revierte la transacción activa y la libera. Es un no-op si no hay transacción.</summary>
     Task RollbackTransactionAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Ejecuta <paramref name="operation"/> dentro de una transacción gestionada por la
+    /// estrategia de ejecución del proveedor (compatible con SqlServerRetryingExecutionStrategy).
+    /// Hace commit si <paramref name="operation"/> termina sin excepción, rollback en caso contrario.
+    /// </summary>
+    Task ExecuteInTransactionAsync(Func<Task> operation, CancellationToken cancellationToken = default);
+
+    /// <inheritdoc cref="ExecuteInTransactionAsync(Func{Task},CancellationToken)"/>
+    Task<T> ExecuteInTransactionAsync<T>(Func<Task<T>> operation, CancellationToken cancellationToken = default);
 }

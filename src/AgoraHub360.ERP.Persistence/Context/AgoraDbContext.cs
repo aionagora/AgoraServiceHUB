@@ -223,4 +223,53 @@ public class AgoraDbContext : DbContext, IUnitOfWork
         await _currentTransaction.DisposeAsync();
         _currentTransaction = null;
     }
+
+    /// <summary>
+    /// Envuelve <paramref name="operation"/> en una transacción compatible con
+    /// <see cref="Microsoft.EntityFrameworkCore.Storage.IExecutionStrategy"/>.
+    /// Requerido cuando SQL Server tiene SqlServerRetryingExecutionStrategy activa.
+    /// </summary>
+    public async Task ExecuteInTransactionAsync(
+        Func<Task> operation,
+        CancellationToken cancellationToken = default)
+    {
+        var strategy = Database.CreateExecutionStrategy();
+        await strategy.ExecuteAsync(async () =>
+        {
+            await using var tx = await Database.BeginTransactionAsync(cancellationToken);
+            try
+            {
+                await operation();
+                await tx.CommitAsync(cancellationToken);
+            }
+            catch
+            {
+                await tx.RollbackAsync(cancellationToken);
+                throw;
+            }
+        });
+    }
+
+    /// <inheritdoc cref="ExecuteInTransactionAsync(Func{Task},CancellationToken)"/>
+    public async Task<T> ExecuteInTransactionAsync<T>(
+        Func<Task<T>> operation,
+        CancellationToken cancellationToken = default)
+    {
+        var strategy = Database.CreateExecutionStrategy();
+        return await strategy.ExecuteAsync(async () =>
+        {
+            await using var tx = await Database.BeginTransactionAsync(cancellationToken);
+            try
+            {
+                var result = await operation();
+                await tx.CommitAsync(cancellationToken);
+                return result;
+            }
+            catch
+            {
+                await tx.RollbackAsync(cancellationToken);
+                throw;
+            }
+        });
+    }
 }

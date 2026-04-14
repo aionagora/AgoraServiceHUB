@@ -345,9 +345,10 @@ public class CierreContableService : ICierreContableService
             "Iniciando cierre anual completo. EmpresaId={EmpresaId}, Gestión={Gestion}",
             empresaId, dto.Gestion);
 
-        await _unitOfWork.BeginTransactionAsync(ct);
         try
         {
+            return await _unitOfWork.ExecuteInTransactionAsync(async () =>
+            {
             // ── PASO 1: Validar que existan los 12 períodos del año ───────────
             var periodos = await _periodoRepo.FindAsync(
                 p => p.EmpresaId == empresaId && p.Anio == dto.Gestion && p.Activo, ct);
@@ -394,18 +395,29 @@ public class CierreContableService : ICierreContableService
             decimal montoIUE = 0m;
             long? asientoIUEId = null;
 
-            var rIUE = await _impuestoService.CalcularIUEAsync(dto.Gestion, ct);
-            if (rIUE.IsSuccess && rIUE.Value != null && rIUE.Value.MontoCalculado > 0)
+            try
             {
-                montoIUE = Math.Round(rIUE.Value.MontoCalculado, 2);
-                _logger.LogInformation(
-                    "IUE calculado. Gestión={Gestion}, MontoIUE={MontoIUE:N2}", dto.Gestion, montoIUE);
+                var rIUE = await _impuestoService.CalcularIUEAsync(dto.Gestion, ct);
+                if (rIUE.IsSuccess && rIUE.Value != null && rIUE.Value.MontoCalculado > 0)
+                {
+                    montoIUE = Math.Round(rIUE.Value.MontoCalculado, 2);
+                    _logger.LogInformation(
+                        "IUE calculado. Gestión={Gestion}, MontoIUE={MontoIUE:N2}", dto.Gestion, montoIUE);
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "No se pudo calcular el IUE para la gestión {Gestion}: {Detalle}. Se omitirá el asiento de IUE.",
+                        dto.Gestion, rIUE.IsSuccess ? "resultado vacío o cero" : rIUE.Error);
+                }
             }
-            else
+            catch (Exception exIUE)
             {
-                _logger.LogWarning(
-                    "No se pudo calcular el IUE para la gestión {Gestion}: {Detalle}. Se omitirá el asiento de IUE.",
-                    dto.Gestion, rIUE.IsSuccess ? "resultado vacío o cero" : rIUE.Error);
+                _logger.LogWarning(exIUE,
+                    "Error al calcular IUE para la gestión {Gestion}. Se omitirá el asiento de IUE. " +
+                    "Verifique que la migración 'TRB_RegistrosImpuesto' haya sido aplicada a la base de datos.",
+                    dto.Gestion);
+                montoIUE = 0m;
             }
 
             // Obtener utilidad bruta ANTES de crear cualquier asiento de cierre
@@ -683,8 +695,6 @@ public class CierreContableService : ICierreContableService
                 _logger.LogInformation("Apertura de gestión {GestionNueva} completada.", gestionNueva);
             }
 
-            await _unitOfWork.CommitTransactionAsync(ct);
-
             _logger.LogInformation(
                 "Cierre anual gestión {Gestion} completado. IUE={IUE:N2}, RL={RL:N2}, UtilPostIUE={U:N2}.",
                 dto.Gestion, montoIUE, reservaLegal, utilidadPostIUE);
@@ -704,14 +714,20 @@ public class CierreContableService : ICierreContableService
                 AsientoTransferenciaId = asientoTransferenciaId,
                 NuevaGestionAbierta   = dto.AbrirNuevaGestion
             };
+            }, ct); // ExecuteInTransactionAsync — commit/rollback gestionado internamente
         }
         catch (Exception ex)
         {
+            // Desenrollar hasta la causa raíz (e.g. SqlException)
+            var root = ex;
+            while (root.InnerException != null) root = root.InnerException;
+
             _logger.LogError(ex,
-                "Error durante el cierre anual de la gestión {Gestion}. Ejecutando rollback.",
-                dto.Gestion);
-            await _unitOfWork.RollbackTransactionAsync(ct);
-            throw;
+                "Error durante el cierre anual de la gestión {Gestion}. Causa raíz: {RootMessage}",
+                dto.Gestion, root.Message);
+
+            throw new InvalidOperationException(
+                $"Error al ejecutar el cierre anual de la gestión {dto.Gestion}: {root.Message}", ex);
         }
     }
 
@@ -745,15 +761,27 @@ public class CierreContableService : ICierreContableService
                 $"El asiento de cierre '{concepto}' no cuadra. " +
                 $"Debe: {totalDebe:N2}, Haber: {totalHaber:N2}.");
 
-        // Generar número de comprobante
-        var existentes = await _asientoRepo.FindAsync(
-            a => a.EmpresaId == empresaId
-              && a.TipoComprobanteId == tipoComprobanteId
-              && a.Gestion == fecha.Year, ct);
-
+        // Generar número de comprobante — Formato: {Prefijo}-{Mes:D2}-{secuencial:D4}
+        // Alcance único: Empresa + Gestión + TipoComprobante + Periodo (mes)
         var tipoComp = await _tipoCompRepo.GetByIdAsync(tipoComprobanteId, ct);
         var prefijo  = tipoComp?.Prefijo ?? "CIE";
-        var numero   = $"{prefijo}-{(existentes.Count + 1):D4}";
+        var mes = fecha.Month;
+        var prefijoMes = $"{prefijo}-{mes:D2}-";
+
+        var enMismoPeriodo = await _asientoRepo.FindAsync(
+            a => a.EmpresaId == empresaId
+              && a.Gestion == fecha.Year
+              && a.Numero.StartsWith(prefijoMes), ct);
+
+        var maxSeq = 0;
+        foreach (var a in enMismoPeriodo)
+        {
+            var lastDash = a.Numero.LastIndexOf('-');
+            if (lastDash >= 0 && int.TryParse(a.Numero[(lastDash + 1)..], out int n) && n > maxSeq)
+                maxSeq = n;
+        }
+
+        var numero = $"{prefijo}-{mes:D2}-{(maxSeq + 1):D4}";
 
         var asiento = new AsientoContable
         {

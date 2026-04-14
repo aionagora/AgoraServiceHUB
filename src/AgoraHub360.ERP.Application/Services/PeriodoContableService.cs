@@ -125,7 +125,8 @@ public class PeriodoContableService : IPeriodoContableService
 
         if (borradores.Count > 0)
             return Result<PeriodoContableDto>.Failure(
-                $"Cannot close period with {borradores.Count} draft journal entries. Post or delete them first.");
+                $"El período '{periodo.Nombre}' tiene {borradores.Count} asiento(s) en Borrador. " +
+                "Contabilícelos o elimínelos antes de cerrar el período.");
 
         periodo.Estado = "Cerrado";
         periodo.FechaCierre = DateTime.UtcNow;

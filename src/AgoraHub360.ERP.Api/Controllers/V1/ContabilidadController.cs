@@ -24,6 +24,28 @@ public class ContabilidadController : ControllerBase
         _cierreService = cierreService;
     }
 
+    [HttpPost("cierre-contable/anual")]
+    public async Task<IActionResult> EjecutarCierreAnual([FromBody] EjecutarCierreAnualDto dto, CancellationToken ct)
+    {
+        try
+        {
+            var result = await _cierreService.EjecutarCierreAnualAsync(dto, ct);
+            return Ok(ApiResponse<CierreContableDto>.Ok(result,
+                $"Cierre contable anual de la gestión {dto.Gestion} ejecutado exitosamente."));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(ApiResponse<CierreContableDto>.Fail(ex.Message));
+        }
+        catch (Exception ex)
+        {
+            // Desenrollar la cadena de excepciones hasta llegar a la causa raíz (e.g. SqlException)
+            var root = ex;
+            while (root.InnerException != null) root = root.InnerException;
+            return StatusCode(500, ApiResponse<string>.Fail($"Error interno: {root.Message}"));
+        }
+    }
+
     [HttpPost("cierre-contable")]
     public async Task<IActionResult> EjecutarCierre([FromBody] EjecutarCierreDto dto, CancellationToken ct)
     {
