@@ -4,6 +4,7 @@
 @inject AsientoContableHttpService AsientoService
 @inject CuentaContableHttpService CuentaService
 @inject CentroCostoHttpService CentroCostoService
+@inject FileDownloadService FileDownload
 @inject IJSRuntime JS
 
 <PageTitle>Comprobantes Contables - AgoraHub360 ERP</PageTitle>
@@ -1269,9 +1270,9 @@
             {
                 var fileBytes = await AsientoService.ExportarExcelIndividualAsync(editingId);
                 if (fileBytes is { Length: > 0 })
-                    await JS.InvokeVoidAsync("downloadFileFromBase64", $"Comprobante_{numSafe}.xlsx",
-                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        Convert.ToBase64String(fileBytes));
+                    await FileDownload.DownloadFromBase64Async($"Comprobante_{numSafe}.xlsx",
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            fileBytes);
                 else errorMessage = "No se pudo generar el archivo Excel.";
                 return;
             }
@@ -1280,9 +1281,9 @@
             {
                 var fileBytes = await AsientoService.ExportarExcelPlanoAsync(search: formNumero);
                 if (fileBytes is { Length: > 0 })
-                    await JS.InvokeVoidAsync("downloadFileFromBase64", $"Comprobante_Plano_{numSafe}.xlsx",
-                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        Convert.ToBase64String(fileBytes));
+                    await FileDownload.DownloadFromBase64Async($"Comprobante_Plano_{numSafe}.xlsx",
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            fileBytes);
                 else errorMessage = "No se pudo generar el archivo Excel plano.";
                 return;
             }
@@ -1308,7 +1309,7 @@
                     _ => "text/plain"
                 };
 
-                await JS.InvokeVoidAsync("downloadFileFromBase64", fileName, mimeType, Convert.ToBase64String(exportBytes));
+                await FileDownload.DownloadFromBase64Async(fileName, mimeType, exportBytes);
             }
             else
             {

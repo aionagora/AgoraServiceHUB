@@ -2,6 +2,7 @@
 @attribute [Authorize]
 @inject EstadoFinancieroHttpService ReporteService
 @inject HttpExportEstadosFinancierosService ExportService
+@inject FileDownloadService FileDownload
 @inject IJSRuntime JS
 
 <PageTitle>Balance General - AgoraHub360 ERP</PageTitle>
@@ -137,8 +138,9 @@
         {
             _exportandoExcel = true;
             var url = ExportService.GetBalanceGeneralExportUrl(fechaCorte, "xlsx");
-            await JS.InvokeVoidAsync("downloadFile", url, "BalanceGeneral.xlsx");
+            await FileDownload.DownloadFromApiAsync(url, $"BalanceGeneral_{fechaCorte:yyyyMMdd}.xlsx");
         }
+        catch (Exception ex) { errorMessage = $"Error al exportar Excel: {ex.Message}"; }
         finally
         {
             _exportandoExcel = false;
@@ -151,8 +153,9 @@
         {
             _exportandoPdf = true;
             var url = ExportService.GetBalanceGeneralExportUrl(fechaCorte, "pdf");
-            await JS.InvokeVoidAsync("downloadFile", url, "BalanceGeneral.pdf");
+            await FileDownload.DownloadFromApiAsync(url, $"BalanceGeneral_{fechaCorte:yyyyMMdd}.pdf");
         }
+        catch (Exception ex) { errorMessage = $"Error al exportar PDF: {ex.Message}"; }
         finally
         {
             _exportandoPdf = false;

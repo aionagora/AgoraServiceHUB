@@ -156,7 +156,7 @@ public class AsientoContableService : IAsientoContableService
         }
 
         var gestion = dto.Fecha.Year;
-        var numero = await GenerarNumeroComprobanteAsync(empresaId.Value, tipoComp, gestion, ct);
+        var numero = await GenerarNumeroComprobanteAsync(empresaId.Value, tipoComp, gestion, dto.Fecha.Month, ct);
 
         var asiento = new AsientoContable
         {
@@ -261,7 +261,7 @@ public class AsientoContableService : IAsientoContableService
         if (asiento.TipoComprobanteId != dto.TipoComprobanteId)
         {
             asiento.TipoComprobanteId = dto.TipoComprobanteId;
-            asiento.Numero = await GenerarNumeroComprobanteAsync(empresaId.Value, tipoComp, dto.Fecha.Year, ct);
+            asiento.Numero = await GenerarNumeroComprobanteAsync(empresaId.Value, tipoComp, dto.Fecha.Year, dto.Fecha.Month, ct);
         }
 
         asiento.Fecha = dto.Fecha;
@@ -315,7 +315,7 @@ public class AsientoContableService : IAsientoContableService
 
         await ValidarCierreContableAsync(empresaId.Value, gestion, ct);
 
-        var numero = await GenerarNumeroComprobanteAsync(empresaId.Value, tipoComp, gestion, ct);
+        var numero = await GenerarNumeroComprobanteAsync(empresaId.Value, tipoComp, gestion, hoy.Month, ct);
 
         var copia = new AsientoContable
         {
@@ -651,14 +651,27 @@ public class AsientoContableService : IAsientoContableService
         }
     }
 
-    private async Task<string> GenerarNumeroComprobanteAsync(int empresaId, TipoComprobante tipo, int gestion, CancellationToken ct)
+    private async Task<string> GenerarNumeroComprobanteAsync(
+        int empresaId, TipoComprobante tipo, int gestion, int mes, CancellationToken ct)
     {
-        // Number per type + gestion: CI-001, CE-001, CT-001
-        var existentes = await _asientoRepo.FindAsync(
-            a => a.EmpresaId == empresaId && a.TipoComprobanteId == tipo.TipoComprobanteId
-                && a.Gestion == gestion, ct);
-        var siguiente = existentes.Count + 1;
-        return $"{tipo.Prefijo}-{siguiente:D4}";
+        // Formato: {Prefijo}-{Mes:D2}-{secuencial:D4}  →  CT-04-0001
+        // Alcance: Empresa + Gestión + TipoComprobante + Periodo (mes)
+        var prefijoMes = $"{tipo.Prefijo}-{mes:D2}-";
+
+        var enMismoPeriodo = await _asientoRepo.FindAsync(
+            a => a.EmpresaId == empresaId
+              && a.Gestion == gestion
+              && a.Numero.StartsWith(prefijoMes), ct);
+
+        var maxSeq = 0;
+        foreach (var a in enMismoPeriodo)
+        {
+            var lastDash = a.Numero.LastIndexOf('-');
+            if (lastDash >= 0 && int.TryParse(a.Numero[(lastDash + 1)..], out int n) && n > maxSeq)
+                maxSeq = n;
+        }
+
+        return $"{tipo.Prefijo}-{mes:D2}-{(maxSeq + 1):D4}";
     }
 
     private async Task SaveLineasAsync(long asientoId, List<CreateAsientoLineaDto> lineas, CancellationToken ct)

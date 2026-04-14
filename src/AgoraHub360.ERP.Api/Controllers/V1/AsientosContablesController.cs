@@ -3,6 +3,7 @@ namespace AgoraHub360.ERP.Api.Controllers.V1;
 using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Shared.DTOs;
 using AgoraHub360.ERP.Shared.DTOs.Contabilidad;
+using AgoraHub360.ERP.Shared.DTOs.Contabilidad.Importacion;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,15 +17,21 @@ public class AsientosContablesController : ControllerBase
     private readonly IAsientoContableService _service;
     private readonly IComprobanteDocumentoService _docService;
     private readonly IAsientoExportService _exportService;
+    private readonly IAsientoImportService _importService;
+    private readonly ICurrentUserService _currentUser;
 
     public AsientosContablesController(
         IAsientoContableService service,
         IComprobanteDocumentoService docService,
-        IAsientoExportService exportService)
+        IAsientoExportService exportService,
+        IAsientoImportService importService,
+        ICurrentUserService currentUser)
     {
         _service       = service;
         _docService    = docService;
         _exportService = exportService;
+        _importService = importService;
+        _currentUser   = currentUser;
     }
 
     [HttpGet]
@@ -268,5 +275,58 @@ public class AsientosContablesController : ControllerBase
             return NotFound(ApiResponse<bool>.Fail(result.Error!));
 
         return Ok(ApiResponse<bool>.Ok(true, "Documento removido del comprobante."));
+    }
+
+    // ── Importación masiva ──────────────────────────────────────────────
+
+    /// <summary>
+    /// Importa asientos contables desde un archivo Excel.
+    /// Con <paramref name="soloValidar"/> = true solo valida sin persistir.
+    /// </summary>
+    [HttpPost("importar")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(typeof(ApiResponse<ImportValidacionDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<ImportResultDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ImportarAsientosAsync(
+        IFormFile archivo,
+        [FromQuery] bool soloValidar = false,
+        [FromQuery] bool contabilizarInmediatamente = false,
+        CancellationToken ct = default)
+    {
+        if (archivo == null || archivo.Length == 0)
+            return BadRequest(ApiResponse<string>.Fail("Debe adjuntar un archivo."));
+
+        if (archivo.Length > 5 * 1024 * 1024)
+            return BadRequest(ApiResponse<string>.Fail("El archivo no puede superar 5 MB."));
+
+        var empresaId = _currentUser.EmpresaId;
+        if (empresaId is null or 0)
+            return BadRequest(ApiResponse<string>.Fail("No se pudo determinar la empresa del usuario."));
+
+        await using var stream = archivo.OpenReadStream();
+
+        if (soloValidar)
+        {
+            var validacion = await _importService.ValidarArchivoAsync(stream, empresaId.Value, ct);
+            return Ok(ApiResponse<ImportValidacionDto>.Ok(validacion));
+        }
+
+        var resultado = await _importService.ImportarAsync(stream, empresaId.Value, contabilizarInmediatamente, ct);
+        return Ok(ApiResponse<ImportResultDto>.Ok(resultado));
+    }
+
+    /// <summary>
+    /// Descarga una plantilla Excel vacía con los encabezados esperados para la importación masiva.
+    /// </summary>
+    [HttpGet("plantilla-importacion")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+    public async Task<IActionResult> DescargarPlantillaImportacionAsync(CancellationToken ct = default)
+    {
+        var archivo = await _importService.GenerarPlantillaAsync(ct);
+        return File(
+            archivo,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "plantilla_importacion_asientos.xlsx");
     }
 }

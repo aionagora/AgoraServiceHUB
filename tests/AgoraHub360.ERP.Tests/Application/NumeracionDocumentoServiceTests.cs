@@ -126,6 +126,11 @@ public class NumeracionDocumentoServiceTests
     {
         public bool SaveCalled { get; private set; }
         public Task<int> SaveChangesAsync(CancellationToken ct = default) { SaveCalled = true; return Task.FromResult(1); }
+        public Task BeginTransactionAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public Task CommitTransactionAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public Task RollbackTransactionAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public Task ExecuteInTransactionAsync(Func<Task> op, CancellationToken ct = default) => op();
+        public Task<T> ExecuteInTransactionAsync<T>(Func<Task<T>> op, CancellationToken ct = default) => op();
         public void Dispose() { }
     }
 

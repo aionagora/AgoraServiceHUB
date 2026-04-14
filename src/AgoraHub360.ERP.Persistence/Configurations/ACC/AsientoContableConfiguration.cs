@@ -28,7 +28,10 @@ public class AsientoContableConfiguration : IEntityTypeConfiguration<AsientoCont
         builder.Property(a => a.CreadoPor).HasMaxLength(100);
         builder.Property(a => a.ModificadoPor).HasMaxLength(100);
 
-        builder.HasIndex(a => new { a.EmpresaId, a.Numero }).IsUnique();
+        // Numeración única por empresa + gestión (el Numero incluye prefijo+mes+secuencial)
+        builder.HasIndex(a => new { a.EmpresaId, a.Gestion, a.Numero })
+            .IsUnique()
+            .HasDatabaseName("IX_AsientosContables_EmpresaId_Gestion_Numero");
         builder.HasIndex(a => new { a.EmpresaId, a.Fecha });
         builder.HasIndex(a => new { a.EmpresaId, a.Estado });
         builder.HasIndex(a => new { a.EmpresaId, a.Gestion });
