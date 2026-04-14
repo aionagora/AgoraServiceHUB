@@ -16,7 +16,7 @@ public partial class AsientosImportar
     private bool contabilizarInmediatamente = false;
 
     private IBrowserFile? archivoSeleccionado;
-    private Stream? fileStream;
+    private byte[]? fileBytes;
     private const long MaxFileSize = 5 * 1024 * 1024; // 5 MB
 
     private ImportValidacionDto? validacionResult;
@@ -57,9 +57,10 @@ public partial class AsientosImportar
         validacionResult = null;
         importacionResult = null;
         archivoSeleccionado = null;
+        fileBytes = null;
 
         var file = e.File;
-        
+
         // Validar tamaño y extensión básica
         if (file.Size > MaxFileSize)
         {
@@ -72,13 +73,18 @@ public partial class AsientosImportar
             return;
         }
 
+        // Leer todo el archivo en memoria (BrowserFileStream no es seekable)
+        using var ms = new MemoryStream();
+        await using var stream = file.OpenReadStream(MaxFileSize);
+        await stream.CopyToAsync(ms);
+        fileBytes = ms.ToArray();
+
         archivoSeleccionado = file;
-        fileStream = file.OpenReadStream(MaxFileSize);
     }
 
     private async Task ValidarArchivo()
     {
-        if (archivoSeleccionado == null || fileStream == null)
+        if (archivoSeleccionado == null || fileBytes == null)
             return;
 
         try
@@ -88,10 +94,8 @@ public partial class AsientosImportar
             successMessage = null;
             importacionResult = null;
 
-            // Restablecer el stream
-            fileStream.Position = 0;
-
-            var response = await AsientoService.ValidarImportacionAsync(fileStream, archivoSeleccionado.Name);
+            using var ms = new MemoryStream(fileBytes);
+            var response = await AsientoService.ValidarImportacionAsync(ms, archivoSeleccionado.Name);
 
             if (response.Success && response.Data != null)
             {
@@ -122,7 +126,7 @@ public partial class AsientosImportar
 
     private async Task ImportarArchivo()
     {
-        if (!puedeImportar || fileStream == null || archivoSeleccionado == null)
+        if (!puedeImportar || fileBytes == null || archivoSeleccionado == null)
             return;
 
         try
@@ -132,21 +136,19 @@ public partial class AsientosImportar
             successMessage = null;
             validacionResult = null;
 
-            // Restablecer el stream
-            fileStream.Position = 0;
-
-            var response = await AsientoService.ImportarAsync(fileStream, archivoSeleccionado.Name, contabilizarInmediatamente);
+            using var ms = new MemoryStream(fileBytes);
+            var response = await AsientoService.ImportarAsync(ms, archivoSeleccionado.Name, contabilizarInmediatamente);
 
             if (response.Success && response.Data != null)
             {
                 importacionResult = response.Data;
-                
+
                 if (importacionResult.TotalErrores == 0)
                 {
                     successMessage = $"Importación exitosa. Se crearon {importacionResult.TotalAsientosImportados} asientos con {importacionResult.TotalLineasImportadas} líneas.";
                     // Limpiamos el archivo para evitar re-importación accidental
                     archivoSeleccionado = null;
-                    fileStream = null;
+                    fileBytes = null;
                 }
                 else
                 {

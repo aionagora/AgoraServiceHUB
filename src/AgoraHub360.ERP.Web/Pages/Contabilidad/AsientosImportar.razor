@@ -67,7 +67,7 @@
                         </div>
 
                         <div class="d-grid gap-2">
-                            <button class="btn btn-primary" @onclick="ValidarArchivo" disabled="@(procesando || fileStream == null)">
+                            <button class="btn btn-primary" @onclick="ValidarArchivo" disabled="@(procesando || fileBytes == null)">
                                 @if (validando) { <span class="spinner-border spinner-border-sm me-1"></span> }
                                 <i class="bi bi-check-circle"></i> 1. Validar Archivo
                             </button>
