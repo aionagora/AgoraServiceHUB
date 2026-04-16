@@ -1,6 +1,7 @@
 @page "/dashboard/contabilidad"
 @attribute [Authorize]
 @inject DashboardDataService DashSvc
+@using AgoraHub360.ERP.Web.Pages.Dashboards.Components
 
 <PageTitle>Dashboard Contabilidad - AgoraHub360 ERP</PageTitle>
 
@@ -14,165 +15,181 @@
     </button>
 </div>
 
+<!-- Sistema de Pestañas (Tabs) -->
+<ul class="nav nav-tabs mb-4" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(activeTab == "dashboard" ? "active" : "")" 
+                @onclick='() => activeTab = "dashboard"' 
+                style="@(activeTab == "dashboard" ? "color:#8b5cf6; font-weight:bold" : "color:var(--agora-text-muted)")">
+            <i class="bi bi-speedometer2 me-1"></i> Dashboard
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link @(activeTab == "accesos" ? "active" : "")" 
+                @onclick='() => activeTab = "accesos"'
+                style="@(activeTab == "accesos" ? "color:#8b5cf6; font-weight:bold" : "color:var(--agora-text-muted)")">
+            <i class="bi bi-grid-3x3-gap-fill me-1"></i> Accesos del Módulo
+        </button>
+    </li>
+</ul>
+
 @if (loading)
 {
     <div class="text-center py-5"><div class="spinner-border" style="color:#8b5cf6"></div></div>
 }
 else
 {
-    @* KPIs *@
-    <div class="row g-3 mb-4">
-        <div class="col-sm-6 col-xl-3">
-            <div class="stat-card text-center">
-                <div class="stat-label">Asientos del Mes</div>
-                <div class="stat-value" style="color:#8b5cf6">@kpis.AsientosMes</div>
-                <small class="text-muted">Total registrados</small>
+    @if (activeTab == "dashboard")
+    {
+        @* Tab 1: KPIs y Dashboard Operativo *@
+        <div class="tab-pane-enter">
+            @* KPIs *@
+            <div class="row g-3 mb-4">
+                <div class="col-sm-6 col-xl-3">
+                    <div class="stat-card text-center">
+                        <div class="stat-label">Asientos del Mes</div>
+                        <div class="stat-value" style="color:#8b5cf6">@kpis.AsientosMes</div>
+                        <small class="text-muted">Total registrados</small>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-xl-3">
+                    <div class="stat-card text-center">
+                        <div class="stat-label">Contabilizados</div>
+                        <div class="stat-value text-success">@kpis.AsientosContabilizados</div>
+                        <small class="text-muted">Firmados en el período</small>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-xl-3">
+                    <div class="stat-card text-center">
+                        <div class="stat-label">Borradores Pendientes</div>
+                        <div class="stat-value @(kpis.AsientosBorrador > 0 ? "text-warning" : "text-muted")">@kpis.AsientosBorrador</div>
+                        @if (kpis.AsientosBorrador > 0) { <span class="badge bg-warning text-dark">Requieren contabilizar</span> }
+                    </div>
+                </div>
+                <div class="col-sm-6 col-xl-3">
+                    <div class="stat-card text-center">
+                        <div class="stat-label">Total Debe (mes)</div>
+                        <div class="stat-value" style="font-size:1.3rem">@kpis.TotalDebitoMes.ToString("N2")</div>
+                        <small class="text-muted">Solo asientos contabilizados</small>
+                    </div>
+                </div>
             </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-            <div class="stat-card text-center">
-                <div class="stat-label">Contabilizados</div>
-                <div class="stat-value text-success">@kpis.AsientosContabilizados</div>
-                <small class="text-muted">Firmados en el período</small>
-            </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-            <div class="stat-card text-center">
-                <div class="stat-label">Borradores Pendientes</div>
-                <div class="stat-value @(kpis.AsientosBorrador > 0 ? "text-warning" : "text-muted")">@kpis.AsientosBorrador</div>
-                @if (kpis.AsientosBorrador > 0) { <span class="badge bg-warning text-dark">Requieren contabilizar</span> }
-            </div>
-        </div>
-        <div class="col-sm-6 col-xl-3">
-            <div class="stat-card text-center">
-                <div class="stat-label">Total Debe (mes)</div>
-                <div class="stat-value" style="font-size:1.3rem">@kpis.TotalDebitoMes.ToString("N2")</div>
-                <small class="text-muted">Solo asientos contabilizados</small>
-            </div>
-        </div>
-    </div>
 
-    @* Resumen + Últimos asientos *@
-    <div class="row g-3 mb-4">
-        <div class="col-lg-4">
-            <div class="card h-100">
-                <div class="card-header py-3"><i class="bi bi-pie-chart-fill me-1"></i>Estado del Período</div>
-                <div class="card-body d-flex flex-column justify-content-center">
-                    @{
-                        var total = kpis.AsientosMes;
-                        var pctCont = total > 0 ? kpis.AsientosContabilizados * 100 / total : 0;
-                        var pctBorr = total > 0 ? kpis.AsientosBorrador * 100 / total : 0;
-                    }
-                    @if (total > 0)
-                    {
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between mb-1">
-                                <span class="small fw-semibold text-success"><i class="bi bi-check-circle me-1"></i>Contabilizados</span>
-                                <span class="small fw-bold">@kpis.AsientosContabilizados (@pctCont%)</span>
-                            </div>
-                            <div class="progress mb-2" style="height:10px">
-                                <div class="progress-bar bg-success" style="width:@(pctCont)%"></div>
+            @* Resumen + Últimos asientos *@
+            <div class="row g-3 mb-4">
+                <div class="col-lg-4">
+                    <div class="card h-100">
+                        <div class="card-header py-3"><i class="bi bi-pie-chart-fill me-1"></i>Estado del Período</div>
+                        <div class="card-body d-flex flex-column justify-content-center">
+                            @{
+                                var total = kpis.AsientosMes;
+                                var pctCont = total > 0 ? kpis.AsientosContabilizados * 100 / total : 0;
+                                var pctBorr = total > 0 ? kpis.AsientosBorrador * 100 / total : 0;
+                            }
+                            @if (total > 0)
+                            {
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="small fw-semibold text-success"><i class="bi bi-check-circle me-1"></i>Contabilizados</span>
+                                        <span class="small fw-bold">@kpis.AsientosContabilizados (@pctCont%)</span>
+                                    </div>
+                                    <div class="progress mb-2" style="height:10px">
+                                        <div class="progress-bar bg-success" style="width:@(pctCont)%"></div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between mb-1">
+                                        <span class="small fw-semibold text-warning"><i class="bi bi-pencil me-1"></i>Borradores</span>
+                                        <span class="small fw-bold">@kpis.AsientosBorrador (@pctBorr%)</span>
+                                    </div>
+                                    <div class="progress mb-2" style="height:10px">
+                                        <div class="progress-bar bg-warning" style="width:@(pctBorr)%"></div>
+                                    </div>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="text-center text-muted py-3">
+                                    <i class="bi bi-journal-x fs-3 d-block mb-2"></i>Sin asientos este mes
+                                </div>
+                            }
+                            <div class="d-grid gap-2 mt-3">
+                                <a href="/contabilidad/asientos" class="btn btn-sm btn-outline-secondary text-start">
+                                    <i class="bi bi-plus-circle me-2"></i>Nuevo Asiento
+                                </a>
+                                <a href="/contabilidad/cuentas" class="btn btn-sm btn-outline-secondary text-start">
+                                    <i class="bi bi-list-ol me-2"></i>Plan de Cuentas
+                                </a>
+                                <a href="/contabilidad/periodos" class="btn btn-sm btn-outline-secondary text-start">
+                                    <i class="bi bi-calendar-range me-2"></i>Períodos Contables
+                                </a>
                             </div>
                         </div>
-                        <div class="mb-3">
-                            <div class="d-flex justify-content-between mb-1">
-                                <span class="small fw-semibold text-warning"><i class="bi bi-pencil me-1"></i>Borradores</span>
-                                <span class="small fw-bold">@kpis.AsientosBorrador (@pctBorr%)</span>
-                            </div>
-                            <div class="progress mb-2" style="height:10px">
-                                <div class="progress-bar bg-warning" style="width:@(pctBorr)%"></div>
-                            </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-8">
+                    <div class="card h-100">
+                        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-journal-text me-1"></i>Últimos Asientos Contables</span>
+                            <a href="/contabilidad/asientos" class="btn btn-sm btn-link py-0">Ver todos</a>
                         </div>
-                    }
-                    else
-                    {
-                        <div class="text-center text-muted py-3">
-                            <i class="bi bi-journal-x fs-3 d-block mb-2"></i>Sin asientos este mes
+                        <div class="card-body p-0">
+                            @if (kpis.UltimosAsientos.Count == 0)
+                            {
+                                <div class="text-center text-muted py-4 small">
+                                    <i class="bi bi-journal-x fs-4 d-block mb-2"></i>Sin asientos este mes
+                                </div>
+                            }
+                            else
+                            {
+                                <table class="table table-sm table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Número</th>
+                                            <th>Fecha</th>
+                                            <th>Tipo</th>
+                                            <th>Glosa</th>
+                                            <th class="text-end">Debe</th>
+                                            <th>Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var a in kpis.UltimosAsientos)
+                                        {
+                                            <tr>
+                                                <td><strong class="small">@a.Numero</strong></td>
+                                                <td class="small">@a.Fecha.ToString("dd/MM/yy")</td>
+                                                <td class="small">@a.TipoComprobanteCodigo</td>
+                                                <td class="small text-truncate" style="max-width:180px" title="@a.Glosa">@a.Glosa</td>
+                                                <td class="text-end small">@a.TotalDebe.ToString("N2")</td>
+                                                <td>
+                                                    <span class="badge @GetAsientoBadge(a.Estado)" style="font-size:.7rem">@a.Estado</span>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            }
                         </div>
-                    }
-                    <div class="d-grid gap-2 mt-3">
-                        <a href="/contabilidad/asientos" class="btn btn-sm btn-outline-secondary text-start">
-                            <i class="bi bi-plus-circle me-2"></i>Nuevo Asiento
-                        </a>
-                        <a href="/contabilidad/cuentas" class="btn btn-sm btn-outline-secondary text-start">
-                            <i class="bi bi-list-ol me-2"></i>Plan de Cuentas
-                        </a>
-                        <a href="/contabilidad/periodos" class="btn btn-sm btn-outline-secondary text-start">
-                            <i class="bi bi-calendar-range me-2"></i>Períodos Contables
-                        </a>
                     </div>
                 </div>
             </div>
         </div>
-
-        <div class="col-lg-8">
-            <div class="card h-100">
-                <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                    <span><i class="bi bi-journal-text me-1"></i>Últimos Asientos Contables</span>
-                    <a href="/contabilidad/asientos" class="btn btn-sm btn-link py-0">Ver todos</a>
-                </div>
-                <div class="card-body p-0">
-                    @if (kpis.UltimosAsientos.Count == 0)
-                    {
-                        <div class="text-center text-muted py-4 small">
-                            <i class="bi bi-journal-x fs-4 d-block mb-2"></i>Sin asientos este mes
-                        </div>
-                    }
-                    else
-                    {
-                        <table class="table table-sm table-hover mb-0">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Número</th>
-                                    <th>Fecha</th>
-                                    <th>Tipo</th>
-                                    <th>Glosa</th>
-                                    <th class="text-end">Debe</th>
-                                    <th>Estado</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var a in kpis.UltimosAsientos)
-                                {
-                                    <tr>
-                                        <td><strong class="small">@a.Numero</strong></td>
-                                        <td class="small">@a.Fecha.ToString("dd/MM/yy")</td>
-                                        <td class="small">@a.TipoComprobanteCodigo</td>
-                                        <td class="small text-truncate" style="max-width:180px" title="@a.Glosa">@a.Glosa</td>
-                                        <td class="text-end small">@a.TotalDebe.ToString("N2")</td>
-                                        <td>
-                                            <span class="badge @GetAsientoBadge(a.Estado)" style="font-size:.7rem">@a.Estado</span>
-                                        </td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    }
-                </div>
-            </div>
+    }
+    else if (activeTab == "accesos")
+    {
+        @* Tab 2: Accesos (Tarjetas del Módulo) *@
+        <div class="tab-pane-enter">
+            <ContabilidadAccesosTab />
         </div>
-    </div>
-
-    @* Links rápidos *@
-    <div class="row g-3">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body py-3">
-                    <div class="row g-2 align-items-center">
-                        <div class="col-auto text-muted small fw-semibold">Módulos:</div>
-                        <div class="col-auto"><a href="/contabilidad/asientos" class="btn btn-sm btn-outline-secondary"><i class="bi bi-journal-text me-1"></i>Asientos</a></div>
-                        <div class="col-auto"><a href="/contabilidad/cuentas" class="btn btn-sm btn-outline-secondary"><i class="bi bi-list-ol me-1"></i>Plan de Cuentas</a></div>
-                        <div class="col-auto"><a href="/contabilidad/periodos" class="btn btn-sm btn-outline-secondary"><i class="bi bi-calendar-range me-1"></i>Períodos</a></div>
-                        <div class="col-auto"><a href="/contabilidad/plantillas" class="btn btn-sm btn-outline-secondary"><i class="bi bi-file-earmark-text me-1"></i>Plantillas</a></div>
-                        <div class="col-auto"><a href="/contabilidad/comprobantes" class="btn btn-sm btn-outline-secondary"><i class="bi bi-receipt me-1"></i>Comprobantes</a></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    }
 }
 
 @code {
+    // Control de UI Tabs
+    private string activeTab = "dashboard";
+
     private bool loading = true;
     private ContabilidadKpis kpis = new();
 
