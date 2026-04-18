@@ -27,6 +27,7 @@ builder.Services.AddScoped<FileDownloadService>();
 builder.Services.AddScoped<AuthHttpService>();
 builder.Services.AddScoped<EmpresaHttpService>();
 builder.Services.AddScoped<EmpresaStateService>();
+builder.Services.AddScoped<HttpSucursalService>();
 builder.Services.AddScoped<RolHttpService>();
 builder.Services.AddScoped<UsuarioHttpService>();
 builder.Services.AddScoped<AuditLogHttpService>();

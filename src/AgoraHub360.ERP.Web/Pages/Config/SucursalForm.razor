@@ -1,0 +1,161 @@
+@using AgoraHub360.ERP.Shared.DTOs.Sucursal
+@using AgoraHub360.ERP.Shared.DTOs.Empresa
+@inject EmpresaHttpService EmpresaSvc
+
+@if (Show)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(EditId.HasValue ? "Editar Sucursal" : "Nueva Sucursal")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseAsync"></button>
+                </div>
+                <EditForm Model="Model" OnValidSubmit="HandleValidSubmitAsync">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body">
+                        @if (!EditId.HasValue)
+                        {
+                            <div class="mb-3">
+                                <label class="form-label">Empresa *</label>
+                                <InputSelect class="form-select" ValueExpression="@(() => _createModel.EmpresaId)" Value="@_createModel.EmpresaId" ValueChanged="@((int args) => { _createModel.EmpresaId = args; })">
+                                    <option value="0">— Seleccionar Empresa —</option>
+                                    @foreach (var emp in Empresas)
+                                    {
+                                        <option value="@emp.Id">@emp.Nombre</option>
+                                    }
+                                </InputSelect>
+                                <ValidationMessage For="() => _createModel.EmpresaId" />
+                            </div>
+                        }
+
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <label class="form-label">Nombre *</label>
+                                <InputText class="form-control" @bind-Value="ModelNombre" />
+                                <ValidationMessage For="() => ModelNombre" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">C&oacute;digo</label>
+                                <InputText class="form-control" @bind-Value="ModelCodigo" />
+                                <ValidationMessage For="() => ModelCodigo" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Direcci&oacute;n</label>
+                            <InputText class="form-control" @bind-Value="ModelDireccion" />
+                            <ValidationMessage For="() => ModelDireccion" />
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Ciudad</label>
+                                <InputText class="form-control" @bind-Value="ModelCiudad" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Tel&eacute;fono</label>
+                                <InputText class="form-control" @bind-Value="ModelTelefono" />
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Email</label>
+                                <InputText class="form-control" @bind-Value="ModelEmail" />
+                                <ValidationMessage For="() => ModelEmail" />
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="form-check form-switch">
+                                    <InputCheckbox class="form-check-input" @bind-Value="ModelEsCentral" id="chkEsCentral" />
+                                    <label class="form-check-label" for="chkEsCentral">Es Central (Principal)</label>
+                                </div>
+                                <small class="text-muted d-block">Establecer esta sucursal como casa matriz de la empresa seleccionada.</small>
+                            </div>
+
+                            @if (EditId.HasValue)
+                            {
+                                <div class="col-md-6 mb-3">
+                                    <div class="form-check form-switch">
+                                        <InputCheckbox class="form-check-input" @bind-Value="ModelActivo" id="chkActivo" />
+                                        <label class="form-check-label" for="chkActivo">Activa</label>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseAsync">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" disabled="@Saving">
+                            @if (Saving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            @(EditId.HasValue ? "Guardar Cambios" : "Crear Sucursal")
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Show { get; set; }
+    [Parameter] public int? EditId { get; set; }
+    [Parameter] public int? DefaultEmpresaId { get; set; }
+    [Parameter] public EventCallback<bool> OnClose { get; set; }
+    [Parameter] public EventCallback<(bool esEdit, object dto)> OnSave { get; set; }
+    [Parameter] public bool Saving { get; set; }
+    [Parameter] public List<EmpresaDto> Empresas { get; set; } = new();
+
+    private CrearSucursalDto _createModel = new();
+    private ActualizarSucursalDto _updateModel = new();
+
+    protected override void OnParametersSet()
+    {
+        if (Show && !EditId.HasValue && !Empresas.Any())
+        {
+            // Initializing new model
+            _createModel = new CrearSucursalDto { Activo = true, EmpresaId = DefaultEmpresaId ?? 0 };
+        }
+    }
+
+    public void LoadForEdit(SucursalDto sucursal)
+    {
+        _updateModel = new ActualizarSucursalDto
+        {
+            Nombre = sucursal.Nombre,
+            Codigo = sucursal.Codigo,
+            Direccion = sucursal.Direccion,
+            Ciudad = sucursal.Ciudad,
+            Telefono = sucursal.Telefono,
+            Email = sucursal.Email,
+            EsCentral = sucursal.EsCentral,
+            Activo = sucursal.Activo
+        };
+        StateHasChanged();
+    }
+
+    private object Model => EditId.HasValue ? _updateModel : _createModel;
+
+    // Helper properties for bindings to avoid runtime casting issues in the blazor template
+    private string ModelNombre { get => EditId.HasValue ? _updateModel.Nombre : _createModel.Nombre; set { if (EditId.HasValue) _updateModel.Nombre = value; else _createModel.Nombre = value; } }
+    private string? ModelCodigo { get => EditId.HasValue ? _updateModel.Codigo : _createModel.Codigo; set { if (EditId.HasValue) _updateModel.Codigo = value; else _createModel.Codigo = value; } }
+    private string? ModelDireccion { get => EditId.HasValue ? _updateModel.Direccion : _createModel.Direccion; set { if (EditId.HasValue) _updateModel.Direccion = value; else _createModel.Direccion = value; } }
+    private string? ModelCiudad { get => EditId.HasValue ? _updateModel.Ciudad : _createModel.Ciudad; set { if (EditId.HasValue) _updateModel.Ciudad = value; else _createModel.Ciudad = value; } }
+    private string? ModelTelefono { get => EditId.HasValue ? _updateModel.Telefono : _createModel.Telefono; set { if (EditId.HasValue) _updateModel.Telefono = value; else _createModel.Telefono = value; } }
+    private string? ModelEmail { get => EditId.HasValue ? _updateModel.Email : _createModel.Email; set { if (EditId.HasValue) _updateModel.Email = value; else _createModel.Email = value; } }
+    private bool ModelEsCentral { get => EditId.HasValue ? _updateModel.EsCentral : _createModel.EsCentral; set { if (EditId.HasValue) _updateModel.EsCentral = value; else _createModel.EsCentral = value; } }
+    private bool ModelActivo { get => EditId.HasValue ? _updateModel.Activo : _createModel.Activo; set { if (EditId.HasValue) _updateModel.Activo = value; else _createModel.Activo = value; } }
+
+    private async Task HandleValidSubmitAsync()
+    {
+        await OnSave.InvokeAsync((EditId.HasValue, Model));
+    }
+
+    private async Task CloseAsync()
+    {
+        await OnClose.InvokeAsync(false);
+    }
+}

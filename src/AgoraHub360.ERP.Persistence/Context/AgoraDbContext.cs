@@ -46,6 +46,7 @@ public class AgoraDbContext : DbContext, IUnitOfWork
 
     // ── Core ──────────────────────────────────────────────────────────────────
     public DbSet<Empresa> Empresas => Set<Empresa>();
+    public DbSet<Sucursal> Sucursales => Set<Sucursal>();
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<UsuarioEmpresa> UsuarioEmpresas => Set<UsuarioEmpresa>();
     public DbSet<Moneda> Monedas => Set<Moneda>();

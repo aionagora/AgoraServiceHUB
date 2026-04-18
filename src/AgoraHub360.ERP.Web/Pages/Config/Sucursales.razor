@@ -1,0 +1,376 @@
+@page "/config/sucursales"
+@attribute [Authorize(Roles = "Admin")]
+@using AgoraHub360.ERP.Shared.DTOs.Sucursal
+@using AgoraHub360.ERP.Shared.DTOs.Empresa
+@using AgoraHub360.ERP.Web.Services
+@inject HttpSucursalService SucursalSvc
+@inject EmpresaHttpService EmpresaSvc
+@inject EmpresaStateService EmpresaState
+
+<PageTitle>Sucursales - AgoraHub360 ERP</PageTitle>
+
+<div class="page-header">
+    <h1>Sucursales</h1>
+    <p class="text-muted mb-0">Sistema &rsaquo; Sucursales</p>
+</div>
+
+@if (!string.IsNullOrEmpty(_mensaje))
+{
+    <div class="alert @(_esError ? "alert-danger" : "alert-success") alert-dismissible fade show" role="alert">
+        @_mensaje
+        <button type="button" class="btn-close" @onclick="() => _mensaje = null"></button>
+    </div>
+}
+
+<div class="card mb-4">
+    <div class="card-body py-3 d-flex flex-column flex-md-row align-items-md-center gap-3">
+        <div class="flex-grow-1">
+            <label class="form-label mb-1">Empresa</label>
+            <select class="form-select" @onchange="OnEmpresaChange" disabled="@_loadingEmpresas">
+                <option value="0">— Seleccionar Empresa —</option>
+                @foreach (var emp in _empresas)
+                {
+                    <option value="@emp.Id" selected="@(_selectedEmpresaId == emp.Id)">@emp.Nombre</option>
+                }
+            </select>
+        </div>
+        <div class="pt-md-4">
+            <button class="btn btn-primary" @onclick="ShowCrear" disabled="@(_selectedEmpresaId <= 0)">
+                <i class="bi bi-plus-circle me-1"></i> Nueva Sucursal
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center py-3">
+        <span>Listado de Sucursales (@_sucursales.Count)</span>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="card-body text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="text-muted mt-2">Cargando sucursales...</p>
+        </div>
+    }
+    else if (_selectedEmpresaId <= 0)
+    {
+        <div class="card-body text-center py-5">
+            <i class="bi bi-buildings" style="font-size: 3rem; color: var(--agora-text-light);"></i>
+            <p class="text-muted mt-3">Seleccione una empresa para ver sus sucursales.</p>
+        </div>
+    }
+    else if (_sucursales.Count == 0)
+    {
+        <div class="card-body text-center py-5">
+            <i class="bi bi-shop" style="font-size: 3rem; color: var(--agora-text-light);"></i>
+            <p class="text-muted mt-3">No hay sucursales registradas para esta empresa.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>C&oacute;digo</th>
+                        <th>Nombre</th>
+                        <th>Ciudad</th>
+                        <th class="text-center">Tipo</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var suc in _sucursales)
+                    {
+                        <tr>
+                            <td>@(suc.Codigo ?? "—")</td>
+                            <td class="fw-semibold">@suc.Nombre</td>
+                            <td>@(suc.Ciudad ?? "—")</td>
+                            <td class="text-center">
+                                @if (suc.EsCentral)
+                                {
+                                    <span class="badge bg-primary">Casa Matriz</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-light text-dark">Sucursal</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                @if (suc.Activo)
+                                {
+                                    <span class="badge bg-success" style="cursor: pointer" @onclick="() => ToggleEstado(suc)" title="Clic para desactivar">Activa</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary" style="cursor: pointer" @onclick="() => ToggleEstado(suc)" title="Clic para activar">Inactiva</span>
+                                }
+                            </td>
+                            <td class="text-end text-nowrap">
+                                @if (!suc.EsCentral && suc.Activo)
+                                {
+                                    <button class="btn btn-outline-info btn-sm me-1"
+                                            @onclick="() => SetPrincipal(suc)" title="Establecer como Casa Matriz">
+                                        <i class="bi bi-star"></i>
+                                    </button>
+                                }
+                                <button class="btn btn-outline-primary btn-sm me-1"
+                                        @onclick="() => ShowEditar(suc.Id)" title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                @if (!suc.EsCentral)
+                                {
+                                    <button class="btn btn-outline-danger btn-sm"
+                                            @onclick="() => ConfirmDelete(suc)" title="Eliminar">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<SucursalForm 
+    @ref="_form"
+    Show="@_showForm" 
+    EditId="@_editId"
+    DefaultEmpresaId="@_selectedEmpresaId"
+    Empresas="@_empresas"
+    Saving="@_saving"
+    OnClose="OnFormClose" 
+    OnSave="OnFormSave" />
+
+<!-- Modal Confirmar Eliminacion -->
+@if (_deleteTarget is not null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar Eliminaci&oacute;n</h5>
+                    <button type="button" class="btn-close" @onclick="() => _deleteTarget = null"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Eliminar la sucursal <strong>@_deleteTarget.Nombre</strong>?</p>
+                    <p class="text-muted small">Esta acci&oacute;n no se puede deshacer.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary btn-sm" @onclick="() => _deleteTarget = null">Cancelar</button>
+                    <button class="btn btn-danger btn-sm" @onclick="DeleteAsync" disabled="@_saving">
+                        @if (_saving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<EmpresaDto> _empresas = new();
+    private List<SucursalListadoDto> _sucursales = new();
+    private int _selectedEmpresaId;
+
+    private bool _loadingEmpresas = true;
+    private bool _loading = false;
+    private string? _mensaje;
+    private bool _esError;
+
+    private bool _showForm;
+    private int? _editId;
+    private bool _saving;
+    private SucursalForm? _form;
+
+    private SucursalListadoDto? _deleteTarget;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEmpresasAsync();
+        if (EmpresaState.EmpresaActivaId.HasValue)
+        {
+            _selectedEmpresaId = EmpresaState.EmpresaActivaId.Value;
+            await LoadSucursalesAsync();
+        }
+    }
+
+    private async Task LoadEmpresasAsync()
+    {
+        _loadingEmpresas = true;
+        try
+        {
+            _empresas = await EmpresaSvc.GetAllAsync();
+        }
+        catch
+        {
+            ShowMsg("Error al cargar las empresas disponibles.", true);
+        }
+        _loadingEmpresas = false;
+    }
+
+    private async Task OnEmpresaChange(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var empId))
+        {
+            _selectedEmpresaId = empId;
+            await LoadSucursalesAsync();
+        }
+    }
+
+    private async Task LoadSucursalesAsync()
+    {
+        if (_selectedEmpresaId <= 0)
+        {
+            _sucursales.Clear();
+            return;
+        }
+
+        _loading = true;
+        try
+        {
+            _sucursales = await SucursalSvc.GetAllByEmpresaAsync(_selectedEmpresaId);
+        }
+        catch
+        {
+            ShowMsg("Error al cargar las sucursales.", true);
+        }
+        _loading = false;
+    }
+
+    private void ShowCrear()
+    {
+        _editId = null;
+        _showForm = true;
+    }
+
+    private async Task ShowEditar(int id)
+    {
+        _editId = id;
+        _showForm = true;
+
+        try
+        {
+            var sucursal = await SucursalSvc.GetByIdAsync(id);
+            if (sucursal != null && _form != null)
+            {
+                _form.LoadForEdit(sucursal);
+            }
+        }
+        catch
+        {
+            ShowMsg("No se pudo cargar la informaci&oacute;n para editar.", true);
+            _showForm = false;
+        }
+    }
+
+    private void ConfirmDelete(SucursalListadoDto sucursal)
+    {
+        _deleteTarget = sucursal;
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (_deleteTarget == null) return;
+
+        _saving = true;
+        var r = await SucursalSvc.DeleteAsync(_deleteTarget.Id);
+        _saving = false;
+
+        _deleteTarget = null;
+
+        if (r.Success)
+        {
+            ShowMsg("Sucursal desactivada con &eacute;xito.");
+            await LoadSucursalesAsync();
+        }
+        else
+        {
+            ShowMsg(r.Message ?? "Ocurri&oacute; un error.", true);
+        }
+    }
+
+    private async Task SetPrincipal(SucursalListadoDto suc)
+    {
+        var r = await SucursalSvc.PatchPrincipalAsync(suc.Id);
+        if (r.Success)
+        {
+            ShowMsg($"Sucursal '{suc.Nombre}' ahora es la casa matriz.");
+            await LoadSucursalesAsync();
+        }
+        else
+        {
+            ShowMsg(r.Message ?? "No se pudo establecer como matriz.", true);
+        }
+    }
+
+    private async Task ToggleEstado(SucursalListadoDto suc)
+    {
+        if (suc.EsCentral && suc.Activo)
+        {
+            ShowMsg("No se puede desactivar la casa matriz.", true);
+            return;
+        }
+
+        var r = await SucursalSvc.PatchEstadoAsync(suc.Id, !suc.Activo);
+        if (r.Success)
+        {
+            ShowMsg($"Estado actualizado.");
+            await LoadSucursalesAsync();
+        }
+        else
+        {
+            ShowMsg(r.Message ?? "Error al cambiar el estado.", true);
+        }
+    }
+
+    private void OnFormClose()
+    {
+        _showForm = false;
+        _editId = null;
+    }
+
+    private async Task OnFormSave((bool esEdit, object dto) args)
+    {
+        _saving = true;
+        StateHasChanged();
+
+        ApiResponse<SucursalDto> resultado;
+        if (args.esEdit)
+        {
+            resultado = await SucursalSvc.UpdateAsync(_editId!.Value, (ActualizarSucursalDto)args.dto);
+        }
+        else
+        {
+            var createDto = (CrearSucursalDto)args.dto;
+            resultado = await SucursalSvc.CreateAsync(createDto);
+        }
+
+        _saving = false;
+
+        if (resultado.Success)
+        {
+            _showForm = false;
+            ShowMsg(args.esEdit ? "Sucursal actualizada correctamente." : "Sucursal creada con &eacute;xito.");
+            await LoadSucursalesAsync();
+        }
+        else
+        {
+            ShowMsg(resultado.Message ?? "Error al guardar.", true);
+        }
+    }
+
+    private void ShowMsg(string msg, bool error = false)
+    {
+        _mensaje = msg;
+        _esError = error;
+    }
+}
