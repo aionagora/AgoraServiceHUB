@@ -18,6 +18,7 @@ public static class DependencyInjection
         services.AddValidatorsFromAssemblyContaining<TareaCreateValidator>();
 
         services.AddScoped<IEmpresaService, EmpresaService>();
+        services.AddScoped<ISucursalService, SucursalService>();
         services.AddScoped<IRolService, RolService>();
         services.AddScoped<IUsuarioService, UsuarioService>();
         services.AddScoped<IParametroSistemaService, ParametroSistemaService>();

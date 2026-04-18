@@ -16,8 +16,14 @@ public class HttpSucursalService
 
     public async Task<List<SucursalListadoDto>> GetAllByEmpresaAsync(int empresaId)
     {
-        var response = await _http.GetFromJsonAsync<ApiResponse<List<SucursalListadoDto>>>($"{BaseUrl}/empresa/{empresaId}");
-        return response?.Data ?? new List<SucursalListadoDto>();
+        var response = await _http.GetAsync($"{BaseUrl}/empresa/{empresaId}");
+        if (!response.IsSuccessStatusCode)
+        {
+            var error = await response.Content.ReadAsStringAsync();
+            throw new Exception($"HTTP {(int)response.StatusCode}: {error}");
+        }
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<List<SucursalListadoDto>>>();
+        return result?.Data ?? new List<SucursalListadoDto>();
     }
 
     public async Task<SucursalDto?> GetByIdAsync(int id)
@@ -32,10 +38,17 @@ public class HttpSucursalService
         if (!response.IsSuccessStatusCode)
         {
             var body = await response.Content.ReadAsStringAsync();
-            return ApiResponse<SucursalDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
+            try
+            {
+                var errorResult = await response.Content.ReadFromJsonAsync<ApiResponse<SucursalDto>>();
+                if (errorResult != null && !string.IsNullOrEmpty(errorResult.Message)) 
+                    return errorResult;
+            }
+            catch { }
+            return ApiResponse<SucursalDto>.Fail(FormatearErrorValidacion("Error al crear sucursal", (int)response.StatusCode, body));
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<SucursalDto>>()
-            ?? ApiResponse<SucursalDto>.Fail("Error de comunicacion con el servidor.");
+            ?? ApiResponse<SucursalDto>.Fail("Error de comunicación con el servidor.");
     }
 
     public async Task<ApiResponse<SucursalDto>> UpdateAsync(int id, ActualizarSucursalDto dto)
@@ -44,10 +57,41 @@ public class HttpSucursalService
         if (!response.IsSuccessStatusCode)
         {
             var body = await response.Content.ReadAsStringAsync();
-            return ApiResponse<SucursalDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
+            try
+            {
+                var errorResult = await response.Content.ReadFromJsonAsync<ApiResponse<SucursalDto>>();
+                if (errorResult != null && !string.IsNullOrEmpty(errorResult.Message)) 
+                    return errorResult;
+            }
+            catch { }
+            return ApiResponse<SucursalDto>.Fail(FormatearErrorValidacion("Error al actualizar sucursal", (int)response.StatusCode, body));
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<SucursalDto>>()
-            ?? ApiResponse<SucursalDto>.Fail("Error de comunicacion con el servidor.");
+            ?? ApiResponse<SucursalDto>.Fail("Error de comunicación con el servidor.");
+    }
+
+    private string FormatearErrorValidacion(string defaultMsg, int statusCode, string body)
+    {
+        if (statusCode == 400 && body.Contains("\"errors\":"))
+        {
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(body);
+                if (doc.RootElement.TryGetProperty("title", out var titleProp) &&
+                    doc.RootElement.TryGetProperty("errors", out var errorsProp))
+                {
+                    var msg = $"{titleProp.GetString()}: ";
+                    foreach (var err in errorsProp.EnumerateObject())
+                    {
+                        var values = err.Value.EnumerateArray().Select(x => x.GetString());
+                        msg += string.Join(", ", values) + " ";
+                    }
+                    return msg.Trim();
+                }
+            }
+            catch { }
+        }
+        return $"HTTP {statusCode}: {body}";
     }
 
     public async Task<ApiResponse<bool>> DeleteAsync(int id)

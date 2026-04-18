@@ -113,6 +113,12 @@ public class EmpresaServiceTests
         public Task<IReadOnlyList<Empresa>> FindAsync(Expression<Func<Empresa, bool>> predicate, CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<Empresa>>(_store.Where(predicate.Compile()).ToList().AsReadOnly());
 
+        public Task<IReadOnlyList<Empresa>> FindIgnoreQueryFiltersAsync(Expression<Func<Empresa, bool>> predicate, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<Empresa>>(_store.Where(predicate.Compile()).ToList().AsReadOnly());
+
+        public Task<Empresa?> GetByIdIgnoreQueryFiltersAsync(int id, CancellationToken ct = default)
+            => Task.FromResult(_store.FirstOrDefault(e => e.Id == id));
+
         public Task<Empresa> AddAsync(Empresa entity, CancellationToken ct = default)
         {
             _store.Add(entity);

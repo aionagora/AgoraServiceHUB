@@ -22,11 +22,20 @@ public class Repository<T> : IRepository<T> where T : class
     public async Task<T?> GetByIdAsync(long id, CancellationToken cancellationToken = default)
         => await _dbSet.FindAsync(new object[] { id }, cancellationToken);
 
+    public async Task<T?> GetByIdIgnoreQueryFiltersAsync(int id, CancellationToken cancellationToken = default)
+    {
+        // Get entity type to dynamically find primary key name if needed, assuming 'Id' property
+        return await _dbSet.IgnoreQueryFilters().FirstOrDefaultAsync(e => EF.Property<int>(e, "Id") == id, cancellationToken);
+    }
+
     public async Task<IReadOnlyList<T>> GetAllAsync(CancellationToken cancellationToken = default)
         => await _dbSet.ToListAsync(cancellationToken);
 
     public async Task<IReadOnlyList<T>> FindAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default)
         => await _dbSet.Where(predicate).ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<T>> FindIgnoreQueryFiltersAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default)
+        => await _dbSet.IgnoreQueryFilters().Where(predicate).ToListAsync(cancellationToken);
 
     public async Task<T> AddAsync(T entity, CancellationToken cancellationToken = default)
     {

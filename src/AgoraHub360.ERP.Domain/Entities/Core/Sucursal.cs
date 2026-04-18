@@ -23,8 +23,6 @@ public class Sucursal : TenantEntity
 
     public bool EsCentral { get; set; }
 
-    public bool Activo { get; set; } = true;
-
     // Relación
     public Empresa? Empresa { get; set; }
 }

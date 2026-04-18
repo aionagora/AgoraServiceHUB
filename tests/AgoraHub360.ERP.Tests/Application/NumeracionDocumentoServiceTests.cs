@@ -107,6 +107,12 @@ public class NumeracionDocumentoServiceTests
         public Task<IReadOnlyList<NumeracionDocumento>> FindAsync(Expression<Func<NumeracionDocumento, bool>> predicate, CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<NumeracionDocumento>>(_store.Where(predicate.Compile()).ToList().AsReadOnly());
 
+        public Task<IReadOnlyList<NumeracionDocumento>> FindIgnoreQueryFiltersAsync(Expression<Func<NumeracionDocumento, bool>> predicate, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<NumeracionDocumento>>(_store.Where(predicate.Compile()).ToList().AsReadOnly());
+
+        public Task<NumeracionDocumento?> GetByIdIgnoreQueryFiltersAsync(int id, CancellationToken ct = default)
+            => Task.FromResult(_store.FirstOrDefault(n => n.Id == id));
+
         public Task<NumeracionDocumento> AddAsync(NumeracionDocumento entity, CancellationToken ct = default)
         {
             _store.Add(entity);
