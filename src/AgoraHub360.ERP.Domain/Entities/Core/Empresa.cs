@@ -39,4 +39,6 @@ public class Empresa : AuditableEntity
 
     /// <summary>Prefijo para SKU autogenerado. Ej: "PRD-"</summary>
     public string? PrefijoSku { get; set; }
+
+    public ICollection<Sucursal> Sucursales { get; set; } = new List<Sucursal>();
 }
