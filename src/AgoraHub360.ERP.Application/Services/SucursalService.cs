@@ -28,7 +28,7 @@ public class SucursalService : ISucursalService
 
     public async Task<Result<IReadOnlyList<SucursalListadoDto>>> GetAllByEmpresaAsync(int empresaId, CancellationToken ct = default)
     {
-        var sucursales = await _sucursalRepository.FindAsync(s => s.EmpresaId == empresaId, ct);
+        var sucursales = await _sucursalRepository.FindIgnoreQueryFiltersAsync(s => s.EmpresaId == empresaId, ct);
 
         var dtos = sucursales.Select(s => new SucursalListadoDto
         {
@@ -46,7 +46,7 @@ public class SucursalService : ISucursalService
 
     public async Task<Result<SucursalDto>> GetByIdAsync(int id, CancellationToken ct = default)
     {
-        var sucursal = await _sucursalRepository.GetByIdAsync(id, ct);
+        var sucursal = await _sucursalRepository.GetByIdIgnoreQueryFiltersAsync(id, ct);
         if (sucursal == null)
         {
             return Result<SucursalDto>.Failure("Sucursal no encontrada.");
@@ -58,7 +58,6 @@ public class SucursalService : ISucursalService
 
     public async Task<Result<SucursalDto>> CreateAsync(CrearSucursalDto dto, CancellationToken ct = default)
     {
-        // Validar empresa existente
         var empresa = await _empresaRepository.GetByIdAsync(dto.EmpresaId, ct);
         if (empresa == null)
         {
@@ -92,7 +91,7 @@ public class SucursalService : ISucursalService
 
     public async Task<Result<SucursalDto>> UpdateAsync(int id, ActualizarSucursalDto dto, CancellationToken ct = default)
     {
-        var sucursal = await _sucursalRepository.GetByIdAsync(id, ct);
+        var sucursal = await _sucursalRepository.GetByIdIgnoreQueryFiltersAsync(id, ct);
         if (sucursal == null)
         {
             return Result<SucursalDto>.Failure("Sucursal no encontrada.");
@@ -121,7 +120,7 @@ public class SucursalService : ISucursalService
 
     public async Task<Result<bool>> DeleteAsync(int id, CancellationToken ct = default)
     {
-        var sucursal = await _sucursalRepository.GetByIdAsync(id, ct);
+        var sucursal = await _sucursalRepository.GetByIdIgnoreQueryFiltersAsync(id, ct);
         if (sucursal == null)
         {
             return Result<bool>.Failure("Sucursal no encontrada.");
@@ -132,7 +131,6 @@ public class SucursalService : ISucursalService
             return Result<bool>.Failure("No se puede eliminar la sucursal central.");
         }
 
-        // Eliminación lógica seteando Activo = false
         sucursal.Activo = false;
         await _sucursalRepository.UpdateAsync(sucursal, ct);
         await _unitOfWork.SaveChangesAsync(ct);
@@ -142,7 +140,7 @@ public class SucursalService : ISucursalService
 
     public async Task<Result<bool>> CambiarEstadoAsync(int id, bool activo, CancellationToken ct = default)
     {
-        var sucursal = await _sucursalRepository.GetByIdAsync(id, ct);
+        var sucursal = await _sucursalRepository.GetByIdIgnoreQueryFiltersAsync(id, ct);
         if (sucursal == null)
             return Result<bool>.Failure("Sucursal no encontrada.");
 
@@ -158,18 +156,17 @@ public class SucursalService : ISucursalService
 
     public async Task<Result<bool>> EstablecerCentralAsync(int id, CancellationToken ct = default)
     {
-        var sucursal = await _sucursalRepository.GetByIdAsync(id, ct);
+        var sucursal = await _sucursalRepository.GetByIdIgnoreQueryFiltersAsync(id, ct);
         if (sucursal == null)
             return Result<bool>.Failure("Sucursal no encontrada.");
 
         if (sucursal.EsCentral)
-            return Result<bool>.Success(true); // Ya es central
+            return Result<bool>.Success(true);
 
         if (!sucursal.Activo)
             return Result<bool>.Failure("No se puede establecer como central una sucursal inactiva.");
 
-        // Obtener todas las sucursales de la empresa
-        var sucursalesEmpresa = await _sucursalRepository.FindAsync(s => s.EmpresaId == sucursal.EmpresaId, ct);
+        var sucursalesEmpresa = await _sucursalRepository.FindIgnoreQueryFiltersAsync(s => s.EmpresaId == sucursal.EmpresaId, ct);
 
         foreach(var s in sucursalesEmpresa.Where(x => x.EsCentral))
         {
@@ -192,27 +189,24 @@ public class SucursalService : ISucursalService
         int? sucursalIdExcluida, 
         CancellationToken ct)
     {
-        var sucursalesEmpresa = await _sucursalRepository.FindAsync(s => s.EmpresaId == empresaId, ct);
+        var sucursalesEmpresa = await _sucursalRepository.FindIgnoreQueryFiltersAsync(s => s.EmpresaId == empresaId, ct);
 
         if (sucursalIdExcluida.HasValue)
         {
-            sucursalesEmpresa = sucursalesEmpresa.Where(s => s.Id != sucursalIdExcluida.Value).ToList();
+            sucursalesEmpresa = sucursalesEmpresa.Where(s => s.Id != sucursalIdExcluida.Value).ToList().AsReadOnly();
         }
 
-        // Validar duplicados de nombre
         if (sucursalesEmpresa.Any(s => s.Nombre.Equals(nombre, System.StringComparison.OrdinalIgnoreCase)))
         {
             return Result<bool>.Failure("Ya existe una sucursal con el mismo nombre en esta empresa.");
         }
 
-        // Validar duplicados de código
         if (!string.IsNullOrWhiteSpace(codigo) && 
             sucursalesEmpresa.Any(s => s.Codigo == codigo))
         {
             return Result<bool>.Failure("Ya existe una sucursal con el mismo código en esta empresa.");
         }
 
-        // Validar única sucursal principal
         if (esCentral && sucursalesEmpresa.Any(s => s.EsCentral))
         {
             return Result<bool>.Failure("Ya existe una sucursal central para esta empresa. Solo puede haber una principal.");

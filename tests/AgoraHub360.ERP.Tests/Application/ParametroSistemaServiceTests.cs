@@ -119,6 +119,12 @@ public class ParametroSistemaServiceTests
         public Task<IReadOnlyList<ParametroSistema>> FindAsync(Expression<Func<ParametroSistema, bool>> predicate, CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<ParametroSistema>>(_store.Where(predicate.Compile()).ToList().AsReadOnly());
 
+        public Task<IReadOnlyList<ParametroSistema>> FindIgnoreQueryFiltersAsync(Expression<Func<ParametroSistema, bool>> predicate, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<ParametroSistema>>(_store.Where(predicate.Compile()).ToList().AsReadOnly());
+
+        public Task<ParametroSistema?> GetByIdIgnoreQueryFiltersAsync(int id, CancellationToken ct = default)
+            => Task.FromResult(_store.FirstOrDefault(p => p.Id == id));
+
         public Task<ParametroSistema> AddAsync(ParametroSistema entity, CancellationToken ct = default)
         {
             _store.Add(entity);

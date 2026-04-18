@@ -210,9 +210,9 @@
         {
             _empresas = await EmpresaSvc.GetAllAsync();
         }
-        catch
+        catch (Exception ex)
         {
-            ShowMsg("Error al cargar las empresas disponibles.", true);
+            ShowMsg($"Error al cargar las empresas disponibles: {ex.Message}", true);
         }
         _loadingEmpresas = false;
     }
@@ -239,9 +239,9 @@
         {
             _sucursales = await SucursalSvc.GetAllByEmpresaAsync(_selectedEmpresaId);
         }
-        catch
+        catch (Exception ex)
         {
-            ShowMsg("Error al cargar las sucursales.", true);
+            ShowMsg($"Error al cargar las sucursales: {ex.Message}", true);
         }
         _loading = false;
     }
@@ -265,9 +265,9 @@
                 _form.LoadForEdit(sucursal);
             }
         }
-        catch
+        catch (Exception ex)
         {
-            ShowMsg("No se pudo cargar la informaci&oacute;n para editar.", true);
+            ShowMsg($"No se pudo cargar la informaci&oacute;n para editar: {ex.Message}", true);
             _showForm = false;
         }
     }
