@@ -9,6 +9,11 @@ public class SucursalDto
     public string? CodigoInterno { get; set; }
     public string? Sigla { get; set; }
     public string? Descripcion { get; set; }
+    public Guid? PaisId { get; set; }
+    public Guid? DepartamentoId { get; set; }
+    public Guid? ProvinciaId { get; set; }
+    public Guid? CiudadId { get; set; }
+    public Guid? ZonaId { get; set; }
     public string? Pais { get; set; }
     public string? Departamento { get; set; }
     public string? Provincia { get; set; }

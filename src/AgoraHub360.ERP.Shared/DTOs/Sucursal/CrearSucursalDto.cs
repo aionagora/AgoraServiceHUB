@@ -24,6 +24,12 @@ public class CrearSucursalDto
     [MaxLength(500, ErrorMessage = "La descripción no puede exceder 500 caracteres.")]
     public string? Descripcion { get; set; }
 
+    public Guid? PaisId { get; set; }
+    public Guid? DepartamentoId { get; set; }
+    public Guid? ProvinciaId { get; set; }
+    public Guid? CiudadId { get; set; }
+    public Guid? ZonaId { get; set; }
+
     [MaxLength(100, ErrorMessage = "El país no puede exceder 100 caracteres.")]
     public string? Pais { get; set; }
 

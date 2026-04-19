@@ -36,6 +36,18 @@ public class OrdenPedido : TenantEntity
     public int AlmacenDestinoId { get; set; }
     public Almacen? AlmacenDestino { get; set; }
 
+    /// <summary>Sucursal de la empresa que origina/gestiona el pedido.</summary>
+    public int? SucursalId { get; set; }
+    public Sucursal? Sucursal { get; set; }
+
+    /// <summary>Cliente asociado al pedido (si aplica flujo comercial).</summary>
+    public int? ClienteId { get; set; }
+    public Cliente? Cliente { get; set; }
+
+    /// <summary>Sucursal del cliente (dirección operativa/comercial para despacho).</summary>
+    public int? ClienteSucursalId { get; set; }
+    public ClienteSucursal? ClienteSucursal { get; set; }
+
     public EstadoDocumento Estado { get; set; } = EstadoDocumento.Borrador;
 
     public string? Observaciones { get; set; }

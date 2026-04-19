@@ -23,9 +23,11 @@ public static class DependencyInjection
         services.AddScoped<IUsuarioService, UsuarioService>();
         services.AddScoped<IParametroSistemaService, ParametroSistemaService>();
         services.AddScoped<INumeracionDocumentoService, NumeracionDocumentoService>();
+        services.AddScoped<IGeografiaService, GeografiaService>();
 
         // MDM: third parties
         services.AddScoped<IClienteService, ClienteService>();
+        services.AddScoped<IClienteSucursalService, ClienteSucursalService>();
         services.AddScoped<IProveedorService, ProveedorService>();
         services.AddScoped<IAlmacenService, AlmacenService>();
 

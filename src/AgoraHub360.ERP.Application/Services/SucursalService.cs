@@ -78,6 +78,11 @@ public class SucursalService : ISucursalService
             CodigoInterno = dto.CodigoInterno,
             Sigla = dto.Sigla,
             Descripcion = dto.Descripcion,
+            PaisId = dto.PaisId,
+            DepartamentoId = dto.DepartamentoId,
+            ProvinciaId = dto.ProvinciaId,
+            CiudadId = dto.CiudadId,
+            ZonaId = dto.ZonaId,
             Pais = dto.Pais,
             Departamento = dto.Departamento,
             Provincia = dto.Provincia,
@@ -133,6 +138,11 @@ public class SucursalService : ISucursalService
         sucursal.CodigoInterno = dto.CodigoInterno;
         sucursal.Sigla = dto.Sigla;
         sucursal.Descripcion = dto.Descripcion;
+        sucursal.PaisId = dto.PaisId;
+        sucursal.DepartamentoId = dto.DepartamentoId;
+        sucursal.ProvinciaId = dto.ProvinciaId;
+        sucursal.CiudadId = dto.CiudadId;
+        sucursal.ZonaId = dto.ZonaId;
         sucursal.Pais = dto.Pais;
         sucursal.Departamento = dto.Departamento;
         sucursal.Provincia = dto.Provincia;
@@ -276,6 +286,11 @@ public class SucursalService : ISucursalService
             CodigoInterno = sucursal.CodigoInterno,
             Sigla = sucursal.Sigla,
             Descripcion = sucursal.Descripcion,
+            PaisId = sucursal.PaisId,
+            DepartamentoId = sucursal.DepartamentoId,
+            ProvinciaId = sucursal.ProvinciaId,
+            CiudadId = sucursal.CiudadId,
+            ZonaId = sucursal.ZonaId,
             Pais = sucursal.Pais,
             Departamento = sucursal.Departamento,
             Provincia = sucursal.Provincia,

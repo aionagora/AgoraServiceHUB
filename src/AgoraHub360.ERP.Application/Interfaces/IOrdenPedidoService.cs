@@ -10,6 +10,9 @@ public interface IOrdenPedidoService
         string? estado = null,
         DateTime? fechaDesde = null,
         DateTime? fechaHasta = null,
+        int? sucursalId = null,
+        int? clienteId = null,
+        int? clienteSucursalId = null,
         CancellationToken ct = default);
 
     /// <summary>Obtiene una OP con sus líneas.</summary>

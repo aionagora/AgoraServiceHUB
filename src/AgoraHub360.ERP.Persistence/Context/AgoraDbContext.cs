@@ -50,12 +50,18 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<UsuarioEmpresa> UsuarioEmpresas => Set<UsuarioEmpresa>();
     public DbSet<Moneda> Monedas => Set<Moneda>();
+    public DbSet<Pais> Paises => Set<Pais>();
+    public DbSet<Departamento> Departamentos => Set<Departamento>();
+    public DbSet<Provincia> Provincias => Set<Provincia>();
+    public DbSet<Ciudad> Ciudades => Set<Ciudad>();
+    public DbSet<Zona> Zonas => Set<Zona>();
     public DbSet<Rol> Roles => Set<Rol>();
     public DbSet<ParametroSistema> ParametrosSistema => Set<ParametroSistema>();
     public DbSet<NumeracionDocumento> NumeracionesDocumento => Set<NumeracionDocumento>();
 
     // ── MDM: Third parties ────────────────────────────────────────────────────
     public DbSet<Cliente> Clientes => Set<Cliente>();
+    public DbSet<ClienteSucursal> ClienteSucursales => Set<ClienteSucursal>();
     public DbSet<Proveedor> Proveedores => Set<Proveedor>();
     public DbSet<Almacen> Almacenes => Set<Almacen>();
     public DbSet<UbicacionAlmacen> UbicacionesAlmacen => Set<UbicacionAlmacen>();

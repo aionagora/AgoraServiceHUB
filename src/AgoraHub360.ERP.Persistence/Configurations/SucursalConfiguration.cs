@@ -37,6 +37,12 @@ public class SucursalConfiguration : IEntityTypeConfiguration<Sucursal>
         builder.Property(s => s.Descripcion).HasMaxLength(500);
 
         // Nuevas propiedades - Ubicación
+        builder.Property(s => s.PaisId);
+        builder.Property(s => s.DepartamentoId);
+        builder.Property(s => s.ProvinciaId);
+        builder.Property(s => s.CiudadId);
+        builder.Property(s => s.ZonaId);
+
         builder.Property(s => s.Pais).HasMaxLength(100);
         builder.Property(s => s.Departamento).HasMaxLength(100);
         builder.Property(s => s.Provincia).HasMaxLength(100);
@@ -76,6 +82,12 @@ public class SucursalConfiguration : IEntityTypeConfiguration<Sucursal>
             .IsUnique()
             .HasDatabaseName("IX_Sucursal_Empresa_Codigo")
             .HasFilter("[Codigo] IS NOT NULL");
+
+        builder.HasIndex(s => new { s.EmpresaId, s.PaisId });
+        builder.HasIndex(s => new { s.EmpresaId, s.DepartamentoId });
+        builder.HasIndex(s => new { s.EmpresaId, s.ProvinciaId });
+        builder.HasIndex(s => new { s.EmpresaId, s.CiudadId });
+        builder.HasIndex(s => new { s.EmpresaId, s.ZonaId });
 
         // Relación e integridad referencial restrict
         builder.HasOne(s => s.Empresa)

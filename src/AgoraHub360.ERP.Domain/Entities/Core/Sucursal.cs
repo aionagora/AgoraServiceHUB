@@ -19,6 +19,12 @@ public class Sucursal : TenantEntity
     public string? Descripcion { get; set; }
 
     // -- Nuevos campos de Ubicación (adicionales a Ciudad y Dirección) --
+    public Guid? PaisId { get; set; }
+    public Guid? DepartamentoId { get; set; }
+    public Guid? ProvinciaId { get; set; }
+    public Guid? CiudadId { get; set; }
+    public Guid? ZonaId { get; set; }
+
     public string? Pais { get; set; }
     public string? Departamento { get; set; }
     public string? Provincia { get; set; }

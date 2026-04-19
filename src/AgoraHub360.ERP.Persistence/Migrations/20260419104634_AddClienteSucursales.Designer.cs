@@ -4,6 +4,7 @@ using AgoraHub360.ERP.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AgoraHub360.ERP.Persistence.Migrations
 {
     [DbContext(typeof(AgoraDbContext))]
-    partial class AgoraDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260419104634_AddClienteSucursales")]
+    partial class AddClienteSucursales
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1764,12 +1767,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<int?>("ClienteId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("ClienteSucursalId")
-                        .HasColumnType("int");
-
                     b.Property<string>("CreadoPor")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
@@ -1819,9 +1816,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Property<bool?>("StockCubre")
                         .HasColumnType("bit");
 
-                    b.Property<int?>("SucursalId")
-                        .HasColumnType("int");
-
                     b.Property<byte>("Urgencia")
                         .HasColumnType("tinyint");
 
@@ -1829,19 +1823,9 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
                     b.HasIndex("AlmacenDestinoId");
 
-                    b.HasIndex("ClienteId");
-
-                    b.HasIndex("ClienteSucursalId");
-
                     b.HasIndex("EmpresaId");
 
                     b.HasIndex("SolicitanteId");
-
-                    b.HasIndex("SucursalId");
-
-                    b.HasIndex("EmpresaId", "ClienteId");
-
-                    b.HasIndex("EmpresaId", "ClienteSucursalId");
 
                     b.HasIndex("EmpresaId", "Estado");
 
@@ -1851,8 +1835,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .IsUnique();
 
                     b.HasIndex("EmpresaId", "SolicitanteId");
-
-                    b.HasIndex("EmpresaId", "SucursalId");
 
                     b.ToTable("OrdenesPedido", "cmp");
                 });
@@ -2353,70 +2335,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.ToTable("AuditLogs", "core");
                 });
 
-            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Core.Ciudad", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<bool>("Activo")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime>("CreadoEn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("ModificadoEn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Nombre")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
-
-                    b.Property<Guid>("ProvinciaId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProvinciaId", "Nombre")
-                        .IsUnique()
-                        .HasDatabaseName("UX_Ciudades_Provincia_Nombre");
-
-                    b.ToTable("Ciudades", "core");
-                });
-
-            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Core.Departamento", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<bool>("Activo")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime>("CreadoEn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("ModificadoEn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Nombre")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
-
-                    b.Property<Guid>("PaisId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PaisId", "Nombre")
-                        .IsUnique()
-                        .HasDatabaseName("UX_Departamentos_Pais_Nombre");
-
-                    b.ToTable("Departamentos", "core");
-                });
-
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Core.Empresa", b =>
                 {
                     b.Property<int>("Id")
@@ -2642,43 +2560,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.ToTable("NumeracionesDocumento", "core");
                 });
 
-            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Core.Pais", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<bool>("Activo")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("CodigoIso2")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("CodigoIso3")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<DateTime>("CreadoEn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("ModificadoEn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Nombre")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Nombre")
-                        .IsUnique()
-                        .HasDatabaseName("UX_Paises_Nombre");
-
-                    b.ToTable("Paises", "core");
-                });
-
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Core.ParametroSistema", b =>
                 {
                     b.Property<int>("Id")
@@ -2739,38 +2620,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("ParametrosSistema", "core");
-                });
-
-            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Core.Provincia", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<bool>("Activo")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime>("CreadoEn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<Guid>("DepartamentoId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime?>("ModificadoEn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Nombre")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("DepartamentoId", "Nombre")
-                        .IsUnique()
-                        .HasDatabaseName("UX_Provincias_Departamento_Nombre");
-
-                    b.ToTable("Provincias", "core");
                 });
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Core.Rol", b =>
@@ -2868,9 +2717,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<Guid?>("CiudadId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<string>("Codigo")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
@@ -2889,9 +2735,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Property<string>("Departamento")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
-
-                    b.Property<Guid?>("DepartamentoId")
-                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Descripcion")
                         .HasMaxLength(500)
@@ -2950,9 +2793,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<Guid?>("PaisId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<bool>("PermiteCompras")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
@@ -2986,9 +2826,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<Guid?>("ProvinciaId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<string>("Referencia")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -3021,31 +2858,18 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<Guid?>("ZonaId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.HasKey("Id");
 
                     b.HasIndex("EmpresaId");
-
-                    b.HasIndex("EmpresaId", "CiudadId");
 
                     b.HasIndex("EmpresaId", "Codigo")
                         .IsUnique()
                         .HasDatabaseName("IX_Sucursal_Empresa_Codigo")
                         .HasFilter("[Codigo] IS NOT NULL");
 
-                    b.HasIndex("EmpresaId", "DepartamentoId");
-
                     b.HasIndex("EmpresaId", "Nombre")
                         .IsUnique()
                         .HasDatabaseName("IX_Sucursal_Empresa_Nombre");
-
-                    b.HasIndex("EmpresaId", "PaisId");
-
-                    b.HasIndex("EmpresaId", "ProvinciaId");
-
-                    b.HasIndex("EmpresaId", "ZonaId");
 
                     b.ToTable("Sucursales", "core");
                 });
@@ -3131,38 +2955,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.HasIndex("EmpresaId");
 
                     b.ToTable("UsuarioEmpresas", "core");
-                });
-
-            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Core.Zona", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<bool>("Activo")
-                        .HasColumnType("bit");
-
-                    b.Property<Guid>("CiudadId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<DateTime>("CreadoEn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("ModificadoEn")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Nombre")
-                        .IsRequired()
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CiudadId", "Nombre")
-                        .IsUnique()
-                        .HasDatabaseName("UX_Zonas_Ciudad_Nombre");
-
-                    b.ToTable("Zonas", "core");
                 });
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.DOC.ComprobanteDocumento", b =>
@@ -6584,36 +6376,15 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.Cliente", "Cliente")
-                        .WithMany()
-                        .HasForeignKey("ClienteId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.ClienteSucursal", "ClienteSucursal")
-                        .WithMany()
-                        .HasForeignKey("ClienteSucursalId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("AgoraHub360.ERP.Domain.Entities.Core.Usuario", "Solicitante")
                         .WithMany()
                         .HasForeignKey("SolicitanteId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("AgoraHub360.ERP.Domain.Entities.Core.Sucursal", "Sucursal")
-                        .WithMany()
-                        .HasForeignKey("SucursalId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.Navigation("AlmacenDestino");
 
-                    b.Navigation("Cliente");
-
-                    b.Navigation("ClienteSucursal");
-
                     b.Navigation("Solicitante");
-
-                    b.Navigation("Sucursal");
                 });
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CMP.OrdenPedidoLinea", b =>
@@ -6702,30 +6473,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Navigation("Parent");
                 });
 
-            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Core.Ciudad", b =>
-                {
-                    b.HasOne("AgoraHub360.ERP.Domain.Entities.Core.Provincia", "Provincia")
-                        .WithMany("Ciudades")
-                        .HasForeignKey("ProvinciaId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("FK_Ciudades_Provincias");
-
-                    b.Navigation("Provincia");
-                });
-
-            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Core.Departamento", b =>
-                {
-                    b.HasOne("AgoraHub360.ERP.Domain.Entities.Core.Pais", "Pais")
-                        .WithMany("Departamentos")
-                        .HasForeignKey("PaisId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("FK_Departamentos_Paises");
-
-                    b.Navigation("Pais");
-                });
-
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Core.Empresa", b =>
                 {
                     b.HasOne("AgoraHub360.ERP.Domain.Entities.Core.Moneda", "MonedaBase")
@@ -6734,18 +6481,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("MonedaBase");
-                });
-
-            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Core.Provincia", b =>
-                {
-                    b.HasOne("AgoraHub360.ERP.Domain.Entities.Core.Departamento", "Departamento")
-                        .WithMany("Provincias")
-                        .HasForeignKey("DepartamentoId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("FK_Provincias_Departamentos");
-
-                    b.Navigation("Departamento");
                 });
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Core.Sucursal", b =>
@@ -6786,18 +6521,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Navigation("Empresa");
 
                     b.Navigation("Usuario");
-                });
-
-            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Core.Zona", b =>
-                {
-                    b.HasOne("AgoraHub360.ERP.Domain.Entities.Core.Ciudad", "Ciudad")
-                        .WithMany("Zonas")
-                        .HasForeignKey("CiudadId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("FK_Zonas_Ciudades");
-
-                    b.Navigation("Ciudad");
                 });
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.DOC.ComprobanteDocumento", b =>
@@ -7260,29 +6983,9 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Navigation("Children");
                 });
 
-            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Core.Ciudad", b =>
-                {
-                    b.Navigation("Zonas");
-                });
-
-            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Core.Departamento", b =>
-                {
-                    b.Navigation("Provincias");
-                });
-
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Core.Empresa", b =>
                 {
                     b.Navigation("Sucursales");
-                });
-
-            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Core.Pais", b =>
-                {
-                    b.Navigation("Departamentos");
-                });
-
-            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Core.Provincia", b =>
-                {
-                    b.Navigation("Ciudades");
                 });
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Core.Usuario", b =>

@@ -5,11 +5,13 @@
 @using System.ComponentModel.DataAnnotations
 @using AgoraHub360.ERP.Shared.DTOs.Sucursal
 @using AgoraHub360.ERP.Shared.DTOs.Empresa
+@using AgoraHub360.ERP.Shared.DTOs.Common
 @using AgoraHub360.ERP.Web.Services
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Routing
 @inject HttpSucursalService SucursalSvc
 @inject EmpresaHttpService EmpresaSvc
+@inject GeoCatalogHttpService GeoCatalogSvc
 @inject NavigationManager Nav
 @inject IJSRuntime Js
 
@@ -174,23 +176,53 @@
                     <div class="row g-3">
                         <div class="col-md-6 col-lg-4">
                             <label class="form-label">Pa&iacute;s</label>
-                            <InputText class="form-control" @bind-Value="_model.Pais" />
+                            <InputSelect class="form-select" @bind-Value="_model.PaisId" @bind-Value:after="OnPaisSelectedAsync">
+                                <option value="">— Seleccionar país —</option>
+                                @foreach (var item in _paises)
+                                {
+                                    <option value="@item.Id">@item.Nombre</option>
+                                }
+                            </InputSelect>
                         </div>
                         <div class="col-md-6 col-lg-4">
                             <label class="form-label">Departamento</label>
-                            <InputText class="form-control" @bind-Value="_model.Departamento" />
+                            <InputSelect class="form-select" @bind-Value="_model.DepartamentoId" @bind-Value:after="OnDepartamentoSelectedAsync" disabled="@(!_model.PaisId.HasValue)">
+                                <option value="">— Seleccionar departamento —</option>
+                                @foreach (var item in _departamentos)
+                                {
+                                    <option value="@item.Id">@item.Nombre</option>
+                                }
+                            </InputSelect>
                         </div>
                         <div class="col-md-6 col-lg-4">
                             <label class="form-label">Provincia</label>
-                            <InputText class="form-control" @bind-Value="_model.Provincia" />
+                            <InputSelect class="form-select" @bind-Value="_model.ProvinciaId" @bind-Value:after="OnProvinciaSelectedAsync" disabled="@(!_model.DepartamentoId.HasValue)">
+                                <option value="">— Seleccionar provincia —</option>
+                                @foreach (var item in _provincias)
+                                {
+                                    <option value="@item.Id">@item.Nombre</option>
+                                }
+                            </InputSelect>
                         </div>
                         <div class="col-md-6 col-lg-4">
                             <label class="form-label">Ciudad</label>
-                            <InputText class="form-control" @bind-Value="_model.Ciudad" />
+                            <InputSelect class="form-select" @bind-Value="_model.CiudadId" @bind-Value:after="OnCiudadSelectedAsync" disabled="@(!_model.ProvinciaId.HasValue)">
+                                <option value="">— Seleccionar ciudad —</option>
+                                @foreach (var item in _ciudades)
+                                {
+                                    <option value="@item.Id">@item.Nombre</option>
+                                }
+                            </InputSelect>
                         </div>
                         <div class="col-md-6 col-lg-4">
                             <label class="form-label">Zona</label>
-                            <InputText class="form-control" @bind-Value="_model.Zona" />
+                            <InputSelect class="form-select" @bind-Value="_model.ZonaId" disabled="@(!_model.CiudadId.HasValue)">
+                                <option value="">— Seleccionar zona —</option>
+                                @foreach (var item in _zonas)
+                                {
+                                    <option value="@item.Id">@item.Nombre</option>
+                                }
+                            </InputSelect>
                         </div>
                         <div class="col-md-12 col-lg-8">
                             <label class="form-label">Direcci&oacute;n</label>
@@ -358,6 +390,11 @@
 
     private readonly SucursalFormModel _model = new();
     private readonly List<EmpresaDto> _empresas = new();
+    private List<GeoCatalogItemDto> _paises = new();
+    private List<GeoCatalogItemDto> _departamentos = new();
+    private List<GeoCatalogItemDto> _provincias = new();
+    private List<GeoCatalogItemDto> _ciudades = new();
+    private List<GeoCatalogItemDto> _zonas = new();
     private EditContext _editContext = default!;
 
     private bool _isEdit => Id.HasValue;
@@ -406,8 +443,11 @@
 
         try
         {
+            _empresas.Clear();
             var empresas = await EmpresaSvc.GetAllAsync();
             _empresas.AddRange(empresas);
+
+            _paises = await TryLoadGeoAsync(() => GeoCatalogSvc.GetPaisesAsync(), "países");
 
             if (_isEdit)
             {
@@ -420,6 +460,7 @@
                 }
 
                 MapFromDto(suc);
+                await PreloadGeoChainForEditAsync();
             }
             else
             {
@@ -452,6 +493,91 @@
         await LoadDataAsync();
     }
 
+    private async Task OnPaisSelectedAsync()
+    {
+        _model.DepartamentoId = null;
+        _model.ProvinciaId = null;
+        _model.CiudadId = null;
+        _model.ZonaId = null;
+        _departamentos = new();
+        _provincias = new();
+        _ciudades = new();
+        _zonas = new();
+
+        if (_model.PaisId.HasValue)
+            _departamentos = await TryLoadGeoAsync(() => GeoCatalogSvc.GetDepartamentosByPaisAsync(_model.PaisId.Value), "departamentos");
+    }
+
+    private async Task OnDepartamentoSelectedAsync()
+    {
+        _model.ProvinciaId = null;
+        _model.CiudadId = null;
+        _model.ZonaId = null;
+        _provincias = new();
+        _ciudades = new();
+        _zonas = new();
+
+        if (_model.DepartamentoId.HasValue)
+            _provincias = await TryLoadGeoAsync(() => GeoCatalogSvc.GetProvinciasByDepartamentoAsync(_model.DepartamentoId.Value), "provincias");
+    }
+
+    private async Task OnProvinciaSelectedAsync()
+    {
+        _model.CiudadId = null;
+        _model.ZonaId = null;
+        _ciudades = new();
+        _zonas = new();
+
+        if (_model.ProvinciaId.HasValue)
+            _ciudades = await TryLoadGeoAsync(() => GeoCatalogSvc.GetCiudadesByProvinciaAsync(_model.ProvinciaId.Value), "ciudades");
+    }
+
+    private async Task OnCiudadSelectedAsync()
+    {
+        _model.ZonaId = null;
+        _zonas = new();
+
+        if (_model.CiudadId.HasValue)
+            _zonas = await TryLoadGeoAsync(() => GeoCatalogSvc.GetZonasByCiudadAsync(_model.CiudadId.Value), "zonas");
+    }
+
+    private async Task PreloadGeoChainForEditAsync()
+    {
+        if (_model.PaisId.HasValue)
+            _departamentos = await TryLoadGeoAsync(() => GeoCatalogSvc.GetDepartamentosByPaisAsync(_model.PaisId.Value), "departamentos");
+
+        if (_model.DepartamentoId.HasValue)
+            _provincias = await TryLoadGeoAsync(() => GeoCatalogSvc.GetProvinciasByDepartamentoAsync(_model.DepartamentoId.Value), "provincias");
+
+        if (_model.ProvinciaId.HasValue)
+            _ciudades = await TryLoadGeoAsync(() => GeoCatalogSvc.GetCiudadesByProvinciaAsync(_model.ProvinciaId.Value), "ciudades");
+
+        if (_model.CiudadId.HasValue)
+            _zonas = await TryLoadGeoAsync(() => GeoCatalogSvc.GetZonasByCiudadAsync(_model.CiudadId.Value), "zonas");
+    }
+
+    private async Task<List<GeoCatalogItemDto>> TryLoadGeoAsync(Func<Task<List<GeoCatalogItemDto>>> loader, string catalogo)
+    {
+        try
+        {
+            return await loader();
+        }
+        catch
+        {
+            ShowMessage($"No se pudo cargar catálogo de {catalogo}. Verifique endpoints de geografía.", true);
+            return new List<GeoCatalogItemDto>();
+        }
+    }
+
+    private void SyncLegacyGeoTextFromIds()
+    {
+        _model.Pais = _paises.FirstOrDefault(x => x.Id == _model.PaisId)?.Nombre;
+        _model.Departamento = _departamentos.FirstOrDefault(x => x.Id == _model.DepartamentoId)?.Nombre;
+        _model.Provincia = _provincias.FirstOrDefault(x => x.Id == _model.ProvinciaId)?.Nombre;
+        _model.Ciudad = _ciudades.FirstOrDefault(x => x.Id == _model.CiudadId)?.Nombre;
+        _model.Zona = _zonas.FirstOrDefault(x => x.Id == _model.ZonaId)?.Nombre;
+    }
+
     private bool IsTabActive(string tab) => _activeTab == tab;
 
     private void SetTab(string tab)
@@ -466,6 +592,7 @@
 
         try
         {
+            SyncLegacyGeoTextFromIds();
             ApiResponse<SucursalDto> result;
 
             if (_isEdit)
@@ -477,6 +604,11 @@
                     CodigoInterno = _model.CodigoInterno,
                     Sigla = _model.Sigla,
                     Descripcion = _model.Descripcion,
+                    PaisId = _model.PaisId,
+                    DepartamentoId = _model.DepartamentoId,
+                    ProvinciaId = _model.ProvinciaId,
+                    CiudadId = _model.CiudadId,
+                    ZonaId = _model.ZonaId,
                     Pais = _model.Pais,
                     Departamento = _model.Departamento,
                     Provincia = _model.Provincia,
@@ -519,6 +651,11 @@
                     CodigoInterno = _model.CodigoInterno,
                     Sigla = _model.Sigla,
                     Descripcion = _model.Descripcion,
+                    PaisId = _model.PaisId,
+                    DepartamentoId = _model.DepartamentoId,
+                    ProvinciaId = _model.ProvinciaId,
+                    CiudadId = _model.CiudadId,
+                    ZonaId = _model.ZonaId,
                     Pais = _model.Pais,
                     Departamento = _model.Departamento,
                     Provincia = _model.Provincia,
@@ -618,6 +755,11 @@
         _model.CodigoInterno = s.CodigoInterno;
         _model.Sigla = s.Sigla;
         _model.Descripcion = s.Descripcion;
+        _model.PaisId = s.PaisId;
+        _model.DepartamentoId = s.DepartamentoId;
+        _model.ProvinciaId = s.ProvinciaId;
+        _model.CiudadId = s.CiudadId;
+        _model.ZonaId = s.ZonaId;
         _model.Pais = s.Pais;
         _model.Departamento = s.Departamento;
         _model.Provincia = s.Provincia;
@@ -669,6 +811,11 @@
         [MaxLength(50)] public string? CodigoInterno { get; set; }
         [MaxLength(20)] public string? Sigla { get; set; }
         [MaxLength(500)] public string? Descripcion { get; set; }
+        public Guid? PaisId { get; set; }
+        public Guid? DepartamentoId { get; set; }
+        public Guid? ProvinciaId { get; set; }
+        public Guid? CiudadId { get; set; }
+        public Guid? ZonaId { get; set; }
         [MaxLength(100)] public string? Pais { get; set; }
         [MaxLength(100)] public string? Departamento { get; set; }
         [MaxLength(100)] public string? Provincia { get; set; }

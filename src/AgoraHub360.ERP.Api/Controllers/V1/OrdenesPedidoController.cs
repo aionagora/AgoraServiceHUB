@@ -26,9 +26,12 @@ public class OrdenesPedidoController : ControllerBase
         [FromQuery] string? estado,
         [FromQuery] DateTime? desde,
         [FromQuery] DateTime? hasta,
+        [FromQuery] int? sucursalId,
+        [FromQuery] int? clienteId,
+        [FromQuery] int? clienteSucursalId,
         CancellationToken ct)
     {
-        var result = await _service.GetAllAsync(estado, desde, hasta, ct);
+        var result = await _service.GetAllAsync(estado, desde, hasta, sucursalId, clienteId, clienteSucursalId, ct);
         if (!result.IsSuccess)
             return BadRequest(ApiResponse<IReadOnlyList<OrdenPedidoDto>>.Fail(result.Error!));
         return Ok(ApiResponse<IReadOnlyList<OrdenPedidoDto>>.Ok(result.Value!));
