@@ -1,213 +1,848 @@
+@page "/config/sucursales/nueva"
+@page "/config/sucursales/editar/{Id:int}"
+@attribute [Authorize(Roles = "Admin")]
+@implements IDisposable
+@using System.ComponentModel.DataAnnotations
 @using AgoraHub360.ERP.Shared.DTOs.Sucursal
 @using AgoraHub360.ERP.Shared.DTOs.Empresa
+@using AgoraHub360.ERP.Shared.DTOs.Common
+@using AgoraHub360.ERP.Web.Services
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.Components.Routing
+@inject HttpSucursalService SucursalSvc
 @inject EmpresaHttpService EmpresaSvc
+@inject GeoCatalogHttpService GeoCatalogSvc
+@inject NavigationManager Nav
+@inject IJSRuntime Js
 
-@if (Show)
+<PageTitle>@_pageTitle - AgoraHub360 ERP</PageTitle>
+
+<div class="page-header mb-3">
+    <h1>@_pageTitle</h1>
+    <p class="text-muted mb-0">Sistema &rsaquo; Configuraci&oacute;n &rsaquo; Sucursales &rsaquo; @(_isEdit ? "Editar" : "Nueva")</p>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(_mensaje))
 {
-    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">@(EditId.HasValue ? "Editar Sucursal" : "Nueva Sucursal")</h5>
-                    <button type="button" class="btn-close" @onclick="CloseAsync"></button>
-                </div>
-                @if (!EditId.HasValue)
-                {
-                    <EditForm Model="_createModel" OnValidSubmit="HandleValidSubmitAsync">
-                        <DataAnnotationsValidator />
-                        <div class="modal-body">
-                            <div class="mb-3">
-                                <label class="form-label">Empresa *</label>
-                                <InputSelect class="form-select" @bind-Value="_createModel.EmpresaId">
-                                    <option value="0">— Seleccionar Empresa —</option>
-                                    @foreach (var emp in Empresas)
-                                    {
-                                        <option value="@emp.Id">@emp.Nombre</option>
-                                    }
-                                </InputSelect>
-                                <ValidationMessage For="() => _createModel.EmpresaId" />
-                            </div>
-
-                            <div class="row mb-3">
-                                <div class="col-md-8">
-                                    <label class="form-label">Nombre *</label>
-                                    <InputText class="form-control" @bind-Value="_createModel.Nombre" />
-                                    <ValidationMessage For="() => _createModel.Nombre" />
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">C&oacute;digo</label>
-                                    <InputText class="form-control" @bind-Value="_createModel.Codigo" />
-                                    <ValidationMessage For="() => _createModel.Codigo" />
-                                </div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Direcci&oacute;n</label>
-                                <InputText class="form-control" @bind-Value="_createModel.Direccion" />
-                                <ValidationMessage For="() => _createModel.Direccion" />
-                            </div>
-
-                            <div class="row mb-3">
-                                <div class="col-md-4">
-                                    <label class="form-label">Ciudad</label>
-                                    <InputText class="form-control" @bind-Value="_createModel.Ciudad" />
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Tel&eacute;fono</label>
-                                    <InputText class="form-control" @bind-Value="_createModel.Telefono" />
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Email</label>
-                                    <InputText class="form-control" @bind-Value="_createModel.Email" />
-                                    <ValidationMessage For="() => _createModel.Email" />
-                                </div>
-                            </div>
-
-                            <div class="row">
-                                <div class="col-md-12 mb-3">
-                                    <div class="form-check form-switch">
-                                        <InputCheckbox class="form-check-input" @bind-Value="_createModel.EsCentral" id="chkEsCentral_c" />
-                                        <label class="form-check-label" for="chkEsCentral_c">Es Central (Principal)</label>
-                                    </div>
-                                    <small class="text-muted d-block">Establecer esta sucursal como casa matriz de la empresa seleccionada.</small>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" @onclick="CloseAsync">Cancelar</button>
-                            <button type="submit" class="btn btn-primary" disabled="@Saving">
-                                @if (Saving)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-1"></span>
-                                }
-                                Crear Sucursal
-                            </button>
-                        </div>
-                    </EditForm>
-                }
-                else
-                {
-                    <EditForm Model="_updateModel" OnValidSubmit="HandleValidSubmitAsync">
-                        <DataAnnotationsValidator />
-                        <div class="modal-body">
-                            <div class="row mb-3">
-                                <div class="col-md-8">
-                                    <label class="form-label">Nombre *</label>
-                                    <InputText class="form-control" @bind-Value="_updateModel.Nombre" />
-                                    <ValidationMessage For="() => _updateModel.Nombre" />
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">C&oacute;digo</label>
-                                    <InputText class="form-control" @bind-Value="_updateModel.Codigo" />
-                                    <ValidationMessage For="() => _updateModel.Codigo" />
-                                </div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">Direcci&oacute;n</label>
-                                <InputText class="form-control" @bind-Value="_updateModel.Direccion" />
-                                <ValidationMessage For="() => _updateModel.Direccion" />
-                            </div>
-
-                            <div class="row mb-3">
-                                <div class="col-md-4">
-                                    <label class="form-label">Ciudad</label>
-                                    <InputText class="form-control" @bind-Value="_updateModel.Ciudad" />
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Tel&eacute;fono</label>
-                                    <InputText class="form-control" @bind-Value="_updateModel.Telefono" />
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Email</label>
-                                    <InputText class="form-control" @bind-Value="_updateModel.Email" />
-                                    <ValidationMessage For="() => _updateModel.Email" />
-                                </div>
-                            </div>
-
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <div class="form-check form-switch">
-                                        <InputCheckbox class="form-check-input" @bind-Value="_updateModel.EsCentral" id="chkEsCentral_u" />
-                                        <label class="form-check-label" for="chkEsCentral_u">Es Central (Principal)</label>
-                                    </div>
-                                    <small class="text-muted d-block">Establecer esta sucursal como casa matriz de la empresa seleccionada.</small>
-                                </div>
-
-                                <div class="col-md-6 mb-3">
-                                    <div class="form-check form-switch">
-                                        <InputCheckbox class="form-check-input" @bind-Value="_updateModel.Activo" id="chkActivo_u" />
-                                        <label class="form-check-label" for="chkActivo_u">Activa</label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" @onclick="CloseAsync">Cancelar</button>
-                            <button type="submit" class="btn btn-primary" disabled="@Saving">
-                                @if (Saving)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-1"></span>
-                                }
-                                Guardar Cambios
-                            </button>
-                        </div>
-                    </EditForm>
-                }
-            </div>
-        </div>
+    <div class="alert @(_esError ? "alert-danger" : "alert-success") alert-dismissible fade show" role="alert">
+        @_mensaje
+        <button type="button" class="btn-close" @onclick="() => _mensaje = null"></button>
     </div>
 }
 
-@code {
-    [Parameter] public bool Show { get; set; }
-    [Parameter] public int? EditId { get; set; }
-    [Parameter] public int? DefaultEmpresaId { get; set; }
-    [Parameter] public EventCallback<bool> OnClose { get; set; }
-    [Parameter] public EventCallback<(bool esEdit, object dto)> OnSave { get; set; }
-    [Parameter] public bool Saving { get; set; }
-    [Parameter] public List<EmpresaDto> Empresas { get; set; } = new();
-
-    private CrearSucursalDto _createModel = new();
-    private ActualizarSucursalDto _updateModel = new();
-
-    private bool _wasShown = false;
-
-    protected override void OnParametersSet()
-    {
-        if (Show && !_wasShown && !EditId.HasValue)
+<ErrorBoundary>
+    <ChildContent>
+        @if (_loading)
         {
-            // Initializing new model with the selected EmpresaId from the main view
-            _createModel = new CrearSucursalDto { Activo = true, EmpresaId = DefaultEmpresaId ?? 0 };
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="text-muted mt-2">Cargando formulario de sucursal...</p>
+                </div>
+            </div>
         }
-        _wasShown = Show;
-    }
-
-    public void LoadForEdit(SucursalDto sucursal)
-    {
-        _updateModel = new ActualizarSucursalDto
+        else if (_loadFailed)
         {
-            Nombre = sucursal.Nombre,
-            Codigo = sucursal.Codigo,
-            Direccion = sucursal.Direccion,
-            Ciudad = sucursal.Ciudad,
-            Telefono = sucursal.Telefono,
-            Email = sucursal.Email,
-            EsCentral = sucursal.EsCentral,
-            Activo = sucursal.Activo
-        };
-        StateHasChanged();
+            <div class="card border-danger">
+                <div class="card-body">
+                    <h5 class="text-danger mb-2">No se pudo cargar el formulario</h5>
+                    <p class="mb-2">@_loadErrorDetail</p>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-outline-primary" @onclick="RetryLoadAsync">Reintentar</button>
+                        <button type="button" class="btn btn-outline-secondary" @onclick="CancelAsync">Volver al listado</button>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <NavigationLock ConfirmExternalNavigation="@_hasUnsavedChanges" OnBeforeInternalNavigation="HandleBeforeInternalNavigation" />
+
+            <EditForm EditContext="_editContext" OnValidSubmit="HandleSubmitAsync">
+        <DataAnnotationsValidator />
+
+        <div class="position-sticky top-0 z-3 bg-body border rounded shadow-sm p-3 mb-3">
+            <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    @if (_hasUnsavedChanges)
+                    {
+                        <span class="badge text-bg-warning">Cambios sin guardar</span>
+                    }
+                    else
+                    {
+                        <span class="badge text-bg-success">Sin cambios pendientes</span>
+                    }
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="CancelAsync" disabled="@_saving">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary" disabled="@_saving">
+                        @if (_saving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        Guardar
+                    </button>
+                </div>
+            </div>
+            <div class="mt-2">
+                <ValidationSummary />
+            </div>
+        </div>
+
+        <ul class="nav nav-pills flex-wrap gap-2 mb-3 p-2 bg-light rounded border">
+            <li class="nav-item">
+                <button type="button" class="nav-link @(IsTabActive("general") ? "active" : "text-dark")" @onclick='() => SetTab("general")'>General</button>
+            </li>
+            <li class="nav-item">
+                <button type="button" class="nav-link @(IsTabActive("ubicacion") ? "active" : "text-dark")" @onclick='() => SetTab("ubicacion")'>Ubicaci&oacute;n</button>
+            </li>
+            <li class="nav-item">
+                <button type="button" class="nav-link @(IsTabActive("contacto") ? "active" : "text-dark")" @onclick='() => SetTab("contacto")'>Contacto</button>
+            </li>
+            <li class="nav-item">
+                <button type="button" class="nav-link @(IsTabActive("operacion") ? "active" : "text-dark")" @onclick='() => SetTab("operacion")'>Operaci&oacute;n</button>
+            </li>
+            <li class="nav-item">
+                <button type="button" class="nav-link @(IsTabActive("config") ? "active" : "text-dark")" @onclick='() => SetTab("config")'>Configuraci&oacute;n</button>
+            </li>
+        </ul>
+
+        @if (IsTabActive("general"))
+        {
+            <div class="card mb-3">
+                <div class="card-header">Datos generales</div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6 col-lg-4">
+                            <label class="form-label">Empresa *</label>
+                            <InputSelect class="form-select" @bind-Value="_model.EmpresaId" disabled="@_isEdit">
+                                <option value="0">— Seleccionar Empresa —</option>
+                                @foreach (var emp in _empresas)
+                                {
+                                    <option value="@emp.Id">@emp.Nombre</option>
+                                }
+                            </InputSelect>
+                            <ValidationMessage For="() => _model.EmpresaId" />
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <label class="form-label">C&oacute;digo</label>
+                            <InputText class="form-control" @bind-Value="_model.Codigo" />
+                            <ValidationMessage For="() => _model.Codigo" />
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <label class="form-label">C&oacute;digo Interno</label>
+                            <InputText class="form-control" @bind-Value="_model.CodigoInterno" />
+                            <ValidationMessage For="() => _model.CodigoInterno" />
+                        </div>
+                        <div class="col-md-8 col-lg-6">
+                            <label class="form-label">Nombre *</label>
+                            <InputText class="form-control" @bind-Value="_model.Nombre" />
+                            <ValidationMessage For="() => _model.Nombre" />
+                        </div>
+                        <div class="col-md-4 col-lg-3">
+                            <label class="form-label">Sigla</label>
+                            <InputText class="form-control" @bind-Value="_model.Sigla" />
+                            <ValidationMessage For="() => _model.Sigla" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Descripci&oacute;n</label>
+                            <InputTextArea class="form-control" rows="3" @bind-Value="_model.Descripcion" />
+                            <ValidationMessage For="() => _model.Descripcion" />
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <div class="form-check form-switch mt-4">
+                                <InputCheckbox class="form-check-input" @bind-Value="_model.EsCentral" id="chkEsCentral" />
+                                <label class="form-check-label" for="chkEsCentral">Es principal (casa matriz)</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <div class="form-check form-switch mt-4">
+                                <InputCheckbox class="form-check-input" @bind-Value="_model.Activo" id="chkActivo" />
+                                <label class="form-check-label" for="chkActivo">Activa</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (IsTabActive("ubicacion"))
+        {
+            <div class="card mb-3">
+                <div class="card-header">Ubicaci&oacute;n</div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6 col-lg-4">
+                            <label class="form-label">Pa&iacute;s</label>
+                            <InputSelect class="form-select" @bind-Value="_model.PaisId" @bind-Value:after="OnPaisSelectedAsync">
+                                <option value="">— Seleccionar país —</option>
+                                @foreach (var item in _paises)
+                                {
+                                    <option value="@item.Id">@item.Nombre</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <label class="form-label">Departamento</label>
+                            <InputSelect class="form-select" @bind-Value="_model.DepartamentoId" @bind-Value:after="OnDepartamentoSelectedAsync" disabled="@(!_model.PaisId.HasValue)">
+                                <option value="">— Seleccionar departamento —</option>
+                                @foreach (var item in _departamentos)
+                                {
+                                    <option value="@item.Id">@item.Nombre</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <label class="form-label">Provincia</label>
+                            <InputSelect class="form-select" @bind-Value="_model.ProvinciaId" @bind-Value:after="OnProvinciaSelectedAsync" disabled="@(!_model.DepartamentoId.HasValue)">
+                                <option value="">— Seleccionar provincia —</option>
+                                @foreach (var item in _provincias)
+                                {
+                                    <option value="@item.Id">@item.Nombre</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <label class="form-label">Ciudad</label>
+                            <InputSelect class="form-select" @bind-Value="_model.CiudadId" @bind-Value:after="OnCiudadSelectedAsync" disabled="@(!_model.ProvinciaId.HasValue)">
+                                <option value="">— Seleccionar ciudad —</option>
+                                @foreach (var item in _ciudades)
+                                {
+                                    <option value="@item.Id">@item.Nombre</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <label class="form-label">Zona</label>
+                            <InputSelect class="form-select" @bind-Value="_model.ZonaId" disabled="@(!_model.CiudadId.HasValue)">
+                                <option value="">— Seleccionar zona —</option>
+                                @foreach (var item in _zonas)
+                                {
+                                    <option value="@item.Id">@item.Nombre</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div class="col-md-12 col-lg-8">
+                            <label class="form-label">Direcci&oacute;n</label>
+                            <InputText class="form-control" @bind-Value="_model.Direccion" />
+                            <ValidationMessage For="() => _model.Direccion" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Referencia</label>
+                            <InputTextArea class="form-control" rows="2" @bind-Value="_model.Referencia" />
+                            <ValidationMessage For="() => _model.Referencia" />
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <label class="form-label">Latitud</label>
+                            <InputText class="form-control" @bind-Value="_latitudText" />
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <label class="form-label">Longitud</label>
+                            <InputText class="form-control" @bind-Value="_longitudText" />
+                        </div>
+                        <div class="col-md-12 col-lg-8">
+                            <label class="form-label">URL Mapa</label>
+                            <InputText class="form-control" @bind-Value="_model.UrlMapa" />
+                            <ValidationMessage For="() => _model.UrlMapa" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (IsTabActive("contacto"))
+        {
+            <div class="card mb-3">
+                <div class="card-header">Contacto</div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6 col-lg-4">
+                            <label class="form-label">Responsable</label>
+                            <InputText class="form-control" @bind-Value="_model.ResponsableNombre" />
+                            <ValidationMessage For="() => _model.ResponsableNombre" />
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <label class="form-label">Cargo</label>
+                            <InputText class="form-control" @bind-Value="_model.ResponsableCargo" />
+                            <ValidationMessage For="() => _model.ResponsableCargo" />
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <label class="form-label">Tel&eacute;fono</label>
+                            <InputText class="form-control" @bind-Value="_model.Telefono" />
+                            <ValidationMessage For="() => _model.Telefono" />
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <label class="form-label">Celular</label>
+                            <InputText class="form-control" @bind-Value="_model.Celular" />
+                            <ValidationMessage For="() => _model.Celular" />
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <label class="form-label">WhatsApp</label>
+                            <InputText class="form-control" @bind-Value="_model.WhatsApp" />
+                            <ValidationMessage For="() => _model.WhatsApp" />
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <label class="form-label">Email</label>
+                            <InputText class="form-control" @bind-Value="_model.Email" />
+                            <ValidationMessage For="() => _model.Email" />
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <label class="form-label">Email alternativo</label>
+                            <InputText class="form-control" @bind-Value="_model.EmailAlternativo" />
+                            <ValidationMessage For="() => _model.EmailAlternativo" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (IsTabActive("operacion"))
+        {
+            <div class="card mb-3">
+                <div class="card-header">Operaci&oacute;n</div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6 col-lg-4">
+                            <div class="form-check form-switch">
+                                <InputCheckbox class="form-check-input" @bind-Value="_model.PermiteVentas" id="opVentas" />
+                                <label class="form-check-label" for="opVentas">Permite Ventas</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <div class="form-check form-switch">
+                                <InputCheckbox class="form-check-input" @bind-Value="_model.PermiteCompras" id="opCompras" />
+                                <label class="form-check-label" for="opCompras">Permite Compras</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <div class="form-check form-switch">
+                                <InputCheckbox class="form-check-input" @bind-Value="_model.PermiteInventario" id="opInventario" />
+                                <label class="form-check-label" for="opInventario">Permite Inventario</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <div class="form-check form-switch">
+                                <InputCheckbox class="form-check-input" @bind-Value="_model.PermiteDespacho" id="opDespacho" />
+                                <label class="form-check-label" for="opDespacho">Permite Despacho</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <div class="form-check form-switch">
+                                <InputCheckbox class="form-check-input" @bind-Value="_model.PermiteFacturacion" id="opFacturacion" />
+                                <label class="form-check-label" for="opFacturacion">Permite Facturaci&oacute;n</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <div class="form-check form-switch">
+                                <InputCheckbox class="form-check-input" @bind-Value="_model.ManejaAlmacen" id="opAlmacen" />
+                                <label class="form-check-label" for="opAlmacen">Maneja Almac&eacute;n</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (IsTabActive("config"))
+        {
+            <div class="card mb-3">
+                <div class="card-header">Configuraci&oacute;n</div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6 col-lg-4">
+                            <label class="form-label">C&oacute;digo Sucursal Fiscal</label>
+                            <InputText class="form-control" @bind-Value="_model.CodigoSucursalFiscal" />
+                            <ValidationMessage For="() => _model.CodigoSucursalFiscal" />
+                        </div>
+                        <div class="col-md-6 col-lg-4">
+                            <label class="form-label">Prefijo Documental</label>
+                            <InputText class="form-control" @bind-Value="_model.PrefijoDocumental" />
+                            <ValidationMessage For="() => _model.PrefijoDocumental" />
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Observaciones</label>
+                            <InputTextArea class="form-control" rows="3" @bind-Value="_model.Observaciones" />
+                            <ValidationMessage For="() => _model.Observaciones" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+            </EditForm>
+        }
+    </ChildContent>
+    <ErrorContent Context="ex">
+        <div class="card border-danger">
+            <div class="card-body">
+                <h5 class="text-danger mb-2">Ocurrió un error inesperado al cargar la vista</h5>
+                <p class="mb-3">@ex.Message</p>
+                <button type="button" class="btn btn-outline-secondary" @onclick="CancelAsync">Volver al listado</button>
+            </div>
+        </div>
+    </ErrorContent>
+</ErrorBoundary>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "empresaId")] public int? EmpresaIdQuery { get; set; }
+
+    private readonly SucursalFormModel _model = new();
+    private readonly List<EmpresaDto> _empresas = new();
+    private List<GeoCatalogItemDto> _paises = new();
+    private List<GeoCatalogItemDto> _departamentos = new();
+    private List<GeoCatalogItemDto> _provincias = new();
+    private List<GeoCatalogItemDto> _ciudades = new();
+    private List<GeoCatalogItemDto> _zonas = new();
+    private EditContext _editContext = default!;
+
+    private bool _isEdit => Id.HasValue;
+    private bool _loading = true;
+    private bool _loadFailed;
+    private bool _saving;
+    private bool _hasUnsavedChanges;
+    private bool _isNavigatingAfterSave;
+    private bool _esError;
+    private string? _mensaje;
+    private string _loadErrorDetail = string.Empty;
+    private string _activeTab = "general";
+
+    private string _latitudText
+    {
+        get => _model.Latitud?.ToString() ?? string.Empty;
+        set => _model.Latitud = decimal.TryParse(value, out var v) ? v : null;
     }
 
-    private object Model => EditId.HasValue ? _updateModel : _createModel;
-
-    private async Task HandleValidSubmitAsync()
+    private string _longitudText
     {
-        await OnSave.InvokeAsync((EditId.HasValue, Model));
+        get => _model.Longitud?.ToString() ?? string.Empty;
+        set => _model.Longitud = decimal.TryParse(value, out var v) ? v : null;
     }
 
-    private async Task CloseAsync()
+    private string _pageTitle => _isEdit ? "Editar Sucursal" : "Nueva Sucursal";
+
+    protected override async Task OnInitializedAsync()
     {
-        await OnClose.InvokeAsync(false);
+        await LoadDataAsync();
+    }
+
+    private async Task LoadDataAsync()
+    {
+        _loading = true;
+        _loadFailed = false;
+        _loadErrorDetail = string.Empty;
+
+        if (_editContext is not null)
+        {
+            _editContext.OnFieldChanged -= OnFieldChanged;
+        }
+
+        _editContext = new EditContext(_model);
+        _editContext.OnFieldChanged += OnFieldChanged;
+
+        try
+        {
+            _empresas.Clear();
+            var empresas = await EmpresaSvc.GetAllAsync();
+            _empresas.AddRange(empresas);
+
+            _paises = await TryLoadGeoAsync(() => GeoCatalogSvc.GetPaisesAsync(), "países");
+
+            if (_isEdit)
+            {
+                var suc = await SucursalSvc.GetByIdAsync(Id!.Value);
+                if (suc == null)
+                {
+                    _loadFailed = true;
+                    _loadErrorDetail = "No se encontró la sucursal solicitada.";
+                    return;
+                }
+
+                MapFromDto(suc);
+                await PreloadGeoChainForEditAsync();
+            }
+            else
+            {
+                _model.EmpresaId = EmpresaIdQuery ?? 0;
+                _model.Activo = true;
+                _model.PermiteVentas = true;
+                _model.PermiteCompras = true;
+                _model.PermiteInventario = true;
+                _model.PermiteDespacho = true;
+                _model.PermiteFacturacion = true;
+                _model.ManejaAlmacen = true;
+            }
+
+        }
+        catch (Exception ex)
+        {
+            ShowMessage($"Error al cargar el formulario: {ex.Message}", true);
+            _loadFailed = true;
+            _loadErrorDetail = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task RetryLoadAsync()
+    {
+        _mensaje = null;
+        await LoadDataAsync();
+    }
+
+    private async Task OnPaisSelectedAsync()
+    {
+        _model.DepartamentoId = null;
+        _model.ProvinciaId = null;
+        _model.CiudadId = null;
+        _model.ZonaId = null;
+        _departamentos = new();
+        _provincias = new();
+        _ciudades = new();
+        _zonas = new();
+
+        if (_model.PaisId.HasValue)
+            _departamentos = await TryLoadGeoAsync(() => GeoCatalogSvc.GetDepartamentosByPaisAsync(_model.PaisId.Value), "departamentos");
+    }
+
+    private async Task OnDepartamentoSelectedAsync()
+    {
+        _model.ProvinciaId = null;
+        _model.CiudadId = null;
+        _model.ZonaId = null;
+        _provincias = new();
+        _ciudades = new();
+        _zonas = new();
+
+        if (_model.DepartamentoId.HasValue)
+            _provincias = await TryLoadGeoAsync(() => GeoCatalogSvc.GetProvinciasByDepartamentoAsync(_model.DepartamentoId.Value), "provincias");
+    }
+
+    private async Task OnProvinciaSelectedAsync()
+    {
+        _model.CiudadId = null;
+        _model.ZonaId = null;
+        _ciudades = new();
+        _zonas = new();
+
+        if (_model.ProvinciaId.HasValue)
+            _ciudades = await TryLoadGeoAsync(() => GeoCatalogSvc.GetCiudadesByProvinciaAsync(_model.ProvinciaId.Value), "ciudades");
+    }
+
+    private async Task OnCiudadSelectedAsync()
+    {
+        _model.ZonaId = null;
+        _zonas = new();
+
+        if (_model.CiudadId.HasValue)
+            _zonas = await TryLoadGeoAsync(() => GeoCatalogSvc.GetZonasByCiudadAsync(_model.CiudadId.Value), "zonas");
+    }
+
+    private async Task PreloadGeoChainForEditAsync()
+    {
+        if (_model.PaisId.HasValue)
+            _departamentos = await TryLoadGeoAsync(() => GeoCatalogSvc.GetDepartamentosByPaisAsync(_model.PaisId.Value), "departamentos");
+
+        if (_model.DepartamentoId.HasValue)
+            _provincias = await TryLoadGeoAsync(() => GeoCatalogSvc.GetProvinciasByDepartamentoAsync(_model.DepartamentoId.Value), "provincias");
+
+        if (_model.ProvinciaId.HasValue)
+            _ciudades = await TryLoadGeoAsync(() => GeoCatalogSvc.GetCiudadesByProvinciaAsync(_model.ProvinciaId.Value), "ciudades");
+
+        if (_model.CiudadId.HasValue)
+            _zonas = await TryLoadGeoAsync(() => GeoCatalogSvc.GetZonasByCiudadAsync(_model.CiudadId.Value), "zonas");
+    }
+
+    private async Task<List<GeoCatalogItemDto>> TryLoadGeoAsync(Func<Task<List<GeoCatalogItemDto>>> loader, string catalogo)
+    {
+        try
+        {
+            return await loader();
+        }
+        catch
+        {
+            ShowMessage($"No se pudo cargar catálogo de {catalogo}. Verifique endpoints de geografía.", true);
+            return new List<GeoCatalogItemDto>();
+        }
+    }
+
+    private void SyncLegacyGeoTextFromIds()
+    {
+        _model.Pais = _paises.FirstOrDefault(x => x.Id == _model.PaisId)?.Nombre;
+        _model.Departamento = _departamentos.FirstOrDefault(x => x.Id == _model.DepartamentoId)?.Nombre;
+        _model.Provincia = _provincias.FirstOrDefault(x => x.Id == _model.ProvinciaId)?.Nombre;
+        _model.Ciudad = _ciudades.FirstOrDefault(x => x.Id == _model.CiudadId)?.Nombre;
+        _model.Zona = _zonas.FirstOrDefault(x => x.Id == _model.ZonaId)?.Nombre;
+    }
+
+    private bool IsTabActive(string tab) => _activeTab == tab;
+
+    private void SetTab(string tab)
+    {
+        _activeTab = tab;
+    }
+
+    private async Task HandleSubmitAsync()
+    {
+        _saving = true;
+        _mensaje = null;
+
+        try
+        {
+            SyncLegacyGeoTextFromIds();
+            ApiResponse<SucursalDto> result;
+
+            if (_isEdit)
+            {
+                var dto = new ActualizarSucursalDto
+                {
+                    Nombre = _model.Nombre,
+                    Codigo = _model.Codigo,
+                    CodigoInterno = _model.CodigoInterno,
+                    Sigla = _model.Sigla,
+                    Descripcion = _model.Descripcion,
+                    PaisId = _model.PaisId,
+                    DepartamentoId = _model.DepartamentoId,
+                    ProvinciaId = _model.ProvinciaId,
+                    CiudadId = _model.CiudadId,
+                    ZonaId = _model.ZonaId,
+                    Pais = _model.Pais,
+                    Departamento = _model.Departamento,
+                    Provincia = _model.Provincia,
+                    Zona = _model.Zona,
+                    Referencia = _model.Referencia,
+                    Latitud = _model.Latitud,
+                    Longitud = _model.Longitud,
+                    UrlMapa = _model.UrlMapa,
+                    Direccion = _model.Direccion,
+                    Ciudad = _model.Ciudad,
+                    ResponsableNombre = _model.ResponsableNombre,
+                    ResponsableCargo = _model.ResponsableCargo,
+                    Celular = _model.Celular,
+                    WhatsApp = _model.WhatsApp,
+                    EmailAlternativo = _model.EmailAlternativo,
+                    Telefono = _model.Telefono,
+                    Email = _model.Email,
+                    EsCentral = _model.EsCentral,
+                    PermiteVentas = _model.PermiteVentas,
+                    PermiteCompras = _model.PermiteCompras,
+                    PermiteInventario = _model.PermiteInventario,
+                    PermiteDespacho = _model.PermiteDespacho,
+                    PermiteFacturacion = _model.PermiteFacturacion,
+                    ManejaAlmacen = _model.ManejaAlmacen,
+                    CodigoSucursalFiscal = _model.CodigoSucursalFiscal,
+                    PrefijoDocumental = _model.PrefijoDocumental,
+                    Observaciones = _model.Observaciones,
+                    Activo = _model.Activo
+                };
+
+                result = await SucursalSvc.UpdateAsync(Id!.Value, dto);
+            }
+            else
+            {
+                var dto = new CrearSucursalDto
+                {
+                    EmpresaId = _model.EmpresaId,
+                    Nombre = _model.Nombre,
+                    Codigo = _model.Codigo,
+                    CodigoInterno = _model.CodigoInterno,
+                    Sigla = _model.Sigla,
+                    Descripcion = _model.Descripcion,
+                    PaisId = _model.PaisId,
+                    DepartamentoId = _model.DepartamentoId,
+                    ProvinciaId = _model.ProvinciaId,
+                    CiudadId = _model.CiudadId,
+                    ZonaId = _model.ZonaId,
+                    Pais = _model.Pais,
+                    Departamento = _model.Departamento,
+                    Provincia = _model.Provincia,
+                    Zona = _model.Zona,
+                    Referencia = _model.Referencia,
+                    Latitud = _model.Latitud,
+                    Longitud = _model.Longitud,
+                    UrlMapa = _model.UrlMapa,
+                    Direccion = _model.Direccion,
+                    Ciudad = _model.Ciudad,
+                    ResponsableNombre = _model.ResponsableNombre,
+                    ResponsableCargo = _model.ResponsableCargo,
+                    Celular = _model.Celular,
+                    WhatsApp = _model.WhatsApp,
+                    EmailAlternativo = _model.EmailAlternativo,
+                    Telefono = _model.Telefono,
+                    Email = _model.Email,
+                    EsCentral = _model.EsCentral,
+                    PermiteVentas = _model.PermiteVentas,
+                    PermiteCompras = _model.PermiteCompras,
+                    PermiteInventario = _model.PermiteInventario,
+                    PermiteDespacho = _model.PermiteDespacho,
+                    PermiteFacturacion = _model.PermiteFacturacion,
+                    ManejaAlmacen = _model.ManejaAlmacen,
+                    CodigoSucursalFiscal = _model.CodigoSucursalFiscal,
+                    PrefijoDocumental = _model.PrefijoDocumental,
+                    Observaciones = _model.Observaciones,
+                    Activo = _model.Activo
+                };
+
+                result = await SucursalSvc.CreateAsync(dto);
+            }
+
+            if (result.Success)
+            {
+                _hasUnsavedChanges = false;
+                _isNavigatingAfterSave = true;
+                Nav.NavigateTo("/config/sucursales");
+                return;
+            }
+
+            ShowMessage(result.Message ?? "No se pudo guardar la sucursal.", true);
+        }
+        catch (Exception ex)
+        {
+            ShowMessage($"Error al guardar: {ex.Message}", true);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task CancelAsync()
+    {
+        if (_hasUnsavedChanges)
+        {
+            var confirmar = await Js.InvokeAsync<bool>("confirm", "Tienes cambios sin guardar. ¿Deseas salir sin guardar?");
+            if (!confirmar)
+                return;
+        }
+
+        Nav.NavigateTo("/config/sucursales");
+    }
+
+    private void OnFieldChanged(object? sender, FieldChangedEventArgs e)
+    {
+        if (_loading || _saving)
+            return;
+
+        _hasUnsavedChanges = true;
+    }
+
+    private async Task HandleBeforeInternalNavigation(LocationChangingContext context)
+    {
+        if (_isNavigatingAfterSave || !_hasUnsavedChanges)
+            return;
+
+        var confirmar = await Js.InvokeAsync<bool>("confirm", "Tienes cambios sin guardar. ¿Deseas salir sin guardar?");
+        if (!confirmar)
+        {
+            context.PreventNavigation();
+        }
+    }
+
+    private void ShowMessage(string message, bool error)
+    {
+        _mensaje = message;
+        _esError = error;
+    }
+
+    private void MapFromDto(SucursalDto s)
+    {
+        _model.EmpresaId = s.EmpresaId;
+        _model.Nombre = s.Nombre;
+        _model.Codigo = s.Codigo;
+        _model.CodigoInterno = s.CodigoInterno;
+        _model.Sigla = s.Sigla;
+        _model.Descripcion = s.Descripcion;
+        _model.PaisId = s.PaisId;
+        _model.DepartamentoId = s.DepartamentoId;
+        _model.ProvinciaId = s.ProvinciaId;
+        _model.CiudadId = s.CiudadId;
+        _model.ZonaId = s.ZonaId;
+        _model.Pais = s.Pais;
+        _model.Departamento = s.Departamento;
+        _model.Provincia = s.Provincia;
+        _model.Zona = s.Zona;
+        _model.Referencia = s.Referencia;
+        _model.Latitud = s.Latitud;
+        _model.Longitud = s.Longitud;
+        _model.UrlMapa = s.UrlMapa;
+        _model.Direccion = s.Direccion;
+        _model.Ciudad = s.Ciudad;
+        _model.ResponsableNombre = s.ResponsableNombre;
+        _model.ResponsableCargo = s.ResponsableCargo;
+        _model.Telefono = s.Telefono;
+        _model.Celular = s.Celular;
+        _model.WhatsApp = s.WhatsApp;
+        _model.Email = s.Email;
+        _model.EmailAlternativo = s.EmailAlternativo;
+        _model.EsCentral = s.EsCentral;
+        _model.Activo = s.Activo;
+        _model.PermiteVentas = s.PermiteVentas;
+        _model.PermiteCompras = s.PermiteCompras;
+        _model.PermiteInventario = s.PermiteInventario;
+        _model.PermiteDespacho = s.PermiteDespacho;
+        _model.PermiteFacturacion = s.PermiteFacturacion;
+        _model.ManejaAlmacen = s.ManejaAlmacen;
+        _model.CodigoSucursalFiscal = s.CodigoSucursalFiscal;
+        _model.PrefijoDocumental = s.PrefijoDocumental;
+        _model.Observaciones = s.Observaciones;
+    }
+
+    public void Dispose()
+    {
+        if (_editContext is not null)
+        {
+            _editContext.OnFieldChanged -= OnFieldChanged;
+        }
+    }
+
+    private sealed class SucursalFormModel
+    {
+        [Range(1, int.MaxValue, ErrorMessage = "Debe seleccionar una empresa válida.")]
+        public int EmpresaId { get; set; }
+
+        [Required(ErrorMessage = "El nombre es obligatorio.")]
+        [MaxLength(200, ErrorMessage = "El nombre no puede exceder 200 caracteres.")]
+        public string Nombre { get; set; } = string.Empty;
+
+        [MaxLength(50)] public string? Codigo { get; set; }
+        [MaxLength(50)] public string? CodigoInterno { get; set; }
+        [MaxLength(20)] public string? Sigla { get; set; }
+        [MaxLength(500)] public string? Descripcion { get; set; }
+        public Guid? PaisId { get; set; }
+        public Guid? DepartamentoId { get; set; }
+        public Guid? ProvinciaId { get; set; }
+        public Guid? CiudadId { get; set; }
+        public Guid? ZonaId { get; set; }
+        [MaxLength(100)] public string? Pais { get; set; }
+        [MaxLength(100)] public string? Departamento { get; set; }
+        [MaxLength(100)] public string? Provincia { get; set; }
+        [MaxLength(100)] public string? Zona { get; set; }
+        [MaxLength(500)] public string? Referencia { get; set; }
+        public decimal? Latitud { get; set; }
+        public decimal? Longitud { get; set; }
+        [MaxLength(1000)] public string? UrlMapa { get; set; }
+        [MaxLength(500)] public string? Direccion { get; set; }
+        [MaxLength(100)] public string? Ciudad { get; set; }
+        [MaxLength(200)] public string? ResponsableNombre { get; set; }
+        [MaxLength(100)] public string? ResponsableCargo { get; set; }
+        [MaxLength(50)] public string? Telefono { get; set; }
+        [MaxLength(50)] public string? Celular { get; set; }
+        [MaxLength(50)] public string? WhatsApp { get; set; }
+        [MaxLength(200), EmailAddress] public string? Email { get; set; }
+        [MaxLength(200), EmailAddress] public string? EmailAlternativo { get; set; }
+        public bool EsCentral { get; set; }
+        public bool Activo { get; set; } = true;
+        public bool PermiteVentas { get; set; } = true;
+        public bool PermiteCompras { get; set; } = true;
+        public bool PermiteInventario { get; set; } = true;
+        public bool PermiteDespacho { get; set; } = true;
+        public bool PermiteFacturacion { get; set; } = true;
+        public bool ManejaAlmacen { get; set; } = true;
+        [MaxLength(50)] public string? CodigoSucursalFiscal { get; set; }
+        [MaxLength(20)] public string? PrefijoDocumental { get; set; }
+        [MaxLength(1000)] public string? Observaciones { get; set; }
     }
 }

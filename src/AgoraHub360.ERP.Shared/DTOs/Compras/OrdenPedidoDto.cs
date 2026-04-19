@@ -4,6 +4,13 @@ namespace AgoraHub360.ERP.Shared.DTOs.Compras;
 public record OrdenPedidoDto(
     long OrdenPedidoId,
     int EmpresaId,
+    string EmpresaNombre,
+    int? SucursalId,
+    string? SucursalNombre,
+    int? ClienteId,
+    string? ClienteNombre,
+    int? ClienteSucursalId,
+    string? ClienteSucursalNombre,
     string Numero,
     DateTime FechaEmision,
     DateTime? FechaRequerida,
@@ -14,6 +21,9 @@ public record OrdenPedidoDto(
     int AlmacenDestinoId,
     string AlmacenDestinoNombre,
     string Estado,
+    string? DireccionEntrega,
+    string? ReferenciaEntrega,
+    string? ContactoRelacionado,
     string? Observaciones,
     string? MotivoRechazo,
     bool? StockCubre,
@@ -43,6 +53,9 @@ public record CreateOrdenPedidoDto(
     /// <summary>Normal | Urgente | Critico</summary>
     string Urgencia,
     int AlmacenDestinoId,
+    int? SucursalId = null,
+    int? ClienteId = null,
+    int? ClienteSucursalId = null,
     string? Observaciones = null,
     List<CreateOrdenPedidoLineaDto>? Lineas = null);
 
@@ -62,7 +75,10 @@ public record UpdateOrdenPedidoDto(
     /// <summary>Normal | Urgente | Critico</summary>
     string Urgencia,
     int AlmacenDestinoId,
-    string? Observaciones);
+    string? Observaciones,
+    int? SucursalId = null,
+    int? ClienteId = null,
+    int? ClienteSucursalId = null);
 
 /// <summary>
 /// DTO para registrar la revisión de stock por Compras Central.

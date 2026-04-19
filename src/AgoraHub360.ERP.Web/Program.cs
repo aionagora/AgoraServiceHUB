@@ -28,6 +28,7 @@ builder.Services.AddScoped<AuthHttpService>();
 builder.Services.AddScoped<EmpresaHttpService>();
 builder.Services.AddScoped<EmpresaStateService>();
 builder.Services.AddScoped<HttpSucursalService>();
+builder.Services.AddScoped<GeoCatalogHttpService>();
 builder.Services.AddScoped<RolHttpService>();
 builder.Services.AddScoped<UsuarioHttpService>();
 builder.Services.AddScoped<AuditLogHttpService>();
@@ -41,6 +42,7 @@ builder.Services.AddScoped<CatalogoHttpService>();
 builder.Services.AddScoped<UnidadMedidaHttpService>();
 builder.Services.AddScoped<ProductoHttpService>();
 builder.Services.AddScoped<ClienteHttpService>();
+builder.Services.AddScoped<ClienteSucursalHttpService>();
 builder.Services.AddScoped<ProveedorHttpService>();
 builder.Services.AddScoped<AlmacenHttpService>();
 

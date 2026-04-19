@@ -6,6 +6,7 @@
 @inject HttpSucursalService SucursalSvc
 @inject EmpresaHttpService EmpresaSvc
 @inject EmpresaStateService EmpresaState
+@inject NavigationManager Nav
 
 <PageTitle>Sucursales - AgoraHub360 ERP</PageTitle>
 
@@ -35,7 +36,7 @@
             </select>
         </div>
         <div class="pt-md-4">
-            <button class="btn btn-primary" @onclick="ShowCrear" disabled="@(_selectedEmpresaId <= 0)">
+            <button class="btn btn-primary" @onclick="GoToCreate" disabled="@(_selectedEmpresaId <= 0)">
                 <i class="bi bi-plus-circle me-1"></i> Nueva Sucursal
             </button>
         </div>
@@ -118,7 +119,7 @@
                                     </button>
                                 }
                                 <button class="btn btn-outline-primary btn-sm me-1"
-                                        @onclick="() => ShowEditar(suc.Id)" title="Editar">
+                                        @onclick="() => GoToEdit(suc.Id)" title="Editar">
                                     <i class="bi bi-pencil"></i>
                                 </button>
                                 @if (!suc.EsCentral)
@@ -136,16 +137,6 @@
         </div>
     }
 </div>
-
-<SucursalForm 
-    @ref="_form"
-    Show="@_showForm" 
-    EditId="@_editId"
-    DefaultEmpresaId="@_selectedEmpresaId"
-    Empresas="@_empresas"
-    Saving="@_saving"
-    OnClose="OnFormClose" 
-    OnSave="OnFormSave" />
 
 <!-- Modal Confirmar Eliminacion -->
 @if (_deleteTarget is not null)
@@ -186,10 +177,7 @@
     private string? _mensaje;
     private bool _esError;
 
-    private bool _showForm;
-    private int? _editId;
     private bool _saving;
-    private SucursalForm? _form;
 
     private SucursalListadoDto? _deleteTarget;
 
@@ -246,30 +234,14 @@
         _loading = false;
     }
 
-    private void ShowCrear()
+    private void GoToCreate()
     {
-        _editId = null;
-        _showForm = true;
+        Nav.NavigateTo($"/config/sucursales/nueva?empresaId={_selectedEmpresaId}");
     }
 
-    private async Task ShowEditar(int id)
+    private void GoToEdit(int id)
     {
-        _editId = id;
-        _showForm = true;
-
-        try
-        {
-            var sucursal = await SucursalSvc.GetByIdAsync(id);
-            if (sucursal != null && _form != null)
-            {
-                _form.LoadForEdit(sucursal);
-            }
-        }
-        catch (Exception ex)
-        {
-            ShowMsg($"No se pudo cargar la informaci&oacute;n para editar: {ex.Message}", true);
-            _showForm = false;
-        }
+        Nav.NavigateTo($"/config/sucursales/editar/{id}");
     }
 
     private void ConfirmDelete(SucursalListadoDto sucursal)
@@ -329,42 +301,6 @@
         else
         {
             ShowMsg(r.Message ?? "Error al cambiar el estado.", true);
-        }
-    }
-
-    private void OnFormClose()
-    {
-        _showForm = false;
-        _editId = null;
-    }
-
-    private async Task OnFormSave((bool esEdit, object dto) args)
-    {
-        _saving = true;
-        StateHasChanged();
-
-        ApiResponse<SucursalDto> resultado;
-        if (args.esEdit)
-        {
-            resultado = await SucursalSvc.UpdateAsync(_editId!.Value, (ActualizarSucursalDto)args.dto);
-        }
-        else
-        {
-            var createDto = (CrearSucursalDto)args.dto;
-            resultado = await SucursalSvc.CreateAsync(createDto);
-        }
-
-        _saving = false;
-
-        if (resultado.Success)
-        {
-            _showForm = false;
-            ShowMsg(args.esEdit ? "Sucursal actualizada correctamente." : "Sucursal creada con &eacute;xito.");
-            await LoadSucursalesAsync();
-        }
-        else
-        {
-            ShowMsg(resultado.Message ?? "Error al guardar.", true);
         }
     }
 
