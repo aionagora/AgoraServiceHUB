@@ -29,7 +29,7 @@
                             </div>
 
                             <div class="row mb-3">
-                                <div class="col-md-8">
+                                <div class="col-md-6">
                                     <label class="form-label">Nombre *</label>
                                     <InputText class="form-control" @bind-Value="_createModel.Nombre" />
                                     <ValidationMessage For="() => _createModel.Nombre" />
@@ -39,6 +39,26 @@
                                     <InputText class="form-control" @bind-Value="_createModel.Codigo" />
                                     <ValidationMessage For="() => _createModel.Codigo" />
                                 </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Sigla</label>
+                                    <InputText class="form-control" @bind-Value="_createModel.Sigla" />
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">C&oacute;digo Interno</label>
+                                    <InputText class="form-control" @bind-Value="_createModel.CodigoInterno" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">C&oacute;digo Sucursal Fiscal</label>
+                                    <InputText class="form-control" @bind-Value="_createModel.CodigoSucursalFiscal" />
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Descripci&oacute;n</label>
+                                <InputTextArea class="form-control" @bind-Value="_createModel.Descripcion" />
                             </div>
 
                             <div class="mb-3">
@@ -49,27 +69,149 @@
 
                             <div class="row mb-3">
                                 <div class="col-md-4">
+                                    <label class="form-label">Pa&iacute;s</label>
+                                    <InputText class="form-control" @bind-Value="_createModel.Pais" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Departamento</label>
+                                    <InputText class="form-control" @bind-Value="_createModel.Departamento" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Provincia</label>
+                                    <InputText class="form-control" @bind-Value="_createModel.Provincia" />
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Zona</label>
+                                    <InputText class="form-control" @bind-Value="_createModel.Zona" />
+                                </div>
+                                <div class="col-md-4">
                                     <label class="form-label">Ciudad</label>
                                     <InputText class="form-control" @bind-Value="_createModel.Ciudad" />
                                 </div>
                                 <div class="col-md-4">
+                                    <label class="form-label">Referencia</label>
+                                    <InputText class="form-control" @bind-Value="_createModel.Referencia" />
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Latitud</label>
+                                    <InputNumber class="form-control" @bind-Value="_createModel.Latitud" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Longitud</label>
+                                    <InputNumber class="form-control" @bind-Value="_createModel.Longitud" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">URL Mapa</label>
+                                    <InputText class="form-control" @bind-Value="_createModel.UrlMapa" />
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Responsable</label>
+                                    <InputText class="form-control" @bind-Value="_createModel.ResponsableNombre" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Cargo Responsable</label>
+                                    <InputText class="form-control" @bind-Value="_createModel.ResponsableCargo" />
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-3">
                                     <label class="form-label">Tel&eacute;fono</label>
                                     <InputText class="form-control" @bind-Value="_createModel.Telefono" />
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
+                                    <label class="form-label">Celular</label>
+                                    <InputText class="form-control" @bind-Value="_createModel.Celular" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">WhatsApp</label>
+                                    <InputText class="form-control" @bind-Value="_createModel.WhatsApp" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Prefijo Documental</label>
+                                    <InputText class="form-control" @bind-Value="_createModel.PrefijoDocumental" />
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
                                     <label class="form-label">Email</label>
                                     <InputText class="form-control" @bind-Value="_createModel.Email" />
                                     <ValidationMessage For="() => _createModel.Email" />
                                 </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Email Alternativo</label>
+                                    <InputText class="form-control" @bind-Value="_createModel.EmailAlternativo" />
+                                    <ValidationMessage For="() => _createModel.EmailAlternativo" />
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Observaciones</label>
+                                <InputTextArea class="form-control" @bind-Value="_createModel.Observaciones" />
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check form-switch">
+                                        <InputCheckbox class="form-check-input" @bind-Value="_createModel.PermiteVentas" id="chkPermiteVentas_c" />
+                                        <label class="form-check-label" for="chkPermiteVentas_c">Permite Ventas</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check form-switch">
+                                        <InputCheckbox class="form-check-input" @bind-Value="_createModel.PermiteCompras" id="chkPermiteCompras_c" />
+                                        <label class="form-check-label" for="chkPermiteCompras_c">Permite Compras</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check form-switch">
+                                        <InputCheckbox class="form-check-input" @bind-Value="_createModel.PermiteInventario" id="chkPermiteInventario_c" />
+                                        <label class="form-check-label" for="chkPermiteInventario_c">Permite Inventario</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check form-switch">
+                                        <InputCheckbox class="form-check-input" @bind-Value="_createModel.PermiteDespacho" id="chkPermiteDespacho_c" />
+                                        <label class="form-check-label" for="chkPermiteDespacho_c">Permite Despacho</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check form-switch">
+                                        <InputCheckbox class="form-check-input" @bind-Value="_createModel.PermiteFacturacion" id="chkPermiteFacturacion_c" />
+                                        <label class="form-check-label" for="chkPermiteFacturacion_c">Permite Facturaci&oacute;n</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check form-switch">
+                                        <InputCheckbox class="form-check-input" @bind-Value="_createModel.ManejaAlmacen" id="chkManejaAlmacen_c" />
+                                        <label class="form-check-label" for="chkManejaAlmacen_c">Maneja Almac&eacute;n</label>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="row">
-                                <div class="col-md-12 mb-3">
+                                <div class="col-md-6 mb-3">
                                     <div class="form-check form-switch">
                                         <InputCheckbox class="form-check-input" @bind-Value="_createModel.EsCentral" id="chkEsCentral_c" />
                                         <label class="form-check-label" for="chkEsCentral_c">Es Central (Principal)</label>
                                     </div>
                                     <small class="text-muted d-block">Establecer esta sucursal como casa matriz de la empresa seleccionada.</small>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="form-check form-switch">
+                                        <InputCheckbox class="form-check-input" @bind-Value="_createModel.Activo" id="chkActivo_c" />
+                                        <label class="form-check-label" for="chkActivo_c">Activa</label>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -91,7 +233,7 @@
                         <DataAnnotationsValidator />
                         <div class="modal-body">
                             <div class="row mb-3">
-                                <div class="col-md-8">
+                                <div class="col-md-6">
                                     <label class="form-label">Nombre *</label>
                                     <InputText class="form-control" @bind-Value="_updateModel.Nombre" />
                                     <ValidationMessage For="() => _updateModel.Nombre" />
@@ -101,6 +243,26 @@
                                     <InputText class="form-control" @bind-Value="_updateModel.Codigo" />
                                     <ValidationMessage For="() => _updateModel.Codigo" />
                                 </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">Sigla</label>
+                                    <InputText class="form-control" @bind-Value="_updateModel.Sigla" />
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">C&oacute;digo Interno</label>
+                                    <InputText class="form-control" @bind-Value="_updateModel.CodigoInterno" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">C&oacute;digo Sucursal Fiscal</label>
+                                    <InputText class="form-control" @bind-Value="_updateModel.CodigoSucursalFiscal" />
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Descripci&oacute;n</label>
+                                <InputTextArea class="form-control" @bind-Value="_updateModel.Descripcion" />
                             </div>
 
                             <div class="mb-3">
@@ -111,22 +273,138 @@
 
                             <div class="row mb-3">
                                 <div class="col-md-4">
+                                    <label class="form-label">Pa&iacute;s</label>
+                                    <InputText class="form-control" @bind-Value="_updateModel.Pais" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Departamento</label>
+                                    <InputText class="form-control" @bind-Value="_updateModel.Departamento" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Provincia</label>
+                                    <InputText class="form-control" @bind-Value="_updateModel.Provincia" />
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Zona</label>
+                                    <InputText class="form-control" @bind-Value="_updateModel.Zona" />
+                                </div>
+                                <div class="col-md-4">
                                     <label class="form-label">Ciudad</label>
                                     <InputText class="form-control" @bind-Value="_updateModel.Ciudad" />
                                 </div>
                                 <div class="col-md-4">
+                                    <label class="form-label">Referencia</label>
+                                    <InputText class="form-control" @bind-Value="_updateModel.Referencia" />
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">Latitud</label>
+                                    <InputNumber class="form-control" @bind-Value="_updateModel.Latitud" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Longitud</label>
+                                    <InputNumber class="form-control" @bind-Value="_updateModel.Longitud" />
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">URL Mapa</label>
+                                    <InputText class="form-control" @bind-Value="_updateModel.UrlMapa" />
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Responsable</label>
+                                    <InputText class="form-control" @bind-Value="_updateModel.ResponsableNombre" />
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Cargo Responsable</label>
+                                    <InputText class="form-control" @bind-Value="_updateModel.ResponsableCargo" />
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-3">
                                     <label class="form-label">Tel&eacute;fono</label>
                                     <InputText class="form-control" @bind-Value="_updateModel.Telefono" />
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
+                                    <label class="form-label">Celular</label>
+                                    <InputText class="form-control" @bind-Value="_updateModel.Celular" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">WhatsApp</label>
+                                    <InputText class="form-control" @bind-Value="_updateModel.WhatsApp" />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Prefijo Documental</label>
+                                    <InputText class="form-control" @bind-Value="_updateModel.PrefijoDocumental" />
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
                                     <label class="form-label">Email</label>
                                     <InputText class="form-control" @bind-Value="_updateModel.Email" />
                                     <ValidationMessage For="() => _updateModel.Email" />
                                 </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Email Alternativo</label>
+                                    <InputText class="form-control" @bind-Value="_updateModel.EmailAlternativo" />
+                                    <ValidationMessage For="() => _updateModel.EmailAlternativo" />
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Observaciones</label>
+                                <InputTextArea class="form-control" @bind-Value="_updateModel.Observaciones" />
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check form-switch">
+                                        <InputCheckbox class="form-check-input" @bind-Value="_updateModel.PermiteVentas" id="chkPermiteVentas_u" />
+                                        <label class="form-check-label" for="chkPermiteVentas_u">Permite Ventas</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check form-switch">
+                                        <InputCheckbox class="form-check-input" @bind-Value="_updateModel.PermiteCompras" id="chkPermiteCompras_u" />
+                                        <label class="form-check-label" for="chkPermiteCompras_u">Permite Compras</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check form-switch">
+                                        <InputCheckbox class="form-check-input" @bind-Value="_updateModel.PermiteInventario" id="chkPermiteInventario_u" />
+                                        <label class="form-check-label" for="chkPermiteInventario_u">Permite Inventario</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check form-switch">
+                                        <InputCheckbox class="form-check-input" @bind-Value="_updateModel.PermiteDespacho" id="chkPermiteDespacho_u" />
+                                        <label class="form-check-label" for="chkPermiteDespacho_u">Permite Despacho</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check form-switch">
+                                        <InputCheckbox class="form-check-input" @bind-Value="_updateModel.PermiteFacturacion" id="chkPermiteFacturacion_u" />
+                                        <label class="form-check-label" for="chkPermiteFacturacion_u">Permite Facturaci&oacute;n</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <div class="form-check form-switch">
+                                        <InputCheckbox class="form-check-input" @bind-Value="_updateModel.ManejaAlmacen" id="chkManejaAlmacen_u" />
+                                        <label class="form-check-label" for="chkManejaAlmacen_u">Maneja Almac&eacute;n</label>
+                                    </div>
+                                </div>
                             </div>
 
                             <div class="row">
-                                <div class="col-md-6 mb-3">
+                                <div class="col-md-4 mb-3">
                                     <div class="form-check form-switch">
                                         <InputCheckbox class="form-check-input" @bind-Value="_updateModel.EsCentral" id="chkEsCentral_u" />
                                         <label class="form-check-label" for="chkEsCentral_u">Es Central (Principal)</label>
@@ -134,12 +412,13 @@
                                     <small class="text-muted d-block">Establecer esta sucursal como casa matriz de la empresa seleccionada.</small>
                                 </div>
 
-                                <div class="col-md-6 mb-3">
+                                <div class="col-md-4 mb-3">
                                     <div class="form-check form-switch">
                                         <InputCheckbox class="form-check-input" @bind-Value="_updateModel.Activo" id="chkActivo_u" />
                                         <label class="form-check-label" for="chkActivo_u">Activa</label>
                                     </div>
                                 </div>
+
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -189,11 +468,36 @@
         {
             Nombre = sucursal.Nombre,
             Codigo = sucursal.Codigo,
+            CodigoInterno = sucursal.CodigoInterno,
+            Sigla = sucursal.Sigla,
+            Descripcion = sucursal.Descripcion,
+            Pais = sucursal.Pais,
+            Departamento = sucursal.Departamento,
+            Provincia = sucursal.Provincia,
+            Zona = sucursal.Zona,
+            Referencia = sucursal.Referencia,
+            Latitud = sucursal.Latitud,
+            Longitud = sucursal.Longitud,
+            UrlMapa = sucursal.UrlMapa,
             Direccion = sucursal.Direccion,
             Ciudad = sucursal.Ciudad,
+            ResponsableNombre = sucursal.ResponsableNombre,
+            ResponsableCargo = sucursal.ResponsableCargo,
+            Celular = sucursal.Celular,
+            WhatsApp = sucursal.WhatsApp,
+            EmailAlternativo = sucursal.EmailAlternativo,
             Telefono = sucursal.Telefono,
             Email = sucursal.Email,
             EsCentral = sucursal.EsCentral,
+            PermiteVentas = sucursal.PermiteVentas,
+            PermiteCompras = sucursal.PermiteCompras,
+            PermiteInventario = sucursal.PermiteInventario,
+            PermiteDespacho = sucursal.PermiteDespacho,
+            PermiteFacturacion = sucursal.PermiteFacturacion,
+            ManejaAlmacen = sucursal.ManejaAlmacen,
+            CodigoSucursalFiscal = sucursal.CodigoSucursalFiscal,
+            PrefijoDocumental = sucursal.PrefijoDocumental,
+            Observaciones = sucursal.Observaciones,
             Activo = sucursal.Activo
         };
         StateHasChanged();
