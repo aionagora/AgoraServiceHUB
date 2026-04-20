@@ -86,6 +86,8 @@ builder.Services.AddScoped<IWorkflowClientService, WorkflowHttpService>();
 
 // ──── Dashboard ────
 builder.Services.AddScoped<DashboardDataService>();
+builder.Services.AddScoped<SeguridadDinamicaHttpService>();
+builder.Services.AddScoped<SesionUsuarioStateService>();
 
 // ──── Demo Seed ────
 builder.Services.AddScoped<EmpresaDemoService>();

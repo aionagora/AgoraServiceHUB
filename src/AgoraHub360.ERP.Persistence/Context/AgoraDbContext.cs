@@ -49,6 +49,13 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     public DbSet<Sucursal> Sucursales => Set<Sucursal>();
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<UsuarioEmpresa> UsuarioEmpresas => Set<UsuarioEmpresa>();
+    public DbSet<UsuarioSucursalAcceso> UsuariosSucursalesAccesos => Set<UsuarioSucursalAcceso>();
+    public DbSet<ModuloSistema> ModulosSistema => Set<ModuloSistema>();
+    public DbSet<FormularioSistema> FormulariosSistema => Set<FormularioSistema>();
+    public DbSet<AccionSistema> AccionesSistema => Set<AccionSistema>();
+    public DbSet<PerfilAcceso> PerfilesAcceso => Set<PerfilAcceso>();
+    public DbSet<PerfilPermiso> PerfilesPermisos => Set<PerfilPermiso>();
+    public DbSet<UsuarioPerfil> UsuariosPerfiles => Set<UsuarioPerfil>();
     public DbSet<Moneda> Monedas => Set<Moneda>();
     public DbSet<Pais> Paises => Set<Pais>();
     public DbSet<Departamento> Departamentos => Set<Departamento>();
@@ -62,6 +69,8 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     // ── MDM: Third parties ────────────────────────────────────────────────────
     public DbSet<Cliente> Clientes => Set<Cliente>();
     public DbSet<ClienteSucursal> ClienteSucursales => Set<ClienteSucursal>();
+    public DbSet<Contacto> Contactos => Set<Contacto>();
+    public DbSet<ContactoUsuarioAcceso> ContactosUsuariosAccesos => Set<ContactoUsuarioAcceso>();
     public DbSet<Proveedor> Proveedores => Set<Proveedor>();
     public DbSet<Almacen> Almacenes => Set<Almacen>();
     public DbSet<UbicacionAlmacen> UbicacionesAlmacen => Set<UbicacionAlmacen>();

@@ -3,6 +3,7 @@
 @layout LoginLayout
 @inject AuthHttpService AuthSvc
 @inject JwtAuthStateProvider AuthState
+@inject SesionUsuarioStateService SesionState
 @inject NavigationManager Nav
 
 <PageTitle>Iniciar Sesión - AgoraHub360 ERP</PageTitle>
@@ -84,6 +85,7 @@
             if (result.Success && result.Data is not null)
             {
                 await AuthState.LoginAsync(result.Data.Token);
+                await SesionState.InitializeAsync(forceReload: true);
                 Nav.NavigateTo("/", forceLoad: false);
             }
             else

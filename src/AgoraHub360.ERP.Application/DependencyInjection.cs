@@ -20,7 +20,9 @@ public static class DependencyInjection
         services.AddScoped<IEmpresaService, EmpresaService>();
         services.AddScoped<ISucursalService, SucursalService>();
         services.AddScoped<IRolService, RolService>();
+        services.AddScoped<ISeguridadDinamicaService, SeguridadDinamicaService>();
         services.AddScoped<IUsuarioService, UsuarioService>();
+        services.AddScoped<IUsuarioSucursalAccesoService, UsuarioSucursalAccesoService>();
         services.AddScoped<IParametroSistemaService, ParametroSistemaService>();
         services.AddScoped<INumeracionDocumentoService, NumeracionDocumentoService>();
         services.AddScoped<IGeografiaService, GeografiaService>();
@@ -28,6 +30,8 @@ public static class DependencyInjection
         // MDM: third parties
         services.AddScoped<IClienteService, ClienteService>();
         services.AddScoped<IClienteSucursalService, ClienteSucursalService>();
+        services.AddScoped<IContactoService, ContactoService>();
+        services.AddScoped<IContactoUsuarioAccesoService, ContactoUsuarioAccesoService>();
         services.AddScoped<IProveedorService, ProveedorService>();
         services.AddScoped<IAlmacenService, AlmacenService>();
 

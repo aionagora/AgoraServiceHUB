@@ -2,6 +2,7 @@
 @using System.Security.Claims
 @inject EmpresaHttpService EmpresaSvc
 @inject EmpresaStateService EmpresaState
+@inject SesionUsuarioStateService SesionState
 @inject JwtAuthStateProvider AuthState
 @inject NavigationManager Nav
 @implements IDisposable
@@ -40,6 +41,28 @@
                                 }
                             }
                         </select>
+                    </div>
+                }
+
+                @if (SesionState.Sucursales.Count > 1)
+                {
+                    <div class="empresa-selector">
+                        <i class="bi bi-shop"></i>
+                        <select class="empresa-select" @onchange="OnSucursalChanged">
+                            @foreach (var suc in SesionState.Sucursales.Where(x => x.Activo))
+                            {
+                                <option value="@suc.SucursalId" selected="@(suc.SucursalId == SesionState.SucursalActivaId)">
+                                    Sucursal #@suc.SucursalId
+                                </option>
+                            }
+                        </select>
+                    </div>
+                }
+                else if (SesionState.SucursalActivaId.HasValue)
+                {
+                    <div class="empresa-badge">
+                        <i class="bi bi-shop"></i>
+                        <span class="empresa-nombre">Sucursal #@SesionState.SucursalActivaId</span>
                     </div>
                 }
                 else if (EmpresaState.EmpresaActiva != null)
@@ -118,7 +141,9 @@
     protected override async Task OnInitializedAsync()
     {
         EmpresaState.OnChange += StateHasChanged;
+        SesionState.OnChange += StateHasChanged;
         await LoadEmpresasAsync();
+        await SesionState.InitializeAsync();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -162,6 +187,12 @@
         }
     }
 
+    private async Task OnSucursalChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var id))
+            await SesionState.SetSucursalActivaAsync(id);
+    }
+
     private void ToggleSidebar()
     {
         SidebarCollapsed = !SidebarCollapsed;
@@ -187,6 +218,7 @@
     {
         // Limpiar el estado de la empresa
         await EmpresaState.ClearAsync();
+        await SesionState.ClearAsync();
         
         // Cerrar sesión
         await AuthState.LogoutAsync();
@@ -203,5 +235,6 @@
     public void Dispose()
     {
         EmpresaState.OnChange -= StateHasChanged;
+        SesionState.OnChange -= StateHasChanged;
     }
 }
