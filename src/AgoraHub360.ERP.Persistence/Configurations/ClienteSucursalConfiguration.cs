@@ -20,11 +20,44 @@ public class ClienteSucursalConfiguration : IEntityTypeConfiguration<ClienteSucu
             .IsRequired()
             .HasMaxLength(200);
 
+        builder.Property(x => x.AliasComercial)
+            .HasMaxLength(200);
+
         builder.Property(x => x.Direccion)
             .HasMaxLength(500);
 
         builder.Property(x => x.Referencia)
             .HasMaxLength(500);
+
+        builder.Property(x => x.UrlMapa)
+            .HasMaxLength(1000);
+
+        builder.Property(x => x.ResponsableNombre)
+            .HasMaxLength(200);
+
+        builder.Property(x => x.ResponsableCargo)
+            .HasMaxLength(100);
+
+        builder.Property(x => x.Telefono)
+            .HasMaxLength(50);
+
+        builder.Property(x => x.Celular)
+            .HasMaxLength(50);
+
+        builder.Property(x => x.WhatsApp)
+            .HasMaxLength(50);
+
+        builder.Property(x => x.Email)
+            .HasMaxLength(200);
+
+        builder.Property(x => x.RecibePedidos)
+            .HasDefaultValue(true);
+
+        builder.Property(x => x.RecibeFacturacion)
+            .HasDefaultValue(true);
+
+        builder.Property(x => x.EsPuntoEntrega)
+            .HasDefaultValue(true);
 
         builder.Property(x => x.Observaciones)
             .HasMaxLength(1000);

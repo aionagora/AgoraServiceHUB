@@ -12,6 +12,9 @@ public class CreateClienteSucursalDto
     [MaxLength(200, ErrorMessage = "Máximo 200 caracteres.")]
     public string Nombre { get; set; } = string.Empty;
 
+    [MaxLength(200, ErrorMessage = "Máximo 200 caracteres.")]
+    public string? AliasComercial { get; set; }
+
     public int? PaisId { get; set; }
     public int? DepartamentoId { get; set; }
     public int? ProvinciaId { get; set; }
@@ -24,13 +27,37 @@ public class CreateClienteSucursalDto
     [MaxLength(500, ErrorMessage = "Máximo 500 caracteres.")]
     public string? Referencia { get; set; }
 
+    [MaxLength(1000, ErrorMessage = "Máximo 1000 caracteres.")]
+    public string? UrlMapa { get; set; }
+
     public decimal? Latitud { get; set; }
     public decimal? Longitud { get; set; }
 
     public int? ContactoPrincipalId { get; set; }
+    [MaxLength(200, ErrorMessage = "Máximo 200 caracteres.")]
+    public string? ResponsableNombre { get; set; }
+
+    [MaxLength(100, ErrorMessage = "Máximo 100 caracteres.")]
+    public string? ResponsableCargo { get; set; }
+
+    [MaxLength(50, ErrorMessage = "Máximo 50 caracteres.")]
+    public string? Telefono { get; set; }
+
+    [MaxLength(50, ErrorMessage = "Máximo 50 caracteres.")]
+    public string? Celular { get; set; }
+
+    [MaxLength(50, ErrorMessage = "Máximo 50 caracteres.")]
+    public string? WhatsApp { get; set; }
+
+    [MaxLength(200, ErrorMessage = "Máximo 200 caracteres.")]
+    [EmailAddress(ErrorMessage = "Formato de email inválido.")]
+    public string? Email { get; set; }
 
     public bool EsPrincipal { get; set; }
     public bool Activo { get; set; } = true;
+    public bool RecibePedidos { get; set; } = true;
+    public bool RecibeFacturacion { get; set; } = true;
+    public bool EsPuntoEntrega { get; set; } = true;
 
     [MaxLength(1000, ErrorMessage = "Máximo 1000 caracteres.")]
     public string? Observaciones { get; set; }

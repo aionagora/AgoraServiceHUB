@@ -87,6 +87,7 @@ public class ClienteSucursalService : IClienteSucursalService
             ClienteId = clienteId,
             Codigo = dto.Codigo,
             Nombre = dto.Nombre,
+            AliasComercial = dto.AliasComercial,
             PaisId = dto.PaisId,
             DepartamentoId = dto.DepartamentoId,
             ProvinciaId = dto.ProvinciaId,
@@ -94,11 +95,21 @@ public class ClienteSucursalService : IClienteSucursalService
             ZonaId = dto.ZonaId,
             Direccion = dto.Direccion,
             Referencia = dto.Referencia,
+            UrlMapa = dto.UrlMapa,
             Latitud = dto.Latitud,
             Longitud = dto.Longitud,
             ContactoPrincipalId = dto.ContactoPrincipalId,
+            ResponsableNombre = dto.ResponsableNombre,
+            ResponsableCargo = dto.ResponsableCargo,
+            Telefono = dto.Telefono,
+            Celular = dto.Celular,
+            WhatsApp = dto.WhatsApp,
+            Email = dto.Email,
             EsPrincipal = debeSerPrincipal,
             Activo = dto.Activo,
+            RecibePedidos = dto.RecibePedidos,
+            RecibeFacturacion = dto.RecibeFacturacion,
+            EsPuntoEntrega = dto.EsPuntoEntrega,
             Observaciones = dto.Observaciones
         };
 
@@ -130,6 +141,7 @@ public class ClienteSucursalService : IClienteSucursalService
 
         entity.Codigo = dto.Codigo;
         entity.Nombre = dto.Nombre;
+        entity.AliasComercial = dto.AliasComercial;
         entity.PaisId = dto.PaisId;
         entity.DepartamentoId = dto.DepartamentoId;
         entity.ProvinciaId = dto.ProvinciaId;
@@ -137,11 +149,21 @@ public class ClienteSucursalService : IClienteSucursalService
         entity.ZonaId = dto.ZonaId;
         entity.Direccion = dto.Direccion;
         entity.Referencia = dto.Referencia;
+        entity.UrlMapa = dto.UrlMapa;
         entity.Latitud = dto.Latitud;
         entity.Longitud = dto.Longitud;
         entity.ContactoPrincipalId = dto.ContactoPrincipalId;
+        entity.ResponsableNombre = dto.ResponsableNombre;
+        entity.ResponsableCargo = dto.ResponsableCargo;
+        entity.Telefono = dto.Telefono;
+        entity.Celular = dto.Celular;
+        entity.WhatsApp = dto.WhatsApp;
+        entity.Email = dto.Email;
         entity.EsPrincipal = dto.EsPrincipal;
         entity.Activo = dto.Activo;
+        entity.RecibePedidos = dto.RecibePedidos;
+        entity.RecibeFacturacion = dto.RecibeFacturacion;
+        entity.EsPuntoEntrega = dto.EsPuntoEntrega;
         entity.Observaciones = dto.Observaciones;
 
         if (entity.Activo && !entity.EsPrincipal)
@@ -243,6 +265,7 @@ public class ClienteSucursalService : IClienteSucursalService
         EmpresaId = e.EmpresaId,
         Codigo = e.Codigo,
         Nombre = e.Nombre,
+        AliasComercial = e.AliasComercial,
         PaisId = e.PaisId,
         DepartamentoId = e.DepartamentoId,
         ProvinciaId = e.ProvinciaId,
@@ -250,11 +273,21 @@ public class ClienteSucursalService : IClienteSucursalService
         ZonaId = e.ZonaId,
         Direccion = e.Direccion,
         Referencia = e.Referencia,
+        UrlMapa = e.UrlMapa,
         Latitud = e.Latitud,
         Longitud = e.Longitud,
         ContactoPrincipalId = e.ContactoPrincipalId,
+        ResponsableNombre = e.ResponsableNombre,
+        ResponsableCargo = e.ResponsableCargo,
+        Telefono = e.Telefono,
+        Celular = e.Celular,
+        WhatsApp = e.WhatsApp,
+        Email = e.Email,
         EsPrincipal = e.EsPrincipal,
         Activo = e.Activo,
+        RecibePedidos = e.RecibePedidos,
+        RecibeFacturacion = e.RecibeFacturacion,
+        EsPuntoEntrega = e.EsPuntoEntrega,
         Observaciones = e.Observaciones,
         FechaCreacion = e.FechaCreacion
     };
