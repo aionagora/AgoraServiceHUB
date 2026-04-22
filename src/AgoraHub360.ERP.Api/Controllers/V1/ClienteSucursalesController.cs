@@ -25,7 +25,12 @@ public class ClienteSucursalesController : ControllerBase
     {
         var result = await _service.GetAllByClienteAsync(clienteId, ct);
         if (!result.IsSuccess)
+        {
+            if (result.Error!.Contains("no encontrado", StringComparison.OrdinalIgnoreCase))
+                return NotFound(ApiResponse<IReadOnlyList<ClienteSucursalDto>>.Fail(result.Error!));
+
             return BadRequest(ApiResponse<IReadOnlyList<ClienteSucursalDto>>.Fail(result.Error!));
+        }
 
         return Ok(ApiResponse<IReadOnlyList<ClienteSucursalDto>>.Ok(result.Value!));
     }
@@ -73,7 +78,12 @@ public class ClienteSucursalesController : ControllerBase
     {
         var result = await _service.DeleteAsync(clienteId, id, ct);
         if (!result.IsSuccess)
+        {
+            if (result.Error!.Contains("no encontrada", StringComparison.OrdinalIgnoreCase))
+                return NotFound(ApiResponse<bool>.Fail(result.Error!));
+
             return BadRequest(ApiResponse<bool>.Fail(result.Error!));
+        }
 
         return Ok(ApiResponse<bool>.Ok(true, "Sucursal de cliente desactivada exitosamente."));
     }
@@ -83,7 +93,12 @@ public class ClienteSucursalesController : ControllerBase
     {
         var result = await _service.SetPrincipalAsync(clienteId, id, ct);
         if (!result.IsSuccess)
+        {
+            if (result.Error!.Contains("no encontrada", StringComparison.OrdinalIgnoreCase))
+                return NotFound(ApiResponse<bool>.Fail(result.Error!));
+
             return BadRequest(ApiResponse<bool>.Fail(result.Error!));
+        }
 
         return Ok(ApiResponse<bool>.Ok(true, "Sucursal de cliente establecida como principal."));
     }

@@ -1,5 +1,5 @@
-@page "/maestros/clientes/nuevo"
-@page "/maestros/clientes/editar/{Id:int}"
+@page "/mdm/clientes/nuevo"
+@page "/mdm/clientes/editar/{Id:int}"
 @attribute [Authorize]
 @inject NavigationManager Nav
 @inject ClienteHttpService ClienteService
@@ -270,9 +270,30 @@
                                     </div>
 
                                     <div class="row">
+                                        <div class="col-md-3 mb-3">
+                                            <label class="form-label fw-semibold">País *</label>
+                                            <InputNumber class="form-control form-control-sm" @bind-Value="sucursalForm.PaisId" />
+                                            <ValidationMessage For="@(() => sucursalForm.PaisId)" />
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <label class="form-label fw-semibold">Departamento</label>
+                                            <InputNumber class="form-control form-control-sm" @bind-Value="sucursalForm.DepartamentoId" />
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <label class="form-label fw-semibold">Ciudad</label>
+                                            <InputNumber class="form-control form-control-sm" @bind-Value="sucursalForm.CiudadId" />
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <label class="form-label fw-semibold">Zona</label>
+                                            <InputNumber class="form-control form-control-sm" @bind-Value="sucursalForm.ZonaId" />
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
                                         <div class="col-md-8 mb-3">
-                                            <label class="form-label fw-semibold">Dirección</label>
+                                            <label class="form-label fw-semibold">Dirección *</label>
                                             <InputText class="form-control form-control-sm" @bind-Value="sucursalForm.Direccion" />
+                                            <ValidationMessage For="@(() => sucursalForm.Direccion)" />
                                         </div>
                                         <div class="col-md-4 mb-3">
                                             <label class="form-label fw-semibold">Referencia</label>
@@ -332,9 +353,19 @@
                                         </div>
                                     </div>
 
-                                    <div class="mb-3">
-                                        <label class="form-label fw-semibold">URL Mapa</label>
-                                        <InputText class="form-control form-control-sm" @bind-Value="sucursalForm.UrlMapa" />
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label fw-semibold">URL Mapa</label>
+                                            <InputText class="form-control form-control-sm" @bind-Value="sucursalForm.UrlMapa" />
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <label class="form-label fw-semibold">Latitud</label>
+                                            <InputNumber class="form-control form-control-sm" @bind-Value="sucursalForm.Latitud" />
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <label class="form-label fw-semibold">Longitud</label>
+                                            <InputNumber class="form-control form-control-sm" @bind-Value="sucursalForm.Longitud" />
+                                        </div>
                                     </div>
 
                                     <div class="mb-3">
@@ -486,7 +517,7 @@
                 var res = await ClienteService.CreateAsync(dto);
                 if (res.Success)
                 {
-                    Nav.NavigateTo($"/maestros/clientes/editar/{res.Data!.Id}");
+                    Nav.NavigateTo($"/mdm/clientes/editar/{res.Data!.Id}");
                 }
                 else
                 {

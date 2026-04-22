@@ -73,6 +73,22 @@ public class ClienteSucursalService : IClienteSucursalService
 
         var existentes = await _clienteSucursalRepository.FindAsync(x => x.ClienteId == clienteId, ct);
 
+        // Validaciones de negocio
+        if (string.IsNullOrWhiteSpace(dto.Codigo))
+            return Result<ClienteSucursalDto>.Failure("El código de la sucursal es obligatorio.");
+
+        if (string.IsNullOrWhiteSpace(dto.Nombre))
+            return Result<ClienteSucursalDto>.Failure("El nombre de la sucursal es obligatorio.");
+
+        if (string.IsNullOrWhiteSpace(dto.Direccion))
+            return Result<ClienteSucursalDto>.Failure("La dirección de la sucursal es obligatoria.");
+
+        if (!dto.PaisId.HasValue || dto.PaisId.Value <= 0)
+            return Result<ClienteSucursalDto>.Failure("El país es obligatorio para la sucursal.");
+
+        if (!string.IsNullOrWhiteSpace(dto.Email) && !new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(dto.Email))
+            return Result<ClienteSucursalDto>.Failure("El formato del email no es válido.");
+
         if (existentes.Any(x => x.Codigo == dto.Codigo))
             return Result<ClienteSucursalDto>.Failure($"Ya existe una sucursal de cliente con código '{dto.Codigo}'.");
 
@@ -132,6 +148,22 @@ public class ClienteSucursalService : IClienteSucursalService
             return Result<ClienteSucursalDto>.Failure("Sucursal de cliente no encontrada.");
 
         var existentes = await _clienteSucursalRepository.FindAsync(x => x.ClienteId == clienteId, ct);
+
+        // Validaciones de negocio
+        if (string.IsNullOrWhiteSpace(dto.Codigo))
+            return Result<ClienteSucursalDto>.Failure("El código de la sucursal es obligatorio.");
+
+        if (string.IsNullOrWhiteSpace(dto.Nombre))
+            return Result<ClienteSucursalDto>.Failure("El nombre de la sucursal es obligatorio.");
+
+        if (string.IsNullOrWhiteSpace(dto.Direccion))
+            return Result<ClienteSucursalDto>.Failure("La dirección de la sucursal es obligatoria.");
+
+        if (!dto.PaisId.HasValue || dto.PaisId.Value <= 0)
+            return Result<ClienteSucursalDto>.Failure("El país es obligatorio para la sucursal.");
+
+        if (!string.IsNullOrWhiteSpace(dto.Email) && !new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(dto.Email))
+            return Result<ClienteSucursalDto>.Failure("El formato del email no es válido.");
 
         if (existentes.Any(x => x.Id != id && x.Codigo == dto.Codigo))
             return Result<ClienteSucursalDto>.Failure($"Ya existe otra sucursal de cliente con código '{dto.Codigo}'.");
@@ -200,11 +232,13 @@ public class ClienteSucursalService : IClienteSucursalService
                 .OrderBy(x => x.Id)
                 .FirstOrDefault();
 
-            if (reemplazo is null)
-                return Result<bool>.Failure("No se puede desactivar la única sucursal principal activa del cliente.");
-
-            reemplazo.EsPrincipal = true;
-            await _clienteSucursalRepository.UpdateAsync(reemplazo, ct);
+            // Si hay un reemplazo activo, lo marcamos como principal.
+            if (reemplazo is not null)
+            {
+                reemplazo.EsPrincipal = true;
+                await _clienteSucursalRepository.UpdateAsync(reemplazo, ct);
+            }
+            // Si es la unica sucursal simplemente dejamos que se marque como inactiva (a menos que haya regla estricta que no deje que el cliente se quede sin sucursales principales activas)
         }
 
         entity.Activo = false;
