@@ -137,12 +137,12 @@
 
     private void GoToCreate()
     {
-        Nav.NavigateTo("/maestros/clientes/nuevo");
+        Nav.NavigateTo("/mdm/clientes/nuevo");
     }
 
     private void GoToEdit(ClienteDto cliente)
     {
-        Nav.NavigateTo($"/maestros/clientes/editar/{cliente.Id}");
+        Nav.NavigateTo($"/mdm/clientes/editar/{cliente.Id}");
     }
 
     private async Task DeleteCliente(ClienteDto cliente)
