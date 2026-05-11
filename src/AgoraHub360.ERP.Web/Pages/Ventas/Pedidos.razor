@@ -10,13 +10,13 @@
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center py-3">
         <span>Listado de Pedidos</span>
-        <button class="btn btn-primary btn-sm" disabled>
+        <button class="btn btn-primary btn-sm" @onclick="GoToNuevo">
             <i class="bi bi-plus-circle me-1"></i> Nuevo Pedido
         </button>
     </div>
     <div class="card-body text-center py-5">
         <i class="bi bi-receipt" style="font-size: 3rem; color: var(--agora-text-light);"></i>
-        <p class="text-muted mt-3">Módulo en construcción.</p>
+        <p class="text-muted mt-3">De click en "Nuevo Pedido" para probar el nuevo flujo comercial.</p>
     </div>
 </div>
 
@@ -40,15 +40,15 @@
 }
 
 @code {
+    @inject NavigationManager Nav
+
     // Variables preparadas para el módulo de OrdenVenta
-    // Se conectarán al servicio cuando el módulo esté implementado.
     private bool mostrarPreviewWorkflow = false;
     private int  previewOrdenVentaId   = 0;
     private bool previewIsReadOnly     = false;
 
-    // Firma estándar que usará cada fila del listado de ventas:
-    //   <TareasTab EntityType="OrdenVenta"
-    //              EntityId="@ov.OrdenVentaId"
-    //              IsReadOnly="@(ov.Estado is "ENTREGADA" or "COBRADA")"
-    //              OnTareaCompletada="LoadData" />
+    private void GoToNuevo()
+    {
+        Nav.NavigateTo("/ventas/pedidos/nuevo");
+    }
 }
