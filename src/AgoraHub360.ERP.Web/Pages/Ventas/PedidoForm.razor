@@ -5,11 +5,11 @@
 @using AgoraHub360.ERP.Shared.DTOs.Ventas
 @using AgoraHub360.ERP.Shared.DTOs.MDM
 @using AgoraHub360.ERP.Shared.DTOs.Sucursal
-@* @inject PedidoVentaHttpService PedidoService *@
-@* @inject ClienteHttpService ClienteService *@
-@* @inject SucursalHttpService SucursalService *@
-@* @inject AlmacenHttpService AlmacenService *@
-@* @inject AuthenticationStateProvider AuthStateProvider *@
+@inject PedidoVentaHttpService PedidoService
+@inject ClienteHttpService ClienteService
+@inject HttpSucursalService SucursalService
+@inject AlmacenHttpService AlmacenService
+@inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>@(IsNew ? "Nuevo Pedido" : "Editar Pedido") - AgoraHub360</PageTitle>
 
@@ -328,19 +328,25 @@
         try
         {
             loading = true;
-            // currentDto = await PedidoService.GetByIdAsync(Id!.Value);
-
-            // If exists:
-            /*
-            CurrentModel = new CreatePedidoVentaDto {
-                ClienteId = currentDto.ClienteId,
-                ClienteSucursalId = currentDto.ClienteSucursalId,
-                SucursalId = currentDto.SucursalId,
-                AlmacenId = currentDto.AlmacenId,
-                FechaEntregaEsperada = currentDto.FechaEntregaEsperada,
-                Observaciones = currentDto.Observaciones,
-            };
-            */
+            currentDto = await PedidoService.GetByIdAsync(Id!.Value);
+            if (currentDto != null)
+            {
+                CurrentModel = new CreatePedidoVentaDto {
+                    ClienteId = currentDto.ClienteId,
+                    ClienteSucursalId = currentDto.ClienteSucursalId,
+                    SucursalId = currentDto.SucursalId,
+                    AlmacenId = currentDto.AlmacenId,
+                    FechaEntregaEsperada = currentDto.FechaEntregaEsperada,
+                    Observaciones = currentDto.Observaciones,
+                    Detalles = currentDto.Detalles.Select(d => new CreatePedidoVentaDetalleDto {
+                        CompanyProductId = d.CompanyProductId,
+                        CantidadSolicitada = d.CantidadSolicitada,
+                        PrecioUnitario = d.PrecioUnitario,
+                        Impuestos = d.Impuestos,
+                        Observaciones = d.Observaciones
+                    }).ToList()
+                };
+            }
         }
         catch (Exception ex)
         {
@@ -371,12 +377,36 @@
         {
             saving = true;
             errorMessage = null;
+            ApiResponse<PedidoVentaDto> res;
+            if (IsNew)
+            {
+                res = await PedidoService.CreateAsync(CurrentModel);
+            }
+            else
+            {
+                var updateDto = new UpdatePedidoVentaDto
+                {
+                    FechaEntregaEsperada = CurrentModel.FechaEntregaEsperada,
+                    SucursalId = CurrentModel.SucursalId,
+                    AlmacenId = CurrentModel.AlmacenId,
+                    ClienteId = CurrentModel.ClienteId,
+                    ClienteSucursalId = CurrentModel.ClienteSucursalId,
+                    Observaciones = CurrentModel.Observaciones,
+                    Detalles = CurrentModel.Detalles,
+                    Estado = "Borrador"
+                };
+                res = await PedidoService.UpdateAsync(Id!.Value, updateDto);
+            }
 
-            // await PedidoService.CreateAsync(CurrentModel); etc..
-
-            successMessage = IsNew ? "Pedido generado con éxito." : "Pedido actualizado.";
-            await Task.Delay(1000);
-            Nav.NavigateTo("/ventas/pedidos");
+            if (res.Success)
+            {
+                successMessage = IsNew ? "Pedido generado con éxito." : "Pedido actualizado.";
+                Nav.NavigateTo("/ventas/pedidos");
+            }
+            else
+            {
+                errorMessage = res.Message;
+            }
         }
         catch (Exception ex)
         {

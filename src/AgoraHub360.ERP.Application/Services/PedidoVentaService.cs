@@ -132,11 +132,66 @@ public class PedidoVentaService : IPedidoVentaService
 
     public async Task<Result<PedidoVentaDto>> UpdateAsync(long id, UpdatePedidoVentaDto dto, CancellationToken ct = default)
     {
-        return Result<PedidoVentaDto>.Success(new PedidoVentaDto());
+        var entity = await _pedidoRepo.GetByIdAsync(id, ct);
+        if (entity == null)
+            return Result<PedidoVentaDto>.Failure("Pedido de venta no encontrado.");
+
+        if (!_currentUser.EmpresaId.HasValue || entity.EmpresaId != _currentUser.EmpresaId.Value)
+            return Result<PedidoVentaDto>.Failure("No tiene permisos para modificar este pedido.");
+
+        // Only allow updates in certain states (e.g., Borrador, Confirmado)
+        if (entity.Estado == "Despachado" || entity.Estado == "Entregado")
+            return Result<PedidoVentaDto>.Failure("No se puede modificar un pedido que ya fue despachado/entregado.");
+
+        entity.FechaEntregaEsperada = dto.FechaEntregaEsperada;
+        entity.SucursalId = dto.SucursalId;
+        entity.AlmacenId = dto.AlmacenId;
+        entity.ClienteId = dto.ClienteId;
+        entity.ClienteSucursalId = dto.ClienteSucursalId;
+        entity.Observaciones = dto.Observaciones;
+        entity.Estado = dto.Estado ?? entity.Estado;
+
+        // Replace detalles: remove existing and add new
+        entity.Detalles.Clear();
+        foreach (var d in dto.Detalles)
+        {
+            entity.Detalles.Add(new PedidoVentaDetalle
+            {
+                EmpresaId = entity.EmpresaId,
+                CompanyProductId = d.CompanyProductId,
+                CantidadSolicitada = d.CantidadSolicitada,
+                PrecioUnitario = d.PrecioUnitario,
+                Impuestos = d.Impuestos,
+                Subtotal = d.CantidadSolicitada * d.PrecioUnitario,
+                Total = (d.CantidadSolicitada * d.PrecioUnitario) + d.Impuestos,
+                Observaciones = d.Observaciones
+            });
+        }
+
+        entity.Subtotal = entity.Detalles.Sum(x => x.Subtotal);
+        entity.Impuestos = entity.Detalles.Sum(x => x.Impuestos);
+        entity.Total = entity.Detalles.Sum(x => x.Total);
+
+        await _pedidoRepo.UpdateAsync(entity, ct);
+        await _unitOfWork.SaveChangesAsync(ct);
+
+        return Result<PedidoVentaDto>.Success(new PedidoVentaDto { Id = entity.Id, Numero = entity.Numero });
     }
 
     public async Task<Result<bool>> DeleteAsync(long id, CancellationToken ct = default)
     {
+        var entity = await _pedidoRepo.GetByIdAsync(id, ct);
+        if (entity == null)
+            return Result<bool>.Failure("Pedido de venta no encontrado.");
+
+        if (!_currentUser.EmpresaId.HasValue || entity.EmpresaId != _currentUser.EmpresaId.Value)
+            return Result<bool>.Failure("No tiene permisos para eliminar este pedido.");
+
+        // Soft-delete by setting Activo = false
+        entity.Activo = false;
+        await _pedidoRepo.UpdateAsync(entity, ct);
+        await _unitOfWork.SaveChangesAsync(ct);
+
         return Result<bool>.Success(true);
     }
 }
