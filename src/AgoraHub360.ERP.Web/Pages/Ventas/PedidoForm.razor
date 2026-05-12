@@ -284,7 +284,8 @@
             if (!IsClientUser)
             {
                 // clientesCombo = await ClienteService.GetAllAsync();
-                clientesCombo.Add(new AgoraHub360.ERP.Shared.DTOs.MDM.ClienteDto { Id = 1, Codigo = "CLI-01", RazonSocial = "Empresa Cliente Demo S.A." });
+                // Usar cliente demo que pertenece a la empresa de desarrollo (EmpresaId = 1)
+                clientesCombo.Add(new AgoraHub360.ERP.Shared.DTOs.MDM.ClienteDto { Id = 5, Codigo = "CLI-001", RazonSocial = "Supermercados Del Valle S.A." });
             }
 
             // sucursalesEmpresaCombo = await SucursalService.GetAllAsync();
