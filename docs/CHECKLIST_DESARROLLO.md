@@ -105,18 +105,17 @@
 ## FASE 2 — Ventas y Facturación (v1.1.0) 🔄 EN PROGRESO
 
 ### 2.1 VTA — Ventas
-
-- [ ] 🔄 Pedidos de venta — cabecera (rama `Venta-Pedido`)
-  - [ ] Modelo de dominio `PedidoVenta` / `PedidoVentaLinea`
-  - [ ] Migración de BD
-  - [ ] Servicio `IPedidoVentaService`
-  - [ ] Controller `PedidosVentaController`
-  - [ ] DTO: Create / Update / PedidoDto
-  - [ ] HTTP Service en Web
-  - [ ] Página Blazor: listado + formulario
+- [ ] 🔄 Pedidos de venta — cabecera (rama `feature/pedidos-venta`)
+  - [x] Modelo de dominio `PedidoVenta` / `PedidoVentaLinea`
+  - [x] Migración de BD (aplicada en Development; FK Almacenes ajustada)
+  - [x] Servicio `IPedidoVentaService` (implementación básica)
+  - [x] Controller `PedidosVentaController` (endpoints CRUD)
+  - [x] DTO: Create / Update / PedidoDto
+  - [x] HTTP Service en Web (`PedidoVentaHttpService`)
+  - [x] Página Blazor: listado + formulario (básico)
   - [ ] Flujo de estados: Borrador → Confirmado → Despachado → Cerrado / Anulado
-  - [ ] Validación de stock disponible al confirmar
-  - [ ] Generación de movimiento salida INV al despachar
+  - [ ] Validación de stock disponible al confirmar (pendiente integración con Inventario)
+  - [ ] Generación de movimiento salida INV al despachar (pendiente)
 - [ ] 🔄 Pedidos por sucursal (rama `PedidoSucursal`)
 - [ ] Facturas de venta
   - [ ] Modelo `FacturaVenta` / `FacturaVentaLinea`
