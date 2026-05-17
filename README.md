@@ -1,184 +1,87 @@
 # AgoraHUB360-ERP
-AgoraHUB 360 – ERP  Sistema ERP modular empresarial desarrollado bajo el Modelo Ágora (MAPE), diseñado para entornos mixtos de importación y comercialización, con arquitectura limpia, escalable y multiempresa.
-
-🚀 AgoraHUB 360 – ERP
 
 Sistema ERP modular empresarial desarrollado bajo el Modelo Ágora (MAPE), diseñado para entornos mixtos de importación y comercialización, con arquitectura limpia, escalable y multiempresa desde el núcleo.
 
-📌 Visión del Proyecto
-
-AgoraHUB 360 – ERP es la base tecnológica del ecosistema Ágora HUB 360.
-Su objetivo es proporcionar un sistema empresarial moderno, estructurado y escalable que permita:
-
-Control operativo integral
-
-Gestión multiempresa y multimoneda
-
-Integración compras → inventario → ventas
-
-Costeo de importaciones con prorrateo
-
-Escalabilidad modular
-
-Evolución futura hacia BI, automatización e integraciones externas
-
-🧠 Arquitectura
-
-El proyecto está construido bajo:
-
-Clean Architecture
-
-Separación por dominios
-
-Principios SOLID
-
-Multiempresa (tenant-aware)
-
-Auditoría transversal
-
-Roadmap gobernado por arquitectura (MAPE)
-
-Stack Tecnológico
-
-.NET 8
-
-Blazor WebAssembly
-
-ASP.NET Core Web API
-
-SQL Server 2019+
-
-Entity Framework Core
-
-JWT Authentication
-
-🏗 Estructura de la Solución
-AgoraHub360.ERP.Domain
-AgoraHub360.ERP.Application
-AgoraHub360.ERP.Persistence
-AgoraHub360.ERP.Infrastructure
-AgoraHub360.ERP.Api
-AgoraHub360.ERP.Web
-AgoraHub360.ERP.Shared
-AgoraHub360.ERP.Tests
-
-Principios estructurales
-
-Domain no depende de ninguna capa.
-
-Application contiene reglas de negocio.
-
-Persistence maneja EF Core.
-
-Infrastructure maneja servicios externos.
-
-API expone endpoints.
-
-Web (Blazor WASM) consume la API.
-
-Shared contiene contratos y DTOs.
-
-Tests valida dominio y aplicación.
-
-📦 MVP v1.0 – Alcance
-
-Módulos incluidos en la primera versión:
-
-1️⃣ CORE
-
-Seguridad y roles (RBAC)
-
-Multiempresa
-
-Multimoneda
-
-Parámetros del sistema
-
-Numeración de documentos
-
-Auditoría automática
-
-2️⃣ MDM (Maestros)
-
-Clientes
-
-Proveedores (local e internacional)
-
-Productos (MP / PT / Servicio)
-
-Almacenes
-
-Categorías
-
-Unidades de medida
-
-3️⃣ Inventario Avanzado Base
-
-Kardex
-
-Multi-almacén
-
-Ajustes y transferencias
-
-Costo promedio
-
-Trazabilidad básica
-
-4️⃣ Compras + Importación Básica
-
-Orden de compra
-
-Recepción parcial
-
-Registro de gastos asociados
-
-Prorrateo de costos a inventario
-
-5️⃣ Ventas
-
-Cotización
-
-Pedido
-
-Facturación interna
-
-Integración con inventario
-
-Control de margen básico
-
-Facturación electrónica SIN será incorporada en la versión v1.1.
-
-🔄 Flujo Operativo MVP
-
-Proveedor → Orden de Compra → Recepción + Costos → Inventario Valorizado → Venta → Margen
-
-🔐 Multiempresa
-
-El sistema es multiempresa desde el diseño:
-
-Todas las entidades relevantes incluyen EmpresaId
-
-Seguridad basada en roles
-
-Contexto activo por sesión
-
-Datos aislados por tenant
-
-🛠 Configuración Inicial
-
-## Requisitos
-
-.NET 8 SDK
-
-SQL Server 2019+
-
-Visual Studio 2022/2026
-
-## Pasos
-
-1. **Clonar repositorio**
-
-2. **Configurar cadena de conexión** en `src/AgoraHub360.ERP.Api/appsettings.json`:
+## Estado actual
+
+- **Repositorio:** `abelcalvimontes/AgoraHUB360-ERP`
+- **Rama principal:** `main`
+- **Última actualización documentada:** 2026-05-17
+- **Stack base:** .NET 8 · C# 12 · Blazor WebAssembly · ASP.NET Core Web API · EF Core 8 · SQL Server
+- **Arquitectura:** Clean Architecture + multiempresa (tenant-aware) + auditoría transversal
+- **Estado general:** MVP operativo en desarrollo activo
+
+## Resumen ejecutivo
+
+AgoraHUB360 ERP es la base tecnológica del ecosistema Ágora HUB 360. Actualmente el proyecto tiene una base funcional sólida en **Core, MDM, Inventario, Compras e importante cobertura de Contabilidad**, mientras que **Ventas** continúa en desarrollo activo y existen capacidades adicionales preparadas a nivel de backend o estructura para futuras iteraciones.
+
+Durante abril y mayo de 2026 se consolidaron entregas importantes en:
+
+- Gestión de **empresas y sucursales**
+- Flujo de **clientes por sucursal**
+- Documentación de **estado actual del proyecto**
+- Análisis arquitectónico del **aislamiento multiempresa / tenant**
+
+## Módulos y estado funcional
+
+| Área | Estado | Completitud estimada | Comentarios |
+|------|--------|----------------------|-------------|
+| Core (usuarios, roles, empresas, sucursales) | ✅ Completo | 100% | Multiempresa, seguridad JWT, parámetros y numeración |
+| MDM (clientes, proveedores, productos, almacenes, categorías, UDM) | ✅ Completo | 100% | Incluye productos globales, variantes, listas de precios y catálogos |
+| Inventario | ✅ Completo | 100% | Kardex, movimientos, stock y costo promedio |
+| Compras e importación | ✅ Completo | 100% | Órdenes, recepciones, landed cost y prorrateo |
+| Contabilidad | ✅ Operativo | 95% | Reportes principales y cierre de gestión disponibles |
+| Ventas | 🔄 En desarrollo | 5–15% | Existen ramas activas y avance reciente, pero no está consolidado como módulo completo en `main` |
+| CxC / CxP | ⬜ Pendiente | 0% | Roadmap |
+| Facturación electrónica SIN/SIAT | ⬜ Pendiente | 0% | Roadmap v1.1 |
+| Reportes PDF / BI / automatización | 🔄 Parcial / pendiente | — | Hay piezas preparadas, pero no cerradas end-to-end |
+| Tests automatizados | ⬜ Bajo avance | ~5% | Estructura disponible, cobertura aún baja |
+
+## Arquitectura de la solución
+
+La solución está organizada en los siguientes proyectos dentro de `src/`:
+
+- `AgoraHub360.ERP.Domain`
+- `AgoraHub360.ERP.Application`
+- `AgoraHub360.ERP.Persistence`
+- `AgoraHub360.ERP.Infrastructure`
+- `AgoraHub360.ERP.Api`
+- `AgoraHub360.ERP.Web`
+- `AgoraHub360.ERP.Shared`
+- `AgoraHub360.ERP.Tests`
+
+### Principios estructurales
+
+- **Domain** no depende de otras capas.
+- **Application** concentra servicios y reglas de negocio.
+- **Persistence** implementa EF Core, migraciones, repositorios e interceptores.
+- **Infrastructure** contiene servicios externos e integraciones futuras.
+- **API** expone endpoints REST versionados.
+- **Web** consume la API desde Blazor WebAssembly.
+- **Shared** agrupa DTOs y contratos comunes.
+- **Tests** centraliza pruebas unitarias e integración.
+
+## Funcionalidades transversales relevantes
+
+- Multiempresa con `EmpresaId` y filtros globales de tenant
+- Auditoría automática
+- Versionado de entidades
+- Soft delete por `Activo = false`
+- API versionada bajo `/api/v1/`
+- Autenticación JWT
+- Swagger y health checks
+
+## Acceso local y arranque
+
+### Requisitos
+
+- .NET 8 SDK
+- SQL Server 2019+
+- Visual Studio 2022/2026
+
+### Configuración de base de datos
+
+Editar `src/AgoraHub360.ERP.Api/appsettings.json` con una cadena de conexión válida:
 
 ```json
 {
@@ -188,155 +91,125 @@ Visual Studio 2022/2026
 }
 ```
 
-**Nota importante:** La cadena de conexión en `appsettings.json` es leída automáticamente por el `AgoraDbContextFactory` para las migraciones. No es necesario configurar nada adicional.
-
-3. **Ejecutar migraciones:**
+### Aplicar migraciones
 
 ```bash
 dotnet ef database update --project src/AgoraHub360.ERP.Persistence --startup-project src/AgoraHub360.ERP.Api
 ```
 
-4. **Iniciar el sistema:**
-
-### Opción A: Script Automatizado (Recomendado) 🚀
+### Inicio rápido
 
 ```powershell
 .\start-system.ps1
 ```
 
-El script automáticamente:
-- ✅ Detiene procesos previos
-- ✅ Inicia la API (puerto 7001)
-- ✅ Inicia la Web (puerto 5002)
-- ✅ Abre el navegador en el login
-- ✅ Muestra las credenciales
+El script automatiza:
 
-### Opción B: Inicio Manual
+- detención de procesos previos
+- inicio de API en puerto 7001
+- inicio de Web en puerto 5002
+- apertura del navegador
+- visualización de credenciales por defecto
 
-**Terminal 1 - API:**
-```bash
-cd src\AgoraHub360.ERP.Api
-dotnet run --launch-profile https
-```
+### URLs locales
 
-**Terminal 2 - Web:**
-```bash
-cd src\AgoraHub360.ERP.Web
-dotnet run --launch-profile https
-```
+- Web: `https://localhost:5002`
+- Login: `https://localhost:5002/login`
+- API: `https://localhost:7001`
+- Swagger: `https://localhost:7001/swagger`
+- Health: `https://localhost:7001/health`
 
-5. **Acceder al sistema:**
-   - Aplicación Web: `https://localhost:5002`
-   - Login: `https://localhost:5002/login`
-   - API: `https://localhost:7001`
-   - Swagger: `https://localhost:7001/swagger`
-
-## 🔐 Credenciales de Acceso
-
-El sistema crea automáticamente un usuario administrador:
+## Credenciales por defecto
 
 | Campo | Valor |
 |-------|-------|
-| **Email** | `admin@agorahub360.com` |
-| **Contraseña** | `Admin123` |
-| **Rol** | Admin |
+| Email | `admin@agorahub360.com` |
+| Contraseña | `Admin123` |
+| Rol | `Admin` |
 
-### 🔄 Resetear Usuario Administrador
+> **Importante:** cambiar estas credenciales antes de cualquier despliegue productivo.
 
-Si olvidaste la contraseña o necesitas restaurar el usuario admin:
+## Scripts útiles
 
-**Método Rápido:**
-```powershell
-.\reset-admin-user.ps1
-```
+- `start-system.ps1` — inicia API y Web
+- `quick-db-test.ps1` — test rápido de base de datos
+- `test-database-connection.ps1` — validación completa de conexión
+- `reset-admin-user.ps1` — reseteo del usuario administrador
+- `verify-admin-user.ps1` — verificación del usuario admin
+- `verify-mdm-routes.ps1` — validación de rutas MDM
 
-**Método Alternativo (Genera SQL):**
-```powershell
-.\reset-admin-simple.ps1
-```
+## Documentación recomendada
 
-📚 **Documentación Completa:**
-- [RESET-ADMIN-QUICKSTART.md](RESET-ADMIN-QUICKSTART.md) - Guía rápida de reseteo
-- [RESET-ADMIN-GUIDE.md](RESET-ADMIN-GUIDE.md) - Guía completa y troubleshooting
-- [CREDENCIALES-DEFAULT.md](CREDENCIALES-DEFAULT.md) - Usuario y contraseña por defecto
+### Estado y contexto general
 
-⚠️ **Importante:** Cambia estas credenciales antes de pasar a producción.
+- `docs/ESTADO_ACTUAL_2026.md` — resumen ejecutivo del estado actual del proyecto
+- `ESTADO_PROYECTO_COMPLETO.md` — visión consolidada de alto nivel
+- `DOCUMENTACION-MODULOS-COMPLETA.md` — documentación técnica y funcional amplia por módulos
+- `docs/ANALISIS_MODULOS_ERP.md` — análisis transversal de módulos y arquitectura
+- `ANALISIS-MULTIEMPRESA-TENANT.md` — análisis actualizado del aislamiento multiempresa / tenant
 
-🔍 Test de Conexión a Base de Datos
+### Operación y despliegue
 
-### Test Rápido (sin iniciar la API)
-```powershell
-.\quick-db-test.ps1
-```
+- `docs/DEPLOYMENT_GUIDE.md` — guía de despliegue
+- `CREDENCIALES-DEFAULT.md` — acceso inicial
+- `RESET-ADMIN-GUIDE.md` y `RESET-ADMIN-QUICKSTART.md` — recuperación de usuario admin
 
-### Test Completo (con API corriendo)
-```powershell
-# Terminal 1: Inicia la API
-cd src\AgoraHub360.ERP.Api
-dotnet run
+### Documentación específica y técnica
 
-# Terminal 2: Ejecuta el test
-.\test-database-connection.ps1
-```
+- `docs/MODULO-FINANCIERO-CONTABLE.md` — estado del módulo financiero-contable
+- `docs/CHECKLIST_DESARROLLO.md` — checklist por fases y validación pre-producción
+- `docs/GIT_WORKFLOW.md` — flujo de ramas y trabajo con Git
+- `docs/COMMIT_CONVENTION.md` — convención de commits
+- `docs/PROJECT_BOARD_SETUP.md` — estructura de tablero de proyecto
 
-### Endpoints de Diagnóstico
-- **GET** `/api/v1/diagnostics/ping` - Verifica que la API esté activa
-- **GET** `/api/v1/diagnostics/database-test` - Test completo de BD
-- **GET** `/health` - Health check general
+## Ramas visibles y contexto de evolución
 
-📚 **Documentación Completa:**
-- [Script de Inicio](start-system.ps1) - Inicio automatizado
-- [Credenciales por Defecto](CREDENCIALES-DEFAULT.md) - Usuario y contraseña
-- [Solución Error de Login](LOGIN-ERROR-FIX.md) - Troubleshooting de conexión
-- [Guía de Testing](DATABASE-TEST-GUIDE.md) - Guía detallada
-- [Resumen Ejecutivo](DATABASE-TEST-SUMMARY.md) - Resumen rápido
-- [Reporte Técnico](DATABASE-TEST-REPORT.md) - Detalles técnicos
-- [Solución de Problemas de Conexión](DATABASE-CONNECTION-FIX.md) - Troubleshooting BD
+Además de `main`, el repositorio mantiene ramas de trabajo y referencia que ayudan a contextualizar el estado del proyecto, por ejemplo:
 
-📈 Roadmap
+- `Venta-Pedido`
+- `PedidoSucursal`
+- `VentasGestion`
+- `feature/pedidos-venta`
+- `ClienteGestion_Sucursal`
+- `ClienteSucursal`
+- `codex/CorreccionMultiempresa`
 
-v1.0 → MVP Mixto Operativo
+Estas ramas muestran que el proyecto sigue avanzando especialmente en ventas, sucursales y mejoras multiempresa.
 
-v1.1 → Integración SIN (Facturación electrónica)
+## Actividad reciente relevante
 
-v1.2 → BI básico + dashboards
+Entre los cambios recientes visibles en el repositorio destacan:
 
-v2.0 → Producción / MRP
+- **2026-05-17:** incorporación de `ANALISIS-MULTIEMPRESA-TENANT.md`
+- **2026-05-11:** actualización de `docs/ESTADO_ACTUAL_2026.md` y checklist de desarrollo
+- **abril 2026:** consolidación de empresas, sucursales y cliente por sucursal
+- **abril 2026:** generación de documentación amplia de módulos
 
-v2.x → Automatización avanzada + integraciones externas
+## Roadmap resumido
 
-🧪 Testing
+### v1.1
 
-Unit Tests en Domain y Application
+- Ventas completas
+- Facturación electrónica SIAT / SIN
+- Cuentas por cobrar y por pagar
+- Reportes PDF
 
-Integration Tests en Persistence
+### v1.2
 
-Pruebas funcionales previas a release
+- Dashboards y KPIs reales
+- Exportaciones masivas Excel/PDF
+- UI para módulos parcialmente estructurados
+- Mejor cobertura de pruebas
+- CI/CD
 
-Database Testing con scripts automatizados
+### v2.0+
 
-📜 Metodología
+- Workflows y automatización
+- BI
+- API pública
+- SaaS multi-tenant más robusto
+- Integraciones externas
 
-Este proyecto sigue el Modelo Ágora (MAPE):
+## Nota sobre la documentación
 
-Diagnóstico
-
-Diseño Arquitectónico
-
-Desarrollo por Capas
-
-Validación Controlada
-
-Implementación Guiada
-
-Evolución Continua
-
-No se libera sin validación estructural.
-
-🎯 Objetivo Estratégico
-
-Convertirse en la plataforma ERP central del ecosistema Ágora HUB 360 y escalar regionalmente como solución SaaS empresarial.
-
-📩 Contacto
-
-Proyecto desarrollado por Ágora HUB 360 – Dirección Ágora Tech.
+La documentación del repositorio fue creciendo por hitos, incidencias, fixes, análisis y entregas funcionales. Por eso existen varios `.md` históricos. Este README pasa a funcionar como **punto de entrada principal** y dirige a los documentos vigentes más útiles para entender el estado real del proyecto al **17 de mayo de 2026**.
