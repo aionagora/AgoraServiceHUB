@@ -351,7 +351,7 @@
             {
                 // Cargar almacenes de la sucursal seleccionada
                 var todosAlmacenes = await AlmacenService.GetAllAsync();
-                almacenesCombo = todosAlmacenes.Where(a => a.SucursalId == sucursalId).ToList();
+                almacenesCombo = todosAlmacenes.Where(a => a.SucursalId.HasValue && a.SucursalId.Value == sucursalId).ToList();
             }
             catch (Exception ex)
             {

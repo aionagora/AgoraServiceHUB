@@ -1,8 +1,10 @@
 @page "/mdm/almacenes"
 @attribute [Authorize]
 @inject AlmacenHttpService AlmacenService
+@inject HttpSucursalService SucursalService
 @inject IJSRuntime JS
 @using AgoraHub360.ERP.Shared.DTOs.MDM
+@using AgoraHub360.ERP.Shared.DTOs.Sucursal
 
 <PageTitle>Almacenes</PageTitle>
 
@@ -60,6 +62,7 @@
                                 <th>ID</th>
                                 <th>Código</th>
                                 <th>Nombre</th>
+                                <th>Sucursal</th>
                                 <th>Dirección</th>
                                 <th>Responsable</th>
                                 <th>Teléfono</th>
@@ -74,6 +77,7 @@
                                     <td>@almacen.Id</td>
                                     <td><code>@almacen.Codigo</code></td>
                                     <td><strong>@almacen.Nombre</strong></td>
+                                    <td>@(almacen.SucursalNombre ?? "-")</td>
                                     <td>@(almacen.Direccion ?? "-")</td>
                                     <td>@(almacen.Responsable ?? "-")</td>
                                     <td>@(almacen.Telefono ?? "-")</td>
@@ -132,6 +136,18 @@
                                 <InputText class="form-control" @bind-Value="createDto.Nombre" placeholder="Nombre del almacén" />
                                 <ValidationMessage For="@(() => createDto.Nombre)" />
                             </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Sucursal</label>
+                            <InputSelect class="form-select" @bind-Value="createDto.SucursalId">
+                                <option value="">-- Seleccione una sucursal (opcional) --</option>
+                                @foreach (var suc in sucursales)
+                                {
+                                    <option value="@suc.Id">@suc.Nombre</option>
+                                }
+                            </InputSelect>
+                            <small class="form-text text-muted">El almacén se asociará a esta sucursal interna de la empresa.</small>
                         </div>
 
                         <div class="mb-3">
@@ -244,6 +260,7 @@
 
 @code {
     private List<AlmacenDto> almacenes = new();
+    private List<SucursalListadoDto> sucursales = new();
     private bool loading = true;
     private bool saving = false;
     private bool showCreateModal = false;
@@ -257,6 +274,7 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadAlmacenes();
+        await LoadSucursales();
     }
 
     private async Task LoadAlmacenes()
@@ -274,6 +292,19 @@
         finally
         {
             loading = false;
+        }
+    }
+
+    private async Task LoadSucursales()
+    {
+        try
+        {
+            sucursales = await SucursalService.GetActivasAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar sucursales: {ex.Message}";
+            sucursales = new();
         }
     }
 

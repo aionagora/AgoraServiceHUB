@@ -41,4 +41,5 @@ public class Empresa : AuditableEntity
     public string? PrefijoSku { get; set; }
 
     public ICollection<Sucursal> Sucursales { get; set; } = new List<Sucursal>();
+    public ICollection<MDM.Almacen> Almacenes { get; set; } = new List<MDM.Almacen>();
 }

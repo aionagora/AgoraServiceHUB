@@ -12,8 +12,10 @@ public class Almacen : TenantEntity
     public string Codigo { get; set; } = string.Empty;
     public string Nombre { get; set; } = string.Empty;
 
-    public int SucursalId { get; set; }
+    public int? SucursalId { get; set; }
     public Sucursal? Sucursal { get; set; }
+
+    public Empresa? Empresa { get; set; }
 
     public string? Direccion { get; set; }
     public string? Responsable { get; set; }

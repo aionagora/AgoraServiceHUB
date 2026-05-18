@@ -12,6 +12,8 @@ public class CreateAlmacenDto
     [MaxLength(200, ErrorMessage = "Máximo 200 caracteres.")]
     public string Nombre { get; set; } = string.Empty;
 
+    public int? SucursalId { get; set; }
+
     [MaxLength(300, ErrorMessage = "Máximo 300 caracteres.")]
     public string? Direccion { get; set; }
 

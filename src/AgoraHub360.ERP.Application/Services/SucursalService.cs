@@ -14,17 +14,20 @@ public class SucursalService : ISucursalService
 {
     private readonly IRepository<Sucursal> _sucursalRepository;
     private readonly IRepository<Empresa> _empresaRepository;
+    private readonly IRepository<AgoraHub360.ERP.Domain.Entities.MDM.Almacen> _almacenRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUserService;
 
     public SucursalService(
         IRepository<Sucursal> sucursalRepository,
         IRepository<Empresa> empresaRepository,
+        IRepository<AgoraHub360.ERP.Domain.Entities.MDM.Almacen> almacenRepository,
         IUnitOfWork unitOfWork,
         ICurrentUserService currentUserService)
     {
         _sucursalRepository = sucursalRepository;
         _empresaRepository = empresaRepository;
+        _almacenRepository = almacenRepository;
         _unitOfWork = unitOfWork;
         _currentUserService = currentUserService;
     }
@@ -132,6 +135,30 @@ public class SucursalService : ISucursalService
         };
 
         var sucursal = await _sucursalRepository.AddAsync(entidad, ct);
+
+        // FASE 3: Auto-crear almacén principal si la sucursal es operativa
+        if (dto.ManejaAlmacen || dto.PermiteInventario || dto.PermiteDespacho)
+        {
+            var codigoAlmacen = $"ALM-{dto.Codigo}".Trim();
+
+            // Validar que no exista para prevenir error de constraint único
+            var existsAlmacen = await _almacenRepository.FindAsync(a => 
+                a.EmpresaId == empresaId.Value && a.Codigo == codigoAlmacen, ct);
+
+            if (existsAlmacen.Count == 0)
+            {
+                var nuevoAlmacen = new AgoraHub360.ERP.Domain.Entities.MDM.Almacen
+                {
+                    EmpresaId = empresaId.Value,
+                    Sucursal = sucursal,
+                    Codigo = codigoAlmacen,
+                    Nombre = $"Almacén {dto.Nombre}".Trim(),
+                    Activo = true
+                };
+                await _almacenRepository.AddAsync(nuevoAlmacen, ct);
+            }
+        }
+
         await _unitOfWork.SaveChangesAsync(ct);
 
         return Result<SucursalDto>.Success(MapToDto(sucursal));
