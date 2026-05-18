@@ -106,6 +106,7 @@ public class AlmacenService : IAlmacenService
         Id = e.Id,
         Codigo = e.Codigo,
         Nombre = e.Nombre,
+        SucursalId = e.SucursalId,
         Direccion = e.Direccion,
         Responsable = e.Responsable,
         Telefono = e.Telefono,

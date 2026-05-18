@@ -23,10 +23,10 @@ public class SucursalesController : ControllerBase
         _sucursalService = sucursalService;
     }
 
-    [HttpGet("empresa/{empresaId:int}")]
-    public async Task<IActionResult> GetByEmpresa(int empresaId, CancellationToken ct)
+    [HttpGet]
+    public async Task<IActionResult> GetAll(CancellationToken ct)
     {
-        var result = await _sucursalService.GetAllByEmpresaAsync(empresaId, ct);
+        var result = await _sucursalService.GetAllAsync(ct);
         if (!result.IsSuccess)
             return BadRequest(ApiResponse<IReadOnlyList<SucursalListadoDto>>.Fail(result.Error!));
 

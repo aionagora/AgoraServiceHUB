@@ -69,8 +69,12 @@ public class PedidoVentaService : IPedidoVentaService
         if (dto.ClienteSucursalId.HasValue)
         {
             var clienteSucursal = await _clienteSucursalRepo.GetByIdAsync(dto.ClienteSucursalId.Value, ct);
-            if (clienteSucursal == null || clienteSucursal.ClienteId != dto.ClienteId)
+            if (clienteSucursal == null)
+                return Result<PedidoVentaDto>.Failure("Sucursal de cliente no encontrada.");
+            if (clienteSucursal.ClienteId != dto.ClienteId)
                 return Result<PedidoVentaDto>.Failure("La sucursal destino no pertenece al cliente seleccionado.");
+            if (clienteSucursal.EmpresaId != tenantId)
+                return Result<PedidoVentaDto>.Failure("La sucursal de cliente no pertenece a la empresa actual.");
         }
 
         // 3. Validar SucursalEmpresa

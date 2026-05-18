@@ -5,8 +5,10 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using AgoraHub360.ERP.Application.Interfaces;
+using AgoraHub360.ERP.Application.Common;
 using AgoraHub360.ERP.Domain.Entities.Core;
 using AgoraHub360.ERP.Domain.Interfaces;
+using AgoraHub360.ERP.Shared.DTOs.Auth;
 using AgoraHub360.ERP.Shared.DTOs;
 using Microsoft.IdentityModel.Tokens;
 
@@ -35,38 +37,45 @@ public class AuthService : IAuthService
 
     public async Task<AuthResponseDto?> LoginAsync(LoginRequestDto request, CancellationToken ct = default)
     {
-        // Buscar usuario por email
         var users = await _userRepo.FindAsync(u => u.Email == request.Email && u.Activo, ct);
         var user = users.FirstOrDefault();
         if (user is null)
             return null;
 
-        // Verificar password
         if (user.PasswordHash != HashPassword(request.Password))
             return null;
 
-        // Obtener la primera empresa asignada (para el claim EmpresaId)
-        var empresas = await _ueRepo.FindAsync(ue => ue.UsuarioId == user.Id, ct);
-        var primeraEmpresa = empresas.FirstOrDefault();
-        var empresaId = user.EmpresaActivaId ?? primeraEmpresa?.EmpresaId;
-        var rol = primeraEmpresa?.Rol ?? "Viewer";
+        var empresasAsignadas = await _ueRepo.FindAsync(ue => ue.UsuarioId == user.Id, ct);
+        var empresaIds = empresasAsignadas.Select(e => e.EmpresaId).Distinct().ToList();
+        var empresasActivas = await _empresaRepo.FindAsync(e => empresaIds.Contains(e.Id) && e.Activo, ct);
+        var empresasActivasAsignadas = empresasAsignadas.Where(e => empresasActivas.Any(a => a.Id == e.EmpresaId)).ToList();
+        if (empresasActivas.Count == 0)
+            return null;
 
-        // Fallback: si el usuario no tiene empresas asignadas, usar la primera empresa activa del sistema
-        if (!empresaId.HasValue)
+        UsuarioEmpresa? empresaSeleccionada = null;
+        if (user.EmpresaActivaId.HasValue)
         {
-            var todasEmpresas = await _empresaRepo.FindAsync(e => e.Activo, ct);
-            empresaId = todasEmpresas.FirstOrDefault()?.Id;
+            empresaSeleccionada = empresasActivasAsignadas.FirstOrDefault(e => e.EmpresaId == user.EmpresaActivaId.Value);
         }
 
-        // Generar JWT
-        var token = GenerateJwtToken(user, empresaId, rol);
+        if (empresaSeleccionada is null)
+        {
+            empresaSeleccionada = empresasActivasAsignadas.FirstOrDefault();
+            if (empresaSeleccionada is null)
+                return null;
+            user.EmpresaActivaId = empresaSeleccionada.EmpresaId;
+        }
+
+        var token = GenerateJwtToken(user, empresaSeleccionada.EmpresaId, empresaSeleccionada.Rol);
         var expiration = DateTime.UtcNow.AddHours(
             _config.GetValue<int>("Jwt:ExpirationHours", 8));
+
+        await _userRepo.UpdateAsync(user, ct);
 
         return new AuthResponseDto
         {
             Token = token,
-            RefreshToken = "", // No implementado en esta versión mínima
+            RefreshToken = "",
             Expiration = expiration,
             NombreUsuario = user.NombreUsuario,
             Email = user.Email
@@ -79,7 +88,57 @@ public class AuthService : IAuthService
         return Task.FromResult<AuthResponseDto?>(null);
     }
 
-    private string GenerateJwtToken(Usuario user, int? empresaId, string rol)
+    public async Task<Result<CambiarEmpresaResponseDto>> CambiarEmpresaActivaAsync(int usuarioId, int empresaId, CancellationToken ct = default)
+    {
+        var usuario = await _userRepo.GetByIdAsync(usuarioId, ct);
+        if (usuario is null || !usuario.Activo)
+            return Result<CambiarEmpresaResponseDto>.Failure("Usuario no encontrado o inactivo.");
+
+        var asignaciones = await _ueRepo.FindAsync(ue => ue.UsuarioId == usuarioId, ct);
+        var asignacion = asignaciones.FirstOrDefault(a => a.EmpresaId == empresaId);
+        if (asignacion is null)
+            return Result<CambiarEmpresaResponseDto>.Failure("La empresa seleccionada no pertenece al usuario.");
+
+        var empresa = await _empresaRepo.GetByIdAsync(empresaId, ct);
+        if (empresa is null || !empresa.Activo)
+            return Result<CambiarEmpresaResponseDto>.Failure("La empresa seleccionada no está activa.");
+
+        usuario.EmpresaActivaId = empresaId;
+        await _userRepo.UpdateAsync(usuario, ct);
+
+        var token = GenerateJwtToken(usuario, empresaId, asignacion.Rol);
+        var expiration = DateTime.UtcNow.AddHours(
+            _config.GetValue<int>("Jwt:ExpirationHours", 8));
+
+        var empresasDisponibles = asignaciones.Select(a => new EmpresaSesionDto
+        {
+            Id = a.EmpresaId,
+            Nombre = a.Empresa?.Nombre ?? $"Empresa #{a.EmpresaId}",
+            Nit = a.Empresa?.NIT,
+            Rol = a.Rol,
+            EsActiva = a.EmpresaId == empresaId
+        }).ToList();
+
+        var response = new CambiarEmpresaResponseDto
+        {
+            Token = token,
+            Expiration = expiration,
+            EmpresaActiva = new EmpresaSesionDto
+            {
+                Id = empresa.Id,
+                Nombre = empresa.Nombre,
+                Nit = empresa.NIT,
+                Rol = asignacion.Rol,
+                EsActiva = true
+            },
+            EmpresasDisponibles = empresasDisponibles.AsReadOnly(),
+            SucursalesDisponibles = Array.Empty<SucursalSesionDto>()
+        };
+
+        return Result<CambiarEmpresaResponseDto>.Success(response);
+    }
+
+    private string GenerateJwtToken(Usuario user, int empresaId, string rol)
     {
         var key = _config["Jwt:Key"] ?? "AgoraHub360-ERP-Dev-Secret-Key-2026-MinLength32!";
         var issuer = _config["Jwt:Issuer"] ?? "AgoraHub360.ERP";
@@ -97,8 +156,7 @@ public class AuthService : IAuthService
             new(ClaimTypes.Role, rol),
         };
 
-        if (empresaId.HasValue)
-            claims.Add(new Claim("EmpresaId", empresaId.Value.ToString()));
+        claims.Add(new Claim("EmpresaId", empresaId.ToString()));
 
         var token = new JwtSecurityToken(
             issuer: issuer,

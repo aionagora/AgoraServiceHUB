@@ -5,6 +5,7 @@ public class AlmacenDto
     public int Id { get; set; }
     public string Codigo { get; set; } = string.Empty;
     public string Nombre { get; set; } = string.Empty;
+    public int SucursalId { get; set; }
     public string? Direccion { get; set; }
     public string? Responsable { get; set; }
     public string? Telefono { get; set; }

@@ -26,7 +26,7 @@ public class ClienteService : IClienteService
     {
         var empresaId = _currentUser.EmpresaId;
         if (!empresaId.HasValue)
-            return Result<IReadOnlyList<ClienteDto>>.Failure("No se pudo determinar la empresa activa.");
+            return Result<IReadOnlyList<ClienteDto>>.Failure("No existe empresa activa en la sesión.");
 
         var items = await _repository.FindAsync(c => c.EmpresaId == empresaId.Value, ct);
         return Result<IReadOnlyList<ClienteDto>>.Success(
@@ -37,7 +37,12 @@ public class ClienteService : IClienteService
     {
         var empresaId = _currentUser.EmpresaId;
         if (!empresaId.HasValue)
-            return Result<ClienteDto>.Failure("No se pudo determinar la empresa activa.");
+        {
+            Console.WriteLine("[TEMP-LOG] ClienteService.CreateAsync: EmpresaId NULL en CurrentUserService.");
+            return Result<ClienteDto>.Failure("No existe empresa activa en la sesión.");
+        }
+
+        Console.WriteLine($"[TEMP-LOG] ClienteService.CreateAsync: EmpresaId={empresaId.Value}");
 
         var entity = await _repository.GetByIdAsync(id, ct);
         if (entity is null)
@@ -53,7 +58,7 @@ public class ClienteService : IClienteService
     {
         var empresaId = _currentUser.EmpresaId;
         if (!empresaId.HasValue)
-            return Result<ClienteDto>.Failure("No se pudo determinar la empresa activa.");
+            return Result<ClienteDto>.Failure("No existe empresa activa en la sesión.");
 
         // Validar código único por empresa
         var byCodigo = await _repository.FindAsync(
@@ -75,8 +80,13 @@ public class ClienteService : IClienteService
             Activo = true
         };
 
+        Console.WriteLine($"[TEMP-LOG] ClienteService.CreateAsync: EmpresaId asignado al cliente={entity.EmpresaId}");
+
+        Console.WriteLine("[TEMP-LOG] ClienteService.CreateAsync: antes de AddAsync.");
         await _repository.AddAsync(entity, ct);
+        Console.WriteLine("[TEMP-LOG] ClienteService.CreateAsync: antes de SaveChangesAsync.");
         await _unitOfWork.SaveChangesAsync(ct);
+        Console.WriteLine("[TEMP-LOG] ClienteService.CreateAsync: después de SaveChangesAsync.");
 
         return Result<ClienteDto>.Success(MapToDto(entity));
     }
@@ -85,7 +95,7 @@ public class ClienteService : IClienteService
     {
         var empresaId = _currentUser.EmpresaId;
         if (!empresaId.HasValue)
-            return Result<ClienteDto>.Failure("No se pudo determinar la empresa activa.");
+            return Result<ClienteDto>.Failure("No existe empresa activa en la sesión.");
 
         var entity = await _repository.GetByIdAsync(id, ct);
         if (entity is null)
@@ -120,7 +130,7 @@ public class ClienteService : IClienteService
     {
         var empresaId = _currentUser.EmpresaId;
         if (!empresaId.HasValue)
-            return Result<bool>.Failure("No se pudo determinar la empresa activa.");
+            return Result<bool>.Failure("No existe empresa activa en la sesión.");
 
         var entity = await _repository.GetByIdAsync(id, ct);
         if (entity is null)

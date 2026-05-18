@@ -14,9 +14,9 @@ public class HttpSucursalService
         _http = http;
     }
 
-    public async Task<List<SucursalListadoDto>> GetAllByEmpresaAsync(int empresaId)
+    public async Task<List<SucursalListadoDto>> GetAllAsync()
     {
-        var response = await _http.GetAsync($"{BaseUrl}/empresa/{empresaId}");
+        var response = await _http.GetAsync(BaseUrl);
         if (!response.IsSuccessStatusCode)
         {
             var error = await response.Content.ReadAsStringAsync();
@@ -24,6 +24,12 @@ public class HttpSucursalService
         }
         var result = await response.Content.ReadFromJsonAsync<ApiResponse<List<SucursalListadoDto>>>();
         return result?.Data ?? new List<SucursalListadoDto>();
+    }
+
+    public async Task<List<SucursalListadoDto>> GetActivasAsync()
+    {
+        var todas = await GetAllAsync();
+        return todas.Where(s => s.Activo).ToList();
     }
 
     public async Task<SucursalDto?> GetByIdAsync(int id)

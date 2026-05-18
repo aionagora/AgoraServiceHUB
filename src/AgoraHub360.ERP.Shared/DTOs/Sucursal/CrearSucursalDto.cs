@@ -4,8 +4,6 @@ using System.ComponentModel.DataAnnotations;
 
 public class CrearSucursalDto
 {
-    [Required(ErrorMessage = "La empresa es obligatoria.")]
-    [Range(1, int.MaxValue, ErrorMessage = "Debe seleccionar una empresa válida.")]
     public int EmpresaId { get; set; }
 
     [Required(ErrorMessage = "El nombre es obligatorio.")]

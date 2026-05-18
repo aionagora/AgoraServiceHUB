@@ -7,6 +7,7 @@
 @using AgoraHub360.ERP.Shared.DTOs.Sucursal
 @inject PedidoVentaHttpService PedidoService
 @inject ClienteHttpService ClienteService
+@inject ClienteSucursalHttpService ClienteSucursalHttpService
 @inject HttpSucursalService SucursalService
 @inject AlmacenHttpService AlmacenService
 @inject AuthenticationStateProvider AuthStateProvider
@@ -280,16 +281,31 @@
     {
         try
         {
-            // Simulación / Aquí se llaman los verdaderos Módulos HttpService
+            // Carga real de clientes desde backend (filtrado por EmpresaId en JWT)
             if (!IsClientUser)
             {
-                // clientesCombo = await ClienteService.GetAllAsync();
-                // Usar cliente demo que pertenece a la empresa de desarrollo (EmpresaId = 1)
-                clientesCombo.Add(new AgoraHub360.ERP.Shared.DTOs.MDM.ClienteDto { Id = 5, Codigo = "CLI-001", RazonSocial = "Supermercados Del Valle S.A." });
+                try
+                {
+                    clientesCombo = await ClienteService.GetAllAsync();
+                }
+                catch (Exception ex)
+                {
+                    errorMessage = $"Error al cargar clientes: {ex.Message}";
+                    clientesCombo = new();
+                }
             }
 
-            // sucursalesEmpresaCombo = await SucursalService.GetAllAsync();
-            sucursalesEmpresaCombo.Add(new SucursalListadoDto { Id = 10, Nombre = "Sucursal Principal (La Paz)" });
+            // Carga real de sucursales internas de la empresa
+            try
+            {
+                var sucursalesResult = await SucursalService.GetActivasAsync();
+                sucursalesEmpresaCombo = sucursalesResult ?? new();
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Error al cargar sucursales: {ex.Message}";
+                sucursalesEmpresaCombo = new();
+            }
         }
         catch (Exception ex)
         {
@@ -305,9 +321,21 @@
 
         if (clienteId > 0)
         {
-            // clienteSucursalesCombo = await ClienteSucursalService.GetByClienteAsync(clienteId);
-            clienteSucursalesCombo.Add(new ClienteSucursalDto { Id = 5, Nombre = "Tienda Zona Sur", Direccion = "Av. Siempre Viva 123" });
-            clienteSucursalesCombo.Add(new ClienteSucursalDto { Id = 6, Nombre = "Almacén Central", Direccion = "Parque Ind. 40" });
+            try
+            {
+                var result = await ClienteSucursalHttpService.GetByClienteAsync(clienteId);
+                clienteSucursalesCombo = result ?? new();
+
+                if (clienteSucursalesCombo.Count == 0)
+                {
+                    // El mensaje de advertencia ya está implementado en la UI (líneas 92-95)
+                }
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Error al cargar sucursales del cliente: {ex.Message}";
+                clienteSucursalesCombo = new();
+            }
         }
     }
 
@@ -319,8 +347,17 @@
 
         if (sucursalId > 0)
         {
-            // almacenesCombo = await AlmacenService.GetBySucursalAsync(sucursalId);
-            almacenesCombo.Add(new AlmacenDto { Id = 100, Codigo = "ALM-PRINC", Nombre = "Almacén General" });
+            try
+            {
+                // Cargar almacenes de la sucursal seleccionada
+                var todosAlmacenes = await AlmacenService.GetAllAsync();
+                almacenesCombo = todosAlmacenes.Where(a => a.SucursalId == sucursalId).ToList();
+            }
+            catch (Exception ex)
+            {
+                errorMessage = $"Error al cargar almacenes: {ex.Message}";
+                almacenesCombo = new();
+            }
         }
     }
 

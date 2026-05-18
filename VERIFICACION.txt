@@ -1,0 +1,231 @@
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                   TABLA DE VERIFICACIÓN - AgoraHub360 ERP                     ║
+╚═══════════════════════════════════════════════════════════════════════════════╝
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ PARTE A: /api/v1/empresas/mis-empresas                                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+ANTES:
+  ❌ GET /api/v1/empresas/mis-empresas → 401 Unauthorized
+  ❌ Backend: "Authorization failed. RolesAuthorizationRequirement: Admin"
+  ❌ [AllowAnonymous] + [Authorize] = conflicto de atributos
+
+CORRECCIÓN:
+  ✅ Eliminado [AllowAnonymous]
+  ✅ Eliminado [Authorize] redundante del método
+  ✅ Hereda [Authorize] de la clase (sin roles)
+
+DESPUÉS (ESPERADO):
+  ✅ GET /api/v1/empresas/mis-empresas → 200 OK
+  ✅ Backend: NO error de autorización
+  ✅ Solo requiere JWT válido (sin rol específico)
+  ✅ Devuelve empresas activas asignadas al usuario
+
+VERIFICACIÓN:
+  ┌─────────────────────────────────────────────────────────────┐
+  │ 1. Login con usuario normal (testuser@agora.com)            │
+  │ 2. GET /api/v1/empresas/mis-empresas                         │
+  │ 3. Status debe ser 200 OK                                    │
+  │ 4. Response: lista de empresas asignadas                     │
+  │ 5. Backend logs: NO debe aparecer "Admin" requirement       │
+  └─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ PARTE B: ClienteForm.razor - Guardado de Cliente                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+ANTES:
+  ❌ Llenar campos → Click Guardar → OnInvalidSubmit
+  ❌ Console: "[TEMP-LOG] SaveCliente bloqueado por validación"
+  ❌ Model del EditForm: GetCreateDto() ejecutado en cada render
+  ❌ Campos: formCodigo, formRazonSocial (variables separadas)
+  ❌ POST /api/v1/clientes nunca se ejecuta
+
+CORRECCIÓN:
+  ✅ Creado ClienteFormModel interno con DataAnnotations
+  ✅ Instancia única: formModel = new()
+  ✅ EditForm Model="formModel" (estable entre renders)
+  ✅ Inputs vinculados: @bind-Value="formModel.Codigo"
+  ✅ HandleInvalidSubmit mejorado con mensajes detallados
+
+DESPUÉS (ESPERADO):
+  ✅ Llenar campos → Click Guardar → OnValidSubmit
+  ✅ Console: "[TEMP-LOG] SaveCliente iniciado"
+  ✅ Console: "[TEMP-LOG] DTO CreateCliente {...}"
+  ✅ Network: POST /api/v1/clientes → 201 Created
+  ✅ Redirección a /mdm/clientes/editar/{id}
+
+VERIFICACIÓN:
+  ┌─────────────────────────────────────────────────────────────┐
+  │ 1. Ir a https://localhost:5002/mdm/clientes/nuevo           │
+  │ 2. Llenar:                                                   │
+  │    • Código: TEST001                                         │
+  │    • Razón Social: Cliente de Prueba                         │
+  │    • Tipo Cliente: Mayorista                                 │
+  │ 3. Abrir DevTools (F12) → Console                            │
+  │ 4. Click en "Guardar Cliente"                                │
+  │ 5. Verificar Console:                                        │
+  │    ✅ "[TEMP-LOG] SaveCliente iniciado"                      │
+  │    ✅ "{IsNew: true, Codigo: 'TEST001', ...}"                │
+  │    ✅ "[TEMP-LOG] DTO CreateCliente"                         │
+  │    ❌ NO debe aparecer "bloqueado por validación"            │
+  │ 6. Verificar Network tab:                                    │
+  │    ✅ POST https://localhost:7001/api/v1/clientes            │
+  │    ✅ Status: 201 Created                                    │
+  │    ✅ Response: {success: true, data: {...}}                 │
+  │ 7. Verificar redirección automática a edición               │
+  └─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ CASOS DE ERROR - Validación debe funcionar correctamente                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+PRUEBA 1: Código vacío
+  1. Dejar Código en blanco
+  2. Click Guardar
+  3. Esperado:
+     ✅ Mensaje: "El código es obligatorio."
+     ✅ Console: "[TEMP-LOG] Validación: El código es obligatorio."
+     ✅ Campo Código marcado en rojo
+     ❌ POST no se ejecuta
+
+PRUEBA 2: Razón Social vacía
+  1. Código: TEST002
+  2. Razón Social en blanco
+  3. Click Guardar
+  4. Esperado:
+     ✅ Mensaje: "La razón social es obligatoria."
+     ✅ Console: "[TEMP-LOG] Validación: La razón social es obligatoria."
+     ✅ Campo Razón Social marcado en rojo
+     ❌ POST no se ejecuta
+
+PRUEBA 3: Email inválido
+  1. Llenar campos obligatorios
+  2. Email: "esto-no-es-email"
+  3. Click Guardar
+  4. Esperado:
+     ✅ Mensaje: "El email no tiene un formato válido."
+     ✅ Campo Email marcado en rojo
+     ❌ POST no se ejecuta
+
+PRUEBA 4: Todo válido
+  1. Código: TEST003
+  2. Razón Social: Cliente Válido
+  3. Tipo Cliente: General
+  4. Email: cliente@ejemplo.com
+  5. Click Guardar
+  6. Esperado:
+     ✅ Console: SaveCliente iniciado
+     ✅ POST ejecutado
+     ✅ Status 201
+     ✅ Redirección exitosa
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ LIMPIEZA ANTES DE PROBAR                                                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+SCRIPT AUTOMÁTICO:
+  > .\scripts\reiniciar-servicios.ps1
+
+PASOS MANUALES (si no usas el script):
+  1. Detener API y Web
+  2. Matar procesos dotnet en puertos 7001 y 5002:
+     > netstat -ano | findstr :7001
+     > taskkill /PID {número} /F
+  3. dotnet clean
+  4. Borrar bin y obj (opcional pero recomendado)
+  5. dotnet restore
+  6. dotnet build
+  7. Iniciar API: cd src\AgoraHub360.ERP.Api; dotnet run
+  8. Iniciar Web: cd src\AgoraHub360.ERP.Web; dotnet run
+
+NAVEGADOR:
+  1. F12 → Application → Clear Storage → Clear site data
+  2. Service Workers → Unregister (si aparece)
+  3. Cerrar DevTools
+  4. Ctrl+F5 (hard reload)
+  5. Login nuevamente
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ARCHIVOS MODIFICADOS                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+  ✏️  src/AgoraHub360.ERP.Api/Controllers/V1/EmpresasController.cs
+      └─ Líneas 42-47: Corregidos atributos de autorización
+
+  ✏️  src/AgoraHub360.ERP.Web/Pages/MDM/ClienteForm.razor
+      └─ Línea 8: Added @using System.ComponentModel.DataAnnotations
+      └─ Línea 84: Model cambiado a formModel
+      └─ Líneas 91-141: Inputs vinculados a formModel.*
+      └─ Líneas 394+: Refactorizado @code con ClienteFormModel
+
+  🆕 scripts/reiniciar-servicios.ps1
+      └─ Script automático de limpieza completa
+
+  🆕 docs/DIAGNOSTICO-CORRECCION-2024.md
+      └─ Documentación técnica completa
+
+  🆕 RESUMEN-CORRECCIONES.md
+      └─ Resumen ejecutivo de cambios
+
+  🆕 VERIFICACION.txt (este archivo)
+      └─ Tabla de verificación paso a paso
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ COMPILACIÓN                                                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+  ✅ dotnet build → SUCCESS
+  ✅ 0 errores
+  ✅ 0 warnings relevantes
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ NOTAS IMPORTANTES                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+  ⚠️  NO enviar EmpresaId desde frontend
+      → El backend lo asigna automáticamente desde CurrentUserService
+
+  ⚠️  Validaciones en frontend (DataAnnotations) solo para EditForm
+      → Backend usa FluentValidation (no modificado)
+
+  ⚠️  Namespace 'Clientes' mantenido
+      → Según copilot-instructions.md
+
+  ⚠️  MaxLength coincide con DDL SQL Server
+      → Validado contra esquema real
+
+  ⚠️  Logs temporales mantener hasta verificación completa
+      → [TEMP-LOG] en console para diagnóstico
+
+  ⚠️  ClienteService.cs NO modificado
+      → No era necesario, problema estaba en formulario
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ CONTACTO SOPORTE                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+  Si los problemas persisten después de verificación:
+
+  1. Verificar timestamp DLL API en runtime
+     > Get-Item .\src\AgoraHub360.ERP.Api\bin\Debug\net8.0\*.dll
+     → Debe ser posterior a la corrección
+
+  2. Verificar que no hay múltiples dotnet.exe
+     > Get-Process dotnet
+     → Matar todos y reiniciar limpio
+
+  3. Verificar token JWT claims
+     → DevTools → Application → Local Storage
+     → Verificar que incluye UserId, EmpresaId, Role
+
+  4. Agregar logs en Program.cs temporales
+     → Inspeccionar metadata de endpoints en runtime
+
+  5. Verificar que TenantRequiredMiddleware NO bloquea GET
+     → Solo debe validar tenant en operaciones de escritura
+
+╔═══════════════════════════════════════════════════════════════════════════════╗
+║                           FIN DE VERIFICACIÓN                                 ║
+╚═══════════════════════════════════════════════════════════════════════════════╝

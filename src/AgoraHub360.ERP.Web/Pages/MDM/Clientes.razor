@@ -2,8 +2,10 @@
 @attribute [Authorize]
 @inject NavigationManager Nav
 @inject ClienteHttpService ClienteService
+@inject EmpresaStateService EmpresaState
 @inject IJSRuntime JS
 @using ClienteDto = AgoraHub360.ERP.Shared.DTOs.MDM.ClienteDto
+@implements IDisposable
 
 <PageTitle>Clientes</PageTitle>
 
@@ -114,7 +116,13 @@
 
     protected override async Task OnInitializedAsync()
     {
+        EmpresaState.OnChange += HandleEmpresaChanged;
         await LoadClientes();
+    }
+
+    private void HandleEmpresaChanged()
+    {
+        _ = InvokeAsync(async () => await LoadClientes());
     }
 
     private async Task LoadClientes()
@@ -133,6 +141,11 @@
         {
             loading = false;
         }
+    }
+
+    public void Dispose()
+    {
+        EmpresaState.OnChange -= HandleEmpresaChanged;
     }
 
     private void GoToCreate()
