@@ -17,6 +17,7 @@ public class PedidoVentaDetalle : TenantEntity
     public CompanyProduct? CompanyProduct { get; set; }
 
     public decimal CantidadSolicitada { get; set; }
+    public decimal CantidadReservada { get; set; } = 0m;
     public decimal CantidadConfirmada { get; set; }
     public decimal CantidadDespachada { get; set; }
 

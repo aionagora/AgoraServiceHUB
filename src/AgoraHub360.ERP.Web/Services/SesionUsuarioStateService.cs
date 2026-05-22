@@ -33,6 +33,16 @@ public class SesionUsuarioStateService
         if (!forceReload && _contexto is not null)
             return;
 
+        if (forceReload)
+        {
+            if (_contexto is not null)
+            {
+                await _js.InvokeVoidAsync("localStorage.removeItem", BuildSucursalKey());
+            }
+            _contexto = null;
+            _sucursalActivaId = null;
+        }
+
         _contexto = await _seguridadHttp.GetContextoSesionAsync();
         await LoadSucursalActivaAsync();
         OnChange?.Invoke();

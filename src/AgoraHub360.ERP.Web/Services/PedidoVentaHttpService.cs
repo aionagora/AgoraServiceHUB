@@ -16,8 +16,21 @@ public class PedidoVentaHttpService
 
     public async Task<List<PedidoVentaDto>> GetAllAsync()
     {
-        var response = await _http.GetFromJsonAsync<ApiResponse<List<PedidoVentaDto>>>(BaseUrl);
-        return response?.Data ?? new();
+        var response = await _http.GetAsync(BaseUrl);
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            throw new InvalidOperationException($"Error HTTP {(int)response.StatusCode}: {body}");
+        }
+
+        var payload = await response.Content.ReadFromJsonAsync<ApiResponse<List<PedidoVentaDto>>>();
+        if (payload is null)
+            throw new InvalidOperationException("Respuesta vacía del endpoint de pedidos.");
+
+        if (!payload.Success)
+            throw new InvalidOperationException(payload.Message ?? "La API devolvió un error al listar pedidos.");
+
+        return payload.Data ?? new List<PedidoVentaDto>();
     }
 
     public async Task<PedidoVentaDto?> GetByIdAsync(long id)

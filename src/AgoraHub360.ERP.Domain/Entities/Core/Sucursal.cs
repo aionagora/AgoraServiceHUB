@@ -66,4 +66,7 @@ public class Sucursal : TenantEntity
 
     // Relación
     public Empresa? Empresa { get; set; }
+
+    // Almacenes de esta sucursal
+    public ICollection<MDM.Almacen> Almacenes { get; set; } = new List<MDM.Almacen>();
 }

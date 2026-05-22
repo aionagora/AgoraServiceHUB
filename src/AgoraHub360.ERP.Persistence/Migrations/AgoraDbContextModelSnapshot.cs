@@ -3833,6 +3833,11 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<decimal>("ReservedStock")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("decimal(18,4)")
+                        .HasDefaultValue(0m);
+
                     b.HasKey("Id");
 
                     b.HasIndex("AlmacenId");
@@ -4070,7 +4075,7 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<int>("SucursalId")
+                    b.Property<int?>("SucursalId")
                         .HasColumnType("int");
 
                     b.Property<string>("Telefono")
@@ -6005,7 +6010,16 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
+                    b.Property<DateTime?>("FechaAnulacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaConfirmacion")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("FechaDespacho")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("FechaEmision")
@@ -6021,6 +6035,11 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<bool>("InventarioDescontado")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("ModificadoPor")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
@@ -6033,6 +6052,11 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Property<string>("Observaciones")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
+
+                    b.Property<bool>("ReservaAplicada")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<decimal>("Subtotal")
                         .HasPrecision(18, 2)
@@ -6091,6 +6115,12 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Property<decimal>("CantidadDespachada")
                         .HasPrecision(18, 4)
                         .HasColumnType("decimal(18,4)");
+
+                    b.Property<decimal>("CantidadReservada")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)")
+                        .HasDefaultValue(0m);
 
                     b.Property<decimal>("CantidadSolicitada")
                         .HasPrecision(18, 4)
@@ -7790,11 +7820,18 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.MDM.Almacen", b =>
                 {
-                    b.HasOne("AgoraHub360.ERP.Domain.Entities.Core.Sucursal", "Sucursal")
-                        .WithMany()
-                        .HasForeignKey("SucursalId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.Core.Empresa", "Empresa")
+                        .WithMany("Almacenes")
+                        .HasForeignKey("EmpresaId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("AgoraHub360.ERP.Domain.Entities.Core.Sucursal", "Sucursal")
+                        .WithMany("Almacenes")
+                        .HasForeignKey("SucursalId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Empresa");
 
                     b.Navigation("Sucursal");
                 });
@@ -8297,6 +8334,8 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Core.Empresa", b =>
                 {
+                    b.Navigation("Almacenes");
+
                     b.Navigation("Sucursales");
                 });
 
@@ -8327,6 +8366,11 @@ namespace AgoraHub360.ERP.Persistence.Migrations
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Core.Provincia", b =>
                 {
                     b.Navigation("Ciudades");
+                });
+
+            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Core.Sucursal", b =>
+                {
+                    b.Navigation("Almacenes");
                 });
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.Core.Usuario", b =>

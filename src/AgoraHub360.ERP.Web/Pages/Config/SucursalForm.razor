@@ -1,16 +1,15 @@
 @page "/config/sucursales/nueva"
 @page "/config/sucursales/editar/{Id:int}"
-@attribute [Authorize(Roles = "Admin")]
+@attribute [Authorize]
 @implements IDisposable
 @using System.ComponentModel.DataAnnotations
 @using AgoraHub360.ERP.Shared.DTOs.Sucursal
-@using AgoraHub360.ERP.Shared.DTOs.Empresa
 @using AgoraHub360.ERP.Shared.DTOs.Common
 @using AgoraHub360.ERP.Web.Services
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.AspNetCore.Components.Routing
 @inject HttpSucursalService SucursalSvc
-@inject EmpresaHttpService EmpresaSvc
+@inject EmpresaStateService EmpresaState
 @inject GeoCatalogHttpService GeoCatalogSvc
 @inject NavigationManager Nav
 @inject IJSRuntime Js
@@ -117,14 +116,9 @@
                     <div class="row g-3">
                         <div class="col-md-6 col-lg-4">
                             <label class="form-label">Empresa *</label>
-                            <InputSelect class="form-select" @bind-Value="_model.EmpresaId" disabled="@_isEdit">
-                                <option value="0">— Seleccionar Empresa —</option>
-                                @foreach (var emp in _empresas)
-                                {
-                                    <option value="@emp.Id">@emp.Nombre</option>
-                                }
-                            </InputSelect>
-                            <ValidationMessage For="() => _model.EmpresaId" />
+                            <div class="form-control bg-light">
+                                @(EmpresaState.EmpresaActiva?.Nombre ?? "—")
+                            </div>
                         </div>
                         <div class="col-md-6 col-lg-4">
                             <label class="form-label">C&oacute;digo</label>
@@ -386,10 +380,8 @@
 
 @code {
     [Parameter] public int? Id { get; set; }
-    [Parameter, SupplyParameterFromQuery(Name = "empresaId")] public int? EmpresaIdQuery { get; set; }
 
     private readonly SucursalFormModel _model = new();
-    private readonly List<EmpresaDto> _empresas = new();
     private List<GeoCatalogItemDto> _paises = new();
     private List<GeoCatalogItemDto> _departamentos = new();
     private List<GeoCatalogItemDto> _provincias = new();
@@ -443,10 +435,6 @@
 
         try
         {
-            _empresas.Clear();
-            var empresas = await EmpresaSvc.GetAllAsync();
-            _empresas.AddRange(empresas);
-
             _paises = await TryLoadGeoAsync(() => GeoCatalogSvc.GetPaisesAsync(), "países");
 
             if (_isEdit)
@@ -464,7 +452,7 @@
             }
             else
             {
-                _model.EmpresaId = EmpresaIdQuery ?? 0;
+                _model.EmpresaId = EmpresaState.EmpresaActivaId ?? 0;
                 _model.Activo = true;
                 _model.PermiteVentas = true;
                 _model.PermiteCompras = true;
@@ -800,7 +788,6 @@
 
     private sealed class SucursalFormModel
     {
-        [Range(1, int.MaxValue, ErrorMessage = "Debe seleccionar una empresa válida.")]
         public int EmpresaId { get; set; }
 
         [Required(ErrorMessage = "El nombre es obligatorio.")]

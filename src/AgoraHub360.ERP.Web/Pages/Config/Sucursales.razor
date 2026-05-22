@@ -1,10 +1,8 @@
 @page "/config/sucursales"
-@attribute [Authorize(Roles = "Admin")]
+@attribute [Authorize]
 @using AgoraHub360.ERP.Shared.DTOs.Sucursal
-@using AgoraHub360.ERP.Shared.DTOs.Empresa
 @using AgoraHub360.ERP.Web.Services
 @inject HttpSucursalService SucursalSvc
-@inject EmpresaHttpService EmpresaSvc
 @inject EmpresaStateService EmpresaState
 @inject NavigationManager Nav
 
@@ -26,17 +24,13 @@
 <div class="card mb-4">
     <div class="card-body py-3 d-flex flex-column flex-md-row align-items-md-center gap-3">
         <div class="flex-grow-1">
-            <label class="form-label mb-1">Empresa</label>
-            <select class="form-select" @onchange="OnEmpresaChange" disabled="@_loadingEmpresas">
-                <option value="0">— Seleccionar Empresa —</option>
-                @foreach (var emp in _empresas)
-                {
-                    <option value="@emp.Id" selected="@(_selectedEmpresaId == emp.Id)">@emp.Nombre</option>
-                }
-            </select>
+            <label class="form-label mb-1">Empresa activa</label>
+            <div class="form-control bg-light">
+                @(EmpresaState.EmpresaActiva?.Nombre ?? "—")
+            </div>
         </div>
         <div class="pt-md-4">
-            <button class="btn btn-primary" @onclick="GoToCreate" disabled="@(_selectedEmpresaId <= 0)">
+            <button class="btn btn-primary" @onclick="GoToCreate" disabled="@(!_tieneEmpresaActiva)">
                 <i class="bi bi-plus-circle me-1"></i> Nueva Sucursal
             </button>
         </div>
@@ -55,11 +49,11 @@
             <p class="text-muted mt-2">Cargando sucursales...</p>
         </div>
     }
-    else if (_selectedEmpresaId <= 0)
+    else if (!_tieneEmpresaActiva)
     {
         <div class="card-body text-center py-5">
             <i class="bi bi-buildings" style="font-size: 3rem; color: var(--agora-text-light);"></i>
-            <p class="text-muted mt-3">Seleccione una empresa para ver sus sucursales.</p>
+            <p class="text-muted mt-3">Seleccione una empresa activa para ver sus sucursales.</p>
         </div>
     }
     else if (_sucursales.Count == 0)
@@ -168,11 +162,8 @@
 }
 
 @code {
-    private List<EmpresaDto> _empresas = new();
     private List<SucursalListadoDto> _sucursales = new();
-    private int _selectedEmpresaId;
-
-    private bool _loadingEmpresas = true;
+    private bool _tieneEmpresaActiva;
     private bool _loading = false;
     private string? _mensaje;
     private bool _esError;
@@ -183,40 +174,27 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadEmpresasAsync();
-        if (EmpresaState.EmpresaActivaId.HasValue)
-        {
-            _selectedEmpresaId = EmpresaState.EmpresaActivaId.Value;
+        _tieneEmpresaActiva = EmpresaState.EmpresaActivaId.HasValue;
+        if (_tieneEmpresaActiva)
             await LoadSucursalesAsync();
-        }
     }
 
-    private async Task LoadEmpresasAsync()
+    protected override async Task OnParametersSetAsync()
     {
-        _loadingEmpresas = true;
-        try
+        var tieneEmpresa = EmpresaState.EmpresaActivaId.HasValue;
+        if (_tieneEmpresaActiva != tieneEmpresa)
         {
-            _empresas = await EmpresaSvc.GetAllAsync();
-        }
-        catch (Exception ex)
-        {
-            ShowMsg($"Error al cargar las empresas disponibles: {ex.Message}", true);
-        }
-        _loadingEmpresas = false;
-    }
-
-    private async Task OnEmpresaChange(ChangeEventArgs e)
-    {
-        if (int.TryParse(e.Value?.ToString(), out var empId))
-        {
-            _selectedEmpresaId = empId;
-            await LoadSucursalesAsync();
+            _tieneEmpresaActiva = tieneEmpresa;
+            if (_tieneEmpresaActiva)
+                await LoadSucursalesAsync();
+            else
+                _sucursales.Clear();
         }
     }
 
     private async Task LoadSucursalesAsync()
     {
-        if (_selectedEmpresaId <= 0)
+        if (!EmpresaState.EmpresaActivaId.HasValue)
         {
             _sucursales.Clear();
             return;
@@ -225,7 +203,7 @@
         _loading = true;
         try
         {
-            _sucursales = await SucursalSvc.GetAllByEmpresaAsync(_selectedEmpresaId);
+            _sucursales = await SucursalSvc.GetAllAsync();
         }
         catch (Exception ex)
         {
@@ -236,7 +214,8 @@
 
     private void GoToCreate()
     {
-        Nav.NavigateTo($"/config/sucursales/nueva?empresaId={_selectedEmpresaId}");
+        if (!EmpresaState.EmpresaActivaId.HasValue) return;
+        Nav.NavigateTo($"/config/sucursales/nueva?empresaId={EmpresaState.EmpresaActivaId.Value}");
     }
 
     private void GoToEdit(int id)

@@ -2,6 +2,7 @@ namespace AgoraHub360.ERP.Api.Controllers.V1;
 
 using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Shared.DTOs;
+using AgoraHub360.ERP.Shared.Constants;
 using AgoraHub360.ERP.Shared.DTOs.Empresa;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
@@ -31,6 +32,7 @@ public class EmpresasController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Roles = Roles.Admin)]
     public async Task<IActionResult> GetAll(CancellationToken ct)
     {
         var result = await _empresaService.GetAllAsync(ct);
@@ -38,7 +40,8 @@ public class EmpresasController : ControllerBase
     }
 
     /// <summary>
-    /// Obtiene solo las empresas asignadas al usuario logueado
+    /// Obtiene solo las empresas asignadas al usuario logueado.
+    /// Solo requiere autenticación, sin roles específicos.
     /// </summary>
     [HttpGet("mis-empresas")]
     public async Task<IActionResult> GetMisEmpresas(CancellationToken ct)

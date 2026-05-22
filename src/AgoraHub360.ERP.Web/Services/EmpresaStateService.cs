@@ -1,6 +1,8 @@
 namespace AgoraHub360.ERP.Web.Services;
 
 using AgoraHub360.ERP.Shared.DTOs.Empresa;
+using AgoraHub360.ERP.Shared.DTOs.Auth;
+using AgoraHub360.ERP.Shared.DTOs;
 using Microsoft.JSInterop;
 
 /// <summary>
@@ -10,6 +12,8 @@ using Microsoft.JSInterop;
 public class EmpresaStateService
 {
     private readonly IJSRuntime _js;
+    private readonly AuthHttpService _authHttp;
+    private readonly JwtAuthStateProvider _authState;
     private const string StorageKey = "agorahub360_empresa_activa";
 
     private EmpresaDto? _empresaActiva;
@@ -17,9 +21,11 @@ public class EmpresaStateService
 
     public event Action? OnChange;
 
-    public EmpresaStateService(IJSRuntime js)
+    public EmpresaStateService(IJSRuntime js, AuthHttpService authHttp, JwtAuthStateProvider authState)
     {
         _js = js;
+        _authHttp = authHttp;
+        _authState = authState;
     }
 
     public EmpresaDto? EmpresaActiva => _empresaActiva;
@@ -36,6 +42,42 @@ public class EmpresaStateService
         _empresaActiva = empresa;
         await _js.InvokeVoidAsync("localStorage.setItem", StorageKey, empresa.Id.ToString());
         OnChange?.Invoke();
+    }
+
+    public async Task<ApiResponse<CambiarEmpresaResponseDto>> CambiarEmpresaActivaAsync(int empresaId)
+    {
+        var response = await _authHttp.SeleccionarEmpresaAsync(new SeleccionarEmpresaRequestDto { EmpresaId = empresaId });
+        if (!response.Success || response.Data is null)
+            return response;
+
+        await _authState.ReplaceTokenAsync(response.Data.Token);
+
+        if (response.Data.EmpresasDisponibles.Any())
+        {
+            _empresas = response.Data.EmpresasDisponibles
+                .Select(e => new EmpresaDto
+                {
+                    Id = e.Id,
+                    Nombre = e.Nombre,
+                    NIT = e.Nit,
+                    Activo = e.EsActiva,
+                    FechaCreacion = DateTime.UtcNow
+                }).ToList();
+        }
+
+        _empresaActiva = _empresas.FirstOrDefault(e => e.Id == response.Data.EmpresaActiva.Id)
+            ?? new EmpresaDto
+            {
+                Id = response.Data.EmpresaActiva.Id,
+                Nombre = response.Data.EmpresaActiva.Nombre,
+                NIT = response.Data.EmpresaActiva.Nit,
+                Activo = true,
+                FechaCreacion = DateTime.UtcNow
+            };
+
+        await _js.InvokeVoidAsync("localStorage.setItem", StorageKey, _empresaActiva.Id.ToString());
+        OnChange?.Invoke();
+        return response;
     }
 
     public async Task LoadFromStorageAsync()

@@ -1,4 +1,6 @@
 @page "/ventas/pedidos"
+@using AgoraHub360.ERP.Shared.DTOs.Ventas
+@using AgoraHub360.ERP.Web.Services
 
 <PageTitle>Pedidos - AgoraHub360 ERP</PageTitle>
 
@@ -14,9 +16,52 @@
             <i class="bi bi-plus-circle me-1"></i> Nuevo Pedido
         </button>
     </div>
-    <div class="card-body text-center py-5">
-        <i class="bi bi-receipt" style="font-size: 3rem; color: var(--agora-text-light);"></i>
-        <p class="text-muted mt-3">De click en "Nuevo Pedido" para probar el nuevo flujo comercial.</p>
+    <div class="card-body">
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <div class="alert alert-danger" role="alert">@errorMessage</div>
+        }
+        else if (isLoading)
+        {
+            <div class="text-center py-4 text-muted">Cargando pedidos...</div>
+        }
+        else if (pedidos.Count == 0)
+        {
+            <div class="text-center py-5">
+                <i class="bi bi-receipt" style="font-size: 3rem; color: var(--agora-text-light);"></i>
+                <p class="text-muted mt-3">No hay pedidos registrados.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Número</th>
+                            <th>Fecha</th>
+                            <th>Estado</th>
+                            <th class="text-end">Subtotal</th>
+                            <th class="text-end">Impuestos</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var pedido in pedidos)
+                        {
+                            <tr>
+                                <td>@pedido.Numero</td>
+                                <td>@pedido.FechaEmision.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>@pedido.Estado</td>
+                                <td class="text-end">@pedido.Subtotal.ToString("N2")</td>
+                                <td class="text-end">@pedido.Impuestos.ToString("N2")</td>
+                                <td class="text-end fw-semibold">@pedido.Total.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
     </div>
 </div>
 
@@ -41,11 +86,39 @@
 
 @code {
     @inject NavigationManager Nav
+    @inject PedidoVentaHttpService PedidoService
 
     // Variables preparadas para el módulo de OrdenVenta
     private bool mostrarPreviewWorkflow = false;
     private int  previewOrdenVentaId   = 0;
     private bool previewIsReadOnly     = false;
+    private List<PedidoVentaDto> pedidos = new();
+    private bool isLoading;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPedidosAsync();
+    }
+
+    private async Task LoadPedidosAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            pedidos = await PedidoService.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"No se pudo cargar el listado de pedidos: {ex.Message}";
+            pedidos = new();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
 
     private void GoToNuevo()
     {

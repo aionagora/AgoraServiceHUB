@@ -13,6 +13,10 @@ public class StockProductoConfiguration : IEntityTypeConfiguration<StockProducto
         builder.Property(s => s.Id).UseIdentityColumn();
 
         builder.Property(s => s.CurrentStock).HasColumnType("decimal(18,4)");
+        builder.Property(s => s.ReservedStock)
+            .HasColumnType("decimal(18,4)")
+            .IsRequired()
+            .HasDefaultValue(0m);
         builder.Property(s => s.AverageCost).HasColumnType("decimal(18,4)");
         builder.Property(s => s.LastUpdated).IsRequired();
         builder.Property(s => s.CreadoPor).HasMaxLength(100);

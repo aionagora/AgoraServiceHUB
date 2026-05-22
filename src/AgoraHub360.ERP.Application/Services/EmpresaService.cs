@@ -9,12 +9,21 @@ using AgoraHub360.ERP.Shared.DTOs.Empresa;
 public class EmpresaService : IEmpresaService
 {
     private readonly IRepository<Empresa> _repository;
+    private readonly IRepository<Sucursal> _sucursalRepository;
+    private readonly IRepository<AgoraHub360.ERP.Domain.Entities.MDM.Almacen> _almacenRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IEmpresaSeedService _seedService;
 
-    public EmpresaService(IRepository<Empresa> repository, IUnitOfWork unitOfWork, IEmpresaSeedService seedService)
+    public EmpresaService(
+        IRepository<Empresa> repository, 
+        IRepository<Sucursal> sucursalRepository,
+        IRepository<AgoraHub360.ERP.Domain.Entities.MDM.Almacen> almacenRepository,
+        IUnitOfWork unitOfWork, 
+        IEmpresaSeedService seedService)
     {
         _repository = repository;
+        _sucursalRepository = sucursalRepository;
+        _almacenRepository = almacenRepository;
         _unitOfWork = unitOfWork;
         _seedService = seedService;
     }
@@ -56,6 +65,38 @@ public class EmpresaService : IEmpresaService
         };
 
         await _repository.AddAsync(empresa, ct);
+        // Guardamos primero para obtener el Id de la Empresa
+        await _unitOfWork.SaveChangesAsync(ct);
+
+        // FASE 4: Crear Sucursal Principal y Almacén Principal por defecto
+        var sucursalPrincipal = new Sucursal
+        {
+            EmpresaId = empresa.Id,
+            Codigo = "SUC01",
+            Nombre = "Sucursal Principal",
+            EsCentral = true,
+            PermiteVentas = true,
+            PermiteCompras = true,
+            PermiteInventario = true,
+            PermiteDespacho = true,
+            PermiteFacturacion = true,
+            ManejaAlmacen = true,
+            Activo = true
+        };
+
+        await _sucursalRepository.AddAsync(sucursalPrincipal, ct);
+        await _unitOfWork.SaveChangesAsync(ct); // Guardar para obtener SucursalId
+
+        var almacenPrincipal = new AgoraHub360.ERP.Domain.Entities.MDM.Almacen
+        {
+            EmpresaId = empresa.Id,
+            SucursalId = sucursalPrincipal.Id,
+            Codigo = "ALM-SUC01",
+            Nombre = "Almacén Principal",
+            Activo = true
+        };
+
+        await _almacenRepository.AddAsync(almacenPrincipal, ct);
         await _unitOfWork.SaveChangesAsync(ct);
 
         // Seed default MDM data for the new company

@@ -28,10 +28,13 @@ public class ClienteHttpService
 
     public async Task<ApiResponse<ClienteDto>> CreateAsync(CreateClienteDto dto)
     {
+        var authHeader = _http.DefaultRequestHeaders.Authorization?.Scheme;
+        Console.WriteLine($"[TEMP-LOG] POST {BaseUrl} AuthorizationScheme={authHeader ?? "(null)"}");
         var response = await _http.PostAsJsonAsync(BaseUrl, dto);
         if (!response.IsSuccessStatusCode)
         {
             var body = await response.Content.ReadAsStringAsync();
+            Console.WriteLine($"[TEMP-LOG] POST {BaseUrl} Status={(int)response.StatusCode} Body={body}");
             return ApiResponse<ClienteDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<ClienteDto>>()

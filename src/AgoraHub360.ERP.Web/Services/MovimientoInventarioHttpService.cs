@@ -45,18 +45,34 @@ public class MovimientoInventarioHttpService
     }
 
     public async Task<KardexDto?> GetKardexAsync(
-        int productoId,
+        long companyProductId,
         int? almacenId = null,
         DateTime? desde = null,
         DateTime? hasta = null)
     {
-        var url = $"{Base}/kardex/{productoId}?";
+        var url = $"{Base}/kardex/{companyProductId}?";
         if (almacenId.HasValue) url += $"almacenId={almacenId}&";
         if (desde.HasValue) url += $"desde={desde.Value:yyyy-MM-dd}&";
         if (hasta.HasValue) url += $"hasta={hasta.Value:yyyy-MM-dd}&";
 
-        var response = await _http.GetFromJsonAsync<ApiResponse<KardexDto>>(url.TrimEnd('&', '?'));
-        return response?.Data;
+        var httpResponse = await _http.GetAsync(url.TrimEnd('&', '?'));
+        var payload = await httpResponse.Content.ReadFromJsonAsync<ApiResponse<KardexDto>>();
+
+        if (!httpResponse.IsSuccessStatusCode)
+        {
+            var detail = payload?.Message
+                         ?? (payload?.Errors is { Count: > 0 } ? string.Join(" | ", payload.Errors) : null)
+                         ?? await httpResponse.Content.ReadAsStringAsync();
+            throw new InvalidOperationException($"HTTP {(int)httpResponse.StatusCode}: {detail}");
+        }
+
+        if (payload is null)
+            throw new InvalidOperationException("Respuesta vacía del endpoint de kardex.");
+
+        if (!payload.Success)
+            throw new InvalidOperationException(payload.Message ?? "Error al cargar kardex.");
+
+        return payload.Data;
     }
 
     public async Task<List<StockProductoDto>> GetStockAsync(int? almacenId = null)

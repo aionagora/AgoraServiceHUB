@@ -94,13 +94,25 @@ public class MovimientoInventarioService : IMovimientoInventarioService
         if (!empresaId.HasValue)
             return Result<MovimientoInventarioDto>.Failure("No active company.");
 
+        Console.WriteLine($"[TEMP-LOG] MovimientoInventario.CreateAsync EmpresaId JWT: {empresaId.Value}");
+        Console.WriteLine($"[TEMP-LOG] MovimientoInventario.CreateAsync CompanyProductId recibido: {dto.CompanyProductId}");
+        Console.WriteLine($"[TEMP-LOG] MovimientoInventario.CreateAsync ProductId en DTO: N/A (el DTO usa CompanyProductId)");
+        Console.WriteLine($"[TEMP-LOG] MovimientoInventario.CreateAsync WarehouseId recibido: {dto.WarehouseId}");
+        Console.WriteLine($"[TEMP-LOG] MovimientoInventario.CreateAsync MovementType: {dto.MovementType}");
+
         // Validate CompanyProduct
         var companyProduct = await _companyProductRepo.GetByIdAsync(dto.CompanyProductId, ct);
+        Console.WriteLine(companyProduct is null
+            ? "[TEMP-LOG] MovimientoInventario.CreateAsync resultado búsqueda CompanyProduct: NO ENCONTRADO"
+            : $"[TEMP-LOG] MovimientoInventario.CreateAsync resultado búsqueda CompanyProduct: ENCONTRADO CompanyProductId={companyProduct.CompanyProductId}, ProductId={companyProduct.ProductId}, EmpresaId={companyProduct.EmpresaId}");
         if (companyProduct is null || companyProduct.EmpresaId != empresaId.Value)
             return Result<MovimientoInventarioDto>.Failure("Company product not found or does not belong to your company.");
 
         // Validate source warehouse
         var almacen = await _almacenRepo.GetByIdAsync(dto.WarehouseId, ct);
+        Console.WriteLine(almacen is null
+            ? "[TEMP-LOG] MovimientoInventario.CreateAsync resultado búsqueda Warehouse: NO ENCONTRADO"
+            : $"[TEMP-LOG] MovimientoInventario.CreateAsync resultado búsqueda Warehouse: ENCONTRADO WarehouseId={almacen.Id}, EmpresaId={almacen.EmpresaId}");
         if (almacen is null || almacen.EmpresaId != empresaId.Value)
             return Result<MovimientoInventarioDto>.Failure("Warehouse not found or does not belong to your company.");
 
@@ -113,6 +125,9 @@ public class MovimientoInventarioService : IMovimientoInventarioService
             if (dto.DestinationWarehouseId == dto.WarehouseId)
                 return Result<MovimientoInventarioDto>.Failure("Destination warehouse must differ from source.");
             almacenDestino = await _almacenRepo.GetByIdAsync(dto.DestinationWarehouseId.Value, ct);
+            Console.WriteLine(almacenDestino is null
+                ? "[TEMP-LOG] MovimientoInventario.CreateAsync resultado búsqueda DestinationWarehouse: NO ENCONTRADO"
+                : $"[TEMP-LOG] MovimientoInventario.CreateAsync resultado búsqueda DestinationWarehouse: ENCONTRADO WarehouseId={almacenDestino.Id}, EmpresaId={almacenDestino.EmpresaId}");
             if (almacenDestino is null || almacenDestino.EmpresaId != empresaId.Value)
                 return Result<MovimientoInventarioDto>.Failure("Destination warehouse not found or does not belong to your company.");
         }
@@ -179,7 +194,8 @@ public class MovimientoInventarioService : IMovimientoInventarioService
                 UpdateAverageCost(stockDestino, dto.Quantity, unitCost);
                 stockDestino.CurrentStock += dto.Quantity;
                 stockDestino.LastUpdated = DateTime.UtcNow;
-                await _stockRepo.UpdateAsync(stockDestino, ct);
+                if (stockDestino.Id != 0)
+                    await _stockRepo.UpdateAsync(stockDestino, ct);
                 break;
             case "Adjustment":
                 stockOrigen.CurrentStock += dto.Quantity;
@@ -189,7 +205,8 @@ public class MovimientoInventarioService : IMovimientoInventarioService
         }
 
         stockOrigen.LastUpdated = DateTime.UtcNow;
-        await _stockRepo.UpdateAsync(stockOrigen, ct);
+        if (stockOrigen.Id != 0)
+            await _stockRepo.UpdateAsync(stockOrigen, ct);
         await _unitOfWork.SaveChangesAsync(ct);
 
         var cpMap = new Dictionary<long, string> { { companyProduct.CompanyProductId, companyProduct.Sku } };
@@ -200,7 +217,7 @@ public class MovimientoInventarioService : IMovimientoInventarioService
     }
 
     public async Task<Result<KardexDto>> GetKardexAsync(
-        int productoId,
+        long companyProductId,
         int? almacenId = null,
         DateTime? fechaDesde = null,
         DateTime? fechaHasta = null,
@@ -210,7 +227,10 @@ public class MovimientoInventarioService : IMovimientoInventarioService
         if (!empresaId.HasValue)
             return Result<KardexDto>.Failure("No active company.");
 
-        var companyProduct = await _companyProductRepo.GetByIdAsync((long)productoId, ct);
+        if (companyProductId <= 0)
+            return Result<KardexDto>.Failure("CompanyProductId es obligatorio.");
+
+        var companyProduct = await _companyProductRepo.GetByIdAsync(companyProductId, ct);
         if (companyProduct is null || companyProduct.EmpresaId != empresaId.Value)
             return Result<KardexDto>.Failure("Company product not found.");
 

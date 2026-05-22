@@ -11,27 +11,13 @@ public class TenantRequiredMiddleware
 {
     private readonly RequestDelegate _next;
 
-    // Rutas exentas de validacion tenant (operaciones globales)
     private static readonly string[] ExemptPaths = new[]
     {
-        "/api/v1/auth",
-        "/api/v1/empresas",
-        "/api/v1/roles",
-        "/api/v1/usuarios",
-        "/api/v1/audit-logs",
-        "/api/v1/diagnostics",
-        "/api/v1/mdm/catalogs",
-        "/api/v1/mdm/categories",
-        "/api/v1/mdm/products",
-        "/api/v1/mdm/attributes",
-        "/api/v1/mdm/variants",
-        "/api/v1/mdm/brands",
-        "/api/v1/mdm/manufacturers",
-        "/api/v1/mdm/product-uoms",
-        "/api/v1/mdm/product-codes",
-        "/api/v1/products",
-        "/api/v1/categories",
-        "/api/v1/uoms",
+        "/api/v1/auth/login",
+        "/api/v1/auth/seleccionar-empresa",
+        "/api/v1/auth/mis-empresas",
+        "/api/v1/empresas/mis-empresas",
+        "/api/v1/health",
         "/health",
         "/swagger"
     };
@@ -50,13 +36,15 @@ public class TenantRequiredMiddleware
         var isApiRoute = path.StartsWith("/api/");
         var isExempt = ExemptPaths.Any(p => path.StartsWith(p.ToLowerInvariant()));
         var isWriteOperation = method is "POST" or "PUT" or "DELETE";
+        var isTenantAware = isApiRoute && !isExempt;
         var isAuthenticated = context.User.Identity?.IsAuthenticated == true;
 
-        if (isApiRoute && !isExempt && isWriteOperation && isAuthenticated)
+        if (isTenantAware && isAuthenticated)
         {
             var empresaIdClaim = context.User.FindFirst("EmpresaId")?.Value;
             if (string.IsNullOrEmpty(empresaIdClaim) || !int.TryParse(empresaIdClaim, out _))
             {
+                Console.WriteLine($"[TEMP-LOG] TenantRequired bloqueó {method} {path}. Motivo: EmpresaId ausente/invalid.");
                 context.Response.ContentType = "application/problem+json";
                 context.Response.StatusCode = StatusCodes.Status403Forbidden;
 

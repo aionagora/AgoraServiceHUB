@@ -14,21 +14,31 @@ public class SucursalService : ISucursalService
 {
     private readonly IRepository<Sucursal> _sucursalRepository;
     private readonly IRepository<Empresa> _empresaRepository;
+    private readonly IRepository<AgoraHub360.ERP.Domain.Entities.MDM.Almacen> _almacenRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ICurrentUserService _currentUserService;
 
     public SucursalService(
         IRepository<Sucursal> sucursalRepository,
         IRepository<Empresa> empresaRepository,
-        IUnitOfWork unitOfWork)
+        IRepository<AgoraHub360.ERP.Domain.Entities.MDM.Almacen> almacenRepository,
+        IUnitOfWork unitOfWork,
+        ICurrentUserService currentUserService)
     {
         _sucursalRepository = sucursalRepository;
         _empresaRepository = empresaRepository;
+        _almacenRepository = almacenRepository;
         _unitOfWork = unitOfWork;
+        _currentUserService = currentUserService;
     }
 
-    public async Task<Result<IReadOnlyList<SucursalListadoDto>>> GetAllByEmpresaAsync(int empresaId, CancellationToken ct = default)
+    public async Task<Result<IReadOnlyList<SucursalListadoDto>>> GetAllAsync(CancellationToken ct = default)
     {
-        var sucursales = await _sucursalRepository.FindIgnoreQueryFiltersAsync(s => s.EmpresaId == empresaId, ct);
+        var empresaId = _currentUserService.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<IReadOnlyList<SucursalListadoDto>>.Failure("No hay empresa activa en la sesión.");
+
+        var sucursales = await _sucursalRepository.FindAsync(s => s.EmpresaId == empresaId.Value, ct);
 
         var dtos = sucursales.Select(s => new SucursalListadoDto
         {
@@ -46,11 +56,18 @@ public class SucursalService : ISucursalService
 
     public async Task<Result<SucursalDto>> GetByIdAsync(int id, CancellationToken ct = default)
     {
-        var sucursal = await _sucursalRepository.GetByIdIgnoreQueryFiltersAsync(id, ct);
+        var empresaId = _currentUserService.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<SucursalDto>.Failure("No hay empresa activa en la sesión.");
+
+        var sucursal = await _sucursalRepository.GetByIdAsync(id, ct);
         if (sucursal == null)
         {
             return Result<SucursalDto>.Failure("Sucursal no encontrada.");
         }
+
+        if (sucursal.EmpresaId != empresaId.Value)
+            return Result<SucursalDto>.Failure("Sucursal no encontrada.");
 
         var dto = MapToDto(sucursal);
         return Result<SucursalDto>.Success(dto);
@@ -58,13 +75,17 @@ public class SucursalService : ISucursalService
 
     public async Task<Result<SucursalDto>> CreateAsync(CrearSucursalDto dto, CancellationToken ct = default)
     {
-        var empresa = await _empresaRepository.GetByIdAsync(dto.EmpresaId, ct);
+        var empresaId = _currentUserService.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<SucursalDto>.Failure("No hay empresa activa en la sesión.");
+
+        var empresa = await _empresaRepository.GetByIdAsync(empresaId.Value, ct);
         if (empresa == null)
         {
             return Result<SucursalDto>.Failure("La empresa especificada no existe.");
         }
 
-        var resultValidacion = await ValidarReglasNegocioAsync(dto.EmpresaId, dto.Nombre, dto.Codigo, dto.EsCentral, null, ct);
+        var resultValidacion = await ValidarReglasNegocioAsync(empresaId.Value, dto.Nombre, dto.Codigo, dto.EsCentral, null, ct);
         if (!resultValidacion.IsSuccess)
         {
             return Result<SucursalDto>.Failure(resultValidacion.Error!);
@@ -72,7 +93,7 @@ public class SucursalService : ISucursalService
 
         var entidad = new Sucursal
         {
-            EmpresaId = dto.EmpresaId,
+            EmpresaId = empresaId.Value,
             Nombre = dto.Nombre,
             Codigo = dto.Codigo,
             CodigoInterno = dto.CodigoInterno,
@@ -114,6 +135,30 @@ public class SucursalService : ISucursalService
         };
 
         var sucursal = await _sucursalRepository.AddAsync(entidad, ct);
+
+        // FASE 3: Auto-crear almacén principal si la sucursal es operativa
+        if (dto.ManejaAlmacen || dto.PermiteInventario || dto.PermiteDespacho)
+        {
+            var codigoAlmacen = $"ALM-{dto.Codigo}".Trim();
+
+            // Validar que no exista para prevenir error de constraint único
+            var existsAlmacen = await _almacenRepository.FindAsync(a => 
+                a.EmpresaId == empresaId.Value && a.Codigo == codigoAlmacen, ct);
+
+            if (existsAlmacen.Count == 0)
+            {
+                var nuevoAlmacen = new AgoraHub360.ERP.Domain.Entities.MDM.Almacen
+                {
+                    EmpresaId = empresaId.Value,
+                    Sucursal = sucursal,
+                    Codigo = codigoAlmacen,
+                    Nombre = $"Almacén {dto.Nombre}".Trim(),
+                    Activo = true
+                };
+                await _almacenRepository.AddAsync(nuevoAlmacen, ct);
+            }
+        }
+
         await _unitOfWork.SaveChangesAsync(ct);
 
         return Result<SucursalDto>.Success(MapToDto(sucursal));
@@ -121,11 +166,18 @@ public class SucursalService : ISucursalService
 
     public async Task<Result<SucursalDto>> UpdateAsync(int id, ActualizarSucursalDto dto, CancellationToken ct = default)
     {
-        var sucursal = await _sucursalRepository.GetByIdIgnoreQueryFiltersAsync(id, ct);
+        var empresaId = _currentUserService.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<SucursalDto>.Failure("No hay empresa activa en la sesión.");
+
+        var sucursal = await _sucursalRepository.GetByIdAsync(id, ct);
         if (sucursal == null)
         {
             return Result<SucursalDto>.Failure("Sucursal no encontrada.");
         }
+
+        if (sucursal.EmpresaId != empresaId.Value)
+            return Result<SucursalDto>.Failure("Sucursal no encontrada.");
 
         var resultValidacion = await ValidarReglasNegocioAsync(sucursal.EmpresaId, dto.Nombre, dto.Codigo, dto.EsCentral, id, ct);
         if (!resultValidacion.IsSuccess)
@@ -180,11 +232,18 @@ public class SucursalService : ISucursalService
 
     public async Task<Result<bool>> DeleteAsync(int id, CancellationToken ct = default)
     {
-        var sucursal = await _sucursalRepository.GetByIdIgnoreQueryFiltersAsync(id, ct);
+        var empresaId = _currentUserService.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<bool>.Failure("No hay empresa activa en la sesión.");
+
+        var sucursal = await _sucursalRepository.GetByIdAsync(id, ct);
         if (sucursal == null)
         {
             return Result<bool>.Failure("Sucursal no encontrada.");
         }
+
+        if (sucursal.EmpresaId != empresaId.Value)
+            return Result<bool>.Failure("Sucursal no encontrada.");
 
         if (sucursal.EsCentral)
         {
@@ -200,8 +259,15 @@ public class SucursalService : ISucursalService
 
     public async Task<Result<bool>> CambiarEstadoAsync(int id, bool activo, CancellationToken ct = default)
     {
-        var sucursal = await _sucursalRepository.GetByIdIgnoreQueryFiltersAsync(id, ct);
+        var empresaId = _currentUserService.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<bool>.Failure("No hay empresa activa en la sesión.");
+
+        var sucursal = await _sucursalRepository.GetByIdAsync(id, ct);
         if (sucursal == null)
+            return Result<bool>.Failure("Sucursal no encontrada.");
+
+        if (sucursal.EmpresaId != empresaId.Value)
             return Result<bool>.Failure("Sucursal no encontrada.");
 
         if (sucursal.EsCentral && !activo)
@@ -216,8 +282,15 @@ public class SucursalService : ISucursalService
 
     public async Task<Result<bool>> EstablecerCentralAsync(int id, CancellationToken ct = default)
     {
-        var sucursal = await _sucursalRepository.GetByIdIgnoreQueryFiltersAsync(id, ct);
+        var empresaId = _currentUserService.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<bool>.Failure("No hay empresa activa en la sesión.");
+
+        var sucursal = await _sucursalRepository.GetByIdAsync(id, ct);
         if (sucursal == null)
+            return Result<bool>.Failure("Sucursal no encontrada.");
+
+        if (sucursal.EmpresaId != empresaId.Value)
             return Result<bool>.Failure("Sucursal no encontrada.");
 
         if (sucursal.EsCentral)
@@ -226,7 +299,7 @@ public class SucursalService : ISucursalService
         if (!sucursal.Activo)
             return Result<bool>.Failure("No se puede establecer como central una sucursal inactiva.");
 
-        var sucursalesEmpresa = await _sucursalRepository.FindIgnoreQueryFiltersAsync(s => s.EmpresaId == sucursal.EmpresaId, ct);
+        var sucursalesEmpresa = await _sucursalRepository.FindAsync(s => s.EmpresaId == sucursal.EmpresaId, ct);
 
         foreach(var s in sucursalesEmpresa.Where(x => x.EsCentral))
         {
@@ -249,11 +322,11 @@ public class SucursalService : ISucursalService
         int? sucursalIdExcluida, 
         CancellationToken ct)
     {
-        var sucursalesEmpresa = await _sucursalRepository.FindIgnoreQueryFiltersAsync(s => s.EmpresaId == empresaId, ct);
+        var sucursalesEmpresa = await _sucursalRepository.FindAsync(s => s.EmpresaId == empresaId, ct);
 
         if (sucursalIdExcluida.HasValue)
         {
-            sucursalesEmpresa = sucursalesEmpresa.Where(s => s.Id != sucursalIdExcluida.Value).ToList().AsReadOnly();
+            sucursalesEmpresa = sucursalesEmpresa.Where(s => s.Id != sucursalIdExcluida.Value).ToList();
         }
 
         if (sucursalesEmpresa.Any(s => s.Nombre.Equals(nombre, System.StringComparison.OrdinalIgnoreCase)))

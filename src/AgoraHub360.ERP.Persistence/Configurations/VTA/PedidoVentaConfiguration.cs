@@ -20,6 +20,23 @@ public class PedidoVentaConfiguration : IEntityTypeConfiguration<PedidoVenta>
             .IsRequired()
             .HasMaxLength(30);
 
+        builder.Property(x => x.ReservaAplicada)
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        builder.Property(x => x.InventarioDescontado)
+            .IsRequired()
+            .HasDefaultValue(false);
+
+        builder.Property(x => x.FechaConfirmacion)
+            .IsRequired(false);
+
+        builder.Property(x => x.FechaDespacho)
+            .IsRequired(false);
+
+        builder.Property(x => x.FechaAnulacion)
+            .IsRequired(false);
+
         builder.Property(x => x.Subtotal).HasPrecision(18, 2);
         builder.Property(x => x.Impuestos).HasPrecision(18, 2);
         builder.Property(x => x.Total).HasPrecision(18, 2);

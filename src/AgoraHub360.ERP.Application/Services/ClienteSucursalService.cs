@@ -28,6 +28,7 @@ public class ClienteSucursalService : IClienteSucursalService
     public async Task<Result<IReadOnlyList<ClienteSucursalDto>>> GetAllByClienteAsync(int clienteId, CancellationToken ct = default)
     {
         var empresaIdResult = TryGetEmpresaId();
+        // Se mantiene la validación de empresa activa.
         if (!empresaIdResult.IsSuccess)
             return Result<IReadOnlyList<ClienteSucursalDto>>.Failure(empresaIdResult.Error!);
 

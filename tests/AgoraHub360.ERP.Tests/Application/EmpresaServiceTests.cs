@@ -10,13 +10,22 @@ public class EmpresaServiceTests
 {
     private readonly EmpresaService _sut;
     private readonly FakeRepository _repository;
+    private readonly FakeSucursalRepository _sucursalRepository;
+    private readonly FakeAlmacenRepository _almacenRepository;
     private readonly FakeUnitOfWork _unitOfWork;
 
     public EmpresaServiceTests()
     {
         _repository = new FakeRepository();
+        _sucursalRepository = new FakeSucursalRepository();
+        _almacenRepository = new FakeAlmacenRepository();
         _unitOfWork = new FakeUnitOfWork();
-        _sut = new EmpresaService(_repository, _unitOfWork, new FakeSeedService());
+        _sut = new EmpresaService(
+            _repository, 
+            _sucursalRepository, 
+            _almacenRepository, 
+            _unitOfWork, 
+            new FakeSeedService());
     }
 
     [Fact]
@@ -157,5 +166,31 @@ public class EmpresaServiceTests
     {
         public Task<AgoraHub360.ERP.Application.Common.Result<bool>> SeedDefaultDataAsync(int empresaId, CancellationToken ct = default)
             => Task.FromResult(AgoraHub360.ERP.Application.Common.Result<bool>.Success(true));
+    }
+
+    private class FakeSucursalRepository : IRepository<Sucursal>
+    {
+        public Task<IReadOnlyList<Sucursal>> FindAsync(Expression<Func<Sucursal, bool>> predicate, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<IReadOnlyList<Sucursal>> FindIgnoreQueryFiltersAsync(Expression<Func<Sucursal, bool>> predicate, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<IReadOnlyList<Sucursal>> GetAllAsync(CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<Sucursal?> GetByIdAsync(int id, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<Sucursal?> GetByIdAsync(long id, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<Sucursal?> GetByIdIgnoreQueryFiltersAsync(int id, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<Sucursal> AddAsync(Sucursal entity, CancellationToken ct = default) => Task.FromResult(entity);
+        public Task UpdateAsync(Sucursal entity, CancellationToken ct = default) => Task.CompletedTask;
+        public Task DeleteAsync(Sucursal entity, CancellationToken ct = default) => Task.CompletedTask;
+    }
+
+    private class FakeAlmacenRepository : IRepository<AgoraHub360.ERP.Domain.Entities.MDM.Almacen>
+    {
+        public Task<IReadOnlyList<AgoraHub360.ERP.Domain.Entities.MDM.Almacen>> FindAsync(Expression<Func<AgoraHub360.ERP.Domain.Entities.MDM.Almacen, bool>> predicate, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<IReadOnlyList<AgoraHub360.ERP.Domain.Entities.MDM.Almacen>> FindIgnoreQueryFiltersAsync(Expression<Func<AgoraHub360.ERP.Domain.Entities.MDM.Almacen, bool>> predicate, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<IReadOnlyList<AgoraHub360.ERP.Domain.Entities.MDM.Almacen>> GetAllAsync(CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<AgoraHub360.ERP.Domain.Entities.MDM.Almacen?> GetByIdAsync(int id, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<AgoraHub360.ERP.Domain.Entities.MDM.Almacen?> GetByIdAsync(long id, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<AgoraHub360.ERP.Domain.Entities.MDM.Almacen?> GetByIdIgnoreQueryFiltersAsync(int id, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<AgoraHub360.ERP.Domain.Entities.MDM.Almacen> AddAsync(AgoraHub360.ERP.Domain.Entities.MDM.Almacen entity, CancellationToken ct = default) => Task.FromResult(entity);
+        public Task UpdateAsync(AgoraHub360.ERP.Domain.Entities.MDM.Almacen entity, CancellationToken ct = default) => Task.CompletedTask;
+        public Task DeleteAsync(AgoraHub360.ERP.Domain.Entities.MDM.Almacen entity, CancellationToken ct = default) => Task.CompletedTask;
     }
 }

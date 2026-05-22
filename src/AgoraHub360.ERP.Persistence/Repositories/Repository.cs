@@ -22,6 +22,9 @@ public class Repository<T> : IRepository<T> where T : class
     public async Task<T?> GetByIdAsync(long id, CancellationToken cancellationToken = default)
         => await _dbSet.FindAsync(new object[] { id }, cancellationToken);
 
+    /// <summary>
+    /// Obtiene por Id ignorando filtros globales. Uso exclusivo para escenarios admin/globales.
+    /// </summary>
     public async Task<T?> GetByIdIgnoreQueryFiltersAsync(int id, CancellationToken cancellationToken = default)
     {
         // Get entity type to dynamically find primary key name if needed, assuming 'Id' property
@@ -34,6 +37,9 @@ public class Repository<T> : IRepository<T> where T : class
     public async Task<IReadOnlyList<T>> FindAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default)
         => await _dbSet.Where(predicate).ToListAsync(cancellationToken);
 
+    /// <summary>
+    /// Busca ignorando filtros globales. Uso exclusivo para servicios admin/globales.
+    /// </summary>
     public async Task<IReadOnlyList<T>> FindIgnoreQueryFiltersAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default)
         => await _dbSet.IgnoreQueryFilters().Where(predicate).ToListAsync(cancellationToken);
 
