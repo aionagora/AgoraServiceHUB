@@ -60,15 +60,15 @@ public class MovimientosInventarioController : ControllerBase
     }
 
     /// <summary>Obtiene el kardex de un producto con saldo acumulado.</summary>
-    [HttpGet("kardex/{productoId:int}")]
+    [HttpGet("kardex/{companyProductId:long}")]
     public async Task<IActionResult> GetKardex(
-        int productoId,
+        long companyProductId,
         [FromQuery] int? almacenId,
         [FromQuery] DateTime? desde,
         [FromQuery] DateTime? hasta,
         CancellationToken ct)
     {
-        var result = await _service.GetKardexAsync(productoId, almacenId, desde, hasta, ct);
+        var result = await _service.GetKardexAsync(companyProductId, almacenId, desde, hasta, ct);
         if (!result.IsSuccess)
             return BadRequest(ApiResponse<KardexDto>.Fail(result.Error!));
         return Ok(ApiResponse<KardexDto>.Ok(result.Value!));

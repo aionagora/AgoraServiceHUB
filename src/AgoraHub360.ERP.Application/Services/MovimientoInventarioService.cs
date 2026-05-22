@@ -217,7 +217,7 @@ public class MovimientoInventarioService : IMovimientoInventarioService
     }
 
     public async Task<Result<KardexDto>> GetKardexAsync(
-        int productoId,
+        long companyProductId,
         int? almacenId = null,
         DateTime? fechaDesde = null,
         DateTime? fechaHasta = null,
@@ -227,7 +227,10 @@ public class MovimientoInventarioService : IMovimientoInventarioService
         if (!empresaId.HasValue)
             return Result<KardexDto>.Failure("No active company.");
 
-        var companyProduct = await _companyProductRepo.GetByIdAsync((long)productoId, ct);
+        if (companyProductId <= 0)
+            return Result<KardexDto>.Failure("CompanyProductId es obligatorio.");
+
+        var companyProduct = await _companyProductRepo.GetByIdAsync(companyProductId, ct);
         if (companyProduct is null || companyProduct.EmpresaId != empresaId.Value)
             return Result<KardexDto>.Failure("Company product not found.");
 

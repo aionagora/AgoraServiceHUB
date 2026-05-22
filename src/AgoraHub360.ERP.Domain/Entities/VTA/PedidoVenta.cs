@@ -48,6 +48,13 @@ public class PedidoVenta : TenantEntity
     /// </summary>
     public string Estado { get; set; } = "Borrador";
 
+    public bool ReservaAplicada { get; set; } = false;
+    public bool InventarioDescontado { get; set; } = false;
+
+    public DateTime? FechaConfirmacion { get; set; }
+    public DateTime? FechaDespacho { get; set; }
+    public DateTime? FechaAnulacion { get; set; }
+
     public decimal Subtotal { get; set; }
     public decimal Impuestos { get; set; }
     public decimal Total { get; set; }

@@ -22,7 +22,7 @@ public interface IMovimientoInventarioService
 
     /// <summary>Obtiene el kardex (movimientos con saldo acumulado) de un producto.</summary>
     Task<Result<KardexDto>> GetKardexAsync(
-        int productoId,
+        long companyProductId,
         int? almacenId = null,
         DateTime? fechaDesde = null,
         DateTime? fechaHasta = null,

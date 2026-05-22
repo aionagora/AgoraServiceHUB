@@ -2,7 +2,7 @@
 @attribute [Authorize]
 @inject MovimientoInventarioHttpService InvService
 @inject AlmacenHttpService AlmacenService
-@inject ProductoHttpService ProductoService
+@inject MdmCompanyProductHttpService CompanyProductService
 
 <PageTitle>Kardex - AgoraHub360 ERP</PageTitle>
 
@@ -16,11 +16,11 @@
         <div class="row g-2 align-items-end">
             <div class="col-md-4">
                 <label class="form-label mb-1 small">Product *</label>
-                <select class="form-select form-select-sm" @bind="selectedProductoId">
+                <select class="form-select form-select-sm" @bind="selectedCompanyProductId">
                     <option value="0">-- Select product --</option>
                     @foreach (var p in productos)
                     {
-                        <option value="@p.ProductId">@p.CommercialName</option>
+                        <option value="@p.CompanyProductId">@GetCompanyProductLabel(p)</option>
                     }
                 </select>
             </div>
@@ -43,7 +43,7 @@
                 <input type="date" class="form-control form-control-sm" @bind="filtroHasta" />
             </div>
             <div class="col-md-auto">
-                <button class="btn btn-sm btn-primary" @onclick="LoadKardex" disabled="@(selectedProductoId == 0)">
+                <button class="btn btn-sm btn-primary" @onclick="LoadKardex" disabled="@(selectedCompanyProductId == 0)">
                     <i class="bi bi-search"></i> View Kardex
                 </button>
             </div>
@@ -182,13 +182,13 @@ else
 
 @code {
     private List<AlmacenDto> almacenes = new();
-    private List<ProductDto2> productos = new();
+    private List<CompanyProductDto> productos = new();
     private KardexDto? kardex;
 
     private bool loading = false;
     private string? errorMessage;
 
-    private long selectedProductoId = 0;
+    private long selectedCompanyProductId = 0;
     private int selectedAlmacenId = 0;
     private DateTime? filtroDesde;
     private DateTime? filtroHasta;
@@ -196,7 +196,7 @@ else
     protected override async Task OnInitializedAsync()
     {
         var almTask = AlmacenService.GetAllAsync();
-        var prodTask = ProductoService.GetAllAsync();
+        var prodTask = CompanyProductService.GetAllAsync();
         await Task.WhenAll(almTask, prodTask);
         almacenes = await almTask;
         productos = await prodTask;
@@ -204,20 +204,26 @@ else
 
     private async Task LoadKardex()
     {
-        if (selectedProductoId == 0) return;
+        if (selectedCompanyProductId == 0) return;
         loading = true;
         errorMessage = null;
         kardex = null;
         try
         {
             kardex = await InvService.GetKardexAsync(
-                (int)selectedProductoId,
+                selectedCompanyProductId,
                 almacenId: selectedAlmacenId > 0 ? selectedAlmacenId : null,
                 desde: filtroDesde,
                 hasta: filtroHasta);
         }
         catch (Exception ex) { errorMessage = $"Error loading kardex: {ex.Message}"; }
         finally { loading = false; }
+    }
+
+    private static string GetCompanyProductLabel(CompanyProductDto p)
+    {
+        var codigo = string.IsNullOrWhiteSpace(p.CodigoInterno) ? string.Empty : $" | {p.CodigoInterno}";
+        return $"{p.NombreComercial} ({p.Sku}{codigo})";
     }
 
     private static string GetBadgeClass(string tipo) => tipo switch

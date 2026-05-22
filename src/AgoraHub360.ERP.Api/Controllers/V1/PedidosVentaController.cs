@@ -88,4 +88,44 @@ public class PedidosVentaController : ControllerBase
 
         return Ok(ApiResponse<bool>.Ok(true, "Pedido anulado/borrado exitosamente."));
     }
+
+    [HttpPost("{id:long}/confirmar")]
+    public async Task<IActionResult> Confirm(long id, CancellationToken ct)
+    {
+        var result = await _service.ConfirmAsync(id, ct);
+        if (!result.IsSuccess)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
+
+    [HttpPost("{id:long}/despachar")]
+    public async Task<IActionResult> Dispatch(long id, CancellationToken ct)
+    {
+        var result = await _service.DispatchAsync(id, ct);
+        if (!result.IsSuccess)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
+
+    [HttpPost("{id:long}/anular")]
+    public async Task<IActionResult> Cancel(long id, CancellationToken ct)
+    {
+        var result = await _service.CancelAsync(id, ct);
+        if (!result.IsSuccess)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
+
+    [HttpPost("{id:long}/entregar")]
+    public async Task<IActionResult> MarkDelivered(long id, CancellationToken ct)
+    {
+        var result = await _service.MarkDeliveredAsync(id, ct);
+        if (!result.IsSuccess)
+            return BadRequest(result);
+
+        return Ok(result);
+    }
 }

@@ -13,6 +13,10 @@ public class PedidoVentaDetalleConfiguration : IEntityTypeConfiguration<PedidoVe
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.CantidadSolicitada).HasPrecision(18, 4);
+        builder.Property(x => x.CantidadReservada)
+            .HasPrecision(18, 4)
+            .IsRequired()
+            .HasDefaultValue(0m);
         builder.Property(x => x.CantidadConfirmada).HasPrecision(18, 4);
         builder.Property(x => x.CantidadDespachada).HasPrecision(18, 4);
         builder.Property(x => x.PrecioUnitario).HasPrecision(18, 4);
