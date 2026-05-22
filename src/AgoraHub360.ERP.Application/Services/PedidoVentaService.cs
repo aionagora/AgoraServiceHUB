@@ -11,6 +11,7 @@ namespace AgoraHub360.ERP.Application.Services;
 public class PedidoVentaService : IPedidoVentaService
 {
     private readonly IRepository<PedidoVenta> _pedidoRepo;
+    private readonly IRepository<CompanyProduct> _companyProductRepo;
     private readonly IRepository<Cliente> _clienteRepo;
     private readonly IRepository<ClienteSucursal> _clienteSucursalRepo;
     private readonly IRepository<Sucursal> _sucursalRepo;
@@ -22,6 +23,7 @@ public class PedidoVentaService : IPedidoVentaService
 
     public PedidoVentaService(
         IRepository<PedidoVenta> pedidoRepo,
+        IRepository<CompanyProduct> companyProductRepo,
         IRepository<Cliente> clienteRepo,
         IRepository<ClienteSucursal> clienteSucursalRepo,
         IRepository<Sucursal> sucursalRepo,
@@ -30,6 +32,7 @@ public class PedidoVentaService : IPedidoVentaService
         IUnitOfWork unitOfWork)
     {
         _pedidoRepo = pedidoRepo;
+        _companyProductRepo = companyProductRepo;
         _clienteRepo = clienteRepo;
         _clienteSucursalRepo = clienteSucursalRepo;
         _sucursalRepo = sucursalRepo;
@@ -54,6 +57,24 @@ public class PedidoVentaService : IPedidoVentaService
             return Result<PedidoVentaDto>.Failure("No se pudo determinar la empresa activa.");
 
         var tenantId = _currentUser.EmpresaId.Value;
+
+        Console.WriteLine($"[TEMP-LOG] PedidoVentaService.CreateAsync EmpresaId JWT: {tenantId}");
+        Console.WriteLine($"[TEMP-LOG] PedidoVentaService.CreateAsync AlmacenId recibido: {dto.AlmacenId}");
+        foreach (var detalle in dto.Detalles.Select((value, index) => new { value, index }))
+        {
+            Console.WriteLine($"[TEMP-LOG] PedidoVentaService.CreateAsync detalle {detalle.index + 1} CompanyProductId recibido: {detalle.value.CompanyProductId}");
+
+            var companyProduct = await _companyProductRepo.GetByIdAsync(detalle.value.CompanyProductId, ct);
+            if (companyProduct is null)
+            {
+                Console.WriteLine($"[TEMP-LOG] PedidoVentaService.CreateAsync detalle {detalle.index + 1} búsqueda CompanyProduct: NO ENCONTRADO");
+            }
+            else
+            {
+                Console.WriteLine($"[TEMP-LOG] PedidoVentaService.CreateAsync detalle {detalle.index + 1} búsqueda CompanyProduct: ENCONTRADO CompanyProductId={companyProduct.CompanyProductId}, ProductId={companyProduct.ProductId}, EmpresaId={companyProduct.EmpresaId}");
+                Console.WriteLine($"[TEMP-LOG] PedidoVentaService.CreateAsync detalle {detalle.index + 1} CompanyProduct.EmpresaId: {companyProduct.EmpresaId}");
+            }
+        }
 
         // 1. Validar Cliente
         var cliente = await _clienteRepo.GetByIdAsync(dto.ClienteId, ct);

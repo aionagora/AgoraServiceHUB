@@ -3,6 +3,7 @@ namespace AgoraHub360.ERP.Application.Services;
 using AgoraHub360.ERP.Application.Common;
 using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Domain.Entities.PRC;
+using AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Interfaces;
 using AgoraHub360.ERP.Shared.DTOs.PRC;
 
@@ -10,17 +11,20 @@ public class PriceListService : IPriceListService
 {
     private readonly IRepository<PriceList> _repo;
     private readonly IRepository<PriceListItem> _itemRepo;
+    private readonly IRepository<CompanyProduct> _cpRepo;
     private readonly IUnitOfWork _uow;
     private readonly ICurrentUserService _currentUser;
 
     public PriceListService(
         IRepository<PriceList> repo,
         IRepository<PriceListItem> itemRepo,
+        IRepository<CompanyProduct> cpRepo,
         IUnitOfWork uow,
         ICurrentUserService currentUser)
     {
         _repo = repo;
         _itemRepo = itemRepo;
+        _cpRepo = cpRepo;
         _uow = uow;
         _currentUser = currentUser;
     }
@@ -111,6 +115,13 @@ public class PriceListService : IPriceListService
     {
         var pl = await _repo.GetByIdAsync(dto.PriceListId, ct);
         if (pl is null || !CanAccess(pl)) return Result<PriceListItemDto>.Failure("Lista de precios no encontrada o sin acceso.");
+
+        if (dto.CompanyProductId.HasValue)
+        {
+            var cp = await _cpRepo.GetByIdAsync(dto.CompanyProductId.Value, ct);
+            if (cp is null || cp.EmpresaId != pl.EmpresaId)
+                return Result<PriceListItemDto>.Failure("El producto no pertenece a la misma empresa que la lista de precios.");
+        }
 
         var item = new PriceListItem
         {

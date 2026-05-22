@@ -66,7 +66,9 @@ public class CompanyProductService : ICompanyProductService
             return Result<CompanyProductDto>.Failure("No se pudo determinar la empresa activa.");
 
         var product = await _productRepo.GetByIdAsync(dto.ProductId, ct);
-        if (product is null) return Result<CompanyProductDto>.Failure("Producto global no encontrado.");
+        if (product is null) return Result<CompanyProductDto>.Failure("Producto base no encontrado.");
+        if (product.EmpresaId != empresaId.Value)
+            return Result<CompanyProductDto>.Failure("El producto base no pertenece a la empresa activa.");
 
         var dup = await _repo.FindAsync(
             cp => cp.EmpresaId == empresaId.Value && cp.ProductId == dto.ProductId, ct);

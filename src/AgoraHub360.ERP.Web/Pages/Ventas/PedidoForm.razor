@@ -1,6 +1,7 @@
 @page "/ventas/pedidos/nuevo"
 @page "/ventas/pedidos/editar/{Id:long}"
 @attribute [Authorize]
+@implements IDisposable
 @inject NavigationManager Nav
 @using AgoraHub360.ERP.Shared.DTOs.Ventas
 @using AgoraHub360.ERP.Shared.DTOs.MDM
@@ -10,7 +11,12 @@
 @inject ClienteSucursalHttpService ClienteSucursalHttpService
 @inject HttpSucursalService SucursalService
 @inject AlmacenHttpService AlmacenService
+@inject MdmCompanyProductHttpService CompanyProductService
+@inject MovimientoInventarioHttpService MovimientoInventarioService
+@inject EmpresaStateService EmpresaState
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JS
+@using AgoraHub360.ERP.Shared.DTOs.Inventario
 
 <PageTitle>@(IsNew ? "Nuevo Pedido" : "Editar Pedido") - AgoraHub360</PageTitle>
 
@@ -83,7 +89,7 @@
 
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Sucursal de Entrega</label>
-                                <InputSelect class="form-select form-select-sm" @bind-Value="CurrentModel.ClienteSucursalId" disabled="@(CurrentModel.ClienteId == 0)">
+                                <InputSelect class="form-select form-select-sm" @bind-Value="CurrentModel.ClienteSucursalId" disabled="@DebeDeshabilitarClienteSucursal()">
                                     <option value="">-- Sucursal Principal / Sin Sucursal --</option>
                                     @foreach (var s in clienteSucursalesCombo)
                                     {
@@ -112,7 +118,7 @@
                                              Value="CurrentModel.SucursalId"
                                              ValueChanged="EventCallback.Factory.Create<int>(this, OnSucursalChanged)"
                                              ValueExpression="@(() => CurrentModel.SucursalId)"
-                                             disabled="@(!IsNew || IsClientUser)">
+                                             disabled="@(!IsNew || IsClientUser || DebeDeshabilitarSucursalDespacho())">
                                     <option value="0">-- Seleccione Sucursal --</option>
                                     @foreach (var s in sucursalesEmpresaCombo)
                                     {
@@ -123,7 +129,11 @@
 
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Almacén Origen *</label>
-                                <InputSelect class="form-select form-select-sm" @bind-Value="CurrentModel.AlmacenId" disabled="@(CurrentModel.SucursalId == 0 || IsClientUser)">
+                                <InputSelect class="form-select form-select-sm"
+                                             Value="CurrentModel.AlmacenId"
+                                             ValueChanged="EventCallback.Factory.Create<int>(this, OnAlmacenChanged)"
+                                             ValueExpression="@(() => CurrentModel.AlmacenId)"
+                                             disabled="@(CurrentModel.SucursalId == 0 || IsClientUser || DebeDeshabilitarAlmacenOrigen())">
                                     <option value="0">-- Seleccione Almacén --</option>
                                     @foreach (var a in almacenesCombo)
                                     {
@@ -162,6 +172,12 @@
                     <button type="button" class="btn btn-sm btn-outline-primary" @onclick="AgregarLinea" disabled="@(CurrentModel.AlmacenId == 0)"><i class="bi bi-plus"></i> Agregar Producto</button>
                 </div>
                 <div class="card-body p-0">
+                    @if (CurrentModel.AlmacenId > 0 && productosDisponibles.Count == 0)
+                    {
+                        <div class="alert alert-warning m-3 mb-0">
+                            <i class="bi bi-exclamation-circle me-1"></i>@mensajeProductosDisponibles
+                        </div>
+                    }
                     <table class="table table-hover mb-0">
                         <thead class="table-light">
                             <tr>
@@ -184,8 +200,11 @@
                                 <tr>
                                     <td>
                                         <InputSelect class="form-select form-select-sm" @bind-Value="det.CompanyProductId">
-                                            <option value="0">Seleccione...</option>
-                                            <option value="1">Producto Demo A (En stock)</option>
+                                             <option value="0">Seleccione...</option>
+                                             @foreach (var producto in productosDisponibles)
+                                             {
+                                                 <option value="@producto.CompanyProductId">@producto.DisplayName</option>
+                                             }
                                         </InputSelect>
                                     </td>
                                     <td><InputNumber class="form-control form-control-sm text-end" @bind-Value="det.CantidadSolicitada" /></td>
@@ -244,9 +263,13 @@
     private List<ClienteSucursalDto> clienteSucursalesCombo = new();
     private List<SucursalListadoDto> sucursalesEmpresaCombo = new();
     private List<AlmacenDto> almacenesCombo = new();
+    private List<ProductoDisponibleItem> productosDisponibles = new();
+    private string mensajeProductosDisponibles = "No hay productos disponibles para el almacén seleccionado.";
 
     protected override async Task OnInitializedAsync()
     {
+        EmpresaState.OnChange += OnEmpresaStateChanged;
+
         await LoadContextAsync();
         await LoadCatalogosBaseAsync();
 
@@ -261,8 +284,9 @@
             {
                 await OnClienteChanged(ClientUserId.Value);
             }
-            loading = false;
         }
+
+        loading = false;
     }
 
     private async Task LoadContextAsync()
@@ -300,6 +324,7 @@
             {
                 var sucursalesResult = await SucursalService.GetActivasAsync();
                 sucursalesEmpresaCombo = sucursalesResult ?? new();
+                await AutoSelectSucursalDespachoAsync();
             }
             catch (Exception ex)
             {
@@ -330,6 +355,8 @@
                 {
                     // El mensaje de advertencia ya está implementado en la UI (líneas 92-95)
                 }
+
+                await AutoSelectClienteSucursalAsync();
             }
             catch (Exception ex)
             {
@@ -344,6 +371,9 @@
         CurrentModel.SucursalId = sucursalId;
         CurrentModel.AlmacenId = 0;
         almacenesCombo.Clear();
+        productosDisponibles.Clear();
+        mensajeProductosDisponibles = "Seleccione un almacén para cargar productos.";
+        CurrentModel.Detalles.Clear();
 
         if (sucursalId > 0)
         {
@@ -352,6 +382,7 @@
                 // Cargar almacenes de la sucursal seleccionada
                 var todosAlmacenes = await AlmacenService.GetAllAsync();
                 almacenesCombo = todosAlmacenes.Where(a => a.SucursalId.HasValue && a.SucursalId.Value == sucursalId).ToList();
+                await AutoSelectAlmacenOrigenAsync();
             }
             catch (Exception ex)
             {
@@ -359,6 +390,15 @@
                 almacenesCombo = new();
             }
         }
+
+        await LoadProductosDisponiblesAsync(null);
+    }
+
+    private async Task OnAlmacenChanged(int almacenId)
+    {
+        CurrentModel.AlmacenId = almacenId;
+        await LoadProductosDisponiblesAsync(almacenId > 0 ? almacenId : null);
+        await InvokeAsync(StateHasChanged);
     }
 
     private async Task LoadPedidoAsync()
@@ -406,7 +446,74 @@
         return CurrentModel.ClienteId > 0 
             && CurrentModel.SucursalId > 0 
             && CurrentModel.AlmacenId > 0
-            && CurrentModel.Detalles.Count > 0;
+            && CurrentModel.Detalles.Count > 0
+            && CurrentModel.Detalles.All(d => d.CompanyProductId > 0 && d.CantidadSolicitada > 0);
+    }
+
+    private async Task LoadProductosDisponiblesAsync(int? almacenId)
+    {
+        try
+        {
+            var companyProducts = await CompanyProductService.GetAllAsync();
+
+            if (almacenId.HasValue && almacenId.Value > 0)
+            {
+                var stockItems = await MovimientoInventarioService.GetStockAsync(almacenId.Value);
+                var stockMap = stockItems
+                    .Where(s => s.CurrentStock > 0)
+                    .GroupBy(s => s.CompanyProductId)
+                    .ToDictionary(g => g.Key, g => g.Sum(x => x.CurrentStock));
+
+                productosDisponibles = companyProducts
+                    .Where(cp => stockMap.ContainsKey(cp.CompanyProductId))
+                    .Select(cp => new ProductoDisponibleItem
+                    {
+                        CompanyProductId = cp.CompanyProductId,
+                        NombreComercial = cp.NombreComercial,
+                        Sku = cp.Sku,
+                        CodigoInterno = cp.CodigoInterno,
+                        StockActual = stockMap[cp.CompanyProductId]
+                    })
+                    .OrderBy(p => p.NombreComercial)
+                    .ThenBy(p => p.Sku)
+                    .ToList();
+
+                mensajeProductosDisponibles = productosDisponibles.Count == 0
+                    ? "No hay productos con stock disponible en el almacén seleccionado."
+                    : string.Empty;
+            }
+            else
+            {
+                productosDisponibles = companyProducts
+                    .Select(cp => new ProductoDisponibleItem
+                    {
+                        CompanyProductId = cp.CompanyProductId,
+                        NombreComercial = cp.NombreComercial,
+                        Sku = cp.Sku,
+                        CodigoInterno = cp.CodigoInterno,
+                        StockActual = null
+                    })
+                    .OrderBy(p => p.NombreComercial)
+                    .ThenBy(p => p.Sku)
+                    .ToList();
+
+                mensajeProductosDisponibles = "Seleccione un almacén para filtrar productos con stock.";
+            }
+
+            var idsDisponibles = productosDisponibles.Select(p => p.CompanyProductId).ToHashSet();
+            foreach (var detalle in CurrentModel.Detalles.Where(d => d.CompanyProductId > 0 && !idsDisponibles.Contains(d.CompanyProductId)))
+            {
+                detalle.CompanyProductId = 0;
+            }
+
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (Exception ex)
+        {
+            productosDisponibles.Clear();
+            mensajeProductosDisponibles = "No fue posible cargar productos disponibles.";
+            errorMessage = $"Error al cargar productos: {ex.Message}";
+        }
     }
 
     private async Task SaveAsync()
@@ -415,6 +522,37 @@
         {
             saving = true;
             errorMessage = null;
+
+            if (CurrentModel.Detalles.Any(d => d.CompanyProductId <= 0))
+            {
+                errorMessage = "Debe seleccionar un producto válido en todas las líneas del pedido.";
+                return;
+            }
+
+            await JS.InvokeVoidAsync("console.info", "[TEMP-LOG] PedidoVenta frontend antes de POST", new
+            {
+                AlmacenOrigenId = CurrentModel.AlmacenId,
+                SucursalDespachoId = CurrentModel.SucursalId,
+                ClienteId = CurrentModel.ClienteId,
+                ClienteSucursalId = CurrentModel.ClienteSucursalId,
+                Lineas = CurrentModel.Detalles.Select(d => new
+                {
+                    d.CompanyProductId,
+                    d.CantidadSolicitada,
+                    d.PrecioUnitario
+                }).ToList()
+            });
+
+            foreach (var detalle in CurrentModel.Detalles.Select((value, index) => new { value, index }))
+            {
+                await JS.InvokeVoidAsync("console.info", $"[TEMP-LOG] PedidoVenta frontend línea {detalle.index + 1}", new
+                {
+                    detalle.value.CompanyProductId,
+                    Cantidad = detalle.value.CantidadSolicitada,
+                    Precio = detalle.value.PrecioUnitario
+                });
+            }
+
             ApiResponse<PedidoVentaDto> res;
             if (IsNew)
             {
@@ -459,5 +597,111 @@
     private void GoBack()
     {
         Nav.NavigateTo("/ventas/pedidos");
+    }
+
+    private bool DebeDeshabilitarClienteSucursal()
+        => CurrentModel.ClienteId == 0
+           || (clienteSucursalesCombo.Count == 1
+               && CurrentModel.ClienteSucursalId == clienteSucursalesCombo[0].Id);
+
+    private bool DebeDeshabilitarSucursalDespacho()
+        => sucursalesEmpresaCombo.Count == 1
+           && CurrentModel.SucursalId == sucursalesEmpresaCombo[0].Id;
+
+    private bool DebeDeshabilitarAlmacenOrigen()
+        => almacenesCombo.Count == 1
+           && CurrentModel.AlmacenId == almacenesCombo[0].Id;
+
+    private async Task AutoSelectClienteSucursalAsync()
+    {
+        if (CurrentModel.ClienteId <= 0 || clienteSucursalesCombo.Count != 1)
+            return;
+
+        var unica = clienteSucursalesCombo[0];
+        if (CurrentModel.ClienteSucursalId == unica.Id)
+            return;
+
+        CurrentModel.ClienteSucursalId = unica.Id;
+        LogTemporal($"Auto-seleccionando ClienteSucursal {unica.Id}");
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task AutoSelectSucursalDespachoAsync()
+    {
+        if (sucursalesEmpresaCombo.Count != 1)
+            return;
+
+        var unica = sucursalesEmpresaCombo[0];
+        if (CurrentModel.SucursalId == unica.Id)
+            return;
+
+        CurrentModel.SucursalId = unica.Id;
+        LogTemporal($"Auto-seleccionando SucursalDespacho {unica.Id}");
+        await OnSucursalChanged(unica.Id);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task AutoSelectAlmacenOrigenAsync()
+    {
+        if (almacenesCombo.Count != 1)
+            return;
+
+        var unico = almacenesCombo[0];
+        if (CurrentModel.AlmacenId == unico.Id)
+            return;
+
+        CurrentModel.AlmacenId = unico.Id;
+        LogTemporal($"Auto-seleccionando AlmacenOrigen {unico.Id}");
+        await LoadProductosDisponiblesAsync(unico.Id);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void OnEmpresaStateChanged()
+    {
+        _ = InvokeAsync(HandleEmpresaStateChangedAsync);
+    }
+
+    private async Task HandleEmpresaStateChangedAsync()
+    {
+        LimpiarEstadoPorCambioEmpresa();
+        await LoadCatalogosBaseAsync();
+        await LoadProductosDisponiblesAsync(null);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void LimpiarEstadoPorCambioEmpresa()
+    {
+        CurrentModel.ClienteId = 0;
+        CurrentModel.ClienteSucursalId = null;
+        CurrentModel.SucursalId = 0;
+        CurrentModel.AlmacenId = 0;
+        CurrentModel.Detalles.Clear();
+        clienteSucursalesCombo.Clear();
+        almacenesCombo.Clear();
+        productosDisponibles.Clear();
+        mensajeProductosDisponibles = "Seleccione un almacén para cargar productos.";
+    }
+
+    private static void LogTemporal(string mensaje)
+    {
+        Console.WriteLine(mensaje);
+    }
+
+    public void Dispose()
+    {
+        EmpresaState.OnChange -= OnEmpresaStateChanged;
+    }
+
+    private sealed class ProductoDisponibleItem
+    {
+        public long CompanyProductId { get; set; }
+        public string NombreComercial { get; set; } = string.Empty;
+        public string Sku { get; set; } = string.Empty;
+        public string? CodigoInterno { get; set; }
+        public decimal? StockActual { get; set; }
+        public string DisplayName =>
+            $"{NombreComercial} | SKU: {Sku}" +
+            (string.IsNullOrWhiteSpace(CodigoInterno) ? string.Empty : $" | Cod: {CodigoInterno}") +
+            (StockActual.HasValue ? $" | Stock: {StockActual.Value:N2}" : string.Empty);
     }
 }

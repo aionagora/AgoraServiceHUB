@@ -46,6 +46,11 @@ public class ProductService : IProductService
     {
         var entity = await _repo.GetByIdAsync(id, ct);
         if (entity is null) return Result<ProductDto2>.Failure($"Product {id} not found.");
+
+        var empresaId = _currentUser.EmpresaId;
+        if (!empresaId.HasValue || entity.EmpresaId != empresaId.Value)
+            return Result<ProductDto2>.Failure("Sin acceso al producto (Empresa no coincide).");
+
         return Result<ProductDto2>.Success(await MapSingleAsync(entity, ct));
     }
 
@@ -99,6 +104,10 @@ public class ProductService : IProductService
         var entity = await _repo.GetByIdAsync(id, ct);
         if (entity is null) return Result<ProductDto2>.Failure($"Product {id} not found.");
 
+        var empresaId = _currentUser.EmpresaId;
+        if (!empresaId.HasValue || entity.EmpresaId != empresaId.Value)
+            return Result<ProductDto2>.Failure("Sin acceso al producto (Empresa no coincide).");
+
         entity.ProductKind = dto.ProductKind;
         entity.GenericName = dto.GenericName;
         entity.CommercialName = dto.CommercialName;
@@ -122,6 +131,11 @@ public class ProductService : IProductService
     {
         var entity = await _repo.GetByIdAsync(id, ct);
         if (entity is null) return Result<bool>.Failure($"Product {id} not found.");
+
+        var empresaId = _currentUser.EmpresaId;
+        if (!empresaId.HasValue || entity.EmpresaId != empresaId.Value)
+            return Result<bool>.Failure("Sin acceso al producto (Empresa no coincide).");
+
         await _repo.DeleteAsync(entity, ct);
         await _uow.SaveChangesAsync(ct);
         return Result<bool>.Success(true);
