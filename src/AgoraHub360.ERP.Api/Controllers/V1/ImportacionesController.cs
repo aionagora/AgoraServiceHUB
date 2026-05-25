@@ -20,7 +20,7 @@ public class ImportacionesController : ControllerBase
         _service = service;
     }
 
-    /// <summary>Lista hojas de importaci髇 con filtros opcionales.</summary>
+    /// <summary>Lista hojas de importaci贸n con filtros opcionales.</summary>
     [HttpGet]
     public async Task<IActionResult> GetAll(
         [FromQuery] long? ordenCompraId,
@@ -34,7 +34,7 @@ public class ImportacionesController : ControllerBase
         return Ok(ApiResponse<IReadOnlyList<HojaImportacionDto>>.Ok(result.Value!));
     }
 
-    /// <summary>Obtiene una hoja con gastos y distribuci髇.</summary>
+    /// <summary>Obtiene una hoja con gastos y distribuci贸n.</summary>
     [HttpGet("{id:long}")]
     public async Task<IActionResult> GetById(long id, CancellationToken ct)
     {
@@ -44,7 +44,7 @@ public class ImportacionesController : ControllerBase
         return Ok(ApiResponse<HojaImportacionDto>.Ok(result.Value!));
     }
 
-    /// <summary>Crea una hoja de importaci髇 con gastos iniciales.</summary>
+    /// <summary>Crea una hoja de importaci贸n con gastos iniciales.</summary>
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateHojaImportacionDto dto, CancellationToken ct)
     {
@@ -54,7 +54,7 @@ public class ImportacionesController : ControllerBase
         return CreatedAtAction(
             nameof(GetById),
             new { id = result.Value!.HojaImportacionId },
-            ApiResponse<HojaImportacionDto>.Ok(result.Value!, "Hoja de importaci髇 creada."));
+            ApiResponse<HojaImportacionDto>.Ok(result.Value!, "Hoja de importaci贸n creada."));
     }
 
     /// <summary>Agrega un gasto a una hoja no liquidada.</summary>

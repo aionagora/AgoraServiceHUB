@@ -5,17 +5,18 @@
 @inject MdmCompanyProductHttpService CompanyProductService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject HojaRutaHttpService HrService
+@inject NavigationManager Nav
 
-<PageTitle>Órdenes de Pedido - AgoraHub360 ERP</PageTitle>
+<PageTitle>Ã“rdenes de Pedido - AgoraHub360 ERP</PageTitle>
 
 <div class="container-fluid">
     <div class="row mb-3">
         <div class="col">
-            <h3><i class="bi bi-clipboard2-check-fill"></i> Órdenes de Pedido</h3>
+            <h3><i class="bi bi-clipboard2-check-fill"></i> Ã“rdenes de Pedido</h3>
             <p class="text-muted mb-0">Solicitudes internas de compra (paso 1 del flujo)</p>
         </div>
         <div class="col-auto">
-            <button class="btn btn-primary" @onclick="ShowCreateModal">
+            <button class="btn btn-primary" @onclick="GoToCreatePage">
                 <i class="bi bi-plus-circle"></i> Nueva OP
             </button>
         </div>
@@ -87,7 +88,7 @@
             {
                 <div class="text-center py-5">
                     <i class="bi bi-inbox" style="font-size:2.5rem;"></i>
-                    <p class="text-muted mt-3">No hay órdenes de pedido registradas.</p>
+                    <p class="text-muted mt-3">No hay Ã³rdenes de pedido registradas.</p>
                 </div>
             }
             else
@@ -97,10 +98,12 @@
                         <thead class="table-light">
                             <tr>
                                 <th style="width:40px"></th>
-                                <th>Número</th>
+                                <th>NÃºmero</th>
                                 <th>Fecha</th>
-                                <th>Solicitante</th>
-                                <th>Almacén</th>
+                                <th>Empresa</th>
+                                <th>Sucursal</th>
+                                <th>Cliente</th>
+                                <th>Entrega</th>
                                 <th>Urgencia</th>
                                 <th>Estado</th>
                                 <th class="text-end">Acciones</th>
@@ -111,14 +114,19 @@
                             {
                                 <tr>
                                     <td>
-                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => ToggleDetail(op.OrdenPedidoId)" title="Ver líneas">
+                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => ToggleDetail(op.OrdenPedidoId)" title="Ver lÃ­neas">
                                             <i class="bi @(expandedId == op.OrdenPedidoId ? "bi-chevron-up" : "bi-chevron-down")"></i>
                                         </button>
                                     </td>
                                     <td><strong>@op.Numero</strong></td>
                                     <td>@op.FechaEmision.ToString("dd/MM/yyyy")</td>
-                                    <td>@op.SolicitanteNombre</td>
-                                    <td>@op.AlmacenDestinoNombre</td>
+                                    <td>@op.EmpresaNombre</td>
+                                    <td>@(op.SucursalNombre ?? "â€”")</td>
+                                    <td>@(op.ClienteNombre ?? "â€”")</td>
+                                    <td>
+                                        <div>@(op.ClienteSucursalNombre ?? "â€”")</div>
+                                        <div class="small text-muted">@(op.DireccionEntrega ?? "Sin direcciÃ³n")</div>
+                                    </td>
                                     <td>
                                         <span class="badge @op.Urgencia.ToUrgenciaBadgeClass()">@op.Urgencia</span>
                                     </td>
@@ -128,10 +136,10 @@
                                     <td class="text-end">
                                         @if (op.Estado == "Borrador")
                                         {
-                                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => ShowEditModal(op)" title="Editar">
+                                            <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => GoToEditPage(op.OrdenPedidoId)" title="Editar">
                                                 <i class="bi bi-pencil"></i>
                                             </button>
-                                            <button class="btn btn-sm btn-outline-success me-1" @onclick="() => EnviarRevision(op)" title="Enviar a revisión">
+                                            <button class="btn btn-sm btn-outline-success me-1" @onclick="() => EnviarRevision(op)" title="Enviar a revisiÃ³n">
                                                 <i class="bi bi-send"></i>
                                             </button>
                                             <button class="btn btn-sm btn-outline-danger" @onclick="() => DeletePedido(op)" title="Eliminar">
@@ -167,12 +175,22 @@
                                 @if (expandedId == op.OrdenPedidoId)
                                 {
                                     <tr>
-                                        <td colspan="8" class="bg-light p-0">
+                                        <td colspan="10" class="bg-light p-0">
                                             <div class="p-3">
-                                                <strong><i class="bi bi-list-ol"></i> Líneas — @op.Numero</strong>
+                                                <div class="row g-2 mb-2">
+                                                    <div class="col-md-3"><strong>Empresa:</strong> @op.EmpresaNombre</div>
+                                                    <div class="col-md-3"><strong>Sucursal empresa:</strong> @(op.SucursalNombre ?? "â€”")</div>
+                                                    <div class="col-md-3"><strong>Cliente:</strong> @(op.ClienteNombre ?? "â€”")</div>
+                                                    <div class="col-md-3"><strong>Sucursal cliente:</strong> @(op.ClienteSucursalNombre ?? "â€”")</div>
+                                                    <div class="col-md-6"><strong>DirecciÃ³n entrega:</strong> @(op.DireccionEntrega ?? "â€”")</div>
+                                                    <div class="col-md-3"><strong>Referencia entrega:</strong> @(op.ReferenciaEntrega ?? "â€”")</div>
+                                                    <div class="col-md-3"><strong>Contacto relacionado:</strong> @(op.ContactoRelacionado ?? "â€”")</div>
+                                                </div>
+
+                                                <strong><i class="bi bi-list-ol"></i> LÃ­neas â€” @op.Numero</strong>
                                                 @if (op.Lineas.Count == 0)
                                                 {
-                                                    <p class="text-muted small mt-2">Sin líneas.</p>
+                                                    <p class="text-muted small mt-2">Sin lÃ­neas.</p>
                                                 }
                                                 else
                                                 {
@@ -181,11 +199,11 @@
                                                             <tr>
                                                                 <th>#</th>
                                                                 <th>SKU</th>
-                                                                <th>Descripción</th>
+                                                                <th>DescripciÃ³n</th>
                                                                 <th>UdM</th>
                                                                 <th class="text-end">Cant. Solic.</th>
                                                                 <th class="text-end">Stock Disp.</th>
-                                                                <th class="text-end">En Tránsito</th>
+                                                                <th class="text-end">En TrÃ¡nsito</th>
                                                                 <th class="text-end">A Comprar</th>
                                                                 <th>Notas</th>
                                                             </tr>
@@ -199,9 +217,9 @@
                                                                     <td>@l.Descripcion</td>
                                                                     <td>@l.UnidadMedida</td>
                                                                     <td class="text-end">@l.CantidadSolicitada.ToString("N2")</td>
-                                                                    <td class="text-end">@(l.CantidadStockDisponible?.ToString("N2") ?? "—")</td>
-                                                                    <td class="text-end">@(l.CantidadEnTransito?.ToString("N2") ?? "—")</td>
-                                                                    <td class="text-end">@(l.CantidadAComprar?.ToString("N2") ?? "—")</td>
+                                                                    <td class="text-end">@(l.CantidadStockDisponible?.ToString("N2") ?? "â€”")</td>
+                                                                    <td class="text-end">@(l.CantidadEnTransito?.ToString("N2") ?? "â€”")</td>
+                                                                    <td class="text-end">@(l.CantidadAComprar?.ToString("N2") ?? "â€”")</td>
                                                                     <td class="small text-muted">@l.Notas</td>
                                                                 </tr>
                                                             }
@@ -286,12 +304,12 @@
                         }
                     </ul>
 
-                    @* ?? Pestaña Datos ?? *@
+                    @* ?? PestaÃ±a Datos ?? *@
                     @if (opModalTab == "datos")
                     {
                     <div class="row g-3">
                         <div class="col-md-3">
-                            <label class="form-label">Fecha Emisión <span class="text-danger">*</span></label>
+                            <label class="form-label">Fecha EmisiÃ³n <span class="text-danger">*</span></label>
                             <input type="date" class="form-control" @bind="formFechaEmision" />
                         </div>
                         <div class="col-md-3">
@@ -301,7 +319,7 @@
                         <div class="col-md-3">
                             <label class="form-label">Solicitante</label>
                             <input type="text" class="form-control bg-light" value="@formSolicitanteNombre" readonly
-                                   title="Asignado automáticamente al usuario que ingresa al sistema" />
+                                   title="Asignado automÃ¡ticamente al usuario que ingresa al sistema" />
                         </div>
                         <div class="col-md-3">
                             <label class="form-label">Centro de Costo</label>
@@ -312,13 +330,13 @@
                             <select class="form-select" @bind="formUrgencia">
                                 <option value="Normal">Normal</option>
                                 <option value="Urgente">Urgente</option>
-                                <option value="Critico">Crítico</option>
+                                <option value="Critico">CrÃ­tico</option>
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">Almacén Destino <span class="text-danger">*</span></label>
+                            <label class="form-label">AlmacÃ©n Destino <span class="text-danger">*</span></label>
                             <select class="form-select" @bind="formAlmacenId">
-                                <option value="0">— Seleccionar —</option>
+                                <option value="0">â€” Seleccionar â€”</option>
                                 @foreach (var a in almacenes)
                                 {
                                     <option value="@a.Id">@a.Nombre</option>
@@ -331,17 +349,17 @@
                         </div>
                     </div>
 
-                    @* ?? Líneas ?? *@
+                    @* ?? LÃ­neas ?? *@
                     <hr />
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <strong><i class="bi bi-list-ol"></i> Líneas del Pedido</strong>
+                        <strong><i class="bi bi-list-ol"></i> LÃ­neas del Pedido</strong>
                         <button type="button" class="btn btn-sm btn-outline-success" @onclick="AddLinea">
-                            <i class="bi bi-plus"></i> Agregar línea
+                            <i class="bi bi-plus"></i> Agregar lÃ­nea
                         </button>
                     </div>
                     @if (tempLineas.Count == 0)
                     {
-                        <p class="text-muted small">Sin líneas. Agregue al menos una.</p>
+                        <p class="text-muted small">Sin lÃ­neas. Agregue al menos una.</p>
                     }
                     else
                     {
@@ -349,7 +367,7 @@
                             <thead>
                                 <tr>
                                     <th>Producto</th>
-                                    <th>Descripción</th>
+                                    <th>DescripciÃ³n</th>
                                     <th>UdM</th>
                                     <th class="text-end" style="width:120px">Cantidad</th>
                                     <th>Notas</th>
@@ -364,7 +382,7 @@
                                         <td>
                                             <select class="form-select form-select-sm" value="@tempLineas[idx].CompanyProductId"
                                                     @onchange="e => OnProductoChange(idx, e)">
-                                                <option value="0">— Producto —</option>
+                                                <option value="0">â€” Producto â€”</option>
                                                 @foreach (var cp in companyProducts)
                                                 {
                                                     <option value="@cp.CompanyProductId">[@cp.Sku] @cp.NombreComercial</option>
@@ -401,9 +419,9 @@
                             </tbody>
                         </table>
                     }
-                    } @* fin pestaña datos *@
+                    } @* fin pestaÃ±a datos *@
 
-                    @* ?? Pestaña Tareas (solo en edición) ?? *@
+                    @* ?? PestaÃ±a Tareas (solo en ediciÃ³n) ?? *@
                     @if (opModalTab == "tareas" && isEditing)
                     {
                         var opDto    = pedidos.FirstOrDefault(o => o.OrdenPedidoId == editingOpId);
@@ -413,7 +431,7 @@
                                    IsReadOnly="@(opEstado is "Cerrado" or "Anulado" or "Rechazado")"
                                    OnTareaCompletada="LoadData" />
                     }
-                    @* ?? Pestaña Hoja de Ruta (solo en edición) ?? *@
+                    @* ?? PestaÃ±a Hoja de Ruta (solo en ediciÃ³n) ?? *@
                     @if (opModalTab == "hoja-ruta" && isEditing)
                     {
                         @if (hrLoading)
@@ -425,7 +443,7 @@
                         }
                         else
                         {
-                            @* ?? Botón crear HR vinculada ?? *@
+                            @* ?? BotÃ³n crear HR vinculada ?? *@
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <span class="text-muted small">
                                     Hojas de ruta vinculadas a esta orden de pedido
@@ -464,7 +482,7 @@
                                             </div>
                                             <div class="d-flex gap-1">
                                                 <a href="/logistica/hojas-ruta" class="btn btn-xs btn-outline-secondary p-0 px-1"
-                                                   title="Ver en módulo Logística">
+                                                   title="Ver en mÃ³dulo LogÃ­stica">
                                                     <i class="bi bi-box-arrow-up-right"></i>
                                                 </a>
                                                 @if (hr.Estado == "BORRADOR")
@@ -491,19 +509,19 @@
                                                 </div>
                                                 <div class="col-md-3">
                                                     <span class="text-muted">ETA:</span>
-                                                    <strong>@(hr.ETA?.ToString("dd/MM/yyyy") ?? "—")</strong>
+                                                    <strong>@(hr.ETA?.ToString("dd/MM/yyyy") ?? "â€”")</strong>
                                                 </div>
                                                 <div class="col-md-3">
                                                     <span class="text-muted">Responsable:</span>
                                                     <strong>@hr.ResponsableUsuario</strong>
                                                 </div>
                                                 <div class="col-md-3">
-                                                    <span class="text-muted">Almacén Origen:</span>
-                                                    <strong>@(hr.AlmacenOrigenNombre ?? "—")</strong>
+                                                    <span class="text-muted">AlmacÃ©n Origen:</span>
+                                                    <strong>@(hr.AlmacenOrigenNombre ?? "â€”")</strong>
                                                 </div>
                                                 <div class="col-md-3">
-                                                    <span class="text-muted">Almacén Destino:</span>
-                                                    <strong>@(hr.AlmacenDestinoNombre ?? "—")</strong>
+                                                    <span class="text-muted">AlmacÃ©n Destino:</span>
+                                                    <strong>@(hr.AlmacenDestinoNombre ?? "â€”")</strong>
                                                 </div>
                                                 @if (!string.IsNullOrEmpty(hr.ProveedorCliente))
                                                 {
@@ -530,7 +548,7 @@
                                                     @foreach (var h in hr.Historial.OrderBy(x => x.FechaCambio))
                                                     {
                                                         <span class="badge bg-light text-dark border" style="font-size:.65rem">
-                                                            @h.FechaCambio.ToString("dd/MM HH:mm") — @h.EstadoNuevo / @h.SubEstadoNuevo
+                                                            @h.FechaCambio.ToString("dd/MM HH:mm") â€” @h.EstadoNuevo / @h.SubEstadoNuevo
                                                             @if (!string.IsNullOrEmpty(h.Observaciones))
                                                             {
                                                                 <span class="ms-1 text-muted"">(@h.Observaciones)</span>
@@ -600,9 +618,9 @@
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Almacén Origen <span class="text-danger">*</span></label>
+                            <label class="form-label">AlmacÃ©n Origen <span class="text-danger">*</span></label>
                             <select class="form-select" @bind="hrFormAlmacenOrigen">
-                                <option value="0">— Seleccionar —</option>
+                                <option value="0">â€” Seleccionar â€”</option>
                                 @foreach (var a in almacenes)
                                 {
                                     <option value="@a.Id">@a.Nombre</option>
@@ -610,9 +628,9 @@
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label">Almacén Destino</label>
+                            <label class="form-label">AlmacÃ©n Destino</label>
                             <select class="form-select" @bind="hrFormAlmacenDestino">
-                                <option value="0">— Ninguno —</option>
+                                <option value="0">â€” Ninguno â€”</option>
                                 @foreach (var a in almacenes)
                                 {
                                     <option value="@a.Id">@a.Nombre</option>
@@ -660,7 +678,7 @@
                     <button type="button" class="btn-close" @onclick="() => hrAEliminar = null"></button>
                 </div>
                 <div class="modal-body">
-                    <p>¿Eliminar <strong>@hrAEliminar.NumeroHojaRuta</strong>?</p>
+                    <p>Â¿Eliminar <strong>@hrAEliminar.NumeroHojaRuta</strong>?</p>
                     <div class="alert alert-warning py-2 small">
                         Solo se pueden eliminar hojas de ruta en estado <strong>BORRADOR</strong>.
                     </div>
@@ -684,7 +702,7 @@
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-boxes"></i> Revisión de Stock — @selectedOp.Numero</h5>
+                    <h5 class="modal-title"><i class="bi bi-boxes"></i> RevisiÃ³n de Stock â€” @selectedOp.Numero</h5>
                     <button type="button" class="btn-close" @onclick="CloseModal"></button>
                 </div>
                 <div class="modal-body">
@@ -693,16 +711,16 @@
                         <div class="alert alert-danger py-2">@modalError</div>
                     }
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">¿El stock cubre el pedido?</label>
+                        <label class="form-label fw-semibold">Â¿El stock cubre el pedido?</label>
                         <div class="form-check">
                             <input class="form-check-input" type="radio" id="stockSi" name="stockCubre"
                                    checked="@stockCubre" @onchange="() => stockCubre = true" />
-                            <label class="form-check-label" for="stockSi">Sí — Abastecer con stock disponible</label>
+                            <label class="form-check-label" for="stockSi">SÃ­ â€” Abastecer con stock disponible</label>
                         </div>
                         <div class="form-check">
                             <input class="form-check-input" type="radio" id="stockNo" name="stockCubre"
                                    checked="@(!stockCubre)" @onchange="() => stockCubre = false" />
-                            <label class="form-check-label" for="stockNo">No — Enviar a aprobación para compra</label>
+                            <label class="form-check-label" for="stockNo">No â€” Enviar a aprobaciÃ³n para compra</label>
                         </div>
                     </div>
                     <div class="mb-3">
@@ -710,15 +728,15 @@
                         <textarea class="form-control" rows="2" @bind="stockObservaciones"></textarea>
                     </div>
                     <hr />
-                    <strong>Líneas del pedido:</strong>
+                    <strong>LÃ­neas del pedido:</strong>
                     <table class="table table-sm table-bordered mt-2">
                         <thead>
                             <tr>
                                 <th>SKU</th>
-                                <th>Descripción</th>
+                                <th>DescripciÃ³n</th>
                                 <th class="text-end">Solic.</th>
                                 <th class="text-end">Stock Disp.</th>
-                                <th class="text-end">En Tránsito</th>
+                                <th class="text-end">En TrÃ¡nsito</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -749,7 +767,7 @@
                     <button class="btn btn-secondary" @onclick="CloseModal" disabled="@saving">Cancelar</button>
                     <button class="btn btn-primary" @onclick="ConfirmarStock" disabled="@saving">
                         @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                        Confirmar Revisión de Stock
+                        Confirmar RevisiÃ³n de Stock
                     </button>
                 </div>
             </div>
@@ -773,7 +791,7 @@
                         {
                             <><i class="bi bi-hand-thumbs-down text-danger"></i> Rechazar Pedido</>
                         }
-                        — @selectedOp.Numero
+                        â€” @selectedOp.Numero
                     </h5>
                     <button type="button" class="btn-close" @onclick="CloseModal"></button>
                 </div>
@@ -794,7 +812,7 @@
                     {
                         <div class="alert alert-success py-2">
                             <i class="bi bi-check-circle-fill"></i>
-                            Se aprobará el pedido <strong>@selectedOp.Numero</strong>. Se podrá generar una Orden de Compra.
+                            Se aprobarÃ¡ el pedido <strong>@selectedOp.Numero</strong>. Se podrÃ¡ generar una Orden de Compra.
                         </div>
                     }
                 </div>
@@ -920,6 +938,10 @@
         showFormModal = true;
     }
 
+    private void GoToCreatePage() => Nav.NavigateTo("/compras/pedidos/nuevo");
+
+    private void GoToEditPage(long id) => Nav.NavigateTo($"/compras/pedidos/editar/{id}");
+
     private void ShowEditModal(OrdenPedidoDto op)
     {
         isEditing = true;
@@ -997,7 +1019,7 @@
         }
     }
 
-    // ?? Líneas form ??????????????????????????????????????????????????????????
+    // ?? LÃ­neas form ??????????????????????????????????????????????????????????
     private void AddLinea() =>
         tempLineas.Add(new CreateOrdenPedidoLineaDto(0, "", "UND", 1));
 
@@ -1023,8 +1045,8 @@
         saving = true; modalError = null;
         try
         {
-            if (formAlmacenId == 0) { modalError = "Seleccione un almacén destino."; return; }
-            if (tempLineas.Count == 0) { modalError = "Agregue al menos una línea."; return; }
+            if (formAlmacenId == 0) { modalError = "Seleccione un almacÃ©n destino."; return; }
+            if (tempLineas.Count == 0) { modalError = "Agregue al menos una lÃ­nea."; return; }
 
             if (isEditing)
             {
@@ -1047,7 +1069,7 @@
                     successMessage = $"Pedido {r.Data?.Numero} creado.";
                     CloseModal();
                     await LoadData();
-                    // Abrir el pedido recién creado en pestaña Tareas para visualizar los hitos generados
+                    // Abrir el pedido reciÃ©n creado en pestaÃ±a Tareas para visualizar los hitos generados
                     if (r.Data is not null)
                     {
                         var nuevo = pedidos.FirstOrDefault(o => o.OrdenPedidoId == r.Data.OrdenPedidoId);
@@ -1068,7 +1090,7 @@
     private async Task EnviarRevision(OrdenPedidoDto op)
     {
         var r = await OpService.EnviarRevisionAsync(op.OrdenPedidoId);
-        if (r.Success) { successMessage = $"Pedido {op.Numero} enviado a revisión."; await LoadData(); }
+        if (r.Success) { successMessage = $"Pedido {op.Numero} enviado a revisiÃ³n."; await LoadData(); }
         else errorMessage = r.Message;
     }
 
@@ -1086,7 +1108,7 @@
             {
                 successMessage = stockCubre
                     ? $"Pedido {selectedOp.Numero} abastecido con stock."
-                    : $"Pedido {selectedOp.Numero} enviado a aprobación.";
+                    : $"Pedido {selectedOp.Numero} enviado a aprobaciÃ³n.";
                 CloseModal(); await LoadData();
             }
             else modalError = r.Message;
@@ -1170,7 +1192,7 @@
 
     private async Task SaveCrearHr()
     {
-        if (hrFormAlmacenOrigen == 0) { hrError = "Seleccione el almacén de origen."; return; }
+        if (hrFormAlmacenOrigen == 0) { hrError = "Seleccione el almacÃ©n de origen."; return; }
         hrSaving = true; hrError = null;
         StateHasChanged();
         try

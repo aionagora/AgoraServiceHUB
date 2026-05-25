@@ -14,7 +14,11 @@ public class OrdenPedidoService : IOrdenPedidoService
 {
     private readonly IRepository<OrdenPedido> _opRepo;
     private readonly IRepository<OrdenPedidoLinea> _lineaRepo;
+    private readonly IRepository<Empresa> _empresaRepo;
     private readonly IRepository<Almacen> _almacenRepo;
+    private readonly IRepository<Sucursal> _sucursalRepo;
+    private readonly IRepository<Cliente> _clienteRepo;
+    private readonly IRepository<ClienteSucursal> _clienteSucursalRepo;
     private readonly IRepository<CompanyProduct> _cpRepo;
     private readonly IRepository<NumeracionDocumento> _numRepo;
     private readonly IRepository<Usuario> _usuarioRepo;
@@ -26,7 +30,11 @@ public class OrdenPedidoService : IOrdenPedidoService
     public OrdenPedidoService(
         IRepository<OrdenPedido> opRepo,
         IRepository<OrdenPedidoLinea> lineaRepo,
+        IRepository<Empresa> empresaRepo,
         IRepository<Almacen> almacenRepo,
+        IRepository<Sucursal> sucursalRepo,
+        IRepository<Cliente> clienteRepo,
+        IRepository<ClienteSucursal> clienteSucursalRepo,
         IRepository<CompanyProduct> cpRepo,
         IRepository<NumeracionDocumento> numRepo,
         IRepository<Usuario> usuarioRepo,
@@ -37,7 +45,11 @@ public class OrdenPedidoService : IOrdenPedidoService
     {
         _opRepo = opRepo;
         _lineaRepo = lineaRepo;
+        _empresaRepo = empresaRepo;
         _almacenRepo = almacenRepo;
+        _sucursalRepo = sucursalRepo;
+        _clienteRepo = clienteRepo;
+        _clienteSucursalRepo = clienteSucursalRepo;
         _cpRepo = cpRepo;
         _numRepo = numRepo;
         _usuarioRepo = usuarioRepo;
@@ -48,7 +60,13 @@ public class OrdenPedidoService : IOrdenPedidoService
     }
 
     public async Task<Result<IReadOnlyList<OrdenPedidoDto>>> GetAllAsync(
-        string? estado, DateTime? fechaDesde, DateTime? fechaHasta, CancellationToken ct)
+        string? estado,
+        DateTime? fechaDesde,
+        DateTime? fechaHasta,
+        int? sucursalId,
+        int? clienteId,
+        int? clienteSucursalId,
+        CancellationToken ct)
     {
         var empresaId = _currentUser.EmpresaId;
         if (!empresaId.HasValue)
@@ -57,7 +75,10 @@ public class OrdenPedidoService : IOrdenPedidoService
         var ops = await _opRepo.FindAsync(
             o => o.EmpresaId == empresaId.Value && o.Activo
                 && (!fechaDesde.HasValue || o.FechaEmision >= fechaDesde.Value)
-                && (!fechaHasta.HasValue || o.FechaEmision <= fechaHasta.Value.AddDays(1).AddSeconds(-1)),
+                && (!fechaHasta.HasValue || o.FechaEmision <= fechaHasta.Value.AddDays(1).AddSeconds(-1))
+                && (!sucursalId.HasValue || o.SucursalId == sucursalId.Value)
+                && (!clienteId.HasValue || o.ClienteId == clienteId.Value)
+                && (!clienteSucursalId.HasValue || o.ClienteSucursalId == clienteSucursalId.Value),
             ct);
 
         if (!string.IsNullOrEmpty(estado) && Enum.TryParse<EstadoDocumento>(estado, true, out var estadoEnum))
@@ -65,6 +86,24 @@ public class OrdenPedidoService : IOrdenPedidoService
 
         var almacenes = await _almacenRepo.FindAsync(a => a.EmpresaId == empresaId.Value, ct);
         var almMap = almacenes.ToDictionary(a => a.Id, a => a.Nombre);
+
+        var empresa = await _empresaRepo.GetByIdAsync(empresaId.Value, ct);
+        var empresaNombre = empresa?.Nombre ?? "—";
+
+        var sucursalIds = ops.Where(o => o.SucursalId.HasValue).Select(o => o.SucursalId!.Value).Distinct().ToList();
+        var sucursalMap = sucursalIds.Count > 0
+            ? (await _sucursalRepo.FindAsync(s => sucursalIds.Contains(s.Id), ct)).ToDictionary(s => s.Id, s => s.Nombre)
+            : new Dictionary<int, string>();
+
+        var clienteIds = ops.Where(o => o.ClienteId.HasValue).Select(o => o.ClienteId!.Value).Distinct().ToList();
+        var clienteMap = clienteIds.Count > 0
+            ? (await _clienteRepo.FindAsync(c => clienteIds.Contains(c.Id), ct)).ToDictionary(c => c.Id)
+            : new Dictionary<int, Cliente>();
+
+        var clienteSucursalIds = ops.Where(o => o.ClienteSucursalId.HasValue).Select(o => o.ClienteSucursalId!.Value).Distinct().ToList();
+        var clienteSucursalMap = clienteSucursalIds.Count > 0
+            ? (await _clienteSucursalRepo.FindAsync(cs => clienteSucursalIds.Contains(cs.Id), ct)).ToDictionary(cs => cs.Id)
+            : new Dictionary<int, ClienteSucursal>();
 
         var lineas = await _lineaRepo.FindAsync(l => ops.Select(o => o.OrdenPedidoId).Contains(l.OrdenPedidoId), ct);
         var cpIds = lineas.Select(l => l.CompanyProductId).Distinct().ToList();
@@ -80,7 +119,7 @@ public class OrdenPedidoService : IOrdenPedidoService
             .ThenByDescending(o => o.OrdenPedidoId)
             .Select(o => MapToDto(o,
                 lineas.Where(l => l.OrdenPedidoId == o.OrdenPedidoId).ToList(),
-                almMap, cpMap, userMap))
+                almMap, cpMap, userMap, empresaNombre, sucursalMap, clienteMap, clienteSucursalMap))
             .ToList()
             .AsReadOnly();
 
@@ -118,11 +157,44 @@ public class OrdenPedidoService : IOrdenPedidoService
         var asignacion = await _usuarioEmpresaRepo.FindAsync(
             ue => ue.UsuarioId == solicitanteId.Value && ue.EmpresaId == empresaId.Value, ct);
         if (!asignacion.Any())
-            return Result<OrdenPedidoDto>.Failure("El usuario no est� asignado a la empresa activa.");
+            return Result<OrdenPedidoDto>.Failure("El usuario no está asignado a la empresa activa.");
 
         var almacen = await _almacenRepo.GetByIdAsync(dto.AlmacenDestinoId, ct);
         if (almacen is null || almacen.EmpresaId != empresaId.Value)
             return Result<OrdenPedidoDto>.Failure("Warehouse not found.");
+
+        if (dto.SucursalId.HasValue)
+        {
+            var sucursal = await _sucursalRepo.GetByIdAsync(dto.SucursalId.Value, ct);
+            if (sucursal is null || sucursal.EmpresaId != empresaId.Value || !sucursal.Activo)
+                return Result<OrdenPedidoDto>.Failure("La sucursal de la empresa no es válida para la empresa activa.");
+
+            if (!sucursal.PermiteVentas)
+                return Result<OrdenPedidoDto>.Failure("La sucursal seleccionada no tiene capacidad comercial para registrar pedidos.");
+        }
+
+        int? clienteSucursalId = null;
+        if (dto.ClienteId.HasValue)
+        {
+            var cliente = await _clienteRepo.GetByIdAsync(dto.ClienteId.Value, ct);
+            if (cliente is null || cliente.EmpresaId != empresaId.Value || !cliente.Activo)
+                return Result<OrdenPedidoDto>.Failure("El cliente no es válido para la empresa activa.");
+
+            var clienteSucursalResult = await ResolveClienteSucursalIdAsync(
+                empresaId.Value,
+                dto.ClienteId.Value,
+                dto.ClienteSucursalId,
+                ct);
+
+            if (!clienteSucursalResult.IsSuccess)
+                return Result<OrdenPedidoDto>.Failure(clienteSucursalResult.Error!);
+
+            clienteSucursalId = clienteSucursalResult.Value;
+        }
+        else if (dto.ClienteSucursalId.HasValue)
+        {
+            return Result<OrdenPedidoDto>.Failure("Para enviar ClienteSucursalId también debe enviar ClienteId.");
+        }
 
         foreach (var lineaDto in dto.Lineas)
         {
@@ -144,6 +216,9 @@ public class OrdenPedidoService : IOrdenPedidoService
             CentroCosto = dto.CentroCosto,
             Urgencia = urgencia,
             AlmacenDestinoId = dto.AlmacenDestinoId,
+            SucursalId = dto.SucursalId,
+            ClienteId = dto.ClienteId,
+            ClienteSucursalId = clienteSucursalId,
             Estado = EstadoDocumento.Borrador,
             Observaciones = dto.Observaciones,
             Activo = true
@@ -171,8 +246,8 @@ public class OrdenPedidoService : IOrdenPedidoService
 
         await _unitOfWork.SaveChangesAsync(ct);
 
-        // Generar tareas autom�ticas desde plantilla configurada para "OrdenPedido".
-        // Si no existe plantilla el resultado es Failure pero no interrumpe la creaci�n.
+        // Generar tareas automáticas desde plantilla configurada para "OrdenPedido".
+        // Si no existe plantilla el resultado es Failure pero no interrumpe la creación.
         await _workflow.GenerarHitosInicialesAsync(new GenerarHitosDto
         {
             EntityType = "OrdenPedido",
@@ -200,14 +275,50 @@ public class OrdenPedidoService : IOrdenPedidoService
         if (almacen is null || almacen.EmpresaId != empresaId.Value)
             return Result<OrdenPedidoDto>.Failure("Warehouse not found.");
 
+        if (dto.SucursalId.HasValue)
+        {
+            var sucursal = await _sucursalRepo.GetByIdAsync(dto.SucursalId.Value, ct);
+            if (sucursal is null || sucursal.EmpresaId != empresaId.Value || !sucursal.Activo)
+                return Result<OrdenPedidoDto>.Failure("La sucursal de la empresa no es válida para la empresa activa.");
+
+            if (!sucursal.PermiteVentas)
+                return Result<OrdenPedidoDto>.Failure("La sucursal seleccionada no tiene capacidad comercial para registrar pedidos.");
+        }
+
+        int? clienteSucursalId = null;
+        if (dto.ClienteId.HasValue)
+        {
+            var cliente = await _clienteRepo.GetByIdAsync(dto.ClienteId.Value, ct);
+            if (cliente is null || cliente.EmpresaId != empresaId.Value || !cliente.Activo)
+                return Result<OrdenPedidoDto>.Failure("El cliente no es válido para la empresa activa.");
+
+            var clienteSucursalResult = await ResolveClienteSucursalIdAsync(
+                empresaId.Value,
+                dto.ClienteId.Value,
+                dto.ClienteSucursalId,
+                ct);
+
+            if (!clienteSucursalResult.IsSuccess)
+                return Result<OrdenPedidoDto>.Failure(clienteSucursalResult.Error!);
+
+            clienteSucursalId = clienteSucursalResult.Value;
+        }
+        else if (dto.ClienteSucursalId.HasValue)
+        {
+            return Result<OrdenPedidoDto>.Failure("Para enviar ClienteSucursalId también debe enviar ClienteId.");
+        }
+
         var urgencia = Enum.TryParse<NivelUrgencia>(dto.Urgencia, true, out var u) ? u : NivelUrgencia.Normal;
 
         op.FechaEmision = dto.FechaEmision;
         op.FechaRequerida = dto.FechaRequerida;
-        // Solicitante no se modifica: queda el usuario que cre� la OP
+        // Solicitante no se modifica: queda el usuario que creó la OP
         op.CentroCosto = dto.CentroCosto;
         op.Urgencia = urgencia;
         op.AlmacenDestinoId = dto.AlmacenDestinoId;
+        op.SucursalId = dto.SucursalId;
+        op.ClienteId = dto.ClienteId;
+        op.ClienteSucursalId = clienteSucursalId;
         op.Observaciones = dto.Observaciones;
 
         await _opRepo.UpdateAsync(op, ct);
@@ -340,6 +451,38 @@ public class OrdenPedidoService : IOrdenPedidoService
         return (op, null);
     }
 
+    private async Task<Result<int?>> ResolveClienteSucursalIdAsync(
+        int empresaId,
+        int clienteId,
+        int? clienteSucursalId,
+        CancellationToken ct)
+    {
+        if (clienteSucursalId.HasValue)
+        {
+            var sucursalCliente = await _clienteSucursalRepo.GetByIdAsync(clienteSucursalId.Value, ct);
+            if (sucursalCliente is null || !sucursalCliente.Activo)
+                return Result<int?>.Failure("La sucursal del cliente no existe o está inactiva.");
+
+            if (sucursalCliente.EmpresaId != empresaId)
+                return Result<int?>.Failure("La sucursal del cliente no pertenece a la empresa activa.");
+
+            if (sucursalCliente.ClienteId != clienteId)
+                return Result<int?>.Failure("La sucursal del cliente no pertenece al cliente seleccionado.");
+
+            return Result<int?>.Success(sucursalCliente.Id);
+        }
+
+        var sucursalesCliente = await _clienteSucursalRepo.FindAsync(
+            cs => cs.EmpresaId == empresaId && cs.ClienteId == clienteId && cs.Activo,
+            ct);
+
+        var principal = sucursalesCliente.FirstOrDefault(cs => cs.EsPrincipal);
+        if (principal is not null)
+            return Result<int?>.Success(principal.Id);
+
+        return Result<int?>.Failure("El cliente no tiene sucursal principal activa. Envíe ClienteSucursalId o configure una principal.");
+    }
+
     private async Task<string> GenerarNumeroAsync(int empresaId, CancellationToken ct)
     {
         var numeraciones = await _numRepo.FindAsync(
@@ -368,7 +511,40 @@ public class OrdenPedidoService : IOrdenPedidoService
         var cpMap = cps.ToDictionary(p => p.CompanyProductId, p => p.Sku);
         var userMap = await GetUsuarioMapAsync(op.EmpresaId, ct);
 
-        return MapToDto(op, lineas.OrderBy(l => l.NumeroLinea).ToList(), almMap, cpMap, userMap);
+        var empresa = await _empresaRepo.GetByIdAsync(op.EmpresaId, ct);
+        var empresaNombre = empresa?.Nombre ?? "—";
+
+        var sucursalMap = new Dictionary<int, string>();
+        if (op.SucursalId.HasValue)
+        {
+            var sucursales = await _sucursalRepo.FindAsync(s => s.Id == op.SucursalId.Value, ct);
+            sucursalMap = sucursales.ToDictionary(s => s.Id, s => s.Nombre);
+        }
+
+        var clienteMap = new Dictionary<int, Cliente>();
+        if (op.ClienteId.HasValue)
+        {
+            var clientes = await _clienteRepo.FindAsync(c => c.Id == op.ClienteId.Value, ct);
+            clienteMap = clientes.ToDictionary(c => c.Id);
+        }
+
+        var clienteSucursalMap = new Dictionary<int, ClienteSucursal>();
+        if (op.ClienteSucursalId.HasValue)
+        {
+            var clienteSucursales = await _clienteSucursalRepo.FindAsync(cs => cs.Id == op.ClienteSucursalId.Value, ct);
+            clienteSucursalMap = clienteSucursales.ToDictionary(cs => cs.Id);
+        }
+
+        return MapToDto(
+            op,
+            lineas.OrderBy(l => l.NumeroLinea).ToList(),
+            almMap,
+            cpMap,
+            userMap,
+            empresaNombre,
+            sucursalMap,
+            clienteMap,
+            clienteSucursalMap);
     }
 
     private async Task<Dictionary<int, string>> GetUsuarioMapAsync(int empresaId, CancellationToken ct)
@@ -387,21 +563,43 @@ public class OrdenPedidoService : IOrdenPedidoService
         IList<OrdenPedidoLinea> lineas,
         Dictionary<int, string> almMap,
         Dictionary<long, string> cpMap,
-        Dictionary<int, string> userMap)
+        Dictionary<int, string> userMap,
+        string empresaNombre,
+        Dictionary<int, string> sucursalMap,
+        Dictionary<int, Cliente> clienteMap,
+        Dictionary<int, ClienteSucursal> clienteSucursalMap)
     {
+        var cliente = op.ClienteId.HasValue
+            ? clienteMap.GetValueOrDefault(op.ClienteId.Value)
+            : null;
+
+        var clienteSucursal = op.ClienteSucursalId.HasValue
+            ? clienteSucursalMap.GetValueOrDefault(op.ClienteSucursalId.Value)
+            : null;
+
         return new OrdenPedidoDto(
             op.OrdenPedidoId,
             op.EmpresaId,
+            empresaNombre,
+            op.SucursalId,
+            op.SucursalId.HasValue ? sucursalMap.GetValueOrDefault(op.SucursalId.Value, "—") : null,
+            op.ClienteId,
+            cliente?.RazonSocial,
+            op.ClienteSucursalId,
+            clienteSucursal?.Nombre,
             op.Numero,
             op.FechaEmision,
             op.FechaRequerida,
             op.SolicitanteId,
-            userMap.GetValueOrDefault(op.SolicitanteId, "�"),
+            userMap.GetValueOrDefault(op.SolicitanteId, "—"),
             op.CentroCosto,
             op.Urgencia.ToString(),
             op.AlmacenDestinoId,
-            almMap.GetValueOrDefault(op.AlmacenDestinoId, "�"),
+            almMap.GetValueOrDefault(op.AlmacenDestinoId, "—"),
             op.Estado.ToString(),
+            clienteSucursal?.Direccion,
+            clienteSucursal?.Referencia,
+            cliente?.NombreContacto,
             op.Observaciones,
             op.MotivoRechazo,
             op.StockCubre,
@@ -411,7 +609,7 @@ public class OrdenPedidoService : IOrdenPedidoService
                 l.OrdenPedidoLineaId,
                 l.NumeroLinea,
                 l.CompanyProductId,
-                cpMap.GetValueOrDefault(l.CompanyProductId, "�"),
+                cpMap.GetValueOrDefault(l.CompanyProductId, "—"),
                 l.Descripcion,
                 l.UnidadMedida,
                 l.CantidadSolicitada,

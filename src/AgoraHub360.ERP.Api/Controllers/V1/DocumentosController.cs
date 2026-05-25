@@ -57,9 +57,9 @@ public class DocumentosController : ControllerBase
         if (!empresaId.HasValue)
             return Unauthorized(ApiResponse<string>.Fail("EmpresaId no encontrado en el token."));
 
-        // Validar tamaño
+        // Validar tamaÃ±o
         if (file.Length > MaxFileSizeBytes)
-            return BadRequest(ApiResponse<string>.Fail($"El archivo supera el límite de 10 MB."));
+            return BadRequest(ApiResponse<string>.Fail($"El archivo supera el lÃ­mite de 10 MB."));
 
         // Validar tipo MIME
         if (!_allowedMimes.Contains(file.ContentType))

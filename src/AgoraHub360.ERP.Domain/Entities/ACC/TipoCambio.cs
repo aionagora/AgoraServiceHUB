@@ -3,7 +3,7 @@ namespace AgoraHub360.ERP.Domain.Entities.ACC;
 using AgoraHub360.ERP.Domain.Common;
 
 /// <summary>
-/// Tipo de cambio diario (Dólar, UFV, Euro, etc.).
+/// Tipo de cambio diario (DÃ³lar, UFV, Euro, etc.).
 /// </summary>
 public class TipoCambio : TenantEntity
 {
@@ -12,10 +12,10 @@ public class TipoCambio : TenantEntity
     /// <summary>Moneda (ej: "USD", "UFV", "EUR").</summary>
     public string Moneda { get; set; } = string.Empty;
 
-    /// <summary>Nombre descriptivo (ej: "Dólar Americano").</summary>
+    /// <summary>Nombre descriptivo (ej: "DÃ³lar Americano").</summary>
     public string Nombre { get; set; } = string.Empty;
 
-    /// <summary>Símbolo (ej: "$", "Bs").</summary>
+    /// <summary>SÃ­mbolo (ej: "$", "Bs").</summary>
     public string Simbolo { get; set; } = string.Empty;
 
     /// <summary>Tipo de cambio de compra.</summary>

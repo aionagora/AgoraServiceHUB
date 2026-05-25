@@ -119,6 +119,12 @@ public class ParametroSistemaServiceTests
         public Task<IReadOnlyList<ParametroSistema>> FindAsync(Expression<Func<ParametroSistema, bool>> predicate, CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<ParametroSistema>>(_store.Where(predicate.Compile()).ToList().AsReadOnly());
 
+        public Task<IReadOnlyList<ParametroSistema>> FindIgnoreQueryFiltersAsync(Expression<Func<ParametroSistema, bool>> predicate, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<ParametroSistema>>(_store.Where(predicate.Compile()).ToList().AsReadOnly());
+
+        public Task<ParametroSistema?> GetByIdIgnoreQueryFiltersAsync(int id, CancellationToken ct = default)
+            => Task.FromResult(_store.FirstOrDefault(p => p.Id == id));
+
         public Task<ParametroSistema> AddAsync(ParametroSistema entity, CancellationToken ct = default)
         {
             _store.Add(entity);
@@ -138,6 +144,11 @@ public class ParametroSistemaServiceTests
     {
         public bool SaveCalled { get; private set; }
         public Task<int> SaveChangesAsync(CancellationToken ct = default) { SaveCalled = true; return Task.FromResult(1); }
+        public Task BeginTransactionAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public Task CommitTransactionAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public Task RollbackTransactionAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public Task ExecuteInTransactionAsync(Func<Task> op, CancellationToken ct = default) => op();
+        public Task<T> ExecuteInTransactionAsync<T>(Func<Task<T>> op, CancellationToken ct = default) => op();
         public void Dispose() { }
     }
 

@@ -1,6 +1,6 @@
 namespace AgoraHub360.ERP.Shared.DTOs.Contabilidad;
 
-/// <summary>DTO de lectura para Período Contable.</summary>
+/// <summary>DTO de lectura para PerÃ­odo Contable.</summary>
 public class PeriodoContableDto
 {
     public int PeriodoContableId { get; set; }
@@ -15,7 +15,7 @@ public class PeriodoContableDto
     public int CantidadAsientos { get; set; }
 }
 
-/// <summary>DTO para generar períodos de un año fiscal.</summary>
+/// <summary>DTO para generar perÃ­odos de un aÃ±o fiscal.</summary>
 public class GenerarPeriodosDto
 {
     public int Anio { get; set; }

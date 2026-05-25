@@ -8,7 +8,7 @@ using ProveedorDtoNS = AgoraHub360.ERP.Shared.DTOs.Proveedor;
 using AgoraHub360.ERP.Shared.DTOs.Usuario;
 
 /// <summary>
-/// Orquesta la creación de una empresa DEMO completa para Importadora de Muebles.
+/// Orquesta la creaciÃ³n de una empresa DEMO completa para Importadora de Muebles.
 /// Ejecuta cada paso secuencialmente y reporta progreso via callback.
 /// </summary>
 public class EmpresaDemoService
@@ -57,7 +57,7 @@ public class EmpresaDemoService
         _unidadMedidaSvc  = unidadMedidaSvc;
     }
 
-    // ?? Resultado público ????????????????????????????????????????????????????
+    // ?? Resultado pÃºblico ????????????????????????????????????????????????????
     public DemoSeedResult Resultado { get; private set; } = new();
 
     // ?? Progreso ?????????????????????????????????????????????????????????????
@@ -82,8 +82,8 @@ public class EmpresaDemoService
         _pasos.Add(("Registrando proveedores...",          CrearProveedoresAsync));
         _pasos.Add(("Registrando clientes...",             CrearClientesAsync));
         _pasos.Add(("Generando plan de cuentas...",        CrearPlanCuentasAsync));
-        _pasos.Add(("Creando períodos contables 2025...",  CrearPeriodosAsync));
-        _pasos.Add(("Creando productos de mueblería...",   CrearProductosAsync));
+        _pasos.Add(("Creando perÃ­odos contables 2025...",  CrearPeriodosAsync));
+        _pasos.Add(("Creando productos de mueblerÃ­a...",   CrearProductosAsync));
         _pasos.Add(("Registrando stock inicial...",        CrearStockInicialAsync));
         _pasos.Add(("Generando asientos contables demo...",CrearAsientosAsync));
     }
@@ -116,14 +116,14 @@ public class EmpresaDemoService
         }
 
         Completado = true;
-        MensajePaso = "¡Empresa DEMO creada con éxito!";
+        MensajePaso = "Â¡Empresa DEMO creada con Ã©xito!";
         NotificarProgreso();
     }
 
     private void NotificarProgreso() => OnProgreso?.Invoke();
 
     // ????????????????????????????????????????????????????????????????????????
-    // PASO 1 — Empresa
+    // PASO 1 â€” Empresa
     // ????????????????????????????????????????????????????????????????????????
     private async Task CrearEmpresaAsync()
     {
@@ -143,7 +143,7 @@ public class EmpresaDemoService
     }
 
     // ????????????????????????????????????????????????????????????????????????
-    // PASO 2 — Usuarios
+    // PASO 2 â€” Usuarios
     // ????????????????????????????????????????????????????????????????????????
     private async Task CrearUsuariosAsync()
     {
@@ -163,16 +163,16 @@ public class EmpresaDemoService
     }
 
     // ????????????????????????????????????????????????????????????????????????
-    // PASO 3 — Almacenes
+    // PASO 3 â€” Almacenes
     // ????????????????????????????????????????????????????????????????????????
     private async Task CrearAlmacenesAsync()
     {
         var almacenes = new[]
         {
-            new CreateAlmacenDto { Codigo="ALM-LP-01",  Nombre="Almacén Central La Paz",        Direccion="Av. Periférica km 2.5, El Alto",      Responsable="Freddy Chura Alvarez",    Telefono="+591 2 2780001" },
+            new CreateAlmacenDto { Codigo="ALM-LP-01",  Nombre="AlmacÃ©n Central La Paz",        Direccion="Av. PerifÃ©rica km 2.5, El Alto",      Responsable="Freddy Chura Alvarez",    Telefono="+591 2 2780001" },
             new CreateAlmacenDto { Codigo="ALM-LP-02",  Nombre="Showroom La Paz",               Direccion="Av. Arce 2345, Zona Sur, La Paz",     Responsable="Patricia Ticona Mamani",  Telefono="+591 2 2780002" },
-            new CreateAlmacenDto { Codigo="ALM-SCZ-01", Nombre="Almacén Santa Cruz",            Direccion="Parque Industrial, Zona Franca SCZ",  Responsable="Jorge Mendez Vargas",     Telefono="+591 3 3360001" },
-            new CreateAlmacenDto { Codigo="ALM-TRA-01", Nombre="Almacén Tránsito / Importación",Direccion="Aduana Interior La Paz",              Responsable="Hugo Apaza Flores",       Telefono="+591 2 2780003" },
+            new CreateAlmacenDto { Codigo="ALM-SCZ-01", Nombre="AlmacÃ©n Santa Cruz",            Direccion="Parque Industrial, Zona Franca SCZ",  Responsable="Jorge Mendez Vargas",     Telefono="+591 3 3360001" },
+            new CreateAlmacenDto { Codigo="ALM-TRA-01", Nombre="AlmacÃ©n TrÃ¡nsito / ImportaciÃ³n",Direccion="Aduana Interior La Paz",              Responsable="Hugo Apaza Flores",       Telefono="+591 2 2780003" },
         };
         foreach (var a in almacenes)
         {
@@ -185,7 +185,7 @@ public class EmpresaDemoService
     }
 
     // ????????????????????????????????????????????????????????????????????????
-    // PASO 4 — Proveedores
+    // PASO 4 â€” Proveedores
     // ????????????????????????????????????????????????????????????????????????
     private async Task CrearProveedoresAsync()
     {
@@ -194,7 +194,7 @@ public class EmpresaDemoService
             new() { RazonSocial="FURNITURE ASIA CO. LTD.",           NIT="CN-88012345",  Telefono="+86 21 6800 1234",  Email="sales@furnitureasiacn.com",      Direccion="No.188 Fumin Rd, Guangzhou, China",          TipoProveedor="Internacional" },
             new() { RazonSocial="TEAK MASTERS INDONESIA PT.",        NIT="ID-99023456",  Telefono="+62 21 5500 9876",  Email="export@teakmastersid.com",       Direccion="Jl. Raya Industri 45, Jakarta, Indonesia",   TipoProveedor="Internacional" },
             new() { RazonSocial="EURO MOBILI S.P.A.",                NIT="IT-77034567",  Telefono="+39 02 8800 4321",  Email="export@euromobili.it",           Direccion="Via Industriale 12, Milano, Italia",          TipoProveedor="Internacional" },
-            new() { RazonSocial="COMERCIAL MUEBLERÍA ANDINA S.R.L.", NIT="1098765432",   Telefono="+591 2 2441100",    Email="ventas@muebleriaandina.bo",      Direccion="Calle Mercado 345, La Paz, Bolivia",          TipoProveedor="Local"         },
+            new() { RazonSocial="COMERCIAL MUEBLERÃA ANDINA S.R.L.", NIT="1098765432",   Telefono="+591 2 2441100",    Email="ventas@muebleriaandina.bo",      Direccion="Calle Mercado 345, La Paz, Bolivia",          TipoProveedor="Local"         },
             new() { RazonSocial="MADERAS Y TAPIZADOS DEL NORTE",     NIT="2087654321",   Telefono="+591 2 2552200",    Email="contacto@maderasnorte.bo",       Direccion="Av. Montes 890, La Paz, Bolivia",             TipoProveedor="Local"         },
             new() { RazonSocial="AGENCIA ADUANERA BOLIVAR LTDA.",    NIT="3076543210",   Telefono="+591 2 2663300",    Email="aduana@bolivaragencia.bo",       Direccion="Puerto Seco La Paz, El Alto, Bolivia",        TipoProveedor="Servicio"      },
         };
@@ -206,18 +206,18 @@ public class EmpresaDemoService
     }
 
     // ????????????????????????????????????????????????????????????????????????
-    // PASO 5 — Clientes
+    // PASO 5 â€” Clientes
     // ????????????????????????????????????????????????????????????????????????
     private async Task CrearClientesAsync()
     {
         var clientes = new[]
         {
             new CreateClienteDto { Codigo="CLI-001", RazonSocial="Supermercados Del Valle S.A.",      NIT="5023001234", Telefono="+591 2 2441100", Email="compras@delvalle.bo",         Direccion="Av. Mcal. Santa Cruz 1250, La Paz",   NombreContacto="Pedro Mamani",  TipoCliente="Mayorista"    },
-            new CreateClienteDto { Codigo="CLI-002", RazonSocial="Hotel Los Andes S.A.",              NIT="5034002345", Telefono="+591 2 2552210", Email="adquisiciones@losandes.bo",   Direccion="Av. 6 de Agosto 520, La Paz",         NombreContacto="Laura Chávez",  TipoCliente="Corporativo"  },
-            new CreateClienteDto { Codigo="CLI-003", RazonSocial="Constructora Boliviana S.R.L.",     NIT="5045003456", Telefono="+591 4 4521100", Email="proyectos@constboliviana.bo", Direccion="Av. Heroínas 340, Cochabamba",         NombreContacto="Roberto Torres",TipoCliente="Corporativo"  },
-            new CreateClienteDto { Codigo="CLI-004", RazonSocial="Tiendas Casa & Hogar Ltda.",        NIT="5056004567", Telefono="+591 3 3320050", Email="compras@casahogar.bo",        Direccion="Av. San Martín 650, Santa Cruz",       NombreContacto="Ana Flores",    TipoCliente="Mayorista"    },
+            new CreateClienteDto { Codigo="CLI-002", RazonSocial="Hotel Los Andes S.A.",              NIT="5034002345", Telefono="+591 2 2552210", Email="adquisiciones@losandes.bo",   Direccion="Av. 6 de Agosto 520, La Paz",         NombreContacto="Laura ChÃ¡vez",  TipoCliente="Corporativo"  },
+            new CreateClienteDto { Codigo="CLI-003", RazonSocial="Constructora Boliviana S.R.L.",     NIT="5045003456", Telefono="+591 4 4521100", Email="proyectos@constboliviana.bo", Direccion="Av. HeroÃ­nas 340, Cochabamba",         NombreContacto="Roberto Torres",TipoCliente="Corporativo"  },
+            new CreateClienteDto { Codigo="CLI-004", RazonSocial="Tiendas Casa & Hogar Ltda.",        NIT="5056004567", Telefono="+591 3 3320050", Email="compras@casahogar.bo",        Direccion="Av. San MartÃ­n 650, Santa Cruz",       NombreContacto="Ana Flores",    TipoCliente="Mayorista"    },
             new CreateClienteDto { Codigo="CLI-005", RazonSocial="Oficinas Ejecutivas del Sur",       NIT="5067005678", Telefono="+591 2 2663300", Email="equipamiento@oesur.bo",       Direccion="Av. Calacoto 7890, Zona Sur, La Paz",  NombreContacto="Marco Vega",    TipoCliente="Corporativo"  },
-            new CreateClienteDto { Codigo="CLI-006", RazonSocial="Distribuidora El Roble S.R.L.",     NIT="5078006789", Telefono="+591 2 2774400", Email="pedidos@elroble.bo",          Direccion="Calle Potosí 230, La Paz",             NombreContacto="Carmen Quispe", TipoCliente="Distribuidor" },
+            new CreateClienteDto { Codigo="CLI-006", RazonSocial="Distribuidora El Roble S.R.L.",     NIT="5078006789", Telefono="+591 2 2774400", Email="pedidos@elroble.bo",          Direccion="Calle PotosÃ­ 230, La Paz",             NombreContacto="Carmen Quispe", TipoCliente="Distribuidor" },
             new CreateClienteDto { Codigo="CLI-007", RazonSocial="Universidad Privada Los Andes",    NIT="5089007890", Telefono="+591 2 2885500", Email="logistica@uplosandes.bo",     Direccion="Calle 21 de Calacoto, La Paz",         NombreContacto="Luis Condori",  TipoCliente="Corporativo"  },
             new CreateClienteDto { Codigo="CLI-008", RazonSocial="Centro Comercial Plaza Mayor",     NIT="5090008901", Telefono="+591 3 3441160", Email="mall@plazamayor.bo",          Direccion="Av. Beni Km 3, Santa Cruz",            NombreContacto="Diana Roca",    TipoCliente="Mayorista"    },
         };
@@ -229,11 +229,11 @@ public class EmpresaDemoService
     }
 
     // ????????????????????????????????????????????????????????????????????????
-    // PASO 6 — Plan de Cuentas (rubros + cuentas de mueblería importadora)
+    // PASO 6 â€” Plan de Cuentas (rubros + cuentas de mueblerÃ­a importadora)
     // ????????????????????????????????????????????????????????????????????????
     private async Task CrearPlanCuentasAsync()
     {
-        // Seed automático del catálogo estándar
+        // Seed automÃ¡tico del catÃ¡logo estÃ¡ndar
         await _asientoSvc.SeedCatalogosAsync();
 
         // Cuentas de mayor (Tipo: 1=Activo 2=Pasivo 3=Patrimonio 4=Ingreso 5=Egreso)
@@ -246,33 +246,33 @@ public class EmpresaDemoService
             new CreateCuentaContableDto { Codigo="1.1.1",    Nombre="Caja",                                 Tipo=1, Naturaleza=1, Nivel=3, PermiteMovimientos=true,  Descripcion="Efectivo en caja general" },
             new CreateCuentaContableDto { Codigo="1.1.2",    Nombre="Caja Chica",                           Tipo=1, Naturaleza=1, Nivel=3, PermiteMovimientos=true,  Descripcion="Fondo fijo de caja chica" },
             new CreateCuentaContableDto { Codigo="1.1.3",    Nombre="Banco BNB Cta. Cte. Bs.",              Tipo=1, Naturaleza=1, Nivel=3, PermiteMovimientos=true,  Descripcion="Banco Nacional de Bolivia" },
-            new CreateCuentaContableDto { Codigo="1.1.4",    Nombre="Banco BCP Cta. Cte. USD",              Tipo=1, Naturaleza=1, Nivel=3, PermiteMovimientos=true,  Descripcion="Banco de Crédito del Perú Bolivia" },
+            new CreateCuentaContableDto { Codigo="1.1.4",    Nombre="Banco BCP Cta. Cte. USD",              Tipo=1, Naturaleza=1, Nivel=3, PermiteMovimientos=true,  Descripcion="Banco de CrÃ©dito del PerÃº Bolivia" },
             new CreateCuentaContableDto { Codigo="1.1.5",    Nombre="Cuentas por Cobrar Clientes",          Tipo=1, Naturaleza=1, Nivel=3, PermiteMovimientos=true,  Descripcion="Saldo pendiente de cobro a clientes" },
-            new CreateCuentaContableDto { Codigo="1.1.6",    Nombre="Anticipo a Proveedores",               Tipo=1, Naturaleza=1, Nivel=3, PermiteMovimientos=true,  Descripcion="Anticipos pagados a proveedores por importación" },
-            new CreateCuentaContableDto { Codigo="1.1.7",    Nombre="Inventario de Mercaderías",            Tipo=1, Naturaleza=1, Nivel=3, PermiteMovimientos=true,  Descripcion="Muebles y accesorios en stock" },
-            new CreateCuentaContableDto { Codigo="1.1.8",    Nombre="Mercadería en Tránsito",               Tipo=1, Naturaleza=1, Nivel=3, PermiteMovimientos=true,  Descripcion="Importaciones en proceso de internación" },
-            new CreateCuentaContableDto { Codigo="1.1.9",    Nombre="IVA Crédito Fiscal",                   Tipo=1, Naturaleza=1, Nivel=3, PermiteMovimientos=true,  Descripcion="IVA pagado en compras" },
+            new CreateCuentaContableDto { Codigo="1.1.6",    Nombre="Anticipo a Proveedores",               Tipo=1, Naturaleza=1, Nivel=3, PermiteMovimientos=true,  Descripcion="Anticipos pagados a proveedores por importaciÃ³n" },
+            new CreateCuentaContableDto { Codigo="1.1.7",    Nombre="Inventario de MercaderÃ­as",            Tipo=1, Naturaleza=1, Nivel=3, PermiteMovimientos=true,  Descripcion="Muebles y accesorios en stock" },
+            new CreateCuentaContableDto { Codigo="1.1.8",    Nombre="MercaderÃ­a en TrÃ¡nsito",               Tipo=1, Naturaleza=1, Nivel=3, PermiteMovimientos=true,  Descripcion="Importaciones en proceso de internaciÃ³n" },
+            new CreateCuentaContableDto { Codigo="1.1.9",    Nombre="IVA CrÃ©dito Fiscal",                   Tipo=1, Naturaleza=1, Nivel=3, PermiteMovimientos=true,  Descripcion="IVA pagado en compras" },
             new CreateCuentaContableDto { Codigo="1.1.10",   Nombre="Gastos Pagados por Anticipado",        Tipo=1, Naturaleza=1, Nivel=3, PermiteMovimientos=true,  Descripcion="Seguros y otros prepagados" },
             new CreateCuentaContableDto { Codigo="1.2",      Nombre="ACTIVO NO CORRIENTE",                  Tipo=1, Naturaleza=1, Nivel=2, PermiteMovimientos=false },
             new CreateCuentaContableDto { Codigo="1.2.1",    Nombre="Mobiliario y Equipos de Oficina",      Tipo=1, Naturaleza=1, Nivel=3, PermiteMovimientos=true,  Descripcion="Muebles y equipos propios" },
-            new CreateCuentaContableDto { Codigo="1.2.2",    Nombre="Vehículos y Transporte",               Tipo=1, Naturaleza=1, Nivel=3, PermiteMovimientos=true,  Descripcion="Camiones y vehículos de reparto" },
-            new CreateCuentaContableDto { Codigo="1.2.3",    Nombre="Dep. Acumulada Mobiliario",            Tipo=1, Naturaleza=2, Nivel=3, PermiteMovimientos=true,  Descripcion="(-) Depreciación acumulada" },
+            new CreateCuentaContableDto { Codigo="1.2.2",    Nombre="VehÃ­culos y Transporte",               Tipo=1, Naturaleza=1, Nivel=3, PermiteMovimientos=true,  Descripcion="Camiones y vehÃ­culos de reparto" },
+            new CreateCuentaContableDto { Codigo="1.2.3",    Nombre="Dep. Acumulada Mobiliario",            Tipo=1, Naturaleza=2, Nivel=3, PermiteMovimientos=true,  Descripcion="(-) DepreciaciÃ³n acumulada" },
             // ?? PASIVO ??????????????????????????????????????????????????????
             new CreateCuentaContableDto { Codigo="2",        Nombre="PASIVO",                               Tipo=2, Naturaleza=2, Nivel=1, PermiteMovimientos=false },
             new CreateCuentaContableDto { Codigo="2.1",      Nombre="PASIVO CORRIENTE",                     Tipo=2, Naturaleza=2, Nivel=2, PermiteMovimientos=false },
             new CreateCuentaContableDto { Codigo="2.1.1",    Nombre="Cuentas por Pagar Proveedores",        Tipo=2, Naturaleza=2, Nivel=3, PermiteMovimientos=true,  Descripcion="Deudas con proveedores nacionales e internacionales" },
             new CreateCuentaContableDto { Codigo="2.1.2",    Nombre="Gastos Aduaneros por Pagar",           Tipo=2, Naturaleza=2, Nivel=3, PermiteMovimientos=true,  Descripcion="Aranceles y tributos aduaneros pendientes" },
-            new CreateCuentaContableDto { Codigo="2.1.3",    Nombre="IVA Débito Fiscal",                    Tipo=2, Naturaleza=2, Nivel=3, PermiteMovimientos=true,  Descripcion="IVA cobrado en ventas" },
+            new CreateCuentaContableDto { Codigo="2.1.3",    Nombre="IVA DÃ©bito Fiscal",                    Tipo=2, Naturaleza=2, Nivel=3, PermiteMovimientos=true,  Descripcion="IVA cobrado en ventas" },
             new CreateCuentaContableDto { Codigo="2.1.4",    Nombre="IT por Pagar",                         Tipo=2, Naturaleza=2, Nivel=3, PermiteMovimientos=true,  Descripcion="Impuesto a las Transacciones" },
             new CreateCuentaContableDto { Codigo="2.1.5",    Nombre="Sueldos y Salarios por Pagar",         Tipo=2, Naturaleza=2, Nivel=3, PermiteMovimientos=true,  Descripcion="Planilla mensual" },
-            new CreateCuentaContableDto { Codigo="2.1.6",    Nombre="Préstamo Bancario CP",                 Tipo=2, Naturaleza=2, Nivel=3, PermiteMovimientos=true,  Descripcion="Porción corriente de préstamos" },
+            new CreateCuentaContableDto { Codigo="2.1.6",    Nombre="PrÃ©stamo Bancario CP",                 Tipo=2, Naturaleza=2, Nivel=3, PermiteMovimientos=true,  Descripcion="PorciÃ³n corriente de prÃ©stamos" },
             new CreateCuentaContableDto { Codigo="2.2",      Nombre="PASIVO NO CORRIENTE",                  Tipo=2, Naturaleza=2, Nivel=2, PermiteMovimientos=false },
-            new CreateCuentaContableDto { Codigo="2.2.1",    Nombre="Préstamo Bancario LP",                 Tipo=2, Naturaleza=2, Nivel=3, PermiteMovimientos=true,  Descripcion="Porción largo plazo de préstamos" },
+            new CreateCuentaContableDto { Codigo="2.2.1",    Nombre="PrÃ©stamo Bancario LP",                 Tipo=2, Naturaleza=2, Nivel=3, PermiteMovimientos=true,  Descripcion="PorciÃ³n largo plazo de prÃ©stamos" },
             // ?? PATRIMONIO ??????????????????????????????????????????????????
             new CreateCuentaContableDto { Codigo="3",        Nombre="PATRIMONIO NETO",                      Tipo=3, Naturaleza=2, Nivel=1, PermiteMovimientos=false },
             new CreateCuentaContableDto { Codigo="3.1",      Nombre="Capital Social",                       Tipo=3, Naturaleza=2, Nivel=2, PermiteMovimientos=true,  Descripcion="Aportes de socios" },
             new CreateCuentaContableDto { Codigo="3.2",      Nombre="Resultados Acumulados",                Tipo=3, Naturaleza=2, Nivel=2, PermiteMovimientos=true,  Descripcion="Utilidades retenidas" },
-            new CreateCuentaContableDto { Codigo="3.3",      Nombre="Resultado del Ejercicio",              Tipo=3, Naturaleza=2, Nivel=2, PermiteMovimientos=true,  Descripcion="Ganancia/pérdida del período" },
+            new CreateCuentaContableDto { Codigo="3.3",      Nombre="Resultado del Ejercicio",              Tipo=3, Naturaleza=2, Nivel=2, PermiteMovimientos=true,  Descripcion="Ganancia/pÃ©rdida del perÃ­odo" },
             // ?? INGRESOS ?????????????????????????????????????????????????????
             new CreateCuentaContableDto { Codigo="4",        Nombre="INGRESOS",                             Tipo=4, Naturaleza=2, Nivel=1, PermiteMovimientos=false },
             new CreateCuentaContableDto { Codigo="4.1",      Nombre="Ventas de Muebles",                    Tipo=4, Naturaleza=2, Nivel=2, PermiteMovimientos=true,  Descripcion="Ingresos por venta de muebles" },
@@ -280,21 +280,21 @@ public class EmpresaDemoService
             new CreateCuentaContableDto { Codigo="4.1.2",    Nombre="Ventas - Muebles de Dormitorio",       Tipo=4, Naturaleza=2, Nivel=3, PermiteMovimientos=true  },
             new CreateCuentaContableDto { Codigo="4.1.3",    Nombre="Ventas - Muebles de Oficina",          Tipo=4, Naturaleza=2, Nivel=3, PermiteMovimientos=true  },
             new CreateCuentaContableDto { Codigo="4.1.4",    Nombre="Ventas - Muebles de Cocina/Comedor",   Tipo=4, Naturaleza=2, Nivel=3, PermiteMovimientos=true  },
-            new CreateCuentaContableDto { Codigo="4.2",      Nombre="Otros Ingresos",                       Tipo=4, Naturaleza=2, Nivel=2, PermiteMovimientos=true,  Descripcion="Servicios de instalación, reparación, etc." },
+            new CreateCuentaContableDto { Codigo="4.2",      Nombre="Otros Ingresos",                       Tipo=4, Naturaleza=2, Nivel=2, PermiteMovimientos=true,  Descripcion="Servicios de instalaciÃ³n, reparaciÃ³n, etc." },
             // ?? EGRESOS ??????????????????????????????????????????????????????
             new CreateCuentaContableDto { Codigo="5",        Nombre="EGRESOS",                              Tipo=5, Naturaleza=1, Nivel=1, PermiteMovimientos=false },
             new CreateCuentaContableDto { Codigo="5.1",      Nombre="COSTO DE VENTAS",                      Tipo=5, Naturaleza=1, Nivel=2, PermiteMovimientos=false },
-            new CreateCuentaContableDto { Codigo="5.1.1",    Nombre="Costo de Mercaderías Vendidas",        Tipo=5, Naturaleza=1, Nivel=3, PermiteMovimientos=true  },
-            new CreateCuentaContableDto { Codigo="5.1.2",    Nombre="Fletes y Transporte de Importación",   Tipo=5, Naturaleza=1, Nivel=3, PermiteMovimientos=true  },
+            new CreateCuentaContableDto { Codigo="5.1.1",    Nombre="Costo de MercaderÃ­as Vendidas",        Tipo=5, Naturaleza=1, Nivel=3, PermiteMovimientos=true  },
+            new CreateCuentaContableDto { Codigo="5.1.2",    Nombre="Fletes y Transporte de ImportaciÃ³n",   Tipo=5, Naturaleza=1, Nivel=3, PermiteMovimientos=true  },
             new CreateCuentaContableDto { Codigo="5.1.3",    Nombre="Aranceles y Tributos Aduaneros",       Tipo=5, Naturaleza=1, Nivel=3, PermiteMovimientos=true  },
             new CreateCuentaContableDto { Codigo="5.2",      Nombre="GASTOS OPERATIVOS",                    Tipo=5, Naturaleza=1, Nivel=2, PermiteMovimientos=false },
             new CreateCuentaContableDto { Codigo="5.2.1",    Nombre="Sueldos y Salarios",                   Tipo=5, Naturaleza=1, Nivel=3, PermiteMovimientos=true  },
             new CreateCuentaContableDto { Codigo="5.2.2",    Nombre="Alquiler de Local y Showroom",         Tipo=5, Naturaleza=1, Nivel=3, PermiteMovimientos=true  },
-            new CreateCuentaContableDto { Codigo="5.2.3",    Nombre="Servicios Básicos",                    Tipo=5, Naturaleza=1, Nivel=3, PermiteMovimientos=true  },
+            new CreateCuentaContableDto { Codigo="5.2.3",    Nombre="Servicios BÃ¡sicos",                    Tipo=5, Naturaleza=1, Nivel=3, PermiteMovimientos=true  },
             new CreateCuentaContableDto { Codigo="5.2.4",    Nombre="Publicidad y Marketing",               Tipo=5, Naturaleza=1, Nivel=3, PermiteMovimientos=true  },
             new CreateCuentaContableDto { Codigo="5.2.5",    Nombre="Mantenimiento y Reparaciones",         Tipo=5, Naturaleza=1, Nivel=3, PermiteMovimientos=true  },
-            new CreateCuentaContableDto { Codigo="5.2.6",    Nombre="Gastos de Importación y Aduana",       Tipo=5, Naturaleza=1, Nivel=3, PermiteMovimientos=true  },
-            new CreateCuentaContableDto { Codigo="5.2.7",    Nombre="Depreciación del Ejercicio",           Tipo=5, Naturaleza=1, Nivel=3, PermiteMovimientos=true  },
+            new CreateCuentaContableDto { Codigo="5.2.6",    Nombre="Gastos de ImportaciÃ³n y Aduana",       Tipo=5, Naturaleza=1, Nivel=3, PermiteMovimientos=true  },
+            new CreateCuentaContableDto { Codigo="5.2.7",    Nombre="DepreciaciÃ³n del Ejercicio",           Tipo=5, Naturaleza=1, Nivel=3, PermiteMovimientos=true  },
             new CreateCuentaContableDto { Codigo="5.3",      Nombre="GASTOS FINANCIEROS",                   Tipo=5, Naturaleza=1, Nivel=2, PermiteMovimientos=false },
             new CreateCuentaContableDto { Codigo="5.3.1",    Nombre="Intereses Bancarios",                  Tipo=5, Naturaleza=1, Nivel=3, PermiteMovimientos=true  },
             new CreateCuentaContableDto { Codigo="5.3.2",    Nombre="Comisiones Bancarias",                 Tipo=5, Naturaleza=1, Nivel=3, PermiteMovimientos=true  },
@@ -308,7 +308,7 @@ public class EmpresaDemoService
     }
 
     // ????????????????????????????????????????????????????????????????????????
-    // PASO 7 — Períodos contables 2025
+    // PASO 7 â€” PerÃ­odos contables 2025
     // ????????????????????????????????????????????????????????????????????????
     private async Task CrearPeriodosAsync()
     {
@@ -317,49 +317,49 @@ public class EmpresaDemoService
     }
 
     // ????????????????????????????????????????????????????????????????????????
-    // PASO 8 — Productos (catálogo global + activar en empresa)
+    // PASO 8 â€” Productos (catÃ¡logo global + activar en empresa)
     // ????????????????????????????????????????????????????????????????????????
     private async Task CrearProductosAsync()
     {
-        // Obtener catálogos disponibles para la empresa actual
+        // Obtener catÃ¡logos disponibles para la empresa actual
         var catalogos = await _catalogoSvc.GetAllAsync();
         if (!catalogos.Any())
-            throw new Exception("No hay catálogos configurados. El seed de empresa debería haberlos creado.");
+            throw new Exception("No hay catÃ¡logos configurados. El seed de empresa deberÃ­a haberlos creado.");
         var catalogoId = catalogos.First().CatalogId;
 
-        // Obtener UOMs — usar la primera (UND) creada por el seed
+        // Obtener UOMs â€” usar la primera (UND) creada por el seed
         var uoms = await _unidadMedidaSvc.GetAllAsync();
         if (!uoms.Any())
-            throw new Exception("No hay unidades de medida configuradas. El seed de empresa debería haberlas creado.");
+            throw new Exception("No hay unidades de medida configuradas. El seed de empresa deberÃ­a haberlas creado.");
         var defaultUomId = uoms.FirstOrDefault(u => u.Code == "UND")?.UomId ?? uoms.First().UomId;
 
         var productos = new[]
         {
             // Sala
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Sofá 3 Cuerpos",               CommercialName="Sofá Malibu 3C",             ShortDescription="Sofá tapizado en tela importada, 3 cuerpos",        DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Sofá 2 Cuerpos",               CommercialName="Sofá Malibu 2C",             ShortDescription="Sofá tapizado en tela importada, 2 cuerpos",        DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Sillón Individual",            CommercialName="Sillón Malibu 1C",           ShortDescription="Sillón tapizado a juego con sofá",                  DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="SofÃ¡ 3 Cuerpos",               CommercialName="SofÃ¡ Malibu 3C",             ShortDescription="SofÃ¡ tapizado en tela importada, 3 cuerpos",        DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="SofÃ¡ 2 Cuerpos",               CommercialName="SofÃ¡ Malibu 2C",             ShortDescription="SofÃ¡ tapizado en tela importada, 2 cuerpos",        DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="SillÃ³n Individual",            CommercialName="SillÃ³n Malibu 1C",           ShortDescription="SillÃ³n tapizado a juego con sofÃ¡",                  DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
             new CreateProductDto2 { CatalogId=catalogoId, GenericName="Mesa de Centro",               CommercialName="Mesa Centro Roble",          ShortDescription="Mesa de centro en madera roble 120x60 cm",          DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
             new CreateProductDto2 { CatalogId=catalogoId, GenericName="Mueble TV",                    CommercialName="Mueble TV Milano 160",        ShortDescription="Mueble para televisor hasta 65 pulgadas",           DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
             // Dormitorio
             new CreateProductDto2 { CatalogId=catalogoId, GenericName="Cama King Size",               CommercialName="Cama Venecia King",          ShortDescription="Cama King con cabecero tapizado, incluye tarima",    DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
             new CreateProductDto2 { CatalogId=catalogoId, GenericName="Cama Queen Size",              CommercialName="Cama Venecia Queen",         ShortDescription="Cama Queen con cabecero tapizado, incluye tarima",  DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Cómoda 6 Cajones",             CommercialName="Cómoda Roma 6C",             ShortDescription="Cómoda en MDF laqueado, 6 cajones con rieles",      DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="CÃ³moda 6 Cajones",             CommercialName="CÃ³moda Roma 6C",             ShortDescription="CÃ³moda en MDF laqueado, 6 cajones con rieles",      DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
             new CreateProductDto2 { CatalogId=catalogoId, GenericName="Ropero 4 Puertas",             CommercialName="Ropero Classic 4P",          ShortDescription="Armario con espejos y organizador interior",        DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
             new CreateProductDto2 { CatalogId=catalogoId, GenericName="Mesa de Noche",                CommercialName="Nochero Roma",               ShortDescription="Mesa de noche a juego con dormitorio Roma",         DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
             // Comedor
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Mesa Comedor 6 Personas",      CommercialName="Mesa Comedor Teka 6P",        ShortDescription="Mesa de teca sólida 160x90 cm, 6 personas",         DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Mesa Comedor 6 Personas",      CommercialName="Mesa Comedor Teka 6P",        ShortDescription="Mesa de teca sÃ³lida 160x90 cm, 6 personas",         DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
             new CreateProductDto2 { CatalogId=catalogoId, GenericName="Silla Comedor",                CommercialName="Silla Teka Tapizada",        ShortDescription="Silla con asiento tapizado, pata de teka",          DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Aparador / Buffet",            CommercialName="Buffet Colonial 3P",         ShortDescription="Aparador colonial 3 puertas madera sólida",         DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Aparador / Buffet",            CommercialName="Buffet Colonial 3P",         ShortDescription="Aparador colonial 3 puertas madera sÃ³lida",         DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
             // Oficina
             new CreateProductDto2 { CatalogId=catalogoId, GenericName="Escritorio Ejecutivo",         CommercialName="Escritorio Exec. Pro",       ShortDescription="Escritorio en L con cajones y porta CPU",           DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Silla Ergonómica Ejecutiva",   CommercialName="Silla Ergo Elite",           ShortDescription="Silla con soporte lumbar y apoyabrazos ajustables",  DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Estantería Modular",           CommercialName="Estante Modular 5N",         ShortDescription="Estantería 5 niveles, armable, carga 50kg/nivel",   DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Mesa de Reuniones 8 Pers.",    CommercialName="Mesa Reunión Oval 8P",       ShortDescription="Mesa ovalada para sala de reuniones",               DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Silla ErgonÃ³mica Ejecutiva",   CommercialName="Silla Ergo Elite",           ShortDescription="Silla con soporte lumbar y apoyabrazos ajustables",  DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="EstanterÃ­a Modular",           CommercialName="Estante Modular 5N",         ShortDescription="EstanterÃ­a 5 niveles, armable, carga 50kg/nivel",   DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Mesa de Reuniones 8 Pers.",    CommercialName="Mesa ReuniÃ³n Oval 8P",       ShortDescription="Mesa ovalada para sala de reuniones",               DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
             // Accesorios
             new CreateProductDto2 { CatalogId=catalogoId, GenericName="Espejo Decorativo",            CommercialName="Espejo Marco Dorado",        ShortDescription="Espejo con marco decorativo 80x120 cm",             DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Alfombra Importada",           CommercialName="Alfombra Persa 200x300",     ShortDescription="Alfombra 100% lana, diseño persa 200x300 cm",       DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
-            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Lámpara de Pie",               CommercialName="Lámpara Arc Premium",        ShortDescription="Lámpara de pie arco, base mármol, altura 180 cm",   DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="Alfombra Importada",           CommercialName="Alfombra Persa 200x300",     ShortDescription="Alfombra 100% lana, diseÃ±o persa 200x300 cm",       DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
+            new CreateProductDto2 { CatalogId=catalogoId, GenericName="LÃ¡mpara de Pie",               CommercialName="LÃ¡mpara Arc Premium",        ShortDescription="LÃ¡mpara de pie arco, base mÃ¡rmol, altura 180 cm",   DefaultUomId=defaultUomId, IsStockable=true, IsSellable=true, IsPurchasable=true },
         };
 
         foreach (var p in productos)
@@ -388,7 +388,7 @@ public class EmpresaDemoService
     }
 
     // ????????????????????????????????????????????????????????????????????????
-    // PASO 9 — Stock inicial (entradas de inventario)
+    // PASO 9 â€” Stock inicial (entradas de inventario)
     // ????????????????????????????????????????????????????????????????????????
     private async Task CrearStockInicialAsync()
     {
@@ -400,21 +400,21 @@ public class EmpresaDemoService
         // Datos de stock por producto (cantidades y costos representativos)
         var stockData = new[]
         {
-            (0,  12m, 2_850m,  "Importación China FAS-2025-001"),
-            (1,  15m, 2_200m,  "Importación China FAS-2025-001"),
-            (2,  20m, 1_450m,  "Importación China FAS-2025-001"),
-            (3,  18m,   780m,  "Importación China FAS-2025-001"),
-            (4,  14m,   920m,  "Importación China FAS-2025-001"),
-            (5,   8m, 4_100m,  "Importación Indonesia TM-2025-002"),
-            (6,  10m, 3_200m,  "Importación Indonesia TM-2025-002"),
-            (7,  16m, 1_100m,  "Importación Indonesia TM-2025-002"),
-            (8,   6m, 3_800m,  "Importación Indonesia TM-2025-002"),
-            (9,  22m,   620m,  "Importación Indonesia TM-2025-002"),
-            (10,  5m, 5_200m,  "Importación Italia EM-2025-003"),
-            (11, 30m,   480m,  "Importación Italia EM-2025-003"),
-            (12,  4m, 2_900m,  "Importación Italia EM-2025-003"),
-            (13,  7m, 3_400m,  "Importación Italia EM-2025-003"),
-            (14, 18m, 1_250m,  "Importación Italia EM-2025-003"),
+            (0,  12m, 2_850m,  "ImportaciÃ³n China FAS-2025-001"),
+            (1,  15m, 2_200m,  "ImportaciÃ³n China FAS-2025-001"),
+            (2,  20m, 1_450m,  "ImportaciÃ³n China FAS-2025-001"),
+            (3,  18m,   780m,  "ImportaciÃ³n China FAS-2025-001"),
+            (4,  14m,   920m,  "ImportaciÃ³n China FAS-2025-001"),
+            (5,   8m, 4_100m,  "ImportaciÃ³n Indonesia TM-2025-002"),
+            (6,  10m, 3_200m,  "ImportaciÃ³n Indonesia TM-2025-002"),
+            (7,  16m, 1_100m,  "ImportaciÃ³n Indonesia TM-2025-002"),
+            (8,   6m, 3_800m,  "ImportaciÃ³n Indonesia TM-2025-002"),
+            (9,  22m,   620m,  "ImportaciÃ³n Indonesia TM-2025-002"),
+            (10,  5m, 5_200m,  "ImportaciÃ³n Italia EM-2025-003"),
+            (11, 30m,   480m,  "ImportaciÃ³n Italia EM-2025-003"),
+            (12,  4m, 2_900m,  "ImportaciÃ³n Italia EM-2025-003"),
+            (13,  7m, 3_400m,  "ImportaciÃ³n Italia EM-2025-003"),
+            (14, 18m, 1_250m,  "ImportaciÃ³n Italia EM-2025-003"),
             (15, 10m,   680m,  "Compra Local CMAN-2025-004"),
             (16,  3m, 6_100m,  "Compra Local CMAN-2025-004"),
             (17, 12m,   590m,  "Compra Local CMAN-2025-004"),
@@ -443,7 +443,7 @@ public class EmpresaDemoService
     }
 
     // ????????????????????????????????????????????????????????????????????????
-    // PASO 10 — Asientos contables demo
+    // PASO 10 â€” Asientos contables demo
     // ????????????????????????????????????????????????????????????????????????
     private async Task CrearAsientosAsync()
     {
@@ -452,18 +452,18 @@ public class EmpresaDemoService
         var tcEgreso  = tiposComp.FirstOrDefault(t => t.Codigo == "CE" || t.Codigo == "EG" || t.Nombre.Contains("Egreso"))?.TipoComprobanteId  ?? 2;
         var tcGeneral = tiposComp.FirstOrDefault(t => t.Codigo == "CG" || t.Codigo == "GE" || t.Nombre.Contains("General"))?.TipoComprobanteId ?? (tiposComp.FirstOrDefault()?.TipoComprobanteId ?? 1);
 
-        // Helper para obtener ID de cuenta por código
+        // Helper para obtener ID de cuenta por cÃ³digo
         int Cta(string codigo) =>
             Resultado.Cuentas.FirstOrDefault(c => c.Codigo == codigo).Id;
 
         var asientos = new[]
         {
-            // 1 — Apertura / Capital inicial
+            // 1 â€” Apertura / Capital inicial
             new CreateAsientoContableDto
             {
                 TipoComprobanteId = tcGeneral,
                 Fecha    = new DateTime(2025, 1, 2),
-                Glosa    = "Apertura de gestión — Aporte de capital social",
+                Glosa    = "Apertura de gestiÃ³n â€” Aporte de capital social",
                 Concepto = "Capital inicial socios",
                 Lineas   = new()
                 {
@@ -472,38 +472,38 @@ public class EmpresaDemoService
                     new CreateAsientoLineaDto { CuentaContableId=Cta("3.1"),   Haber=1_000_000m, Glosa="Capital Social Muebles Andinos" },
                 }
             },
-            // 2 — Compra mercadería importada (anticipo)
+            // 2 â€” Compra mercaderÃ­a importada (anticipo)
             new CreateAsientoContableDto
             {
                 TipoComprobanteId = tcEgreso,
                 Fecha    = new DateTime(2025, 1, 10),
-                Glosa    = "Anticipo 40% a FURNITURE ASIA CO. LTD. — OC-2025-001",
-                Concepto = "Importación muebles sala y dormitorio",
+                Glosa    = "Anticipo 40% a FURNITURE ASIA CO. LTD. â€” OC-2025-001",
+                Concepto = "ImportaciÃ³n muebles sala y dormitorio",
                 Lineas   = new()
                 {
                     new CreateAsientoLineaDto { CuentaContableId=Cta("1.1.6"), Debe=120_000m, Glosa="Anticipo proveedor China 40%" },
                     new CreateAsientoLineaDto { CuentaContableId=Cta("1.1.4"), Haber=120_000m, Glosa="Pago BCP USD" },
                 }
             },
-            // 3 — Recepción mercadería + costos importación
+            // 3 â€” RecepciÃ³n mercaderÃ­a + costos importaciÃ³n
             new CreateAsientoContableDto
             {
                 TipoComprobanteId = tcIngreso,
                 Fecha    = new DateTime(2025, 1, 20),
-                Glosa    = "Recepción mercadería OC-2025-001 + liquidación importación",
-                Concepto = "Ingreso al inventario — muebles sala y dormitorio",
+                Glosa    = "RecepciÃ³n mercaderÃ­a OC-2025-001 + liquidaciÃ³n importaciÃ³n",
+                Concepto = "Ingreso al inventario â€” muebles sala y dormitorio",
                 Lineas   = new()
                 {
                     new CreateAsientoLineaDto { CuentaContableId=Cta("1.1.7"), Debe=320_000m, Glosa="Ingreso inventario muebles" },
-                    new CreateAsientoLineaDto { CuentaContableId=Cta("1.1.6"), Haber=120_000m, Glosa="Aplicación anticipo" },
+                    new CreateAsientoLineaDto { CuentaContableId=Cta("1.1.6"), Haber=120_000m, Glosa="AplicaciÃ³n anticipo" },
                     new CreateAsientoLineaDto { CuentaContableId=Cta("2.1.1"), Haber=180_000m, Glosa="Saldo OC por pagar proveedor" },
-                    new CreateAsientoLineaDto { CuentaContableId=Cta("5.1.2"), Debe=18_500m,   Glosa="Flete marítimo + terrestre" },
+                    new CreateAsientoLineaDto { CuentaContableId=Cta("5.1.2"), Debe=18_500m,   Glosa="Flete marÃ­timo + terrestre" },
                     new CreateAsientoLineaDto { CuentaContableId=Cta("5.1.3"), Debe=24_200m,   Glosa="Aranceles y tributos GAB" },
-                    new CreateAsientoLineaDto { CuentaContableId=Cta("2.1.2"), Haber=24_200m,  Glosa="Obligación aduanera" },
-                    new CreateAsientoLineaDto { CuentaContableId=Cta("2.1.1"), Haber=18_500m,  Glosa="Flete por pagar - Agencia Bolívar" },
+                    new CreateAsientoLineaDto { CuentaContableId=Cta("2.1.2"), Haber=24_200m,  Glosa="ObligaciÃ³n aduanera" },
+                    new CreateAsientoLineaDto { CuentaContableId=Cta("2.1.1"), Haber=18_500m,  Glosa="Flete por pagar - Agencia BolÃ­var" },
                 }
             },
-            // 4 — Pago planilla enero
+            // 4 â€” Pago planilla enero
             new CreateAsientoContableDto
             {
                 TipoComprobanteId = tcEgreso,
@@ -513,31 +513,31 @@ public class EmpresaDemoService
                 Lineas   = new()
                 {
                     new CreateAsientoLineaDto { CuentaContableId=Cta("5.2.1"), Debe=45_000m,  Glosa="Sueldos brutos enero" },
-                    new CreateAsientoLineaDto { CuentaContableId=Cta("1.1.3"), Haber=38_250m, Glosa="Pago neto vía banco BNB" },
+                    new CreateAsientoLineaDto { CuentaContableId=Cta("1.1.3"), Haber=38_250m, Glosa="Pago neto vÃ­a banco BNB" },
                     new CreateAsientoLineaDto { CuentaContableId=Cta("2.1.5"), Haber=6_750m,  Glosa="Retenciones AFP y otros" },
                 }
             },
-            // 5 — Venta al Hotel Los Andes
+            // 5 â€” Venta al Hotel Los Andes
             new CreateAsientoContableDto
             {
                 TipoComprobanteId = tcIngreso,
                 Fecha    = new DateTime(2025, 2, 5),
-                Glosa    = "Venta FAC-2025-0001 — Hotel Los Andes S.A.",
+                Glosa    = "Venta FAC-2025-0001 â€” Hotel Los Andes S.A.",
                 Concepto = "Equipamiento habitaciones 101-120",
                 Lineas   = new()
                 {
                     new CreateAsientoLineaDto { CuentaContableId=Cta("1.1.5"), Debe=186_200m,  Glosa="CxC Hotel Los Andes FAC-2025-0001" },
                     new CreateAsientoLineaDto { CuentaContableId=Cta("4.1.2"), Haber=160_690m, Glosa="Venta muebles dormitorio" },
-                    new CreateAsientoLineaDto { CuentaContableId=Cta("2.1.3"), Haber=20_890m,  Glosa="IVA Débito Fiscal 13%" },
+                    new CreateAsientoLineaDto { CuentaContableId=Cta("2.1.3"), Haber=20_890m,  Glosa="IVA DÃ©bito Fiscal 13%" },
                     new CreateAsientoLineaDto { CuentaContableId=Cta("2.1.4"), Haber=4_620m,   Glosa="IT 3%" },
                 }
             },
-            // 6 — Costo de venta correspondiente
+            // 6 â€” Costo de venta correspondiente
             new CreateAsientoContableDto
             {
                 TipoComprobanteId = tcEgreso,
                 Fecha    = new DateTime(2025, 2, 5),
-                Glosa    = "Costo de venta FAC-2025-0001 — Hotel Los Andes",
+                Glosa    = "Costo de venta FAC-2025-0001 â€” Hotel Los Andes",
                 Concepto = "Descargo inventario muebles dormitorio",
                 Lineas   = new()
                 {
@@ -545,40 +545,40 @@ public class EmpresaDemoService
                     new CreateAsientoLineaDto { CuentaContableId=Cta("1.1.7"), Haber=112_000m, Glosa="Descargo inventario" },
                 }
             },
-            // 7 — Cobro parcial
+            // 7 â€” Cobro parcial
             new CreateAsientoContableDto
             {
                 TipoComprobanteId = tcIngreso,
                 Fecha    = new DateTime(2025, 2, 15),
-                Glosa    = "Cobro parcial 50% FAC-2025-0001 — Hotel Los Andes",
+                Glosa    = "Cobro parcial 50% FAC-2025-0001 â€” Hotel Los Andes",
                 Concepto = "Transferencia bancaria 50%",
                 Lineas   = new()
                 {
-                    new CreateAsientoLineaDto { CuentaContableId=Cta("1.1.3"), Debe=93_100m,  Glosa="Depósito BNB — Hotel Los Andes" },
-                    new CreateAsientoLineaDto { CuentaContableId=Cta("1.1.5"), Haber=93_100m, Glosa="Aplicación CxC parcial" },
+                    new CreateAsientoLineaDto { CuentaContableId=Cta("1.1.3"), Debe=93_100m,  Glosa="DepÃ³sito BNB â€” Hotel Los Andes" },
+                    new CreateAsientoLineaDto { CuentaContableId=Cta("1.1.5"), Haber=93_100m, Glosa="AplicaciÃ³n CxC parcial" },
                 }
             },
-            // 8 — Venta Constructora Boliviana (muebles oficina)
+            // 8 â€” Venta Constructora Boliviana (muebles oficina)
             new CreateAsientoContableDto
             {
                 TipoComprobanteId = tcIngreso,
                 Fecha    = new DateTime(2025, 2, 20),
-                Glosa    = "Venta FAC-2025-0002 — Constructora Boliviana S.R.L.",
+                Glosa    = "Venta FAC-2025-0002 â€” Constructora Boliviana S.R.L.",
                 Concepto = "Equipamiento oficinas proyecto Torre Norte",
                 Lineas   = new()
                 {
                     new CreateAsientoLineaDto { CuentaContableId=Cta("1.1.5"), Debe=248_600m,  Glosa="CxC Constructora Boliviana FAC-2025-0002" },
                     new CreateAsientoLineaDto { CuentaContableId=Cta("4.1.3"), Haber=214_690m, Glosa="Venta muebles oficina" },
-                    new CreateAsientoLineaDto { CuentaContableId=Cta("2.1.3"), Haber=27_910m,  Glosa="IVA Débito Fiscal" },
+                    new CreateAsientoLineaDto { CuentaContableId=Cta("2.1.3"), Haber=27_910m,  Glosa="IVA DÃ©bito Fiscal" },
                     new CreateAsientoLineaDto { CuentaContableId=Cta("2.1.4"), Haber=6_000m,   Glosa="IT 3%" },
                 }
             },
-            // 9 — Alquiler showroom febrero
+            // 9 â€” Alquiler showroom febrero
             new CreateAsientoContableDto
             {
                 TipoComprobanteId = tcEgreso,
                 Fecha    = new DateTime(2025, 2, 28),
-                Glosa    = "Alquiler showroom y oficinas — Febrero 2025",
+                Glosa    = "Alquiler showroom y oficinas â€” Febrero 2025",
                 Concepto = "Pago mensual arrendamiento",
                 Lineas   = new()
                 {
@@ -586,13 +586,13 @@ public class EmpresaDemoService
                     new CreateAsientoLineaDto { CuentaContableId=Cta("1.1.3"), Haber=18_000m, Glosa="Pago banco BNB" },
                 }
             },
-            // 10 — Segunda importación
+            // 10 â€” Segunda importaciÃ³n
             new CreateAsientoContableDto
             {
                 TipoComprobanteId = tcEgreso,
                 Fecha    = new DateTime(2025, 3, 5),
-                Glosa    = "OC-2025-002 TEAK MASTERS — Muebles comedor y accesorios",
-                Concepto = "Anticipo 30% importación Indonesia",
+                Glosa    = "OC-2025-002 TEAK MASTERS â€” Muebles comedor y accesorios",
+                Concepto = "Anticipo 30% importaciÃ³n Indonesia",
                 Lineas   = new()
                 {
                     new CreateAsientoLineaDto { CuentaContableId=Cta("1.1.6"), Debe=85_000m,  Glosa="Anticipo 30% TM Indonesia" },
@@ -603,7 +603,7 @@ public class EmpresaDemoService
 
         foreach (var a in asientos)
         {
-            // Solo crear si tenemos cuentas válidas (IDs > 0)
+            // Solo crear si tenemos cuentas vÃ¡lidas (IDs > 0)
             if (a.Lineas.Any(l => l.CuentaContableId == 0)) continue;
 
             var r = await _asientoSvc.CreateAsync(a);

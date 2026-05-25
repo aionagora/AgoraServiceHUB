@@ -114,7 +114,7 @@ public class ExpedienteImportacionService : IExpedienteImportacionService
             PuertoDestino = dto.PuertoDestino,
             Forwarder = dto.Forwarder,
             Aseguradora = dto.Aseguradora,
-            NumeroP髄izaSeguro = dto.NumeroP髄izaSeguro,
+            NumeroP贸lizaSeguro = dto.NumeroP贸lizaSeguro,
             Observaciones = dto.Observaciones,
             Activo = true
         };
@@ -147,7 +147,7 @@ public class ExpedienteImportacionService : IExpedienteImportacionService
         exp.PuertoDestino = dto.PuertoDestino;
         exp.Forwarder = dto.Forwarder;
         exp.Aseguradora = dto.Aseguradora;
-        exp.NumeroP髄izaSeguro = dto.NumeroP髄izaSeguro;
+        exp.NumeroP贸lizaSeguro = dto.NumeroP贸lizaSeguro;
         exp.NumeroBLAWB = dto.NumeroBLAWB;
         exp.ETD = dto.ETD;
         exp.ETA = dto.ETA;
@@ -231,7 +231,7 @@ public class ExpedienteImportacionService : IExpedienteImportacionService
 
         await _expRepo.UpdateAsync(exp, ct);
         await AddHitoInterno(exp.ExpedienteImportacionId, "ObservacionAduana", DateTime.UtcNow,
-            $"Observaci髇/aforo: {dto.DetalleObservacion}", ct);
+            $"Observaci贸n/aforo: {dto.DetalleObservacion}", ct);
         await _unitOfWork.SaveChangesAsync(ct);
         return Result<ExpedienteImportacionDto>.Success(await BuildDto(exp, ct));
     }
@@ -247,7 +247,7 @@ public class ExpedienteImportacionService : IExpedienteImportacionService
         exp.Estado = EstadoDocumento.EnAduana;
         await _expRepo.UpdateAsync(exp, ct);
         await AddHitoInterno(exp.ExpedienteImportacionId, "SubsanacionAduana", DateTime.UtcNow,
-            $"Observaci髇 subsanada. {observaciones}", ct);
+            $"Observaci贸n subsanada. {observaciones}", ct);
         await _unitOfWork.SaveChangesAsync(ct);
         return Result<ExpedienteImportacionDto>.Success(await BuildDto(exp, ct));
     }
@@ -267,7 +267,7 @@ public class ExpedienteImportacionService : IExpedienteImportacionService
 
         await _expRepo.UpdateAsync(exp, ct);
         await AddHitoInterno(exp.ExpedienteImportacionId, "Levante", dto.FechaLevante,
-            "Levante/liberaci髇 aduanera obtenida.", ct);
+            "Levante/liberaci贸n aduanera obtenida.", ct);
         await _unitOfWork.SaveChangesAsync(ct);
         return Result<ExpedienteImportacionDto>.Success(await BuildDto(exp, ct));
     }
@@ -383,7 +383,7 @@ public class ExpedienteImportacionService : IExpedienteImportacionService
             exp.PuertoDestino,
             exp.Forwarder,
             exp.Aseguradora,
-            exp.NumeroP髄izaSeguro,
+            exp.NumeroP贸lizaSeguro,
             exp.NumeroBLAWB,
             exp.ETD,
             exp.ATD,

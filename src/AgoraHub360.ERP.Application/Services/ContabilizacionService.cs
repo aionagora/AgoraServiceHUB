@@ -9,7 +9,7 @@ using AgoraHub360.ERP.Domain.Interfaces;
 using AgoraHub360.ERP.Shared.DTOs.Contabilidad;
 
 /// <summary>
-/// Motor de contabilizaciÛn autom·tica.
+/// Motor de contabilizaci√≥n autom√°tica.
 /// Lee la plantilla configurada para un tipo de documento,
 /// resuelve los montos, genera el asiento y lo contabiliza en un solo paso.
 /// </summary>
@@ -69,7 +69,7 @@ public class ContabilizacionService : IContabilizacionService
 
         var plantilla = plantillas.FirstOrDefault();
         if (plantilla is null)
-            return Result<AsientoContableDto>.Success(null!); // No template = skip silently (contabilizaciÛn opcional)
+            return Result<AsientoContableDto>.Success(null!); // No template = skip silently (contabilizaci√≥n opcional)
 
         var plantillaLineas = await _plantillaLineaRepo.FindAsync(
             l => l.PlantillaContableId == plantilla.PlantillaContableId && l.Activo, ct);
@@ -114,7 +114,7 @@ public class ContabilizacionService : IContabilizacionService
             var diff = totalDebe - totalHaber;
             if (Math.Abs(diff) < 0.01m)
             {
-                // Rounding difference ó adjust last haber line
+                // Rounding difference ‚Äî adjust last haber line
                 var lastHaber = asientoLineas.FindLastIndex(l => l.haber > 0);
                 if (lastHaber >= 0)
                 {
@@ -147,15 +147,27 @@ public class ContabilizacionService : IContabilizacionService
             var allTipos = await _tipoCompRepo.FindAsync(t => t.EmpresaId == empresaId.Value && t.Activo, ct);
             tipoComp = allTipos.FirstOrDefault();
             if (tipoComp is null)
-                return Result<AsientoContableDto>.Failure("No hay tipos de comprobante configurados. Ejecute 'Generar Cat·logos' primero.");
+                return Result<AsientoContableDto>.Failure("No hay tipos de comprobante configurados. Ejecute 'Generar Cat√°logos' primero.");
         }
 
-        // ?? 7. Generate entry number ??
+        // ?? 7. Generate entry number ‚Äî scoped by Empresa+Gestion+Tipo+Mes ??
         var gestion = fecha.Year;
-        var existentes = await _asientoRepo.FindAsync(
-            a => a.EmpresaId == empresaId.Value && a.TipoComprobanteId == tipoComp.TipoComprobanteId
-                && a.Gestion == gestion, ct);
-        var numero = $"{tipoComp.Prefijo}-{(existentes.Count + 1):D4}";
+        var mes = fecha.Month;
+        var prefijoMes = $"{tipoComp.Prefijo}-{mes:D2}-";
+
+        var enMismoPeriodo = await _asientoRepo.FindAsync(
+            a => a.EmpresaId == empresaId.Value
+              && a.Gestion == gestion
+              && a.Numero.StartsWith(prefijoMes), ct);
+
+        var maxSeq = 0;
+        foreach (var a in enMismoPeriodo)
+        {
+            var lastDash = a.Numero.LastIndexOf('-');
+            if (lastDash >= 0 && int.TryParse(a.Numero[(lastDash + 1)..], out int n) && n > maxSeq)
+                maxSeq = n;
+        }
+        var numero = $"{tipoComp.Prefijo}-{mes:D2}-{(maxSeq + 1):D4}";
 
         // ?? 8. Create journal entry ??
         var asiento = new AsientoContable
@@ -165,7 +177,7 @@ public class ContabilizacionService : IContabilizacionService
             Numero = numero,
             Fecha = fecha,
             Gestion = gestion,
-            TipoRegistro = "Autom·tico",
+            TipoRegistro = "Autom√°tico",
             Glosa = glosa,
             Estado = "Contabilizado",
             RegistradoPorId = _currentUser.UserIdInt,
@@ -173,10 +185,12 @@ public class ContabilizacionService : IContabilizacionService
             OrigenTipo = tipoDocumento,
             OrigenId = origenId,
             OrigenReferencia = origenReferencia,
-            TotalDebe = totalDebe,
-            TotalHaber = totalHaber,
             Activo = true
         };
+
+        asiento.EstablecerTotales(totalDebe, totalHaber);
+        if (!asiento.EstaCuadrado())
+            return Result<AsientoContableDto>.Failure("El asiento de contabilizaci√≥n autom√°tica no cuadra seg√∫n las reglas de dominio.");
 
         await _asientoRepo.AddAsync(asiento, ct);
         await _unitOfWork.SaveChangesAsync(ct);
@@ -247,8 +261,8 @@ public class ContabilizacionService : IContabilizacionService
                 {
                     NumeroLinea = i + 1,
                     CuentaContableId = l.cuentaId,
-                    CuentaCodigo = cuenta?.Codigo ?? "ó",
-                    CuentaNombre = cuenta?.Nombre ?? "ó",
+                    CuentaCodigo = cuenta?.Codigo ?? "‚Äî",
+                    CuentaNombre = cuenta?.Nombre ?? "‚Äî",
                     Debe = l.debe,
                     Haber = l.haber,
                     Glosa = l.glosa,

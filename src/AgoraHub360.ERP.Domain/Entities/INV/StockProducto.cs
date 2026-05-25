@@ -21,6 +21,9 @@ public class StockProducto : TenantEntity
     /// <summary>Current available quantity in the warehouse.</summary>
     public decimal CurrentStock { get; set; }
 
+    /// <summary>Quantity logically reserved for confirmed sales orders.</summary>
+    public decimal ReservedStock { get; set; } = 0m;
+
     /// <summary>Weighted average cost (WAC) currently in effect.</summary>
     public decimal AverageCost { get; set; }
 

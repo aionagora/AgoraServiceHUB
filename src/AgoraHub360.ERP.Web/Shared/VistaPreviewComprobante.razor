@@ -33,7 +33,7 @@
                     @* ?????????????? CABECERA ?????????????? *@
                     <div class="vp-header">
 
-                        @* TÌtulo de empresa y tipo *@
+                        @* T√≠tulo de empresa y tipo *@
                         <div class="vp-header-top">
                             <div class="vp-company-block">
                                 <div class="vp-company-name">AgoraHub360 ERP</div>
@@ -42,7 +42,7 @@
                                 </div>
                             </div>
                             <div class="vp-number-block">
-                                <div class="vp-number-label">Comprobante N∫</div>
+                                <div class="vp-number-label">Comprobante N¬∫</div>
                                 <div class="vp-number-value">@Comprobante.Numero</div>
                             </div>
                         </div>
@@ -58,12 +58,16 @@
                                 <span class="vp-field-value">@Comprobante.Fecha.ToString("dd/MM/yyyy")</span>
                             </div>
                             <div class="vp-field">
-                                <span class="vp-field-label">GestiÛn</span>
+                                <span class="vp-field-label">Gesti√≥n</span>
                                 <span class="vp-field-value">@Comprobante.Gestion</span>
                             </div>
                             <div class="vp-field">
                                 <span class="vp-field-label">Registro</span>
                                 <span class="vp-field-value">@Comprobante.TipoRegistro</span>
+                            </div>
+                            <div class="vp-field">
+                                <span class="vp-field-label">Estado</span>
+                                <span class="vp-field-value fw-bold">@Comprobante.Estado</span>
                             </div>
                             @if (Comprobante.ValorTipoCambio.HasValue)
                             {
@@ -111,13 +115,13 @@
                         </div>
                     </div>
 
-                    @* ?????????????? TABLA DE LÕNEAS ?????????????? *@
+                    @* ?????????????? TABLA DE L√çNEAS ?????????????? *@
                     <div class="vp-table-wrap">
                         <table class="vp-table">
                             <thead>
                                 <tr>
                                     <th class="vp-th-num">#</th>
-                                    <th class="vp-th-cod">CÛdigo</th>
+                                    <th class="vp-th-cod">C√≥digo</th>
                                     <th class="vp-th-cuenta">Nombre de la Cuenta</th>
                                     <th class="vp-th-cc">C. Costo</th>
                                     <th class="vp-th-glosa">Glosa Detalle</th>
@@ -133,7 +137,7 @@
                                 {
                                     <tr>
                                         <td colspan="7" class="text-center text-muted py-3" style="font-size:.8rem">
-                                            Sin lÌneas de detalle
+                                            Sin l√≠neas de detalle
                                         </td>
                                     </tr>
                                 }
@@ -183,14 +187,14 @@
                         {
                             <div class="vp-cuadre-ok">
                                 <i class="bi bi-check-circle-fill me-1"></i>
-                                Comprobante <strong>cuadrado</strong> ó Diferencia: 0.00
+                                Comprobante <strong>cuadrado</strong> ‚Äî Diferencia: 0.00
                             </div>
                         }
                         else
                         {
                             <div class="vp-cuadre-error">
                                 <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                                Comprobante <strong>no cuadrado</strong> ó Diferencia:
+                                Comprobante <strong>no cuadrado</strong> ‚Äî Diferencia:
                                 <strong>@Diferencia.ToString("N2")</strong>
                             </div>
                         }
@@ -236,13 +240,13 @@
     [Parameter]
     public AsientoContableDto? Comprobante { get; set; }
 
-    /// <summary>LÌneas temporales del editor (antes de guardar).</summary>
+    /// <summary>L√≠neas temporales del editor (antes de guardar).</summary>
     [Parameter]
     public IReadOnlyList<PreviewLinea>? LineasTemp { get; set; }
 
     // ?? Line projection shared with parent ???????????????????????????????????
 
-    /// <summary>LÌnea unificada para la vista previa (acepta ambas fuentes).</summary>
+    /// <summary>L√≠nea unificada para la vista previa (acepta ambas fuentes).</summary>
     public record PreviewLinea(
         int Num,
         string CodCuenta,
@@ -297,7 +301,7 @@
 
     private async Task Imprimir()
     {
-        await JS.InvokeVoidAsync("window.print");
+        await JS.InvokeVoidAsync("printElement", "vp-printable");
     }
 
     private void Close()

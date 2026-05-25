@@ -29,7 +29,7 @@ public class CatalogoHttpService
         if (!response.IsSuccessStatusCode)
             return ApiResponse<CatalogDto>.Fail($"HTTP {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
         return await response.Content.ReadFromJsonAsync<ApiResponse<CatalogDto>>()
-            ?? ApiResponse<CatalogDto>.Fail("Error de comunicación.");
+            ?? ApiResponse<CatalogDto>.Fail("Error de comunicaciÃ³n.");
     }
 
     public async Task<ApiResponse<CatalogDto>> UpdateAsync(long id, UpdateCatalogDto dto)
@@ -38,7 +38,7 @@ public class CatalogoHttpService
         if (!response.IsSuccessStatusCode)
             return ApiResponse<CatalogDto>.Fail($"HTTP {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
         return await response.Content.ReadFromJsonAsync<ApiResponse<CatalogDto>>()
-            ?? ApiResponse<CatalogDto>.Fail("Error de comunicación.");
+            ?? ApiResponse<CatalogDto>.Fail("Error de comunicaciÃ³n.");
     }
 
     public async Task<ApiResponse<bool>> DeleteAsync(long id)
@@ -47,6 +47,6 @@ public class CatalogoHttpService
         if (!response.IsSuccessStatusCode)
             return ApiResponse<bool>.Fail($"HTTP {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
         return await response.Content.ReadFromJsonAsync<ApiResponse<bool>>()
-            ?? ApiResponse<bool>.Fail("Error de comunicación.");
+            ?? ApiResponse<bool>.Fail("Error de comunicaciÃ³n.");
     }
 }

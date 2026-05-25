@@ -10,9 +10,12 @@ public interface IOrdenPedidoService
         string? estado = null,
         DateTime? fechaDesde = null,
         DateTime? fechaHasta = null,
+        int? sucursalId = null,
+        int? clienteId = null,
+        int? clienteSucursalId = null,
         CancellationToken ct = default);
 
-    /// <summary>Obtiene una OP con sus líneas.</summary>
+    /// <summary>Obtiene una OP con sus lÃ­neas.</summary>
     Task<Result<OrdenPedidoDto>> GetByIdAsync(long id, CancellationToken ct = default);
 
     /// <summary>Crea una OP en estado Borrador.</summary>
@@ -22,18 +25,18 @@ public interface IOrdenPedidoService
     Task<Result<OrdenPedidoDto>> UpdateAsync(long id, UpdateOrdenPedidoDto dto, CancellationToken ct = default);
 
     /// <summary>
-    /// Envía la OP a Compras Central (Borrador ? EnRevision).
+    /// EnvÃ­a la OP a Compras Central (Borrador ? EnRevision).
     /// </summary>
     Task<Result<OrdenPedidoDto>> EnviarARevisionAsync(long id, CancellationToken ct = default);
 
     /// <summary>
-    /// Registra la revisión de stock: valida si el stock cubre la demanda.
+    /// Registra la revisiÃ³n de stock: valida si el stock cubre la demanda.
     /// Si cubre ? AbastecidoConStock. Si no ? PendienteAprobacion.
     /// </summary>
     Task<Result<OrdenPedidoDto>> RevisarStockAsync(long id, RevisarStockOrdenPedidoDto dto, CancellationToken ct = default);
 
     /// <summary>
-    /// Aprueba o rechaza la OP (gate de Finanzas/Dirección).
+    /// Aprueba o rechaza la OP (gate de Finanzas/DirecciÃ³n).
     /// Aprobado ? Aprobado | Rechazado ? Rechazado.
     /// </summary>
     Task<Result<OrdenPedidoDto>> AprobarRechazarAsync(long id, AprobarRechazarOrdenPedidoDto dto, CancellationToken ct = default);

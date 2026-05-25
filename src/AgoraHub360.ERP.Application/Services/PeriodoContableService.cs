@@ -5,6 +5,7 @@ using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Domain.Entities.ACC;
 using AgoraHub360.ERP.Domain.Interfaces;
 using AgoraHub360.ERP.Shared.DTOs.Contabilidad;
+using Microsoft.Extensions.Logging;
 using System.Globalization;
 
 public class PeriodoContableService : IPeriodoContableService
@@ -13,6 +14,8 @@ public class PeriodoContableService : IPeriodoContableService
     private readonly IRepository<AsientoContable> _asientoRepo;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
+    private readonly IPeriodoContableNotificacionService _notificacionPeriodo;
+    private readonly ILogger<PeriodoContableService> _logger;
 
     private static readonly string[] NombresMes =
     {
@@ -24,12 +27,16 @@ public class PeriodoContableService : IPeriodoContableService
         IRepository<PeriodoContable> periodoRepo,
         IRepository<AsientoContable> asientoRepo,
         IUnitOfWork unitOfWork,
-        ICurrentUserService currentUser)
+        ICurrentUserService currentUser,
+        IPeriodoContableNotificacionService notificacionPeriodo,
+        ILogger<PeriodoContableService> logger)
     {
         _periodoRepo = periodoRepo;
         _asientoRepo = asientoRepo;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _notificacionPeriodo = notificacionPeriodo;
+        _logger = logger;
     }
 
     public async Task<Result<IReadOnlyList<PeriodoContableDto>>> GetAllAsync(int? anio, CancellationToken ct)
@@ -118,7 +125,8 @@ public class PeriodoContableService : IPeriodoContableService
 
         if (borradores.Count > 0)
             return Result<PeriodoContableDto>.Failure(
-                $"Cannot close period with {borradores.Count} draft journal entries. Post or delete them first.");
+                $"El período '{periodo.Nombre}' tiene {borradores.Count} asiento(s) en Borrador. " +
+                "Contabilícelos o elimínelos antes de cerrar el período.");
 
         periodo.Estado = "Cerrado";
         periodo.FechaCierre = DateTime.UtcNow;
@@ -130,6 +138,17 @@ public class PeriodoContableService : IPeriodoContableService
         var asientos = await _asientoRepo.FindAsync(
             a => a.EmpresaId == empresaId.Value && a.Activo && a.Estado == "Contabilizado"
                 && a.Fecha.Year == periodo.Anio && a.Fecha.Month == periodo.Mes, ct);
+
+        try
+        {
+            await _notificacionPeriodo.VerificarPeriodosProximosAsync(empresaId.Value, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Error al verificar períodos próximos tras cerrar período {PeriodoId} (EmpresaId={EmpresaId}).",
+                id, empresaId.Value);
+        }
 
         return Result<PeriodoContableDto>.Success(MapToDto(periodo, asientos.Count));
     }
@@ -153,6 +172,17 @@ public class PeriodoContableService : IPeriodoContableService
         periodo.CerradoPorNombre = null;
         await _periodoRepo.UpdateAsync(periodo, ct);
         await _unitOfWork.SaveChangesAsync(ct);
+
+        try
+        {
+            await _notificacionPeriodo.VerificarPeriodosProximosAsync(empresaId.Value, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Error al verificar períodos próximos tras reabrir período {PeriodoId} (EmpresaId={EmpresaId}).",
+                id, empresaId.Value);
+        }
 
         return Result<PeriodoContableDto>.Success(MapToDto(periodo, 0));
     }

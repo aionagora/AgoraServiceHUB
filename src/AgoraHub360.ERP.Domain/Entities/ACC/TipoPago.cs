@@ -9,15 +9,15 @@ public class TipoPago : TenantEntity
 {
     public int TipoPagoId { get; set; }
 
-    /// <summary>Código corto (ej: "CHQ", "EFE", "QR", "TRF", "S/D").</summary>
+    /// <summary>CÃ³digo corto (ej: "CHQ", "EFE", "QR", "TRF", "S/D").</summary>
     public string Codigo { get; set; } = string.Empty;
 
     /// <summary>Nombre del tipo de pago (ej: "Cheque", "Efectivo").</summary>
     public string Nombre { get; set; } = string.Empty;
 
-    /// <summary>Indica si requiere número de referencia (ej: nro cheque).</summary>
+    /// <summary>Indica si requiere nÃºmero de referencia (ej: nro cheque).</summary>
     public bool RequiereReferencia { get; set; }
 
-    /// <summary>Orden de visualización.</summary>
+    /// <summary>Orden de visualizaciÃ³n.</summary>
     public int Orden { get; set; }
 }

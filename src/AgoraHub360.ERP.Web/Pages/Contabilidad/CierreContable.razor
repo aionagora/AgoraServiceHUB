@@ -1,0 +1,513 @@
+@page "/contabilidad/cierre-anual"
+@attribute [Authorize]
+@inject CierreContableHttpService CierreService
+
+<PageTitle>Cierre Contable Anual - AgoraHub360 ERP</PageTitle>
+
+<div class="container-fluid">
+
+    @* ── ENCABEZADO ─────────────────────────────────────────────────────────── *@
+    <div class="row mb-3 align-items-center">
+        <div class="col">
+            <h3><i class="bi bi-lock-fill text-danger"></i> Cierre Contable Anual</h3>
+            <p class="text-muted mb-0">
+                Proceso de cierre fiscal definitivo — Calcula IUE, constituye Reserva Legal
+                y transfiere resultados a cuentas acumuladas en una sola transacción.
+            </p>
+        </div>
+        <div class="col-auto d-flex gap-1">
+            <a href="/contabilidad/periodos" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-calendar3"></i> Períodos
+            </a>
+            <a href="/contabilidad/asientos" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-journal-text"></i> Comprobantes
+            </a>
+        </div>
+    </div>
+
+    @* ── ALERTAS ─────────────────────────────────────────────────────────────── *@
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle-fill"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @* ── AVISO CIERRE EXISTENTE ──────────────────────────────────────────────── *@
+    @if (cierreExistente != null)
+    {
+        <div class="alert alert-warning d-flex align-items-center gap-2 mb-3">
+            <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+            <div>
+                <strong>Gestión @selectedGestion ya fue cerrada.</strong>
+                Estado: <span class="badge bg-success">@cierreExistente.Estado</span>
+                &nbsp;Fecha: <strong>@cierreExistente.FechaCierre.ToString("dd/MM/yyyy")</strong>
+                &nbsp;— No es posible ejecutar un nuevo cierre para esta gestión.
+            </div>
+        </div>
+    }
+
+    @* ── PANEL PRINCIPAL ─────────────────────────────────────────────────────── *@
+    <div class="row">
+
+        @* ── Columna izquierda: Configuración ─────────────────────────────────── *@
+        <div class="col-lg-6 mb-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="bi bi-gear-fill me-2"></i>Configuración del Cierre</h5>
+                </div>
+                <div class="card-body">
+
+                    @* Gestión *@
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Gestión (Año Fiscal)</label>
+                        <select class="form-select"
+                                @onchange="OnGestionChangedEvent"
+                                disabled="@(ejecutando || cargandoEstado)">
+                            @for (int y = DateTime.Today.Year + 1; y >= DateTime.Today.Year - 5; y--)
+                            {
+                                int year = y;
+                                <option value="@year" selected="@(year == selectedGestion)">@year</option>
+                            }
+                        </select>
+                    </div>
+
+                    @* Fecha de cierre *@
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Fecha de Cierre</label>
+                        <input type="date" class="form-control"
+                               @bind="fechaCierre"
+                               disabled="@ejecutando" />
+                        <div class="form-text">Convención: 31 de diciembre del año fiscal.</div>
+                    </div>
+
+                    @* Observaciones *@
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">
+                            Observaciones <span class="text-muted fw-normal">(opcional)</span>
+                        </label>
+                        <textarea class="form-control" rows="2"
+                                  @bind="observaciones"
+                                  disabled="@ejecutando"
+                                  placeholder="Ej: Cierre aprobado en reunión de directorio Nº 42…">
+                        </textarea>
+                    </div>
+
+                    @* Abrir nueva gestión *@
+                    <div class="mb-4 p-3 border rounded bg-light">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="chkNuevaGestion"
+                                   @bind="abrirNuevaGestion" disabled="@ejecutando" />
+                            <label class="form-check-label" for="chkNuevaGestion">
+                                <strong>Abrir gestión @(selectedGestion + 1) automáticamente</strong>
+                            </label>
+                        </div>
+                        <small class="text-muted d-block mt-1">
+                            Genera el asiento de apertura para @(selectedGestion + 1) con los saldos
+                            del Balance General al @fechaCierre.ToString("dd/MM/yyyy").
+                        </small>
+                    </div>
+
+                    @* Advertencia irreversible *@
+                    <div class="alert alert-warning py-2 mb-3">
+                        <small>
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            <strong>Esta operación es irreversible.</strong>
+                            Los asientos generados quedan contabilizados de forma definitiva.
+                            Realice un respaldo antes de continuar.
+                        </small>
+                    </div>
+
+                    @* Botón o panel de confirmación *@
+                    @if (!mostrarConfirmacion)
+                    {
+                        <button class="btn btn-danger w-100 py-2"
+                                @onclick="SolicitarConfirmacion"
+                                disabled="@(ejecutando || cierreExistente != null || cargandoEstado)">
+                            @if (cargandoEstado)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                <span>Verificando estado…</span>
+                            }
+                            else if (ejecutando)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                <span>Ejecutando cierre anual…</span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-lock-fill me-2"></i>
+                                <span>Ejecutar Cierre Anual @selectedGestion</span>
+                            }
+                        </button>
+                    }
+                    else
+                    {
+                        @* Confirmación inline *@
+                        <div class="border border-danger rounded p-3">
+                            <p class="text-danger fw-bold mb-2">
+                                <i class="bi bi-exclamation-octagon-fill me-1"></i>
+                                ¿Confirmar cierre anual @selectedGestion?
+                            </p>
+                            <p class="text-muted small mb-2">Se ejecutarán los siguientes pasos:</p>
+                            <ul class="small mb-3">
+                                <li>Validar 12 períodos y asientos sin borrador</li>
+                                <li>Calcular y registrar el <strong>IUE (25%)</strong></li>
+                                <li>Cancelar todas las cuentas de resultado</li>
+                                <li>Constituir la <strong>Reserva Legal (5%)</strong></li>
+                                <li>Transferir resultado neto a <strong>Resultados Acumulados</strong></li>
+                                <li>Cerrar todos los períodos de @selectedGestion</li>
+                                @if (abrirNuevaGestion)
+                                {
+                                    <li>
+                                        Crear asiento de apertura para la gestión
+                                        <strong>@(selectedGestion + 1)</strong>
+                                    </li>
+                                }
+                            </ul>
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-danger flex-fill" @onclick="EjecutarCierre">
+                                    <i class="bi bi-check-lg me-1"></i> Confirmar y Ejecutar
+                                </button>
+                                <button class="btn btn-outline-secondary flex-fill"
+                                        @onclick="CancelarConfirmacion">
+                                    <i class="bi bi-x-lg me-1"></i> Cancelar
+                                </button>
+                            </div>
+                        </div>
+                    }
+
+                </div>
+            </div>
+        </div>
+
+        @* ── Columna derecha: Checklist ──────────────────────────────────────── *@
+        <div class="col-lg-6 mb-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="bi bi-clipboard2-check me-2"></i>Lista de Verificación Previa
+                    </h5>
+                </div>
+                <div class="card-body">
+                    @if (cargandoEstado)
+                    {
+                        <div class="text-center py-5">
+                            <span class="spinner-border text-primary"></span>
+                            <p class="mt-2 text-muted small">Verificando estado de la gestión…</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <ul class="list-unstyled mb-0">
+
+                            @* CHECK 1: Sin cierre previo *@
+                            <li class="d-flex align-items-start mb-3 p-2 rounded
+                                       @(cierreExistente == null ? "bg-success bg-opacity-10" : "bg-danger bg-opacity-10")">
+                                <span class="me-2 mt-1 flex-shrink-0">
+                                    @if (cierreExistente == null)
+                                    {
+                                        <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-x-circle-fill text-danger fs-5"></i>
+                                    }
+                                </span>
+                                <div>
+                                    <strong>Sin cierre previo para @selectedGestion</strong>
+                                    <br />
+                                    <small class="text-muted">
+                                        @(cierreExistente == null
+                                            ? $"No existe cierre registrado para la gestión {selectedGestion}. ✓"
+                                            : $"Ya existe un cierre '{cierreExistente.Estado}' — no se puede volver a cerrar.")
+                                    </small>
+                                </div>
+                            </li>
+
+                            @* CHECK 2: 12 períodos cerrados *@
+                            <li class="d-flex align-items-start mb-3 p-2 rounded bg-warning bg-opacity-10">
+                                <span class="me-2 mt-1 flex-shrink-0">
+                                    <i class="bi bi-exclamation-triangle-fill text-warning fs-5"></i>
+                                </span>
+                                <div>
+                                    <strong>12 Períodos del año @selectedGestion cerrados</strong>
+                                    <br />
+                                    <small class="text-muted">
+                                        Verifique que enero–diciembre de @selectedGestion estén en estado
+                                        "Cerrado" antes de ejecutar.
+                                        <a href="/contabilidad/periodos" class="ms-1">
+                                            <i class="bi bi-box-arrow-up-right"></i> Ver Períodos
+                                        </a>
+                                    </small>
+                                </div>
+                            </li>
+
+                            @* CHECK 3: Sin asientos en borrador *@
+                            <li class="d-flex align-items-start mb-3 p-2 rounded bg-warning bg-opacity-10">
+                                <span class="me-2 mt-1 flex-shrink-0">
+                                    <i class="bi bi-exclamation-triangle-fill text-warning fs-5"></i>
+                                </span>
+                                <div>
+                                    <strong>Sin comprobantes en Borrador</strong>
+                                    <br />
+                                    <small class="text-muted">
+                                        Contabilice o elimine todos los comprobantes en estado Borrador
+                                        de la gestión @selectedGestion.
+                                        <a href="/contabilidad/asientos" class="ms-1">
+                                            <i class="bi bi-box-arrow-up-right"></i> Ver Comprobantes
+                                        </a>
+                                    </small>
+                                </div>
+                            </li>
+
+                            @* CHECK 4: Cuentas requeridas *@
+                            <li class="d-flex align-items-start mb-3 p-2 rounded bg-info bg-opacity-10">
+                                <span class="me-2 mt-1 flex-shrink-0">
+                                    <i class="bi bi-info-circle-fill text-info fs-5"></i>
+                                </span>
+                                <div>
+                                    <strong>Plan de cuentas configurado</strong>
+                                    <br />
+                                    <small class="text-muted">
+                                        El proceso requiere cuentas: <em>Gasto IUE</em>,
+                                        <em>IUE por Pagar</em>, <em>Resultado del Ejercicio</em>,
+                                        <em>Resultados Acumulados</em> y <em>Reserva Legal</em>.
+                                    </small>
+                                </div>
+                            </li>
+
+                            @* CHECK 5: Respaldo *@
+                            <li class="d-flex align-items-start p-2 rounded bg-secondary bg-opacity-10">
+                                <span class="me-2 mt-1 flex-shrink-0">
+                                    <i class="bi bi-shield-check text-secondary fs-5"></i>
+                                </span>
+                                <div>
+                                    <strong>Respaldo de base de datos</strong>
+                                    <br />
+                                    <small class="text-muted">
+                                        Recomendado: genere un respaldo completo antes de
+                                        ejecutar el cierre anual.
+                                    </small>
+                                </div>
+                            </li>
+
+                        </ul>
+                    }
+                </div>
+            </div>
+        </div>
+
+    </div>@* /row *@
+
+    @* ── RESULTADO DEL CIERRE ─────────────────────────────────────────────────── *@
+    @if (resultado != null)
+    {
+        <div class="card shadow border-success mt-2">
+            <div class="card-header bg-success text-white d-flex align-items-center gap-2">
+                <i class="bi bi-check-circle-fill fs-5"></i>
+                <h5 class="mb-0">Resultado del Cierre — Gestión @resultado.Gestion</h5>
+            </div>
+            <div class="card-body">
+
+                @* Estado general *@
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-5">Estado</dt>
+                            <dd class="col-sm-7">
+                                <span class="badge bg-success fs-6">@resultado.Estado</span>
+                            </dd>
+                            <dt class="col-sm-5">Fecha de Cierre</dt>
+                            <dd class="col-sm-7">@resultado.FechaCierre.ToString("dd/MM/yyyy")</dd>
+                            @if (!string.IsNullOrWhiteSpace(resultado.Observaciones))
+                            {
+                                <dt class="col-sm-5">Observaciones</dt>
+                                <dd class="col-sm-7">@resultado.Observaciones</dd>
+                            }
+                            @if (resultado.NuevaGestionAbierta)
+                            {
+                                <dt class="col-sm-5">Nueva Gestión</dt>
+                                <dd class="col-sm-7">
+                                    <span class="text-success">
+                                        <i class="bi bi-check-circle-fill"></i>
+                                        Gestión @(resultado.Gestion + 1) abierta automáticamente
+                                    </span>
+                                </dd>
+                            }
+                        </dl>
+                    </div>
+                </div>
+
+                @* Métricas financieras *@
+                <div class="row g-3 mb-4">
+                    <div class="col-md-4">
+                        <div class="card border-primary text-center p-3 h-100">
+                            <div class="text-primary small fw-bold mb-1 text-uppercase">
+                                <i class="bi bi-graph-up me-1"></i>Utilidad Neta (antes IUE)
+                            </div>
+                            <div class="fs-4 fw-bold">
+                                @(resultado.UtilidadNeta.HasValue
+                                    ? $"Bs. {resultado.UtilidadNeta.Value:N2}"
+                                    : "—")
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-danger text-center p-3 h-100">
+                            <div class="text-danger small fw-bold mb-1 text-uppercase">
+                                <i class="bi bi-percent me-1"></i>IUE Calculado (25%)
+                            </div>
+                            <div class="fs-4 fw-bold text-danger">
+                                @(resultado.MontoIUE.HasValue
+                                    ? $"Bs. {resultado.MontoIUE.Value:N2}"
+                                    : "Bs. 0.00")
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card border-warning text-center p-3 h-100">
+                            <div class="text-warning small fw-bold mb-1 text-uppercase">
+                                <i class="bi bi-shield-fill me-1"></i>Reserva Legal (5%)
+                            </div>
+                            <div class="fs-4 fw-bold" style="color:#b45309">
+                                @(resultado.ReservaLegal.HasValue
+                                    ? $"Bs. {resultado.ReservaLegal.Value:N2}"
+                                    : "Bs. 0.00")
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                @* Asientos generados *@
+                <h6 class="mb-2"><i class="bi bi-journal-check me-1"></i>Asientos Contables Generados</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Concepto</th>
+                                <th class="text-center" style="width:130px">ID Asiento</th>
+                                <th class="text-center" style="width:80px">Ver</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (resultado.AsientoIUEId.HasValue)
+                            {
+                                <tr>
+                                    <td>
+                                        <i class="bi bi-receipt text-danger me-1"></i>
+                                        IUE – Impuesto a las Utilidades de las Empresas
+                                    </td>
+                                    <td class="text-center"><code>#@resultado.AsientoIUEId</code></td>
+                                    <td class="text-center">
+                                        <a href="/contabilidad/asientos"
+                                           class="btn btn-outline-primary btn-sm py-0 px-2">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                            @if (resultado.AsientoResultadoId.HasValue)
+                            {
+                                <tr>
+                                    <td>
+                                        <i class="bi bi-arrow-left-right text-primary me-1"></i>
+                                        Cancelación de Cuentas de Resultado
+                                    </td>
+                                    <td class="text-center"><code>#@resultado.AsientoResultadoId</code></td>
+                                    <td class="text-center">
+                                        <a href="/contabilidad/asientos"
+                                           class="btn btn-outline-primary btn-sm py-0 px-2">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                            @if (resultado.AsientoReservaLegalId.HasValue)
+                            {
+                                <tr>
+                                    <td>
+                                        <i class="bi bi-shield-fill text-warning me-1"></i>
+                                        Constitución de Reserva Legal (5%)
+                                    </td>
+                                    <td class="text-center"><code>#@resultado.AsientoReservaLegalId</code></td>
+                                    <td class="text-center">
+                                        <a href="/contabilidad/asientos"
+                                           class="btn btn-outline-primary btn-sm py-0 px-2">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                            @if (resultado.AsientoTransferenciaId.HasValue)
+                            {
+                                <tr>
+                                    <td>
+                                        <i class="bi bi-arrow-right-circle text-success me-1"></i>
+                                        Transferencia a Resultados Acumulados
+                                    </td>
+                                    <td class="text-center"><code>#@resultado.AsientoTransferenciaId</code></td>
+                                    <td class="text-center">
+                                        <a href="/contabilidad/asientos"
+                                           class="btn btn-outline-primary btn-sm py-0 px-2">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                            @if (!resultado.AsientoIUEId.HasValue
+                              && !resultado.AsientoResultadoId.HasValue
+                              && !resultado.AsientoReservaLegalId.HasValue
+                              && !resultado.AsientoTransferenciaId.HasValue)
+                            {
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-3">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        No se generaron asientos (resultado nulo o sin actividad en la gestión).
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+            <div class="card-footer d-flex gap-2">
+                <a href="/contabilidad/asientos" class="btn btn-outline-primary btn-sm">
+                    <i class="bi bi-journal-text me-1"></i>Ver Comprobantes
+                </a>
+                <a href="/contabilidad/balance-general" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-bar-chart-fill me-1"></i>Balance General
+                </a>
+                <a href="/contabilidad/estado-resultados" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-graph-up me-1"></i>Estado de Resultados
+                </a>
+            </div>
+        </div>
+    }
+
+</div>
+
+@* ── OVERLAY DE CARGA ────────────────────────────────────────────────────────── *@
+@if (ejecutando)
+{
+    <div class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center"
+         style="background:rgba(0,0,0,0.55);z-index:9999;">
+        <div class="card p-4 shadow-lg text-center" style="min-width:320px;max-width:400px;">
+            <div class="spinner-border text-danger mb-3 mx-auto" style="width:3.5rem;height:3.5rem;"></div>
+            <h5 class="mb-1">Ejecutando Cierre Anual</h5>
+            <p class="text-muted small mb-0">
+                Gestión <strong>@selectedGestion</strong> — Este proceso puede tardar varios segundos.
+                <br />Por favor no cierre esta ventana.
+            </p>
+        </div>
+    </div>
+}

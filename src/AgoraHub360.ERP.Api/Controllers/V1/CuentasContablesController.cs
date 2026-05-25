@@ -34,7 +34,7 @@ public class CuentasContablesController : ControllerBase
         return Ok(ApiResponse<IReadOnlyList<CuentaContableDto>>.Ok(result.Value!));
     }
 
-    /// <summary>Obtiene el plan de cuentas en estructura de ·rbol.</summary>
+    /// <summary>Obtiene el plan de cuentas en estructura de √°rbol.</summary>
     [HttpGet("tree")]
     public async Task<IActionResult> GetTree(CancellationToken ct)
     {
@@ -86,7 +86,7 @@ public class CuentasContablesController : ControllerBase
         return Ok(ApiResponse<bool>.Ok(true, "Cuenta eliminada."));
     }
 
-    /// <summary>Genera el plan de cuentas est·ndar Bolivia/NIIF.</summary>
+    /// <summary>Genera el plan de cuentas est√°ndar Bolivia/NIIF.</summary>
     [HttpPost("seed")]
     public async Task<IActionResult> Seed(CancellationToken ct)
     {

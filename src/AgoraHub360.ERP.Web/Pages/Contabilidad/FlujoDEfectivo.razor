@@ -1,0 +1,221 @@
+@page "/contabilidad/flujo-efectivo"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@inject AgoraHub360.ERP.Web.Services.HttpFlujoDEfectivoService FlujoDEfectivoSvc
+@inject AgoraHub360.ERP.Web.Services.FileDownloadService FileDownload
+@inject IJSRuntime JS
+@using AgoraHub360.ERP.Shared.DTOs.Contabilidad
+
+<PageTitle>Flujo de Efectivo - AgoraHub360 ERP</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3 d-print-none">
+        <div class="col">
+            <h3><i class="bi bi-cash-coin"></i> Estado de Flujo de Efectivo</h3>
+            <p class="text-muted mb-0">Movimientos de efectivo y equivalentes</p>
+        </div>
+    </div>
+
+    <div class="card mb-3 d-print-none">
+        <div class="card-body py-2">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label mb-1 small">Desde</label>
+                    <input type="date" class="form-control form-control-sm" @bind="desde" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label mb-1 small">Hasta</label>
+                    <input type="date" class="form-control form-control-sm" @bind="hasta" />
+                </div>
+                <div class="col-md-auto">
+                    <button class="btn btn-sm btn-primary" @onclick="Generar" disabled="@loading">
+                        @if (loading) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        <i class="bi bi-calculator"></i> Generar
+                    </button>
+                    <div class="btn-group ms-2">
+                        <button class="btn btn-success btn-sm" @onclick="ExportarExcel" disabled="@(data == null)">
+                            <i class="bi bi-file-earmark-excel"></i> Excel
+                        </button>
+                        <button class="btn btn-danger btn-sm" @onclick="ExportarPdf" disabled="@(data == null)">
+                            <i class="bi bi-file-earmark-pdf"></i> PDF
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-auto">
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="Imprimir" disabled="@(data == null)">
+                        <i class="bi bi-printer"></i> Imprimir
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (data != null)
+    {
+        <div id="printArea">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <h5>ESTADO DE FLUJO DE EFECTIVO</h5>
+                        <p class="text-muted">Del @data.Desde.ToString("dd/MM/yyyy") al @data.Hasta.ToString("dd/MM/yyyy")</p>
+                        <p class="small text-muted">(Expresado en Bolivianos)</p>
+                    </div>
+
+                    <div class="row justify-content-center">
+                        <div class="col-md-10">
+
+                            @* ACTIVIDADES OPERACIONALES *@
+                            <h6 class="fw-bold border-bottom pb-2 text-primary mt-3"><i class="bi bi-gear-fill"></i> ACTIVIDADES DE OPERACIÓN</h6>
+                            @if (data.LineasOperacional.Any())
+                            {
+                                <table class="table table-sm table-hover mb-1">
+                                    <tbody>
+                                        @foreach (var linea in data.LineasOperacional)
+                                        {
+                                            <tr>
+                                                <td style="width: 15%;"><small class="text-muted">@linea.CodigoCuenta</small></td>
+                                                <td>@linea.NombreCuenta</td>
+                                                <td class="text-end" style="width: 20%;">@linea.Monto.ToString("N2")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            }
+                            else
+                            {
+                                <p class="text-muted small fst-italic ps-3">No hay movimientos operacionales.</p>
+                            }
+                            <div class="d-flex justify-content-between fw-bold border-top border-2 border-primary pt-2 mb-4 ps-3 pe-2">
+                                <span>Flujo Neto de Actividades de Operación</span>
+                                <span class="@(data.TotalOperacional >= 0 ? "text-success" : "text-danger")">@data.TotalOperacional.ToString("N2")</span>
+                            </div>
+
+                            @* ACTIVIDADES DE INVERSION *@
+                            <h6 class="fw-bold border-bottom pb-2 text-info mt-3"><i class="bi bi-graph-up-arrow"></i> ACTIVIDADES DE INVERSIÓN</h6>
+                            @if (data.LineasInversion.Any())
+                            {
+                                <table class="table table-sm table-hover mb-1">
+                                    <tbody>
+                                        @foreach (var linea in data.LineasInversion)
+                                        {
+                                            <tr>
+                                                <td style="width: 15%;"><small class="text-muted">@linea.CodigoCuenta</small></td>
+                                                <td>@linea.NombreCuenta</td>
+                                                <td class="text-end" style="width: 20%;">@linea.Monto.ToString("N2")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            }
+                            else
+                            {
+                                <p class="text-muted small fst-italic ps-3">No hay movimientos de inversión.</p>
+                            }
+                            <div class="d-flex justify-content-between fw-bold border-top border-2 border-info pt-2 mb-4 ps-3 pe-2">
+                                <span>Flujo Neto de Actividades de Inversión</span>
+                                <span class="@(data.TotalInversion >= 0 ? "text-success" : "text-danger")">@data.TotalInversion.ToString("N2")</span>
+                            </div>
+
+                            @* ACTIVIDADES DE FINANCIACION *@
+                            <h6 class="fw-bold border-bottom pb-2 text-warning mt-3"><i class="bi bi-bank"></i> ACTIVIDADES DE FINANCIACIÓN</h6>
+                            @if (data.LineasFinanciacion.Any())
+                            {
+                                <table class="table table-sm table-hover mb-1">
+                                    <tbody>
+                                        @foreach (var linea in data.LineasFinanciacion)
+                                        {
+                                            <tr>
+                                                <td style="width: 15%;"><small class="text-muted">@linea.CodigoCuenta</small></td>
+                                                <td>@linea.NombreCuenta</td>
+                                                <td class="text-end" style="width: 20%;">@linea.Monto.ToString("N2")</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            }
+                            else
+                            {
+                                <p class="text-muted small fst-italic ps-3">No hay movimientos de financiación.</p>
+                            }
+                            <div class="d-flex justify-content-between fw-bold border-top border-2 border-warning pt-2 mb-4 ps-3 pe-2">
+                                <span>Flujo Neto de Actividades de Financiación</span>
+                                <span class="@(data.TotalFinanciacion >= 0 ? "text-success" : "text-danger")">@data.TotalFinanciacion.ToString("N2")</span>
+                            </div>
+
+                            @* TOTALES Y SALDOS *@
+                            <div class="card bg-light mt-4">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between fw-bold mb-2 fs-6">
+                                        <span>Rendimiento / Variación Neta de Efectivo:</span>
+                                        <span class="@(data.VariacionNetaEfectivo >= 0 ? "text-success" : "text-danger")">@data.VariacionNetaEfectivo.ToString("N2")</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span class="text-muted">Efectivo al Inicio del Periodo:</span>
+                                        <span>@data.SaldoInicialEfectivo.ToString("N2")</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between fw-bold border-top border-dark pt-2 mt-2 fs-5">
+                                        <span>Efectivo al Final del Periodo:</span>
+                                        <span class="@(data.SaldoFinalEfectivo >= 0 ? "text-success border border-success p-1 rounded" : "text-danger border border-danger p-1 rounded")">@data.SaldoFinalEfectivo.ToString("N2")</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private DateTime desde = new DateTime(DateTime.Today.Year, 1, 1);
+    private DateTime hasta = DateTime.Today;
+    private FlujoDEfectivoDto? data;
+    private bool loading;
+    private string? errorMessage;
+
+    private async Task Generar()
+    {
+        loading = true; errorMessage = null;
+        try
+        {
+            data = await FlujoDEfectivoSvc.GetFlujoDEfectivoAsync(desde, hasta);
+            if (data == null) errorMessage = "No se pudo generar el Flujo de Efectivo.";
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { loading = false; }
+    }
+
+    private async Task Imprimir()
+    {
+        await JS.InvokeVoidAsync("eval", "window.print()");
+    }
+
+    private async Task ExportarExcel()
+    {
+        try
+        {
+            var url = $"api/v1/contabilidad/estados-financieros/flujo-efectivo/export?desde={desde:yyyy-MM-dd}&hasta={hasta:yyyy-MM-dd}&format=xlsx";
+            await FileDownload.DownloadFromApiAsync(url, $"FlujoDEfectivo_{desde:yyyyMMdd}.xlsx");
+        }
+        catch (Exception ex) { errorMessage = $"Error al exportar Excel: {ex.Message}"; }
+    }
+
+    private async Task ExportarPdf()
+    {
+        try
+        {
+            var url = $"api/v1/contabilidad/estados-financieros/flujo-efectivo/export?desde={desde:yyyy-MM-dd}&hasta={hasta:yyyy-MM-dd}&format=pdf";
+            await FileDownload.DownloadFromApiAsync(url, $"FlujoDEfectivo_{desde:yyyyMMdd}.pdf");
+        }
+        catch (Exception ex) { errorMessage = $"Error al exportar PDF: {ex.Message}"; }
+    }
+}

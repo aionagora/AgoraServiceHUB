@@ -2,6 +2,7 @@ namespace AgoraHub360.ERP.Persistence.Configurations.CMP;
 
 using AgoraHub360.ERP.Domain.Entities.CMP;
 using AgoraHub360.ERP.Domain.Entities.Core;
+using AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -36,6 +37,9 @@ public class OrdenPedidoConfiguration : IEntityTypeConfiguration<OrdenPedido>
         builder.HasIndex(o => new { o.EmpresaId, o.Estado });
         builder.HasIndex(o => new { o.EmpresaId, o.FechaEmision });
         builder.HasIndex(o => new { o.EmpresaId, o.SolicitanteId });
+        builder.HasIndex(o => new { o.EmpresaId, o.SucursalId });
+        builder.HasIndex(o => new { o.EmpresaId, o.ClienteId });
+        builder.HasIndex(o => new { o.EmpresaId, o.ClienteSucursalId });
 
         builder.HasOne(o => o.Solicitante)
             .WithMany()
@@ -45,6 +49,21 @@ public class OrdenPedidoConfiguration : IEntityTypeConfiguration<OrdenPedido>
         builder.HasOne(o => o.AlmacenDestino)
             .WithMany()
             .HasForeignKey(o => o.AlmacenDestinoId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(o => o.Sucursal)
+            .WithMany()
+            .HasForeignKey(o => o.SucursalId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(o => o.Cliente)
+            .WithMany()
+            .HasForeignKey(o => o.ClienteId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(o => o.ClienteSucursal)
+            .WithMany()
+            .HasForeignKey(o => o.ClienteSucursalId)
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasMany(o => o.Lineas)

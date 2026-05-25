@@ -13,7 +13,7 @@ public class RecepcionCompraLineaConfiguration : IEntityTypeConfiguration<Recepc
         builder.Property(l => l.RecepcionCompraLineaId).UseIdentityColumn();
 
         builder.Property(l => l.CantidadRecibida).HasColumnType("decimal(18,4)");
-        builder.Property(l => l.CantidadDañada).HasColumnType("decimal(18,4)");
+        builder.Property(l => l.CantidadDaÃ±ada).HasColumnType("decimal(18,4)");
         builder.Property(l => l.CantidadSobrante).HasColumnType("decimal(18,4)");
         builder.Property(l => l.CantidadFaltante).HasColumnType("decimal(18,4)");
         builder.Property(l => l.CostoUnitario).HasColumnType("decimal(18,4)");

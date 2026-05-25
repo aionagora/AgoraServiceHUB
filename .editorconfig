@@ -1,0 +1,38 @@
+root = true
+
+# Reglas globales para todos los archivos
+[*]
+charset = utf-8
+end_of_line = crlf
+indent_style = space
+indent_size = 4
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# C# y Razor
+[*.{cs,razor,cshtml}]
+charset = utf-8
+indent_size = 4
+
+# JSON y configuración
+[*.{json,jsonc}]
+indent_size = 2
+
+# XML y proyectos
+[*.{xml,csproj,props,targets,resx}]
+indent_size = 2
+
+# Scripts shell (LF)
+[*.sh]
+end_of_line = lf
+indent_size = 2
+
+# Markdown
+[*.md]
+trim_trailing_whitespace = false
+end_of_line = lf
+
+# SQL
+[*.sql]
+charset = utf-8
+indent_size = 4

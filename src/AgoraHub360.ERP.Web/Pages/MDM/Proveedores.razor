@@ -48,7 +48,7 @@
     else if (proveedores.Count == 0)
     {
         <div class="alert alert-info">
-            <i class="bi bi-info-circle"></i> No hay proveedores registrados. Crea el primer proveedor usando el bot髇 "Nuevo Proveedor".
+            <i class="bi bi-info-circle"></i> No hay proveedores registrados. Crea el primer proveedor usando el bot贸n "Nuevo Proveedor".
         </div>
     }
     else
@@ -59,11 +59,11 @@
                     <table class="table table-hover">
                         <thead>
                             <tr>
-                                <th>C骴igo</th>
-                                <th>Raz髇 Social</th>
+                                <th>C贸digo</th>
+                                <th>Raz贸n Social</th>
                                 <th>NIT</th>
                                 <th>Tipo</th>
-                                <th>Tel閒ono</th>
+                                <th>Tel茅fono</th>
                                 <th>Email</th>
                                 <th>Estado</th>
                                 <th class="text-end">Acciones</th>
@@ -126,13 +126,13 @@
 
                         <div class="row">
                             <div class="col-md-4 mb-3">
-                                <label class="form-label">C骴igo *</label>
+                                <label class="form-label">C贸digo *</label>
                                 <InputText class="form-control" @bind-Value="createDto.Codigo" placeholder="Ej: PROV-001" />
                                 <ValidationMessage For="@(() => createDto.Codigo)" />
                             </div>
                             <div class="col-md-8 mb-3">
-                                <label class="form-label">Raz髇 Social *</label>
-                                <InputText class="form-control" @bind-Value="createDto.RazonSocial" placeholder="Nombre o raz髇 social" />
+                                <label class="form-label">Raz贸n Social *</label>
+                                <InputText class="form-control" @bind-Value="createDto.RazonSocial" placeholder="Nombre o raz贸n social" />
                                 <ValidationMessage For="@(() => createDto.RazonSocial)" />
                             </div>
                         </div>
@@ -152,15 +152,15 @@
                                 <ValidationMessage For="@(() => createDto.TipoProveedor)" />
                             </div>
                             <div class="col-md-4 mb-3">
-                                <label class="form-label">Condici髇 de Pago</label>
-                                <InputText class="form-control" @bind-Value="createDto.CondicionPago" placeholder="Ej: Contado, 30 d韆s" />
+                                <label class="form-label">Condici贸n de Pago</label>
+                                <InputText class="form-control" @bind-Value="createDto.CondicionPago" placeholder="Ej: Contado, 30 d铆as" />
                                 <ValidationMessage For="@(() => createDto.CondicionPago)" />
                             </div>
                         </div>
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Tel閒ono</label>
+                                <label class="form-label">Tel茅fono</label>
                                 <InputText class="form-control" @bind-Value="createDto.Telefono" placeholder="77123456" />
                                 <ValidationMessage For="@(() => createDto.Telefono)" />
                             </div>
@@ -178,15 +178,15 @@
                                 <ValidationMessage For="@(() => createDto.NombreContacto)" />
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Pa韘</label>
+                                <label class="form-label">Pa铆s</label>
                                 <InputText class="form-control" @bind-Value="createDto.Pais" placeholder="Bolivia" />
                                 <ValidationMessage For="@(() => createDto.Pais)" />
                             </div>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Direcci髇</label>
-                            <InputTextArea class="form-control" @bind-Value="createDto.Direccion" rows="2" placeholder="Direcci髇 completa" />
+                            <label class="form-label">Direcci贸n</label>
+                            <InputTextArea class="form-control" @bind-Value="createDto.Direccion" rows="2" placeholder="Direcci贸n completa" />
                             <ValidationMessage For="@(() => createDto.Direccion)" />
                         </div>
 
@@ -224,13 +224,13 @@
 
                         <div class="row">
                             <div class="col-md-4 mb-3">
-                                <label class="form-label">C骴igo *</label>
+                                <label class="form-label">C贸digo *</label>
                                 <InputText class="form-control" @bind-Value="updateDto.Codigo" placeholder="Ej: PROV-001" />
                                 <ValidationMessage For="@(() => updateDto.Codigo)" />
                             </div>
                             <div class="col-md-8 mb-3">
-                                <label class="form-label">Raz髇 Social *</label>
-                                <InputText class="form-control" @bind-Value="updateDto.RazonSocial" placeholder="Nombre o raz髇 social" />
+                                <label class="form-label">Raz贸n Social *</label>
+                                <InputText class="form-control" @bind-Value="updateDto.RazonSocial" placeholder="Nombre o raz贸n social" />
                                 <ValidationMessage For="@(() => updateDto.RazonSocial)" />
                             </div>
                         </div>
@@ -250,15 +250,15 @@
                                 <ValidationMessage For="@(() => updateDto.TipoProveedor)" />
                             </div>
                             <div class="col-md-4 mb-3">
-                                <label class="form-label">Condici髇 de Pago</label>
-                                <InputText class="form-control" @bind-Value="updateDto.CondicionPago" placeholder="Ej: Contado, 30 d韆s" />
+                                <label class="form-label">Condici贸n de Pago</label>
+                                <InputText class="form-control" @bind-Value="updateDto.CondicionPago" placeholder="Ej: Contado, 30 d铆as" />
                                 <ValidationMessage For="@(() => updateDto.CondicionPago)" />
                             </div>
                         </div>
 
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Tel閒ono</label>
+                                <label class="form-label">Tel茅fono</label>
                                 <InputText class="form-control" @bind-Value="updateDto.Telefono" placeholder="77123456" />
                                 <ValidationMessage For="@(() => updateDto.Telefono)" />
                             </div>
@@ -276,15 +276,15 @@
                                 <ValidationMessage For="@(() => updateDto.NombreContacto)" />
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Pa韘</label>
+                                <label class="form-label">Pa铆s</label>
                                 <InputText class="form-control" @bind-Value="updateDto.Pais" placeholder="Bolivia" />
                                 <ValidationMessage For="@(() => updateDto.Pais)" />
                             </div>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Direcci髇</label>
-                            <InputTextArea class="form-control" @bind-Value="updateDto.Direccion" rows="2" placeholder="Direcci髇 completa" />
+                            <label class="form-label">Direcci贸n</label>
+                            <InputTextArea class="form-control" @bind-Value="updateDto.Direccion" rows="2" placeholder="Direcci贸n completa" />
                             <ValidationMessage For="@(() => updateDto.Direccion)" />
                         </div>
 
@@ -439,7 +439,7 @@
 
     private async Task DeleteProveedor(ProveedorDto proveedor)
     {
-        if (!await JS.InvokeAsync<bool>("confirm", $"縀liminar el proveedor '{proveedor.RazonSocial}'?"))
+        if (!await JS.InvokeAsync<bool>("confirm", $"驴Eliminar el proveedor '{proveedor.RazonSocial}'?"))
             return;
 
         try

@@ -3,8 +3,8 @@ namespace AgoraHub360.ERP.Domain.Entities.CMP;
 using AgoraHub360.ERP.Domain.Common;
 
 /// <summary>
-/// Hito de tracking dentro de un Expediente de Importación.
-/// Registra eventos clave: ETD, ATD, ETA, ATA, Aduana, Observación, Levante, etc.
+/// Hito de tracking dentro de un Expediente de ImportaciÃ³n.
+/// Registra eventos clave: ETD, ATD, ETA, ATA, Aduana, ObservaciÃ³n, Levante, etc.
 /// </summary>
 public class HitoExpediente : AuditableEntity
 {
@@ -21,6 +21,6 @@ public class HitoExpediente : AuditableEntity
     /// <summary>Archivo adjunto o referencia documental del hito.</summary>
     public string? ReferenciaDocumento { get; set; }
 
-    // Navegación
+    // NavegaciÃ³n
     public ExpedienteImportacion? ExpedienteImportacion { get; set; }
 }

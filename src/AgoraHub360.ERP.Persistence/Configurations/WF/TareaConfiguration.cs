@@ -5,8 +5,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 /// <summary>
-/// Configuración EF Core de la entidad Tarea (schema [wf]).
-/// Los índices están diseñados para cubrir el 95 % de los queries de workflow
+/// ConfiguraciÃ³n EF Core de la entidad Tarea (schema [wf]).
+/// Los Ã­ndices estÃ¡n diseÃ±ados para cubrir el 95 % de los queries de workflow
 /// sin necesidad de full-table scans.
 /// </summary>
 public class TareaConfiguration : IEntityTypeConfiguration<Tarea>
@@ -45,7 +45,7 @@ public class TareaConfiguration : IEntityTypeConfiguration<Tarea>
         builder.Property(t => t.MetadataJson)
             .HasColumnType("nvarchar(max)");
 
-        // Auditoría
+        // AuditorÃ­a
         builder.Property(t => t.CreadoPor).HasMaxLength(120);
         builder.Property(t => t.ModificadoPor).HasMaxLength(120);
 
@@ -55,7 +55,7 @@ public class TareaConfiguration : IEntityTypeConfiguration<Tarea>
             .HasForeignKey(t => t.EmpresaId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // ?? Índices ???????????????????????????????????????????????????????????
+        // ?? Ãndices ???????????????????????????????????????????????????????????
 
         // PRINCIPAL: recuperar todas las tareas de un documento en orden
         // INCLUDE cubre Estado, Completado, FechaReal sin acceder a la tabla
@@ -67,12 +67,12 @@ public class TareaConfiguration : IEntityTypeConfiguration<Tarea>
         builder.HasIndex(t => new { t.EmpresaId, t.Estado, t.EntityType })
             .HasDatabaseName("IX_Tareas_Estado");
 
-        // Unicidad: no puede existir el mismo código en el mismo documento
+        // Unicidad: no puede existir el mismo cÃ³digo en el mismo documento
         builder.HasIndex(t => new { t.EmpresaId, t.EntityType, t.EntityId, t.Codigo })
             .IsUnique()
             .HasDatabaseName("IX_Tareas_Codigo_UQ");
 
-        // Reportes de cumplimiento y análisis de retrasos por fecha real
+        // Reportes de cumplimiento y anÃ¡lisis de retrasos por fecha real
         builder.HasIndex(t => new { t.EmpresaId, t.FechaReal })
             .IncludeProperties(t => new { t.EntityType, t.EntityId })
             .HasDatabaseName("IX_Tareas_Fechas");

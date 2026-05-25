@@ -14,16 +14,21 @@ using Microsoft.AspNetCore.Mvc;
 public class ClientesController : ControllerBase
 {
     private readonly IClienteService _service;
+    private readonly ILogger<ClientesController> _logger;
 
-    public ClientesController(IClienteService service)
+    public ClientesController(IClienteService service, ILogger<ClientesController> logger)
     {
         _service = service;
+        _logger = logger;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetAll(CancellationToken ct)
     {
         var result = await _service.GetAllAsync(ct);
+        if (!result.IsSuccess)
+            return BadRequest(ApiResponse<IReadOnlyList<ClienteDto>>.Fail(result.Error!));
+
         return Ok(ApiResponse<IReadOnlyList<ClienteDto>>.Ok(result.Value!));
     }
 
@@ -39,6 +44,15 @@ public class ClientesController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateClienteDto dto, CancellationToken ct)
     {
+        _logger.LogInformation("ClientesController.Create iniciado. User={UserName} UserId={UserId} EmpresaId={EmpresaId} Role={Role}",
+            User.Identity?.Name,
+            User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value,
+            User.FindFirst("EmpresaId")?.Value,
+            User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value);
+        _logger.LogInformation("ClientesController.Create Authenticated={IsAuthenticated} EmpresaIdClaimExists={EmpresaIdClaimExists}",
+            User.Identity?.IsAuthenticated == true,
+            User.HasClaim(c => c.Type == "EmpresaId"));
+
         var result = await _service.CreateAsync(dto, ct);
         if (!result.IsSuccess)
             return BadRequest(ApiResponse<ClienteDto>.Fail(result.Error!));

@@ -1,15 +1,16 @@
 @page "/contabilidad/periodos"
 @attribute [Authorize]
 @inject PeriodoContableHttpService PeriodoService
+@inject AsientoContableHttpService AsientoService
 @inject IJSRuntime JS
 
-<PageTitle>Períodos Contables - AgoraHub360 ERP</PageTitle>
+<PageTitle>PerÃ­odos Contables - AgoraHub360 ERP</PageTitle>
 
 <div class="container-fluid">
     <div class="row mb-3">
         <div class="col">
-            <h3><i class="bi bi-calendar3"></i> Períodos Contables</h3>
-            <p class="text-muted mb-0">Gestión de períodos mensuales — Apertura y cierre</p>
+            <h3><i class="bi bi-calendar3"></i> PerÃ­odos Contables</h3>
+            <p class="text-muted mb-0">GestiÃ³n de perÃ­odos mensuales â€” Apertura y cierre</p>
         </div>
     </div>
 
@@ -28,12 +29,87 @@
         </div>
     }
 
-    @* ?? Generar períodos ?? *@
+    @* Panel de borradores bloqueantes *@
+    @if (periodoConBorradores != null)
+    {
+        <div class="card border-warning shadow-sm mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center"
+                 style="background:rgba(234,179,8,.15)">
+                <span>
+                    <i class="bi bi-journal-x text-warning me-1"></i>
+                    <strong>Asientos en Borrador â€” @periodoConBorradores.Nombre</strong>
+                    <span class="text-muted ms-2 small">ResuÃ©lvalos para poder cerrar el perÃ­odo.</span>
+                </span>
+                <button class="btn btn-sm btn-outline-secondary py-0"
+                        @onclick="CerrarPanelBorradores">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+            <div class="card-body p-0">
+                @if (cargandoBorradores)
+                {
+                    <div class="text-center py-3">
+                        <span class="spinner-border spinner-border-sm text-warning"></span>
+                        <span class="ms-2 text-muted small">Cargando borradoresâ€¦</span>
+                    </div>
+                }
+                else if (borradoresDelPeriodo.Count == 0)
+                {
+                    <p class="text-muted small p-3 mb-0">
+                        <i class="bi bi-info-circle"></i> No se encontraron borradores para este perÃ­odo.
+                        Intente cerrar nuevamente.
+                    </p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:110px">NÃºmero</th>
+                                    <th style="width:100px">Fecha</th>
+                                    <th>Glosa</th>
+                                    <th class="text-end" style="width:110px">Total Debe</th>
+                                    <th class="text-end" style="width:110px">Total Haber</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var a in borradoresDelPeriodo)
+                                {
+                                    <tr>
+                                        <td><code>@a.Numero</code></td>
+                                        <td>@a.Fecha.ToString("dd/MM/yyyy")</td>
+                                        <td class="text-truncate" style="max-width:250px"
+                                            title="@a.Glosa">@a.Glosa</td>
+                                        <td class="text-end">Bs. @a.TotalDebe.ToString("N2")</td>
+                                        <td class="text-end @(a.TotalDebe == a.TotalHaber ? "" : "text-danger fw-bold")">
+                                            Bs. @a.TotalHaber.ToString("N2")
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="card-footer d-flex justify-content-between align-items-center py-2">
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Los asientos en rojo no cuadran (Debe â‰  Haber) y no se pueden contabilizar hasta corregirlos.
+                        </small>
+                        <a href="/contabilidad/asientos" class="btn btn-sm btn-warning">
+                            <i class="bi bi-pencil-square me-1"></i>Gestionar en Comprobantes
+                        </a>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    @* Generar perÃ­odos *@
     <div class="card mb-3">
         <div class="card-body py-2">
             <div class="row g-2 align-items-end">
                 <div class="col-md-2">
-                    <label class="form-label mb-1 small">Año</label>
+                    <label class="form-label mb-1 small">AÃ±o</label>
                     <select class="form-select form-select-sm" @bind="selectedAnio">
                         @for (int y = DateTime.Today.Year + 1; y >= DateTime.Today.Year - 5; y--)
                         {
@@ -47,7 +123,7 @@
                 <div class="col-md-auto">
                     <button class="btn btn-sm btn-success" @onclick="GenerarPeriodos" disabled="@generando">
                         @if (generando) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                        <i class="bi bi-calendar-plus"></i> Generar Períodos @selectedAnio
+                        <i class="bi bi-calendar-plus"></i> Generar PerÃ­odos @selectedAnio
                     </button>
                 </div>
                 <div class="col-md-auto ms-auto">
@@ -63,7 +139,7 @@
         </div>
     </div>
 
-    @* ?? Grid de períodos ?? *@
+    @* ?? Grid de perÃ­odos ?? *@
     <div class="card">
         <div class="card-body p-0">
             @if (loading)
@@ -74,7 +150,7 @@
             {
                 <div class="text-center py-5">
                     <i class="bi bi-calendar-x" style="font-size:2.5rem;"></i>
-                    <p class="text-muted mt-3">No hay períodos para el año <strong>@selectedAnio</strong>. Use <strong>"Generar Períodos"</strong> para crearlos.</p>
+                    <p class="text-muted mt-3">No hay perÃ­odos para el aÃ±o <strong>@selectedAnio</strong>. Use <strong>"Generar PerÃ­odos"</strong> para crearlos.</p>
                 </div>
             }
             else
@@ -110,13 +186,13 @@
                                 <div class="card-footer text-center py-1">
                                     @if (!esCerrado)
                                     {
-                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => CerrarPeriodo(p)" title="Cerrar período">
+                                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => CerrarPeriodo(p)" title="Cerrar perÃ­odo">
                                             <i class="bi bi-lock"></i> Cerrar
                                         </button>
                                     }
                                     else
                                     {
-                                        <button class="btn btn-sm btn-outline-warning" @onclick="() => ReabrirPeriodo(p)" title="Reabrir período">
+                                        <button class="btn btn-sm btn-outline-warning" @onclick="() => ReabrirPeriodo(p)" title="Reabrir perÃ­odo">
                                             <i class="bi bi-unlock"></i> Reabrir
                                         </button>
                                     }
@@ -138,6 +214,10 @@
     private string? successMessage;
     private string? errorMessage;
 
+    private PeriodoContableDto? periodoConBorradores;
+    private List<AsientoContableDto> borradoresDelPeriodo = new();
+    private bool cargandoBorradores;
+
     protected override async Task OnInitializedAsync() => await LoadData();
 
     private async Task LoadData()
@@ -153,12 +233,12 @@
 
     private async Task GenerarPeriodos()
     {
-        if (!await JS.InvokeAsync<bool>("confirm", $"¿Generar los 12 períodos mensuales para el año {selectedAnio}?")) return;
+        if (!await JS.InvokeAsync<bool>("confirm", $"Â¿Generar los 12 perÃ­odos mensuales para el aÃ±o {selectedAnio}?")) return;
         generando = true; errorMessage = null;
         try
         {
             var r = await PeriodoService.GenerarPeriodosAsync(selectedAnio);
-            if (r.Success) { successMessage = r.Message ?? "Períodos generados."; await LoadData(); }
+            if (r.Success) { successMessage = r.Message ?? "PerÃ­odos generados."; await LoadData(); }
             else errorMessage = r.Message;
         }
         catch (Exception ex) { errorMessage = ex.Message; }
@@ -167,23 +247,66 @@
 
     private async Task CerrarPeriodo(PeriodoContableDto periodo)
     {
-        if (!await JS.InvokeAsync<bool>("confirm", $"¿Cerrar el período {periodo.Nombre}? No se podrán crear ni contabilizar asientos en este mes.")) return;
+        if (!await JS.InvokeAsync<bool>("confirm",
+            $"Â¿Cerrar el perÃ­odo {periodo.Nombre}? No se podrÃ¡n crear ni contabilizar asientos en este mes."))
+            return;
+
+        CerrarPanelBorradores();
         try
         {
             var r = await PeriodoService.CerrarAsync(periodo.PeriodoContableId);
-            if (r.Success) { successMessage = $"Período {periodo.Nombre} cerrado."; await LoadData(); }
-            else errorMessage = r.Message;
+            if (r.Success)
+            {
+                successMessage = $"PerÃ­odo {periodo.Nombre} cerrado correctamente.";
+                await LoadData();
+            }
+            else
+            {
+                errorMessage = r.Message;
+                if (r.Message?.Contains("Borrador", StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    periodoConBorradores = periodo;
+                    await CargarBorradoresDelPeriodoAsync(periodo);
+                }
+            }
         }
         catch (Exception ex) { errorMessage = ex.Message; }
     }
 
+    private async Task CargarBorradoresDelPeriodoAsync(PeriodoContableDto periodo)
+    {
+        cargandoBorradores = true;
+        StateHasChanged();
+        try
+        {
+            var desde = new DateTime(periodo.Anio, periodo.Mes, 1);
+            var hasta = desde.AddMonths(1).AddDays(-1);
+            borradoresDelPeriodo = await AsientoService.GetAllAsync(desde, hasta, "Borrador");
+        }
+        catch
+        {
+            borradoresDelPeriodo = new();
+        }
+        finally
+        {
+            cargandoBorradores = false;
+            StateHasChanged();
+        }
+    }
+
+    private void CerrarPanelBorradores()
+    {
+        periodoConBorradores = null;
+        borradoresDelPeriodo.Clear();
+    }
+
     private async Task ReabrirPeriodo(PeriodoContableDto periodo)
     {
-        if (!await JS.InvokeAsync<bool>("confirm", $"¿Reabrir el período {periodo.Nombre}?")) return;
+        if (!await JS.InvokeAsync<bool>("confirm", $"Â¿Reabrir el perÃ­odo {periodo.Nombre}?")) return;
         try
         {
             var r = await PeriodoService.ReabrirAsync(periodo.PeriodoContableId);
-            if (r.Success) { successMessage = $"Período {periodo.Nombre} reabierto."; await LoadData(); }
+            if (r.Success) { successMessage = $"PerÃ­odo {periodo.Nombre} reabierto."; await LoadData(); }
             else errorMessage = r.Message;
         }
         catch (Exception ex) { errorMessage = ex.Message; }

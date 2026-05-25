@@ -3,10 +3,10 @@ namespace AgoraHub360.ERP.Api.Controllers.V1;
 using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Shared.DTOs;
 using AgoraHub360.ERP.Shared.DTOs.Contabilidad;
+using AgoraHub360.ERP.Shared.DTOs.Contabilidad.Importacion;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using OfficeOpenXml;
 
 [ApiController]
 [ApiVersion("1.0")]
@@ -16,15 +16,22 @@ public class AsientosContablesController : ControllerBase
 {
     private readonly IAsientoContableService _service;
     private readonly IComprobanteDocumentoService _docService;
+    private readonly IAsientoExportService _exportService;
+    private readonly IAsientoImportService _importService;
+    private readonly ICurrentUserService _currentUser;
 
     public AsientosContablesController(
         IAsientoContableService service,
-        IComprobanteDocumentoService docService)
+        IComprobanteDocumentoService docService,
+        IAsientoExportService exportService,
+        IAsientoImportService importService,
+        ICurrentUserService currentUser)
     {
-        _service    = service;
-        _docService = docService;
-        // Configurar EPPlus para uso no comercial
-        ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+        _service       = service;
+        _docService    = docService;
+        _exportService = exportService;
+        _importService = importService;
+        _currentUser   = currentUser;
     }
 
     [HttpGet]
@@ -95,7 +102,7 @@ public class AsientosContablesController : ControllerBase
         return Ok(ApiResponse<bool>.Ok(true, "Comprobante eliminado."));
     }
 
-    // ?? Cat�logos ??
+    // ?? Catálogos ??
     [HttpGet("tipos-comprobante")]
     public async Task<IActionResult> GetTiposComprobante(CancellationToken ct)
     {
@@ -121,126 +128,60 @@ public class AsientosContablesController : ControllerBase
     public async Task<IActionResult> SeedCatalogos(CancellationToken ct)
     {
         var r = await _service.SeedCatalogosAsync(ct);
-        return r.IsSuccess ? Ok(ApiResponse<int>.Ok(r.Value!, $"{r.Value} cat�logos generados.")) : BadRequest(ApiResponse<int>.Fail(r.Error!));
+        return r.IsSuccess ? Ok(ApiResponse<int>.Ok(r.Value!, $"{r.Value} catálogos generados.")) : BadRequest(ApiResponse<int>.Fail(r.Error!));
     }
 
-    /// <summary>
-    /// Exporta los comprobantes contables filtrados a un archivo Excel
-    /// </summary>
-    [HttpGet("exportar-excel")]
-    public async Task<IActionResult> ExportarExcel(
-        [FromQuery] DateTime? desde, 
-        [FromQuery] DateTime? hasta,
-        [FromQuery] string? estado, 
-        [FromQuery] int? tipoComprobanteId,
-        [FromQuery] string? search, 
-        CancellationToken ct)
+    [HttpGet("exportar")]
+    public async Task<IActionResult> ExportarAsync(
+        [FromQuery] string formato = "excel",
+        [FromQuery] DateTime? desde = null,
+        [FromQuery] DateTime? hasta = null,
+        [FromQuery] string? estado = null,
+        [FromQuery] int? tipoComprobanteId = null,
+        [FromQuery] string? search = null,
+        CancellationToken ct = default)
     {
         try
         {
-            // Obtener los datos filtrados
             var result = await _service.GetAllAsync(desde, hasta, estado, tipoComprobanteId, search, ct);
             if (!result.IsSuccess)
                 return BadRequest(ApiResponse<string>.Fail(result.Error!));
 
             var asientos = result.Value!;
 
-            // Crear el archivo Excel
-            using var package = new ExcelPackage();
-            var worksheet = package.Workbook.Worksheets.Add("Comprobantes Contables");
-
-            // Configurar encabezados
-            worksheet.Cells[1, 1].Value = "Tipo";
-            worksheet.Cells[1, 2].Value = "N�mero";
-            worksheet.Cells[1, 3].Value = "Fecha";
-            worksheet.Cells[1, 4].Value = "Gesti�n";
-            worksheet.Cells[1, 5].Value = "Concepto";
-            worksheet.Cells[1, 6].Value = "Glosa";
-            worksheet.Cells[1, 7].Value = "Tipo Registro";
-            worksheet.Cells[1, 8].Value = "T/C Moneda";
-            worksheet.Cells[1, 9].Value = "Valor T/C";
-            worksheet.Cells[1, 10].Value = "Tipo Pago";
-            worksheet.Cells[1, 11].Value = "Nro Documento";
-            worksheet.Cells[1, 12].Value = "Total Debe";
-            worksheet.Cells[1, 13].Value = "Total Haber";
-            worksheet.Cells[1, 14].Value = "Estado";
-            worksheet.Cells[1, 15].Value = "Registrado Por";
-
-            // Estilo de encabezados
-            using (var range = worksheet.Cells[1, 1, 1, 15])
+            return formato.ToLower() switch
             {
-                range.Style.Font.Bold = true;
-                range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
-                range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(79, 129, 189));
-                range.Style.Font.Color.SetColor(System.Drawing.Color.White);
-                range.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
-            }
+                "excel" => File(
+                    await _exportService.ExportarExcelAsync(asientos, ct),
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    $"asientos_{DateTime.Today:yyyyMMdd}.xlsx"),
 
-            // Llenar datos
-            int row = 2;
-            foreach (var asiento in asientos)
-            {
-                worksheet.Cells[row, 1].Value = asiento.TipoComprobanteCodigo;
-                worksheet.Cells[row, 2].Value = asiento.Numero;
-                worksheet.Cells[row, 3].Value = asiento.Fecha.ToString("dd/MM/yyyy");
-                worksheet.Cells[row, 4].Value = asiento.Gestion;
-                worksheet.Cells[row, 5].Value = asiento.Concepto ?? "";
-                worksheet.Cells[row, 6].Value = asiento.Glosa;
-                worksheet.Cells[row, 7].Value = asiento.TipoRegistro;
-                worksheet.Cells[row, 8].Value = asiento.TipoCambioMoneda ?? "";
-                worksheet.Cells[row, 9].Value = asiento.ValorTipoCambio?.ToString("N2") ?? "";
-                worksheet.Cells[row, 10].Value = asiento.TipoPagoNombre ?? "";
-                worksheet.Cells[row, 11].Value = asiento.NumeroDocumentoPago ?? "";
-                worksheet.Cells[row, 12].Value = asiento.TotalDebe;
-                worksheet.Cells[row, 13].Value = asiento.TotalHaber;
-                worksheet.Cells[row, 14].Value = asiento.Estado;
-                worksheet.Cells[row, 15].Value = asiento.RegistradoPorNombre ?? "";
+                "csv" => File(
+                    System.Text.Encoding.UTF8.GetBytes(await _exportService.GenerarCsvAsync(asientos)),
+                    "text/csv",
+                    $"asientos_{DateTime.Today:yyyyMMdd}.csv"),
 
-                // Formato de moneda para columnas de monto
-                worksheet.Cells[row, 12].Style.Numberformat.Format = "#,##0.00";
-                worksheet.Cells[row, 13].Style.Numberformat.Format = "#,##0.00";
+                "json" => File(
+                    System.Text.Encoding.UTF8.GetBytes(await _exportService.GenerarJsonAsync(asientos)),
+                    "application/json",
+                    $"asientos_{DateTime.Today:yyyyMMdd}.json"),
 
-                row++;
-            }
+                "xml" => File(
+                    System.Text.Encoding.UTF8.GetBytes(await _exportService.GenerarXmlAsync(asientos)),
+                    "application/xml",
+                    $"asientos_{DateTime.Today:yyyyMMdd}.xml"),
 
-            // Auto ajustar columnas
-            worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
-
-            // Agregar totales
-            if (asientos.Any())
-            {
-                worksheet.Cells[row, 11].Value = "TOTALES:";
-                worksheet.Cells[row, 11].Style.Font.Bold = true;
-                worksheet.Cells[row, 12].Formula = $"SUM(L2:L{row - 1})";
-                worksheet.Cells[row, 13].Formula = $"SUM(M2:M{row - 1})";
-                worksheet.Cells[row, 12].Style.Font.Bold = true;
-                worksheet.Cells[row, 13].Style.Font.Bold = true;
-                worksheet.Cells[row, 12].Style.Numberformat.Format = "#,##0.00";
-                worksheet.Cells[row, 13].Style.Numberformat.Format = "#,##0.00";
-
-                // Borde superior para la fila de totales
-                using (var range = worksheet.Cells[row, 11, row, 13])
-                {
-                    range.Style.Border.Top.Style = OfficeOpenXml.Style.ExcelBorderStyle.Double;
-                }
-            }
-
-            // Generar el archivo
-            var fileBytes = package.GetAsByteArray();
-            var fileName = $"Comprobantes_Contables_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
-
-            return File(fileBytes, 
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
-                fileName);
+                _ => BadRequest("Formato no soportado. Use: excel, csv, json, xml")
+            };
         }
         catch (Exception ex)
         {
-            return StatusCode(500, ApiResponse<string>.Fail($"Error al generar Excel: {ex.Message}"));
+            return StatusCode(500, ApiResponse<string>.Fail($"Error al generar exportación: {ex.Message}"));
         }
     }
 
     /// <summary>
-    /// Exporta un comprobante individual a Excel con cabecera + detalle de l�neas
+    /// Exporta un comprobante individual a Excel con cabecera + detalle de líneas
     /// </summary>
     [HttpGet("{id:long}/exportar-excel")]
     public async Task<IActionResult> ExportarExcelIndividual(long id, CancellationToken ct)
@@ -252,91 +193,9 @@ public class AsientosContablesController : ControllerBase
                 return NotFound(ApiResponse<string>.Fail(result.Error!));
 
             var a = result.Value!;
-
-            using var package = new ExcelPackage();
-            var ws = package.Workbook.Worksheets.Add($"Comprobante {a.Numero}");
-
-            // ?? Cabecera ??
-            ws.Cells[1, 1].Value = "COMPROBANTE CONTABLE";
-            ws.Cells[1, 1].Style.Font.Bold = true;
-            ws.Cells[1, 1].Style.Font.Size = 14;
-
-            ws.Cells[3, 1].Value = "Tipo:"; ws.Cells[3, 2].Value = $"{a.TipoComprobanteCodigo} - {a.TipoComprobanteNombre}";
-            ws.Cells[4, 1].Value = "N�mero:"; ws.Cells[4, 2].Value = a.Numero;
-            ws.Cells[5, 1].Value = "Fecha:"; ws.Cells[5, 2].Value = a.Fecha.ToString("dd/MM/yyyy");
-            ws.Cells[6, 1].Value = "Gesti�n:"; ws.Cells[6, 2].Value = a.Gestion;
-            ws.Cells[7, 1].Value = "Estado:"; ws.Cells[7, 2].Value = a.Estado;
-            ws.Cells[8, 1].Value = "Concepto:"; ws.Cells[8, 2].Value = a.Concepto ?? "";
-            ws.Cells[9, 1].Value = "Glosa:"; ws.Cells[9, 2].Value = a.Glosa;
-            ws.Cells[10, 1].Value = "Registrado por:"; ws.Cells[10, 2].Value = a.RegistradoPorNombre ?? "";
-
-            if (a.TipoCambioMoneda != null)
-            {
-                ws.Cells[11, 1].Value = "Tipo Cambio:";
-                ws.Cells[11, 2].Value = $"{a.TipoCambioMoneda} {a.ValorTipoCambio:N2}";
-            }
-            if (!string.IsNullOrEmpty(a.TipoPagoCodigo) && a.TipoPagoCodigo != "S/D")
-            {
-                ws.Cells[12, 1].Value = "Documento Pago:";
-                ws.Cells[12, 2].Value = $"{a.TipoPagoNombre} {a.NumeroDocumentoPago}";
-            }
-
-            using (var rng = ws.Cells[3, 1, 12, 1])
-            {
-                rng.Style.Font.Bold = true;
-            }
-
-            // ?? Detalle ??
-            int headerRow = 14;
-            ws.Cells[headerRow, 1].Value = "#";
-            ws.Cells[headerRow, 2].Value = "C�digo";
-            ws.Cells[headerRow, 3].Value = "Nombre Cuenta";
-            ws.Cells[headerRow, 4].Value = "Glosa Detalle";
-            ws.Cells[headerRow, 5].Value = "Centro Costo";
-            ws.Cells[headerRow, 6].Value = "Debe";
-            ws.Cells[headerRow, 7].Value = "Haber";
-
-            using (var rng = ws.Cells[headerRow, 1, headerRow, 7])
-            {
-                rng.Style.Font.Bold = true;
-                rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
-                rng.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(79, 129, 189));
-                rng.Style.Font.Color.SetColor(System.Drawing.Color.White);
-            }
-
-            int row = headerRow + 1;
-            foreach (var l in a.Lineas)
-            {
-                ws.Cells[row, 1].Value = l.NumeroLinea;
-                ws.Cells[row, 2].Value = l.CuentaCodigo;
-                ws.Cells[row, 3].Value = l.CuentaNombre;
-                ws.Cells[row, 4].Value = l.Glosa ?? "";
-                ws.Cells[row, 5].Value = l.CentroCostoCodigo ?? "";
-                ws.Cells[row, 6].Value = l.Debe;
-                ws.Cells[row, 7].Value = l.Haber;
-                ws.Cells[row, 6].Style.Numberformat.Format = "#,##0.00";
-                ws.Cells[row, 7].Style.Numberformat.Format = "#,##0.00";
-                row++;
-            }
-
-            // Totales
-            ws.Cells[row, 5].Value = "TOTALES:";
-            ws.Cells[row, 5].Style.Font.Bold = true;
-            ws.Cells[row, 6].Value = a.TotalDebe;
-            ws.Cells[row, 7].Value = a.TotalHaber;
-            ws.Cells[row, 6].Style.Font.Bold = true;
-            ws.Cells[row, 7].Style.Font.Bold = true;
-            ws.Cells[row, 6].Style.Numberformat.Format = "#,##0.00";
-            ws.Cells[row, 7].Style.Numberformat.Format = "#,##0.00";
-            using (var rng = ws.Cells[row, 5, row, 7])
-            {
-                rng.Style.Border.Top.Style = OfficeOpenXml.Style.ExcelBorderStyle.Double;
-            }
-
-            ws.Cells[ws.Dimension.Address].AutoFitColumns();
-
-            var fileBytes = package.GetAsByteArray();
+            var fileBytes = _exportService.ExportarExcelIndividual(a);
             var numSafe = a.Numero.Replace("/", "-").Replace("\\", "-");
+
             return File(fileBytes,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 $"Comprobante_{numSafe}.xlsx");
@@ -348,8 +207,8 @@ public class AsientosContablesController : ControllerBase
     }
 
     /// <summary>
-    /// Exporta listado detallado plano: una fila por l�nea de comprobante.
-    /// Formato pensado para migraci�n a otros sistemas contables.
+    /// Exporta listado detallado plano: una fila por línea de comprobante.
+    /// Formato pensado para migración a otros sistemas contables.
     /// </summary>
     [HttpGet("exportar-excel-plano")]
     public async Task<IActionResult> ExportarExcelPlano(
@@ -366,83 +225,9 @@ public class AsientosContablesController : ControllerBase
             if (!result.IsSuccess)
                 return BadRequest(ApiResponse<string>.Fail(result.Error!));
 
-            var asientos = result.Value!;
-
-            using var package = new ExcelPackage();
-            var ws = package.Workbook.Worksheets.Add("Detalle Plano");
-
-            // Encabezados � una fila por l�nea de detalle
-            var headers = new[]
-            {
-                "Tipo","Numero","Fecha","Gestion","Concepto","Glosa","TipoRegistro",
-                "Estado","TipoCambioMoneda","ValorTipoCambio","TipoPago","NroDocPago",
-                "TotalDebe","TotalHaber","RegistradoPor",
-                "LineaNro","CuentaCodigo","CuentaNombre","LineaDebe","LineaHaber",
-                "LineaGlosa","CentroCosto"
-            };
-            for (int c = 0; c < headers.Length; c++)
-                ws.Cells[1, c + 1].Value = headers[c];
-
-            using (var rng = ws.Cells[1, 1, 1, headers.Length])
-            {
-                rng.Style.Font.Bold = true;
-                rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
-                rng.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(31, 73, 125));
-                rng.Style.Font.Color.SetColor(System.Drawing.Color.White);
-            }
-
-            int row = 2;
-            var altRow = false;
-            foreach (var a in asientos)
-            {
-                var lineas = a.Lineas.Count > 0 ? a.Lineas : new List<AsientoContableLineaDto> { new() };
-                foreach (var l in lineas)
-                {
-                    ws.Cells[row, 1].Value  = a.TipoComprobanteCodigo;
-                    ws.Cells[row, 2].Value  = a.Numero;
-                    ws.Cells[row, 3].Value  = a.Fecha.ToString("dd/MM/yyyy");
-                    ws.Cells[row, 4].Value  = a.Gestion;
-                    ws.Cells[row, 5].Value  = a.Concepto ?? "";
-                    ws.Cells[row, 6].Value  = a.Glosa;
-                    ws.Cells[row, 7].Value  = a.TipoRegistro;
-                    ws.Cells[row, 8].Value  = a.Estado;
-                    ws.Cells[row, 9].Value  = a.TipoCambioMoneda ?? "";
-                    ws.Cells[row, 10].Value = a.ValorTipoCambio?.ToString("N2") ?? "";
-                    ws.Cells[row, 11].Value = a.TipoPagoNombre ?? "";
-                    ws.Cells[row, 12].Value = a.NumeroDocumentoPago ?? "";
-                    ws.Cells[row, 13].Value = a.TotalDebe;
-                    ws.Cells[row, 14].Value = a.TotalHaber;
-                    ws.Cells[row, 15].Value = a.RegistradoPorNombre ?? "";
-                    ws.Cells[row, 16].Value = l.NumeroLinea > 0 ? l.NumeroLinea : (object)"";
-                    ws.Cells[row, 17].Value = l.CuentaCodigo;
-                    ws.Cells[row, 18].Value = l.CuentaNombre;
-                    ws.Cells[row, 19].Value = l.Debe > 0 ? l.Debe : (object)"";
-                    ws.Cells[row, 20].Value = l.Haber > 0 ? l.Haber : (object)"";
-                    ws.Cells[row, 21].Value = l.Glosa ?? "";
-                    ws.Cells[row, 22].Value = l.CentroCostoCodigo ?? "";
-
-                    ws.Cells[row, 13].Style.Numberformat.Format = "#,##0.00";
-                    ws.Cells[row, 14].Style.Numberformat.Format = "#,##0.00";
-                    ws.Cells[row, 19].Style.Numberformat.Format = "#,##0.00";
-                    ws.Cells[row, 20].Style.Numberformat.Format = "#,##0.00";
-
-                    // Filas alternadas para mejor legibilidad
-                    if (altRow)
-                    {
-                        using var rng = ws.Cells[row, 1, row, headers.Length];
-                        rng.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
-                        rng.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(242, 242, 242));
-                    }
-                    row++;
-                }
-                altRow = !altRow;
-            }
-
-            if (row > 2)
-                ws.Cells[ws.Dimension.Address].AutoFitColumns();
-
-            var fileBytes = package.GetAsByteArray();
+            var fileBytes = _exportService.ExportarExcelPlano(result.Value!);
             var ts = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+
             return File(fileBytes,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 $"Comprobantes_Detalle_Plano_{ts}.xlsx");
@@ -481,7 +266,7 @@ public class AsientosContablesController : ControllerBase
             ApiResponse<ComprobanteDocumentoDto>.Ok(result.Value!, "Documento adjuntado."));
     }
 
-    /// <summary>Elimina el v�nculo entre un comprobante y un documento adjunto.</summary>
+    /// <summary>Elimina el vínculo entre un comprobante y un documento adjunto.</summary>
     [HttpDelete("{comprobanteId:long}/documentos/{docId:int}")]
     public async Task<IActionResult> RemoverDocumento(long comprobanteId, int docId, CancellationToken ct)
     {
@@ -490,5 +275,58 @@ public class AsientosContablesController : ControllerBase
             return NotFound(ApiResponse<bool>.Fail(result.Error!));
 
         return Ok(ApiResponse<bool>.Ok(true, "Documento removido del comprobante."));
+    }
+
+    // ── Importación masiva ──────────────────────────────────────────────
+
+    /// <summary>
+    /// Importa asientos contables desde un archivo Excel.
+    /// Con <paramref name="soloValidar"/> = true solo valida sin persistir.
+    /// </summary>
+    [HttpPost("importar")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(typeof(ApiResponse<ImportValidacionDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<ImportResultDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> ImportarAsientosAsync(
+        IFormFile archivo,
+        [FromQuery] bool soloValidar = false,
+        [FromQuery] bool contabilizarInmediatamente = false,
+        CancellationToken ct = default)
+    {
+        if (archivo == null || archivo.Length == 0)
+            return BadRequest(ApiResponse<string>.Fail("Debe adjuntar un archivo."));
+
+        if (archivo.Length > 5 * 1024 * 1024)
+            return BadRequest(ApiResponse<string>.Fail("El archivo no puede superar 5 MB."));
+
+        var empresaId = _currentUser.EmpresaId;
+        if (empresaId is null or 0)
+            return BadRequest(ApiResponse<string>.Fail("No se pudo determinar la empresa del usuario."));
+
+        await using var stream = archivo.OpenReadStream();
+
+        if (soloValidar)
+        {
+            var validacion = await _importService.ValidarArchivoAsync(stream, empresaId.Value, ct);
+            return Ok(ApiResponse<ImportValidacionDto>.Ok(validacion));
+        }
+
+        var resultado = await _importService.ImportarAsync(stream, empresaId.Value, contabilizarInmediatamente, ct);
+        return Ok(ApiResponse<ImportResultDto>.Ok(resultado));
+    }
+
+    /// <summary>
+    /// Descarga una plantilla Excel vacía con los encabezados esperados para la importación masiva.
+    /// </summary>
+    [HttpGet("plantilla-importacion")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+    public async Task<IActionResult> DescargarPlantillaImportacionAsync(CancellationToken ct = default)
+    {
+        var archivo = await _importService.GenerarPlantillaAsync(ct);
+        return File(
+            archivo,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "plantilla_importacion_asientos.xlsx");
     }
 }

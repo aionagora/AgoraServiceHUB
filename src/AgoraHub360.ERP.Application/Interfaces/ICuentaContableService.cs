@@ -12,7 +12,7 @@ public interface ICuentaContableService
         string? search = null,
         CancellationToken ct = default);
 
-    /// <summary>Obtiene el plan de cuentas en estructura de ·rbol.</summary>
+    /// <summary>Obtiene el plan de cuentas en estructura de √°rbol.</summary>
     Task<Result<IReadOnlyList<CuentaContableDto>>> GetTreeAsync(CancellationToken ct = default);
 
     /// <summary>Obtiene una cuenta por Id.</summary>
@@ -27,6 +27,6 @@ public interface ICuentaContableService
     /// <summary>Elimina (soft-delete) una cuenta sin movimientos.</summary>
     Task<Result<bool>> DeleteAsync(int id, CancellationToken ct = default);
 
-    /// <summary>Genera el plan de cuentas est·ndar Bolivia/NIIF para la empresa activa.</summary>
+    /// <summary>Genera el plan de cuentas est√°ndar Bolivia/NIIF para la empresa activa.</summary>
     Task<Result<int>> SeedPlanCuentasAsync(CancellationToken ct = default);
 }

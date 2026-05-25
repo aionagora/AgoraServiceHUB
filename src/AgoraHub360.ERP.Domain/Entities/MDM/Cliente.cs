@@ -16,4 +16,7 @@ public class Cliente : TenantEntity
     public string? Email { get; set; }
     public string? NombreContacto { get; set; }
     public string TipoCliente { get; set; } = "General";
+
+    public ICollection<ClienteSucursal> Sucursales { get; set; } = new List<ClienteSucursal>();
+    public ICollection<Contacto> Contactos { get; set; } = new List<Contacto>();
 }

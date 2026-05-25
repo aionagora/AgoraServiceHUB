@@ -1,8 +1,10 @@
 @page "/inventario/movimientos"
 @attribute [Authorize]
+@implements IDisposable
 @inject MovimientoInventarioHttpService InvService
 @inject AlmacenHttpService AlmacenService
-@inject ProductoHttpService ProductoService
+@inject MdmCompanyProductHttpService CompanyProductService
+@inject EmpresaStateService EmpresaState
 @inject IJSRuntime JS
 
 <PageTitle>Inventory Movements - AgoraHub360 ERP</PageTitle>
@@ -177,7 +179,7 @@
                                     <option value="0">-- Select product --</option>
                                     @foreach (var p in productos)
                                     {
-                                        <option value="@p.ProductId">@p.CommercialName (@p.DefaultUomCode)</option>
+                                        <option value="@p.CompanyProductId">@p.NombreComercial (@(string.IsNullOrWhiteSpace(p.CodigoInterno) ? p.Sku : $"{p.Sku} / {p.CodigoInterno}"))</option>
                                     }
                                 </InputSelect>
                                 <ValidationMessage For="@(() => createDto.CompanyProductId)" />
@@ -240,7 +242,7 @@
 @code {
     private List<MovimientoInventarioDto> movimientos = new();
     private List<AlmacenDto> almacenes = new();
-    private List<ProductDto2> productos = new();
+    private List<CompanyProductDto> productos = new();
 
     private bool loading = true;
     private bool saving = false;
@@ -257,12 +259,45 @@
 
     protected override async Task OnInitializedAsync()
     {
+        EmpresaState.OnChange += OnEmpresaStateChanged;
+        await LoadCatalogosAsync();
+        await LoadData();
+    }
+
+    public void Dispose()
+    {
+        EmpresaState.OnChange -= OnEmpresaStateChanged;
+    }
+
+    private async void OnEmpresaStateChanged()
+    {
+        await InvokeAsync(async () =>
+        {
+            ResetCreateForm();
+            productos.Clear();
+            almacenes.Clear();
+            await LoadCatalogosAsync();
+            await LoadData();
+            StateHasChanged();
+        });
+    }
+
+    private async Task LoadCatalogosAsync()
+    {
         var almTask = AlmacenService.GetAllAsync();
-        var prodTask = ProductoService.GetAllAsync();
+        var prodTask = CompanyProductService.GetAllAsync();
         await Task.WhenAll(almTask, prodTask);
         almacenes = await almTask;
         productos = await prodTask;
-        await LoadData();
+        AutoSelectSingleWarehouse();
+    }
+
+    private void AutoSelectSingleWarehouse()
+    {
+        if (almacenes.Count == 1)
+        {
+            createDto.WarehouseId = almacenes[0].Id;
+        }
     }
 
     private async Task LoadData()
@@ -283,11 +318,17 @@
 
     private void ShowCreateModal()
     {
-        createDto = new CreateMovimientoInventarioDto { MovementDate = DateTime.Today };
+        ResetCreateForm();
         showCreateModal = true;
     }
 
     private void CloseModal() => showCreateModal = false;
+
+    private void ResetCreateForm()
+    {
+        createDto = new CreateMovimientoInventarioDto { MovementDate = DateTime.Today };
+        AutoSelectSingleWarehouse();
+    }
 
     private async Task CreateMovimiento()
     {
@@ -295,6 +336,20 @@
         errorMessage = null;
         try
         {
+            if (createDto.CompanyProductId <= 0)
+            {
+                errorMessage = "Debe seleccionar un company product válido.";
+                return;
+            }
+
+            if (createDto.WarehouseId <= 0)
+            {
+                errorMessage = "Debe seleccionar un almacén válido.";
+                return;
+            }
+
+            await JS.InvokeVoidAsync("console.info", "[TEMP-LOG] Inventory Movement DTO", createDto);
+
             var response = await InvService.CreateAsync(createDto);
             if (response.Success)
             {

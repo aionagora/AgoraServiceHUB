@@ -72,6 +72,10 @@ public class RolServiceTests
             => Task.FromResult<IReadOnlyList<Rol>>(_store.AsReadOnly());
         public Task<IReadOnlyList<Rol>> FindAsync(Expression<Func<Rol, bool>> p, CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<Rol>>(_store.Where(p.Compile()).ToList().AsReadOnly());
+        public Task<IReadOnlyList<Rol>> FindIgnoreQueryFiltersAsync(Expression<Func<Rol, bool>> p, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<Rol>>(_store.Where(p.Compile()).ToList().AsReadOnly());
+        public Task<Rol?> GetByIdIgnoreQueryFiltersAsync(int id, CancellationToken ct = default)
+            => Task.FromResult(_store.FirstOrDefault(r => r.Id == id));
         public Task<Rol> AddAsync(Rol e, CancellationToken ct = default) { _store.Add(e); return Task.FromResult(e); }
         public Task UpdateAsync(Rol e, CancellationToken ct = default) => Task.CompletedTask;
         public Task DeleteAsync(Rol e, CancellationToken ct = default) { _store.Remove(e); return Task.CompletedTask; }
@@ -81,6 +85,11 @@ public class RolServiceTests
     {
         public bool SaveCalled { get; private set; }
         public Task<int> SaveChangesAsync(CancellationToken ct = default) { SaveCalled = true; return Task.FromResult(1); }
+        public Task BeginTransactionAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public Task CommitTransactionAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public Task RollbackTransactionAsync(CancellationToken ct = default) => Task.CompletedTask;
+        public Task ExecuteInTransactionAsync(Func<Task> op, CancellationToken ct = default) => op();
+        public Task<T> ExecuteInTransactionAsync<T>(Func<Task<T>> op, CancellationToken ct = default) => op();
         public void Dispose() { }
     }
 }

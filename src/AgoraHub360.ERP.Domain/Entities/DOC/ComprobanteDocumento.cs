@@ -19,6 +19,6 @@ public class ComprobanteDocumento : TenantEntity
     public long DocumentId { get; set; }
     public virtual Document? Document { get; set; }
 
-    /// <summary>Descripción opcional del adjunto (ej: "Factura proveedor China").</summary>
+    /// <summary>DescripciÃ³n opcional del adjunto (ej: "Factura proveedor China").</summary>
     public string? Descripcion { get; set; }
 }

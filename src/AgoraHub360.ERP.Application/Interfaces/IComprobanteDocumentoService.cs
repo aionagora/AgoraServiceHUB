@@ -13,7 +13,7 @@ public interface IComprobanteDocumentoService
     Task<Result<ComprobanteDocumentoDto>> AdjuntarAsync(
         long comprobanteId, AdjuntarDocumentoDto dto, CancellationToken ct = default);
 
-    /// <summary>Elimina el vínculo entre un comprobante y un documento.</summary>
+    /// <summary>Elimina el vÃ­nculo entre un comprobante y un documento.</summary>
     Task<Result<bool>> RemoverAsync(
         long comprobanteId, int docId, CancellationToken ct = default);
 }

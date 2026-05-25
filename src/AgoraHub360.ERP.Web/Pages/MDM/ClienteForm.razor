@@ -1,0 +1,845 @@
+@page "/mdm/clientes/nuevo"
+@page "/mdm/clientes/editar/{Id:int}"
+@attribute [Authorize]
+@inject NavigationManager Nav
+@inject ClienteHttpService ClienteService
+@inject ClienteSucursalHttpService ClienteSucursalService
+@inject IJSRuntime JS
+@using System.ComponentModel.DataAnnotations
+@using ClienteDto = AgoraHub360.ERP.Shared.DTOs.MDM.ClienteDto
+@using CreateClienteDto = AgoraHub360.ERP.Shared.DTOs.MDM.CreateClienteDto
+@using UpdateClienteDto = AgoraHub360.ERP.Shared.DTOs.MDM.UpdateClienteDto
+@using ClienteSucursalDto = AgoraHub360.ERP.Shared.DTOs.MDM.ClienteSucursalDto
+@using CreateClienteSucursalDto = AgoraHub360.ERP.Shared.DTOs.MDM.CreateClienteSucursalDto
+@using UpdateClienteSucursalDto = AgoraHub360.ERP.Shared.DTOs.MDM.UpdateClienteSucursalDto
+
+<PageTitle>@(IsNew ? "Nuevo Cliente" : "Editar Cliente") - AgoraHub360</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3 align-items-center">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a href="mdm/clientes">Clientes</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">@(IsNew ? "Nuevo" : "Editar")</li>
+                </ol>
+            </nav>
+            <h3 class="mb-0">
+                <i class="bi @(IsNew ? "bi-person-plus" : "bi-person-gear") me-2"></i>
+                @(IsNew ? "Nuevo Cliente" : $"Editar Cliente {clienteDto?.Codigo}")
+            </h3>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+
+    @if (loading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="mt-2">Cargando...</p>
+        </div>
+    }
+    else
+    {
+        <div class="card shadow-sm">
+            <div class="card-header bg-white pt-3 pb-0 border-bottom-0">
+                <ul class="nav nav-tabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link @(activeTab == TabDatos ? "active" : "")" 
+                                @onclick="() => SetTab(TabDatos)" type="button">Datos Generales</button>
+                    </li>
+                    @if (!IsNew)
+                    {
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link @(activeTab == TabSucursales ? "active" : "")" 
+                                    @onclick="LoadSucursalesTab" type="button">Sucursales</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link disabled" title="Próximamente">Contactos</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link disabled" title="Próximamente">Config. Comercial</button>
+                        </li>
+                    }
+                </ul>
+            </div>
+
+            <div class="card-body">
+                @if (activeTab == TabDatos)
+                {
+                    <EditForm Model="formModel" OnValidSubmit="SaveCliente" OnInvalidSubmit="HandleInvalidSubmit">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary class="alert alert-danger" />
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Código *</label>
+                                <InputText class="form-control" @bind-Value="formModel.Codigo" placeholder="Ej: CLI-001" disabled="@(!IsNew)" />
+                                <ValidationMessage For="@(() => formModel.Codigo)" />
+                            </div>
+                            <div class="col-md-8 mb-3">
+                                <label class="form-label fw-bold">Razón Social *</label>
+                                <InputText class="form-control" @bind-Value="formModel.RazonSocial" placeholder="Nombre o razón social" />
+                                <ValidationMessage For="@(() => formModel.RazonSocial)" />
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">NIT</label>
+                                <InputText class="form-control" @bind-Value="formModel.NIT" placeholder="NIT o CI" />
+                                <ValidationMessage For="@(() => formModel.NIT)" />
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Tipo de Cliente *</label>
+                                <InputSelect class="form-select" @bind-Value="formModel.TipoCliente">
+                                    <option value="General">General</option>
+                                    <option value="Mayorista">Mayorista</option>
+                                    <option value="Minorista">Minorista</option>
+                                    <option value="Corporativo">Corporativo</option>
+                                </InputSelect>
+                                <ValidationMessage For="@(() => formModel.TipoCliente)" />
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label fw-bold">Teléfono</label>
+                                <InputText class="form-control" @bind-Value="formModel.Telefono" placeholder="77123456" />
+                                <ValidationMessage For="@(() => formModel.Telefono)" />
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Email</label>
+                                <InputText class="form-control" type="email" @bind-Value="formModel.Email" placeholder="cliente@ejemplo.com" />
+                                <ValidationMessage For="@(() => formModel.Email)" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Nombre Contacto</label>
+                                <InputText class="form-control" @bind-Value="formModel.NombreContacto" placeholder="Persona de contacto" />
+                                <ValidationMessage For="@(() => formModel.NombreContacto)" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Dirección</label>
+                            <InputTextArea class="form-control" @bind-Value="formModel.Direccion" rows="2" placeholder="Dirección completa" />
+                            <ValidationMessage For="@(() => formModel.Direccion)" />
+                        </div>
+
+                        @if (!IsNew)
+                        {
+                            <div class="mb-4 form-check form-switch">
+                                <InputCheckbox class="form-check-input" id="activoCheck" @bind-Value="formModel.Activo" />
+                                <label class="form-check-label" for="activoCheck">Cliente Activo</label>
+                            </div>
+                        }
+
+                        <hr />
+                        <div class="d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-outline-secondary" @onclick="GoBack">
+                                <i class="bi bi-x-circle"></i> Cancelar
+                            </button>
+                            <button type="submit" class="btn btn-primary" disabled="@saving">
+                                @if (saving)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                }
+                                <i class="bi bi-save me-1"></i> @(IsNew ? "Guardar Cliente" : "Actualizar Cliente")
+                            </button>
+                        </div>
+                    </EditForm>
+                }
+                else if (activeTab == TabSucursales)
+                {
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0 text-primary">Sucursales Operativas</h5>
+                        <button type="button" class="btn btn-sm btn-primary" @onclick="NuevaSucursal">
+                            <i class="bi bi-plus-lg"></i> Nueva Sucursal
+                        </button>
+                    </div>
+
+                    @if (cargandoSucursales)
+                    {
+                        <div class="text-center py-4">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                            <span class="ms-2">Cargando sucursales...</span>
+                        </div>
+                    }
+                    else if (sucursalesCliente.Count == 0)
+                    {
+                        <div class="alert alert-info d-flex align-items-center">
+                            <i class="bi bi-info-circle-fill me-2 fs-5"></i> 
+                            <div>No hay sucursales registradas para este cliente.</div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive rounded border mb-4">
+                            <table class="table table-hover table-striped mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Código</th>
+                                        <th>Nombre</th>
+                                        <th>Alias</th>
+                                        <th>Teléfono</th>
+                                        <th class="text-center">Principal</th>
+                                        <th class="text-center">Estado</th>
+                                        <th class="text-end">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var sucursal in sucursalesCliente)
+                                    {
+                                        <tr>
+                                            <td class="align-middle"><code>@sucursal.Codigo</code></td>
+                                            <td class="align-middle fw-medium">@sucursal.Nombre</td>
+                                            <td class="align-middle text-muted">@(sucursal.AliasComercial ?? "-")</td>
+                                            <td class="align-middle">@(sucursal.Telefono ?? "-")</td>
+                                            <td class="align-middle text-center">
+                                                @if(sucursal.EsPrincipal) { <i class="bi bi-star-fill text-warning" title="Principal"></i> }
+                                            </td>
+                                            <td class="align-middle text-center">
+                                                @if (sucursal.Activo)
+                                                {
+                                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill">Activa</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 rounded-pill">Inactiva</span>
+                                                }
+                                            </td>
+                                            <td class="text-end align-middle">
+                                                <div class="btn-group btn-group-sm">
+                                                    <button class="btn btn-outline-primary" @onclick="() => EditarSucursal(sucursal)" title="Editar">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-warning" disabled="@sucursal.EsPrincipal" @onclick="() => MarcarSucursalPrincipal(sucursal)" title="Marcar Principal">
+                                                        <i class="bi bi-star"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-danger" @onclick="() => EliminarSucursal(sucursal)" title="Eliminar">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+
+                    @if (mostrarFormularioSucursal)
+                    {
+                        <div class="card border-primary mb-3">
+                            <div class="card-header bg-primary bg-opacity-10 text-primary fw-bold d-flex justify-content-between align-items-center">
+                                <span><i class="bi @(editandoSucursalId.HasValue ? "bi-pencil-square" : "bi-plus-square") me-2"></i> @(editandoSucursalId.HasValue ? "Editar Sucursal" : "Nueva Sucursal")</span>
+                                <button type="button" class="btn-close" @onclick="CancelarEdicionSucursal"></button>
+                            </div>
+                            <div class="card-body">
+                                <EditForm Model="sucursalForm" OnValidSubmit="GuardarSucursalAsync">
+                                    <DataAnnotationsValidator />
+
+                                    <div class="row">
+                                        <div class="col-md-3 mb-3">
+                                            <label class="form-label fw-semibold">Código *</label>
+                                            <InputText class="form-control form-control-sm" @bind-Value="sucursalForm.Codigo" />
+                                            <ValidationMessage For="@(() => sucursalForm.Codigo)" />
+                                        </div>
+                                        <div class="col-md-5 mb-3">
+                                            <label class="form-label fw-semibold">Nombre *</label>
+                                            <InputText class="form-control form-control-sm" @bind-Value="sucursalForm.Nombre" />
+                                            <ValidationMessage For="@(() => sucursalForm.Nombre)" />
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label fw-semibold">Alias comercial</label>
+                                            <InputText class="form-control form-control-sm" @bind-Value="sucursalForm.AliasComercial" />
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-3 mb-3">
+                                            <label class="form-label fw-semibold">País *</label>
+                                            <InputNumber class="form-control form-control-sm" @bind-Value="sucursalForm.PaisId" />
+                                            <ValidationMessage For="@(() => sucursalForm.PaisId)" />
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <label class="form-label fw-semibold">Departamento</label>
+                                            <InputNumber class="form-control form-control-sm" @bind-Value="sucursalForm.DepartamentoId" />
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <label class="form-label fw-semibold">Ciudad</label>
+                                            <InputNumber class="form-control form-control-sm" @bind-Value="sucursalForm.CiudadId" />
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <label class="form-label fw-semibold">Zona</label>
+                                            <InputNumber class="form-control form-control-sm" @bind-Value="sucursalForm.ZonaId" />
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-8 mb-3">
+                                            <label class="form-label fw-semibold">Dirección *</label>
+                                            <InputText class="form-control form-control-sm" @bind-Value="sucursalForm.Direccion" />
+                                            <ValidationMessage For="@(() => sucursalForm.Direccion)" />
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label fw-semibold">Referencia</label>
+                                            <InputText class="form-control form-control-sm" @bind-Value="sucursalForm.Referencia" />
+                                        </div>
+                                    </div>
+
+                                    <div class="row bg-light rounded p-2 mx-0 mb-3 border">
+                                        <div class="col-12 mb-2"><span class="text-muted fw-bold small text-uppercase">Datos de Contacto</span></div>
+                                        <div class="col-md-4 mb-2">
+                                            <label class="form-label small">Responsable</label>
+                                            <InputText class="form-control form-control-sm" @bind-Value="sucursalForm.ResponsableNombre" />
+                                        </div>
+                                        <div class="col-md-4 mb-2">
+                                            <label class="form-label small">Cargo</label>
+                                            <InputText class="form-control form-control-sm" @bind-Value="sucursalForm.ResponsableCargo" />
+                                        </div>
+                                        <div class="col-md-4 mb-2">
+                                            <label class="form-label small">Email</label>
+                                            <InputText class="form-control form-control-sm" @bind-Value="sucursalForm.Email" />
+                                        </div>
+                                        <div class="col-md-4 mb-2">
+                                            <label class="form-label small">Teléfono</label>
+                                            <InputText class="form-control form-control-sm" @bind-Value="sucursalForm.Telefono" />
+                                        </div>
+                                        <div class="col-md-4 mb-2">
+                                            <label class="form-label small">Celular</label>
+                                            <InputText class="form-control form-control-sm" @bind-Value="sucursalForm.Celular" />
+                                        </div>
+                                        <div class="col-md-4 mb-2">
+                                            <label class="form-label small">WhatsApp</label>
+                                            <InputText class="form-control form-control-sm" @bind-Value="sucursalForm.WhatsApp" />
+                                        </div>
+                                    </div>
+
+                                    <div class="row bg-light rounded p-2 mx-0 mb-3 border">
+                                        <div class="col-12 mb-2"><span class="text-muted fw-bold small text-uppercase">Configuración Operativa</span></div>
+                                        <div class="col-md-3 form-check mb-2">
+                                            <InputCheckbox class="form-check-input" @bind-Value="sucursalForm.EsPrincipal" id="csPrincipal" />
+                                            <label class="form-check-label small" for="csPrincipal">Principal</label>
+                                        </div>
+                                        <div class="col-md-3 form-check mb-2">
+                                            <InputCheckbox class="form-check-input" @bind-Value="sucursalForm.Activo" id="csActivo" />
+                                            <label class="form-check-label small" for="csActivo">Activa</label>
+                                        </div>
+                                        <div class="col-md-3 form-check mb-2">
+                                            <InputCheckbox class="form-check-input" @bind-Value="sucursalForm.RecibePedidos" id="csPedidos" />
+                                            <label class="form-check-label small" for="csPedidos">Recibe pedidos</label>
+                                        </div>
+                                        <div class="col-md-3 form-check mb-2">
+                                            <InputCheckbox class="form-check-input" @bind-Value="sucursalForm.RecibeFacturacion" id="csFacturacion" />
+                                            <label class="form-check-label small" for="csFacturacion">Recibe factur.</label>
+                                        </div>
+                                        <div class="col-md-3 form-check mb-2">
+                                            <InputCheckbox class="form-check-input" @bind-Value="sucursalForm.EsPuntoEntrega" id="csEntrega" />
+                                            <label class="form-check-label small" for="csEntrega">Punto entrega</label>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label fw-semibold">URL Mapa</label>
+                                            <InputText class="form-control form-control-sm" @bind-Value="sucursalForm.UrlMapa" />
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <label class="form-label fw-semibold">Latitud</label>
+                                            <InputNumber class="form-control form-control-sm" @bind-Value="sucursalForm.Latitud" />
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <label class="form-label fw-semibold">Longitud</label>
+                                            <InputNumber class="form-control form-control-sm" @bind-Value="sucursalForm.Longitud" />
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Observaciones</label>
+                                        <InputTextArea class="form-control form-control-sm" rows="2" @bind-Value="sucursalForm.Observaciones" />
+                                    </div>
+
+                                    <div class="d-flex justify-content-end gap-2 mt-3 pt-3 border-top">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="CancelarEdicionSucursal">Cancelar</button>
+                                        <button type="submit" class="btn btn-sm btn-primary" disabled="@saving">
+                                            @if(saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                            <i class="bi bi-save me-1"></i> Guardar Sucursal
+                                        </button>
+                                    </div>
+                                </EditForm>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private bool IsNew => !Id.HasValue || Id.Value == 0;
+
+    private const string TabDatos = "datos";
+    private const string TabSucursales = "sucursales";
+
+    // Tab Data
+    private string activeTab = TabDatos;
+    private bool loading = false;
+    private bool saving = false;
+    private string? errorMessage;
+    private string? successMessage;
+
+    // Entity Data
+    private ClienteDto? clienteDto;
+
+    // Modelo estable para el formulario
+    private ClienteFormModel formModel = new();
+
+    // Sucursales state
+    private bool cargandoSucursales = false;
+    private List<ClienteSucursalDto> sucursalesCliente = new();
+    private bool mostrarFormularioSucursal = false;
+    private int? editandoSucursalId = null;
+    private CreateClienteSucursalDto sucursalForm = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!IsNew)
+        {
+            await LoadClienteInfoAsync();
+        }
+    }
+
+    private async Task LoadClienteInfoAsync()
+    {
+        try
+        {
+            loading = true;
+            errorMessage = null;
+
+            var cliente = await ClienteService.GetByIdAsync(Id!.Value);
+            if (cliente != null)
+            {
+                clienteDto = cliente;
+
+                // Cargar datos en el modelo estable
+                formModel.Codigo = cliente.Codigo;
+                formModel.RazonSocial = cliente.RazonSocial;
+                formModel.NIT = cliente.NIT ?? "";
+                formModel.TipoCliente = cliente.TipoCliente;
+                formModel.Telefono = cliente.Telefono ?? "";
+                formModel.Email = cliente.Email ?? "";
+                formModel.NombreContacto = cliente.NombreContacto ?? "";
+                formModel.Direccion = cliente.Direccion ?? "";
+                formModel.Activo = cliente.Activo;
+            }
+            else
+            {
+                errorMessage = "El cliente solicitado no existe.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar cliente: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private void SetTab(string tabName)
+    {
+        errorMessage = null;
+        successMessage = null;
+        activeTab = tabName;
+    }
+
+    private async Task SaveCliente()
+    {
+        try
+        {
+            saving = true;
+            errorMessage = null;
+            successMessage = null;
+
+            await JS.InvokeVoidAsync("console.info", "[TEMP-LOG] SaveCliente iniciado", new { 
+                IsNew, 
+                Codigo = formModel.Codigo, 
+                RazonSocial = formModel.RazonSocial, 
+                TipoCliente = formModel.TipoCliente 
+            });
+
+            if (IsNew)
+            {
+                var dto = new CreateClienteDto
+                {
+                    Codigo = formModel.Codigo,
+                    RazonSocial = formModel.RazonSocial,
+                    NIT = formModel.NIT,
+                    TipoCliente = formModel.TipoCliente,
+                    Telefono = formModel.Telefono,
+                    Email = formModel.Email,
+                    NombreContacto = formModel.NombreContacto,
+                    Direccion = formModel.Direccion
+                };
+
+                await JS.InvokeVoidAsync("console.info", "[TEMP-LOG] DTO CreateCliente", dto);
+
+                var res = await ClienteService.CreateAsync(dto);
+                if (res.Success)
+                {
+                    Nav.NavigateTo($"/mdm/clientes/editar/{res.Data!.Id}");
+                }
+                else
+                {
+                    await JS.InvokeVoidAsync("console.error", "[TEMP-LOG] CreateCliente fallo", new { res.Success, res.Message, res.Data });
+                    errorMessage = res.Message;
+                }
+            }
+            else
+            {
+                var dto = new UpdateClienteDto
+                {
+                    Codigo = formModel.Codigo,
+                    RazonSocial = formModel.RazonSocial,
+                    NIT = formModel.NIT,
+                    TipoCliente = formModel.TipoCliente,
+                    Telefono = formModel.Telefono,
+                    Email = formModel.Email,
+                    NombreContacto = formModel.NombreContacto,
+                    Direccion = formModel.Direccion,
+                    Activo = formModel.Activo
+                };
+
+                await JS.InvokeVoidAsync("console.info", "[TEMP-LOG] DTO UpdateCliente", dto);
+
+                var res = await ClienteService.UpdateAsync(Id!.Value, dto);
+                if (res.Success)
+                {
+                    successMessage = "Cliente actualizado correctamente.";
+                    await LoadClienteInfoAsync(); // refresh
+                }
+                else
+                {
+                    await JS.InvokeVoidAsync("console.error", "[TEMP-LOG] UpdateCliente fallo", new { res.Success, res.Message, res.Data });
+                    errorMessage = res.Message;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("console.error", "[TEMP-LOG] SaveCliente exception", ex.Message);
+            errorMessage = $"Error al guardar: {ex.Message}";
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private async Task HandleInvalidSubmit(EditContext editContext)
+    {
+        var messages = editContext.GetValidationMessages().ToList();
+
+        await JS.InvokeVoidAsync("console.warn", "[TEMP-LOG] SaveCliente bloqueado por validación.", new { 
+            Codigo = formModel.Codigo, 
+            RazonSocial = formModel.RazonSocial, 
+            TipoCliente = formModel.TipoCliente 
+        });
+
+        foreach (var message in messages)
+        {
+            await JS.InvokeVoidAsync("console.warn", $"[TEMP-LOG] Validación: {message}");
+        }
+
+        errorMessage = messages.Any() 
+            ? "Hay errores de validación en el formulario. Revisa los campos marcados en rojo." 
+            : "El formulario es inválido. Por favor revisa todos los campos obligatorios.";
+    }
+
+    private void GoBack()
+    {
+        Nav.NavigateTo("/mdm/clientes");
+    }
+
+    // Modelo de formulario estable con validaciones
+    private sealed class ClienteFormModel
+    {
+        [Required(ErrorMessage = "El código es obligatorio.")]
+        [MaxLength(50, ErrorMessage = "Máximo 50 caracteres.")]
+        public string Codigo { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "La razón social es obligatoria.")]
+        [MaxLength(200, ErrorMessage = "Máximo 200 caracteres.")]
+        public string RazonSocial { get; set; } = string.Empty;
+
+        [MaxLength(50, ErrorMessage = "Máximo 50 caracteres.")]
+        public string? NIT { get; set; }
+
+        [Required(ErrorMessage = "El tipo de cliente es obligatorio.")]
+        [MaxLength(50, ErrorMessage = "Máximo 50 caracteres.")]
+        public string TipoCliente { get; set; } = "General";
+
+        [MaxLength(50, ErrorMessage = "Máximo 50 caracteres.")]
+        public string? Telefono { get; set; }
+
+        [MaxLength(200, ErrorMessage = "Máximo 200 caracteres.")]
+        [EmailAddress(ErrorMessage = "El email no tiene un formato válido.")]
+        public string? Email { get; set; }
+
+        [MaxLength(200, ErrorMessage = "Máximo 200 caracteres.")]
+        public string? NombreContacto { get; set; }
+
+        [MaxLength(300, ErrorMessage = "Máximo 300 caracteres.")]
+        public string? Direccion { get; set; }
+
+        public bool Activo { get; set; } = true;
+    }
+
+    // --- SUCURSALES LOGIC --- //
+
+    private async Task LoadSucursalesTab()
+    {
+        if (IsNew) return;
+        SetTab(TabSucursales);
+        await SubLoadSucursalesAsync();
+    }
+
+    private async Task SubLoadSucursalesAsync()
+    {
+        try
+        {
+            cargandoSucursales = true;
+            sucursalesCliente = await ClienteSucursalService.GetByClienteAsync(Id!.Value);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar sucursales: {ex.Message}";
+        }
+        finally
+        {
+            cargandoSucursales = false;
+        }
+    }
+
+    private CreateClienteSucursalDto CrearSucursalFormDefault()
+    {
+        return new CreateClienteSucursalDto
+        {
+            Codigo = "",
+            Nombre = "",
+            Activo = true,
+            EsPrincipal = sucursalesCliente.Count == 0,
+            RecibePedidos = true,
+            RecibeFacturacion = true,
+            EsPuntoEntrega = true
+        };
+    }
+
+    private void NuevaSucursal()
+    {
+        editandoSucursalId = null;
+        sucursalForm = CrearSucursalFormDefault();
+        mostrarFormularioSucursal = true;
+    }
+
+    private void CancelarEdicionSucursal()
+    {
+        mostrarFormularioSucursal = false;
+        editandoSucursalId = null;
+        sucursalForm = CrearSucursalFormDefault();
+    }
+
+     private void EditarSucursal(ClienteSucursalDto dto)
+    {
+        editandoSucursalId = dto.Id;
+        sucursalForm = new CreateClienteSucursalDto
+        {
+            Codigo = dto.Codigo,
+            Nombre = dto.Nombre,
+            AliasComercial = dto.AliasComercial,
+            PaisId = dto.PaisId,
+            DepartamentoId = dto.DepartamentoId,
+            ProvinciaId = dto.ProvinciaId,
+            CiudadId = dto.CiudadId,
+            ZonaId = dto.ZonaId,
+            Direccion = dto.Direccion,
+            Referencia = dto.Referencia,
+            UrlMapa = dto.UrlMapa,
+            ContactoPrincipalId = dto.ContactoPrincipalId,
+            ResponsableNombre = dto.ResponsableNombre,
+            ResponsableCargo = dto.ResponsableCargo,
+            Telefono = dto.Telefono,
+            Celular = dto.Celular,
+            WhatsApp = dto.WhatsApp,
+            Email = dto.Email,
+            EsPrincipal = dto.EsPrincipal,
+            Activo = dto.Activo,
+            RecibePedidos = dto.RecibePedidos,
+            RecibeFacturacion = dto.RecibeFacturacion,
+            EsPuntoEntrega = dto.EsPuntoEntrega,
+            Observaciones = dto.Observaciones,
+            Latitud = dto.Latitud,
+            Longitud = dto.Longitud
+        };
+        mostrarFormularioSucursal = true;
+    }
+
+    private async Task GuardarSucursalAsync()
+    {
+        try
+        {
+            saving = true;
+            errorMessage = null;
+            successMessage = null;
+
+            if (editandoSucursalId.HasValue)
+            {
+                var update = new UpdateClienteSucursalDto
+                {
+                    Codigo = sucursalForm.Codigo,
+                    Nombre = sucursalForm.Nombre,
+                    AliasComercial = sucursalForm.AliasComercial,
+                    PaisId = sucursalForm.PaisId,
+                    DepartamentoId = sucursalForm.DepartamentoId,
+                    ProvinciaId = sucursalForm.ProvinciaId,
+                    CiudadId = sucursalForm.CiudadId,
+                    ZonaId = sucursalForm.ZonaId,
+                    Direccion = sucursalForm.Direccion,
+                    Referencia = sucursalForm.Referencia,
+                    UrlMapa = sucursalForm.UrlMapa,
+                    ContactoPrincipalId = sucursalForm.ContactoPrincipalId,
+                    ResponsableNombre = sucursalForm.ResponsableNombre,
+                    ResponsableCargo = sucursalForm.ResponsableCargo,
+                    Telefono = sucursalForm.Telefono,
+                    Celular = sucursalForm.Celular,
+                    WhatsApp = sucursalForm.WhatsApp,
+                    Email = sucursalForm.Email,
+                    EsPrincipal = sucursalForm.EsPrincipal,
+                    Activo = sucursalForm.Activo,
+                    RecibePedidos = sucursalForm.RecibePedidos,
+                    RecibeFacturacion = sucursalForm.RecibeFacturacion,
+                    EsPuntoEntrega = sucursalForm.EsPuntoEntrega,
+                    Observaciones = sucursalForm.Observaciones,
+                    Latitud = sucursalForm.Latitud,
+                    Longitud = sucursalForm.Longitud
+                };
+
+                var res = await ClienteSucursalService.UpdateAsync(Id!.Value, editandoSucursalId.Value, update);
+                if (res.Success)
+                {
+                    successMessage = "Sucursal operativa actualizada con éxito.";
+                    mostrarFormularioSucursal = false;
+                    await SubLoadSucursalesAsync();
+                }
+                else
+                {
+                    errorMessage = res.Message ?? "Error al actualizar la sucursal.";
+                }
+            }
+            else
+            {
+                var res = await ClienteSucursalService.CreateAsync(Id!.Value, sucursalForm);
+                if (res.Success)
+                {
+                    successMessage = "Sucursal agregada con éxito.";
+                    mostrarFormularioSucursal = false;
+                    await SubLoadSucursalesAsync();
+                }
+                else
+                {
+                    errorMessage = res.Message ?? "Error al crear la sucursal.";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Ocurrió un error al guardar la sucursal: {ex.Message}";
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private async Task MarcarSucursalPrincipal(ClienteSucursalDto sucursal)
+    {
+        try
+        {
+            saving = true;
+            errorMessage = null;
+            successMessage = null;
+
+            var result = await ClienteSucursalService.SetPrincipalAsync(Id!.Value, sucursal.Id);
+            if (result.Success)
+            {
+                successMessage = $"La sucursal '{sucursal.Nombre}' se marcó como principal.";
+                await SubLoadSucursalesAsync();
+            }
+            else
+            {
+                errorMessage = result.Message ?? "Error al actualizar sucursal principal.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Error de red: " + ex.Message;
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private async Task EliminarSucursal(ClienteSucursalDto sucursal)
+    {
+        bool confirmed = await JS.InvokeAsync<bool>("confirm", $"¿Está seguro de eliminar la sucursal opertiva {sucursal.Nombre}?");
+        if (confirmed)
+        {
+            try
+            {
+                saving = true;
+                errorMessage = null;
+                successMessage = null;
+
+                var result = await ClienteSucursalService.DeleteAsync(Id!.Value, sucursal.Id);
+                if (result.Success)
+                {
+                    successMessage = "Sucursal eliminada de forma exitosa.";
+                    await SubLoadSucursalesAsync();
+                }
+                else
+                {
+                    errorMessage = result.Message ?? "No se pudo eliminar la sucursal.";
+                }
+            }
+            catch (Exception ex)
+            {
+                errorMessage = "Error al comunicarse con el servidor: " + ex.Message;
+            }
+            finally
+            {
+                saving = false;
+            }
+        }
+    }
+}

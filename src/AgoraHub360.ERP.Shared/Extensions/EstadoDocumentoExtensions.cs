@@ -3,27 +3,27 @@ namespace AgoraHub360.ERP.Shared.Extensions;
 public static class EstadoDocumentoExtensions
 {
     /// <summary>
-    /// Traduce el valor string del estado (tal como viene en los DTOs) a un nombre legible en espa駉l.
+    /// Traduce el valor string del estado (tal como viene en los DTOs) a un nombre legible en espa帽ol.
     /// </summary>
     public static string ToNombre(this string estado) => estado switch
     {
         "Borrador"                => "Borrador",
         "Confirmado"              => "Confirmado",
-        "EnRevision"              => "En Revisi髇",
+        "EnRevision"              => "En Revisi贸n",
         "AbastecidoConStock"      => "Abastecido con Stock",
-        "PendienteAprobacion"     => "Pte. Aprobaci髇",
+        "PendienteAprobacion"     => "Pte. Aprobaci贸n",
         "Aprobado"                => "Aprobado",
         "EnviadaProveedor"        => "Enviada a Proveedor",
-        "EnNegociacion"           => "En Negociaci髇",
+        "EnNegociacion"           => "En Negociaci贸n",
         "ConfirmadaProveedor"     => "Confirmada Proveedor",
         "PagoProgramado"          => "Pago Programado",
-        "EnTransito"              => "En Tr醤sito",
+        "EnTransito"              => "En Tr谩nsito",
         "Arribado"                => "Arribado",
         "EnAduana"                => "En Aduana",
         "ObservacionAduana"       => "Obs. Aduana",
         "Liberado"                => "Liberado",
-        "RecepcionParcial"        => "Recepci髇 Parcial",
-        "RecepcionConDiferencias" => "Recepci髇 c/Diferencias",
+        "RecepcionParcial"        => "Recepci贸n Parcial",
+        "RecepcionConDiferencias" => "Recepci贸n c/Diferencias",
         "Cerrado"                 => "Cerrado",
         "Anulado"                 => "Anulado",
         "Rechazado"               => "Rechazado",
@@ -31,7 +31,7 @@ public static class EstadoDocumentoExtensions
     };
 
     /// <summary>
-    /// Devuelve las clases CSS de Bootstrap para el badge seg鷑 el estado del documento.
+    /// Devuelve las clases CSS de Bootstrap para el badge seg煤n el estado del documento.
     /// </summary>
     public static string ToBadgeClass(this string estado) => estado switch
     {

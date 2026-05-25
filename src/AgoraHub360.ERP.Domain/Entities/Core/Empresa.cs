@@ -4,7 +4,7 @@ using AgoraHub360.ERP.Domain.Common;
 
 /// <summary>
 /// Representa una empresa/tenant en el sistema multi-empresa.
-/// Contiene configuraciÛn global de producto, costeo e industria.
+/// Contiene configuraci√≥n global de producto, costeo e industria.
 /// </summary>
 public class Empresa : AuditableEntity
 {
@@ -17,26 +17,29 @@ public class Empresa : AuditableEntity
     public string? MonedaBaseId { get; set; }
     public Moneda? MonedaBase { get; set; }
 
-    // ?? ConfiguraciÛn de productos ??????????????????????????????????????????
+    // ?? Configuraci√≥n de productos ??????????????????????????????????????????
 
-    /// <summary>Industria principal: 1=Retail, 2=Alimentos, 3=Farmacia, 4=FerreterÌa, 5=Textil, 6=TecnologÌa, 7=General</summary>
+    /// <summary>Industria principal: 1=Retail, 2=Alimentos, 3=Farmacia, 4=Ferreter√≠a, 5=Textil, 6=Tecnolog√≠a, 7=General</summary>
     public byte IndustriaId { get; set; } = 7;
 
-    /// <summary>MÈtodo de costeo por defecto. 1=Promedio, 2=FIFO, 3=LIFO, 4=Est·ndar</summary>
+    /// <summary>M√©todo de costeo por defecto. 1=Promedio, 2=FIFO, 3=LIFO, 4=Est√°ndar</summary>
     public byte MetodoCosteoDefault { get; set; } = 1;
 
     /// <summary>Si true, permite gestionar variantes de producto (talla, color, etc.)</summary>
     public bool PermiteVariantes { get; set; } = true;
 
-    /// <summary>Si true, permite lotes y n˙meros de serie en productos</summary>
+    /// <summary>Si true, permite lotes y n√∫meros de serie en productos</summary>
     public bool PermiteLotes { get; set; }
 
     /// <summary>Si true, gestiona productos como servicio (no stockable)</summary>
     public bool PermiteServicios { get; set; } = true;
 
-    /// <summary>Si true, genera SKU autom·tico al crear producto empresa</summary>
+    /// <summary>Si true, genera SKU autom√°tico al crear producto empresa</summary>
     public bool AutoGeneraSku { get; set; } = true;
 
     /// <summary>Prefijo para SKU autogenerado. Ej: "PRD-"</summary>
     public string? PrefijoSku { get; set; }
+
+    public ICollection<Sucursal> Sucursales { get; set; } = new List<Sucursal>();
+    public ICollection<MDM.Almacen> Almacenes { get; set; } = new List<MDM.Almacen>();
 }

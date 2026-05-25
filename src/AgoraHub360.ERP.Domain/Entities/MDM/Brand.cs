@@ -2,7 +2,7 @@ namespace AgoraHub360.ERP.Domain.Entities.MDM;
 
 using AgoraHub360.ERP.Domain.Common;
 
-/// <summary>Commercial brand — tenant-scoped per company.</summary>
+/// <summary>Commercial brand â€” tenant-scoped per company.</summary>
 public class Brand : TenantEntity
 {
     public long BrandId { get; set; }

@@ -6,7 +6,7 @@ using AgoraHub360.ERP.Domain.Entities.DOC;
 
 /// <summary>
 /// Comprobante contable (journal entry).
-/// Cabecera del comprobante con líneas Debe/Haber que deben cuadrar en partida doble.
+/// Cabecera del comprobante con lÃ­neas Debe/Haber que deben cuadrar en partida doble.
 /// </summary>
 public class AsientoContable : TenantEntity
 {
@@ -17,17 +17,17 @@ public class AsientoContable : TenantEntity
     public int? TipoComprobanteId { get; set; }
     public TipoComprobante? TipoComprobante { get; set; }
 
-    /// <summary>Número de comprobante (se reinicia por período y tipo). Ej: CI-001, CE-001.</summary>
+    /// <summary>NÃºmero de comprobante (se reinicia por perÃ­odo y tipo). Ej: CI-001, CE-001.</summary>
     public string Numero { get; set; } = string.Empty;
 
     /// <summary>Fecha contable del comprobante.</summary>
     public DateTime Fecha { get; set; }
 
-    /// <summary>Gestión / Año fiscal.</summary>
+    /// <summary>GestiÃ³n / AÃ±o fiscal.</summary>
     public int Gestion { get; set; }
 
     // ?? Tipo de registro ??
-    /// <summary>Tipo de registro: Manual, Automático, Ajuste.</summary>
+    /// <summary>Tipo de registro: Manual, AutomÃ¡tico, Ajuste.</summary>
     public string TipoRegistro { get; set; } = "Manual";
 
     // ?? Estado ??
@@ -42,7 +42,7 @@ public class AsientoContable : TenantEntity
     public string Glosa { get; set; } = string.Empty;
 
     // ?? Tipo de cambio ??
-    /// <summary>FK al tipo de cambio vigente (Dólar, UFV).</summary>
+    /// <summary>FK al tipo de cambio vigente (DÃ³lar, UFV).</summary>
     public int? TipoCambioId { get; set; }
     public TipoCambio? TipoCambio { get; set; }
 
@@ -54,7 +54,7 @@ public class AsientoContable : TenantEntity
     public int? TipoPagoId { get; set; }
     public TipoPago? TipoPago { get; set; }
 
-    /// <summary>Número de documento de pago (nro cheque, referencia QR, etc.).</summary>
+    /// <summary>NÃºmero de documento de pago (nro cheque, referencia QR, etc.).</summary>
     public string? NumeroDocumentoPago { get; set; }
 
     // ?? Usuario que registra ??
@@ -62,11 +62,11 @@ public class AsientoContable : TenantEntity
     public int? RegistradoPorId { get; set; }
     public Usuario? RegistradoPor { get; set; }
 
-    /// <summary>Nombre capturado al registrar — firma historica inmutable para impresiones.</summary>
+    /// <summary>Nombre capturado al registrar â€” firma historica inmutable para impresiones.</summary>
     public string? RegistradoPorNombre { get; set; }
 
-    // ?? Origen (para asientos automáticos) ??
-    /// <summary>Tipo de documento origen (ej: Recepción, Importación, Venta, Ajuste).</summary>
+    // ?? Origen (para asientos automÃ¡ticos) ??
+    /// <summary>Tipo de documento origen (ej: RecepciÃ³n, ImportaciÃ³n, Venta, Ajuste).</summary>
     public string? OrigenTipo { get; set; }
 
     /// <summary>Id del documento origen (ej: RecepcionCompraId, HojaImportacionId).</summary>
@@ -77,12 +77,93 @@ public class AsientoContable : TenantEntity
 
     // ?? Totales ??
     /// <summary>Total Debe (calculado).</summary>
-    public decimal TotalDebe { get; set; }
+    public decimal TotalDebe { get; private set; }
 
     /// <summary>Total Haber (calculado).</summary>
-    public decimal TotalHaber { get; set; }
+    public decimal TotalHaber { get; private set; }
 
-    // Navegación
+    // NavegaciÃ³n
     public ICollection<AsientoContableLinea> Lineas { get; set; } = new List<AsientoContableLinea>();
     public ICollection<ComprobanteDocumento> Documentos { get; set; } = new List<ComprobanteDocumento>();
+
+    // ?? LÃ³gica de Dominio ??
+
+    public void AgregarLinea(AsientoContableLinea linea)
+    {
+        if (Estado != "Borrador")
+            throw new Exceptions.DomainException("No se pueden agregar lÃ­neas a un asiento que no estÃ¡ en Borrador.");
+
+        Lineas.Add(linea);
+        TotalDebe += linea.Debe;
+        TotalHaber += linea.Haber;
+    }
+
+    public void EliminarLinea(long lineaId)
+    {
+        if (Estado != "Borrador")
+            throw new Exceptions.DomainException("No se pueden eliminar lÃ­neas de un asiento que no estÃ¡ en Borrador.");
+
+        var linea = Lineas.FirstOrDefault(l => l.AsientoContableLineaId == lineaId)
+            ?? throw new Exceptions.DomainException($"LÃ­nea {lineaId} no encontrada en el asiento.");
+
+        Lineas.Remove(linea);
+        TotalDebe -= linea.Debe;
+        TotalHaber -= linea.Haber;
+    }
+
+    public Common.Result ValidarCuadratura()
+    {
+        var diferencia = Math.Abs(TotalDebe - TotalHaber);
+        if (diferencia > 0.01m)
+            return Common.Result.Failure($"El comprobante no cuadra. Debe: {TotalDebe:N2}, Haber: {TotalHaber:N2}. Diferencia: {diferencia:N2}.");
+
+        return Common.Result.Success();
+    }
+
+    public Common.Result Contabilizar(string? registradoPorNombre = null)
+    {
+        if (Estado != "Borrador")
+            return Common.Result.Failure($"Solo se puede contabilizar un asiento en Borrador. Estado actual: {Estado}");
+
+        var cuadratura = ValidarCuadratura();
+        if (!cuadratura.IsSuccess)
+            return cuadratura;
+
+        Estado = "Contabilizado";
+        if (!string.IsNullOrEmpty(registradoPorNombre))
+        {
+            RegistradoPorNombre = registradoPorNombre;
+        }
+
+        return Common.Result.Success();
+    }
+
+    public Common.Result Anular(string motivo)
+    {
+        if (Estado == "Anulado")
+            return Common.Result.Failure("El asiento ya estÃ¡ anulado.");
+
+        if (Estado == "Borrador")
+            return Common.Result.Failure("Un asiento en Borrador debe eliminarse, no anularse.");
+
+        Estado = "Anulado";
+        Glosa = $"[ANULADO: {motivo}] {Glosa}";
+
+        return Common.Result.Success();
+    }
+
+    /// <summary>
+    /// Recalcula los totales explÃ­citamente desde una lista externa de lÃ­neas
+    /// y actualiza los totales. Ãštil para Carga Manual/DTOs antes de persistir.
+    /// </summary>
+    public void EstablecerTotales(decimal debe, decimal haber)
+    {
+        TotalDebe = debe;
+        TotalHaber = haber;
+    }
+
+    /// <summary>
+    /// Verifica si el asiento cumple con la partida doble.
+    /// </summary>
+    public bool EstaCuadrado() => ValidarCuadratura().IsSuccess;
 }

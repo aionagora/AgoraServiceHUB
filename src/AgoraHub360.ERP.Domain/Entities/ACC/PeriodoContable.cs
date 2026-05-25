@@ -4,32 +4,32 @@ using AgoraHub360.ERP.Domain.Common;
 using AgoraHub360.ERP.Domain.Entities.Core;
 
 /// <summary>
-/// PerÌodo contable (mensual).
-/// Controla en quÈ meses se pueden registrar asientos y cu·les est·n cerrados.
+/// Per√≠odo contable (mensual).
+/// Controla en qu√© meses se pueden registrar asientos y cu√°les est√°n cerrados.
 /// </summary>
 public class PeriodoContable : TenantEntity
 {
     public int PeriodoContableId { get; set; }
 
-    /// <summary>AÒo fiscal (ej: 2025).</summary>
+    /// <summary>A√±o fiscal (ej: 2025).</summary>
     public int Anio { get; set; }
 
     /// <summary>Mes (1-12).</summary>
     public int Mes { get; set; }
 
-    /// <summary>Nombre del perÌodo (ej: "Enero 2025").</summary>
+    /// <summary>Nombre del per√≠odo (ej: "Enero 2025").</summary>
     public string Nombre { get; set; } = string.Empty;
 
     /// <summary>Estado: Abierto, Cerrado.</summary>
     public string Estado { get; set; } = "Abierto";
 
-    /// <summary>Fecha en que se cerrÛ el perÌodo (null si abierto).</summary>
+    /// <summary>Fecha en que se cerr√≥ el per√≠odo (null si abierto).</summary>
     public DateTime? FechaCierre { get; set; }
 
     /// <summary>FK al usuario que cerro el periodo.</summary>
     public int? CerradoPorId { get; set; }
     public Usuario? CerradoPor { get; set; }
 
-    /// <summary>Nombre capturado al cierre ó firma historica inmutable para reportes.</summary>
+    /// <summary>Nombre capturado al cierre ‚Äî firma historica inmutable para reportes.</summary>
     public string? CerradoPorNombre { get; set; }
 }

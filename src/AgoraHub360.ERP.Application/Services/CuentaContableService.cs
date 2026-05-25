@@ -6,21 +6,29 @@ using AgoraHub360.ERP.Domain.Entities.ACC;
 using AgoraHub360.ERP.Domain.Enums;
 using AgoraHub360.ERP.Domain.Interfaces;
 using AgoraHub360.ERP.Shared.DTOs.Contabilidad;
+using Microsoft.Extensions.Caching.Memory;
 
 public class CuentaContableService : ICuentaContableService
 {
     private readonly IRepository<CuentaContable> _repo;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
+    private readonly IMemoryCache _cache;
+
+    private const string CacheKeyPrefix = "plan-cuentas";
+    private static readonly TimeSpan CacheTTL = TimeSpan.FromMinutes(30);
+    private static readonly TimeSpan CacheSlidingExpiration = TimeSpan.FromMinutes(10);
 
     public CuentaContableService(
         IRepository<CuentaContable> repo,
         IUnitOfWork unitOfWork,
-        ICurrentUserService currentUser)
+        ICurrentUserService currentUser,
+        IMemoryCache cache)
     {
         _repo = repo;
         _unitOfWork = unitOfWork;
         _currentUser = currentUser;
+        _cache = cache;
     }
 
     public async Task<Result<IReadOnlyList<CuentaContableDto>>> GetAllAsync(
@@ -30,18 +38,20 @@ public class CuentaContableService : ICuentaContableService
         if (!empresaId.HasValue)
             return Result<IReadOnlyList<CuentaContableDto>>.Failure("No active company.");
 
-        var cuentas = await _repo.FindAsync(
-            c => c.EmpresaId == empresaId.Value && c.Activo
-                && (!tipo.HasValue || (byte)c.Tipo == tipo.Value)
-                && (!permiteMovimientos.HasValue || c.PermiteMovimientos == permiteMovimientos.Value)
-                && (string.IsNullOrEmpty(search) || c.Codigo.Contains(search) || c.Nombre.Contains(search)),
-            ct);
+        var flatList = await GetFlatCachedAsync(empresaId.Value, ct);
 
-        var all = cuentas.OrderBy(c => c.Codigo).ToList();
-        var padreMap = all.ToDictionary(c => c.CuentaContableId);
+        // Apply optional filters in-memory over the cached flat list
+        var filtered = flatList.AsEnumerable();
+        if (tipo.HasValue)
+            filtered = filtered.Where(c => c.Tipo == ((TipoCuenta)tipo.Value).ToString());
+        if (permiteMovimientos.HasValue)
+            filtered = filtered.Where(c => c.PermiteMovimientos == permiteMovimientos.Value);
+        if (!string.IsNullOrEmpty(search))
+            filtered = filtered.Where(c =>
+                c.Codigo.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                c.Nombre.Contains(search, StringComparison.OrdinalIgnoreCase));
 
-        var dtos = all.Select(c => MapToDto(c, padreMap)).ToList().AsReadOnly();
-        return Result<IReadOnlyList<CuentaContableDto>>.Success(dtos);
+        return Result<IReadOnlyList<CuentaContableDto>>.Success(filtered.ToList().AsReadOnly());
     }
 
     public async Task<Result<IReadOnlyList<CuentaContableDto>>> GetTreeAsync(CancellationToken ct)
@@ -50,26 +60,33 @@ public class CuentaContableService : ICuentaContableService
         if (!empresaId.HasValue)
             return Result<IReadOnlyList<CuentaContableDto>>.Failure("No active company.");
 
-        var cuentas = await _repo.FindAsync(
-            c => c.EmpresaId == empresaId.Value && c.Activo, ct);
+        var treeKey = $"{CacheKeyPrefix}-tree-{empresaId.Value}";
 
-        var all = cuentas.OrderBy(c => c.Codigo).ToList();
-        var padreMap = all.ToDictionary(c => c.CuentaContableId);
-
-        // Build tree
-        var dtoMap = all.ToDictionary(c => c.CuentaContableId, c => MapToDto(c, padreMap));
-        var roots = new List<CuentaContableDto>();
-
-        foreach (var dto in dtoMap.Values)
+        if (!_cache.TryGetValue(treeKey, out IReadOnlyList<CuentaContableDto>? cachedTree) || cachedTree is null)
         {
-            var entity = all.First(c => c.CuentaContableId == dto.CuentaContableId);
-            if (entity.CuentaPadreId.HasValue && dtoMap.TryGetValue(entity.CuentaPadreId.Value, out var padre))
-                padre.SubCuentas.Add(dto);
-            else
-                roots.Add(dto);
+            var flatList = await GetFlatCachedAsync(empresaId.Value, ct);
+
+            var dtoMap = flatList.ToDictionary(c => c.CuentaContableId);
+            var roots = new List<CuentaContableDto>();
+
+            foreach (var dto in dtoMap.Values)
+            {
+                if (dto.CuentaPadreId.HasValue && dtoMap.TryGetValue(dto.CuentaPadreId.Value, out var padre))
+                    padre.SubCuentas.Add(dto);
+                else
+                    roots.Add(dto);
+            }
+
+            cachedTree = roots.AsReadOnly();
+            _cache.Set(treeKey, cachedTree, new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = CacheTTL,
+                SlidingExpiration = CacheSlidingExpiration,
+                Priority = CacheItemPriority.High
+            });
         }
 
-        return Result<IReadOnlyList<CuentaContableDto>>.Success(roots.AsReadOnly());
+        return Result<IReadOnlyList<CuentaContableDto>>.Success(cachedTree);
     }
 
     public async Task<Result<CuentaContableDto>> GetByIdAsync(int id, CancellationToken ct)
@@ -127,6 +144,7 @@ public class CuentaContableService : ICuentaContableService
 
         await _repo.AddAsync(cuenta, ct);
         await _unitOfWork.SaveChangesAsync(ct);
+        InvalidateCache(empresaId.Value);
 
         return Result<CuentaContableDto>.Success(MapToDto(cuenta, new Dictionary<int, CuentaContable>()));
     }
@@ -157,6 +175,7 @@ public class CuentaContableService : ICuentaContableService
 
         await _repo.UpdateAsync(cuenta, ct);
         await _unitOfWork.SaveChangesAsync(ct);
+        InvalidateCache(empresaId.Value);
 
         var all = await _repo.FindAsync(c => c.EmpresaId == empresaId.Value && c.Activo, ct);
         return Result<CuentaContableDto>.Success(MapToDto(cuenta, all.ToDictionary(c => c.CuentaContableId)));
@@ -183,6 +202,7 @@ public class CuentaContableService : ICuentaContableService
         cuenta.Activo = false;
         await _repo.UpdateAsync(cuenta, ct);
         await _unitOfWork.SaveChangesAsync(ct);
+        InvalidateCache(empresaId.Value);
 
         return Result<bool>.Success(true);
     }
@@ -232,10 +252,42 @@ public class CuentaContableService : ICuentaContableService
                 codeMap[s.Codigo] = s.CuentaContableId;
         }
 
+        InvalidateCache(empresaId.Value);
         return Result<int>.Success(cuentas.Count);
     }
 
-    // ?? Helpers ??
+    // 鈹�鈹� Cache helpers 鈹�鈹�
+
+    private async Task<IReadOnlyList<CuentaContableDto>> GetFlatCachedAsync(int empresaId, CancellationToken ct)
+    {
+        var flatKey = $"{CacheKeyPrefix}-{empresaId}";
+
+        if (!_cache.TryGetValue(flatKey, out IReadOnlyList<CuentaContableDto>? cached) || cached is null)
+        {
+            var cuentas = await _repo.FindAsync(
+                c => c.EmpresaId == empresaId && c.Activo, ct);
+
+            var all = cuentas.OrderBy(c => c.Codigo).ToList();
+            var padreMap = all.ToDictionary(c => c.CuentaContableId);
+
+            cached = all.Select(c => MapToDto(c, padreMap)).ToList().AsReadOnly();
+
+            _cache.Set(flatKey, cached, new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = CacheTTL,
+                SlidingExpiration = CacheSlidingExpiration,
+                Priority = CacheItemPriority.High
+            });
+        }
+
+        return cached;
+    }
+
+    private void InvalidateCache(int empresaId)
+    {
+        _cache.Remove($"{CacheKeyPrefix}-{empresaId}");
+        _cache.Remove($"{CacheKeyPrefix}-tree-{empresaId}");
+    }
 
     private static CuentaContableDto MapToDto(CuentaContable c, Dictionary<int, CuentaContable> padreMap)
     {
@@ -269,7 +321,7 @@ public class CuentaContableService : ICuentaContableService
     }
 
     /// <summary>
-    /// Plan de cuentas est醤dar Bolivia / NIIF adaptado.
+    /// Plan de cuentas est谩ndar Bolivia / NIIF adaptado.
     /// </summary>
     private static List<CuentaContable> BuildPlanCuentasBolivia(int empresaId)
     {
@@ -309,17 +361,17 @@ public class CuentaContableService : ICuentaContableService
         Add("1.1.2.02", "Anticipos a Proveedores", TipoCuenta.Activo, NaturalezaCuenta.Deudora, 4, true);
         Add("1.1.2.03", "Documentos por Cobrar", TipoCuenta.Activo, NaturalezaCuenta.Deudora, 4, true);
         Add("1.1.2.04", "Deudores Diversos", TipoCuenta.Activo, NaturalezaCuenta.Deudora, 4, true);
-        Add("1.1.2.05", "Provisi髇 Cuentas Incobrables", TipoCuenta.Activo, NaturalezaCuenta.Acreedora, 4, true);
+        Add("1.1.2.05", "Provisi贸n Cuentas Incobrables", TipoCuenta.Activo, NaturalezaCuenta.Acreedora, 4, true);
 
         Add("1.1.3", "Inventarios", TipoCuenta.Activo, NaturalezaCuenta.Deudora, 3);
-        Add("1.1.3.01", "Inventario de Mercader韆s", TipoCuenta.Activo, NaturalezaCuenta.Deudora, 4, true);
-        Add("1.1.3.02", "Inventario en Tr醤sito", TipoCuenta.Activo, NaturalezaCuenta.Deudora, 4, true);
+        Add("1.1.3.01", "Inventario de Mercader铆as", TipoCuenta.Activo, NaturalezaCuenta.Deudora, 4, true);
+        Add("1.1.3.02", "Inventario en Tr谩nsito", TipoCuenta.Activo, NaturalezaCuenta.Deudora, 4, true);
         Add("1.1.3.03", "Materias Primas", TipoCuenta.Activo, NaturalezaCuenta.Deudora, 4, true);
         Add("1.1.3.04", "Productos en Proceso", TipoCuenta.Activo, NaturalezaCuenta.Deudora, 4, true);
         Add("1.1.3.05", "Productos Terminados", TipoCuenta.Activo, NaturalezaCuenta.Deudora, 4, true);
 
         Add("1.1.4", "Impuestos por Recuperar", TipoCuenta.Activo, NaturalezaCuenta.Deudora, 3);
-        Add("1.1.4.01", "Cr閐ito Fiscal IVA", TipoCuenta.Activo, NaturalezaCuenta.Deudora, 4, true);
+        Add("1.1.4.01", "Cr茅dito Fiscal IVA", TipoCuenta.Activo, NaturalezaCuenta.Deudora, 4, true);
         Add("1.1.4.02", "Anticipo IT", TipoCuenta.Activo, NaturalezaCuenta.Deudora, 4, true);
         Add("1.1.4.03", "Anticipo IUE", TipoCuenta.Activo, NaturalezaCuenta.Deudora, 4, true);
 
@@ -329,15 +381,15 @@ public class CuentaContableService : ICuentaContableService
         Add("1.2.1.01", "Terrenos", TipoCuenta.Activo, NaturalezaCuenta.Deudora, 4, true);
         Add("1.2.1.02", "Edificios", TipoCuenta.Activo, NaturalezaCuenta.Deudora, 4, true);
         Add("1.2.1.03", "Maquinaria y Equipo", TipoCuenta.Activo, NaturalezaCuenta.Deudora, 4, true);
-        Add("1.2.1.04", "Veh韈ulos", TipoCuenta.Activo, NaturalezaCuenta.Deudora, 4, true);
+        Add("1.2.1.04", "Veh铆culos", TipoCuenta.Activo, NaturalezaCuenta.Deudora, 4, true);
         Add("1.2.1.05", "Muebles y Enseres", TipoCuenta.Activo, NaturalezaCuenta.Deudora, 4, true);
-        Add("1.2.1.06", "Equipos de Computaci髇", TipoCuenta.Activo, NaturalezaCuenta.Deudora, 4, true);
-        Add("1.2.2", "Depreciaci髇 Acumulada", TipoCuenta.Activo, NaturalezaCuenta.Acreedora, 3);
+        Add("1.2.1.06", "Equipos de Computaci贸n", TipoCuenta.Activo, NaturalezaCuenta.Deudora, 4, true);
+        Add("1.2.2", "Depreciaci贸n Acumulada", TipoCuenta.Activo, NaturalezaCuenta.Acreedora, 3);
         Add("1.2.2.01", "Dep. Acum. Edificios", TipoCuenta.Activo, NaturalezaCuenta.Acreedora, 4, true);
         Add("1.2.2.02", "Dep. Acum. Maquinaria", TipoCuenta.Activo, NaturalezaCuenta.Acreedora, 4, true);
-        Add("1.2.2.03", "Dep. Acum. Veh韈ulos", TipoCuenta.Activo, NaturalezaCuenta.Acreedora, 4, true);
+        Add("1.2.2.03", "Dep. Acum. Veh铆culos", TipoCuenta.Activo, NaturalezaCuenta.Acreedora, 4, true);
         Add("1.2.2.04", "Dep. Acum. Muebles", TipoCuenta.Activo, NaturalezaCuenta.Acreedora, 4, true);
-        Add("1.2.2.05", "Dep. Acum. Eq. Computaci髇", TipoCuenta.Activo, NaturalezaCuenta.Acreedora, 4, true);
+        Add("1.2.2.05", "Dep. Acum. Eq. Computaci贸n", TipoCuenta.Activo, NaturalezaCuenta.Acreedora, 4, true);
 
         // ????????????????????????????????????????????
         // 2. PASIVO
@@ -355,17 +407,17 @@ public class CuentaContableService : ICuentaContableService
         Add("2.1.2.01", "Sueldos por Pagar", TipoCuenta.Pasivo, NaturalezaCuenta.Acreedora, 4, true);
         Add("2.1.2.02", "Aportes Patronales por Pagar", TipoCuenta.Pasivo, NaturalezaCuenta.Acreedora, 4, true);
         Add("2.1.2.03", "Aguinaldos por Pagar", TipoCuenta.Pasivo, NaturalezaCuenta.Acreedora, 4, true);
-        Add("2.1.2.04", "Indemnizaci髇 por Pagar", TipoCuenta.Pasivo, NaturalezaCuenta.Acreedora, 4, true);
+        Add("2.1.2.04", "Indemnizaci贸n por Pagar", TipoCuenta.Pasivo, NaturalezaCuenta.Acreedora, 4, true);
         Add("2.1.2.05", "Retenciones AFC por Pagar", TipoCuenta.Pasivo, NaturalezaCuenta.Acreedora, 4, true);
         Add("2.1.2.06", "Retenciones RC-IVA por Pagar", TipoCuenta.Pasivo, NaturalezaCuenta.Acreedora, 4, true);
 
         Add("2.1.3", "Impuestos por Pagar", TipoCuenta.Pasivo, NaturalezaCuenta.Acreedora, 3);
-        Add("2.1.3.01", "D閎ito Fiscal IVA", TipoCuenta.Pasivo, NaturalezaCuenta.Acreedora, 4, true);
+        Add("2.1.3.01", "D茅bito Fiscal IVA", TipoCuenta.Pasivo, NaturalezaCuenta.Acreedora, 4, true);
         Add("2.1.3.02", "IT por Pagar", TipoCuenta.Pasivo, NaturalezaCuenta.Acreedora, 4, true);
         Add("2.1.3.03", "IUE por Pagar", TipoCuenta.Pasivo, NaturalezaCuenta.Acreedora, 4, true);
         Add("2.1.3.04", "Retenciones IUE por Pagar", TipoCuenta.Pasivo, NaturalezaCuenta.Acreedora, 4, true);
 
-        Add("2.1.4", "Gastos de Importaci髇 por Pagar", TipoCuenta.Pasivo, NaturalezaCuenta.Acreedora, 3);
+        Add("2.1.4", "Gastos de Importaci贸n por Pagar", TipoCuenta.Pasivo, NaturalezaCuenta.Acreedora, 3);
         Add("2.1.4.01", "Fletes por Pagar", TipoCuenta.Pasivo, NaturalezaCuenta.Acreedora, 4, true);
         Add("2.1.4.02", "Seguros por Pagar", TipoCuenta.Pasivo, NaturalezaCuenta.Acreedora, 4, true);
         Add("2.1.4.03", "Aranceles por Pagar", TipoCuenta.Pasivo, NaturalezaCuenta.Acreedora, 4, true);
@@ -374,12 +426,12 @@ public class CuentaContableService : ICuentaContableService
         // 2.2 Pasivo No Corriente
         Add("2.2", "PASIVO NO CORRIENTE", TipoCuenta.Pasivo, NaturalezaCuenta.Acreedora, 2);
         Add("2.2.1", "Deudas a Largo Plazo", TipoCuenta.Pasivo, NaturalezaCuenta.Acreedora, 3);
-        Add("2.2.1.01", "Pr閟tamos Bancarios LP", TipoCuenta.Pasivo, NaturalezaCuenta.Acreedora, 4, true);
+        Add("2.2.1.01", "Pr茅stamos Bancarios LP", TipoCuenta.Pasivo, NaturalezaCuenta.Acreedora, 4, true);
         Add("2.2.1.02", "Hipotecas por Pagar", TipoCuenta.Pasivo, NaturalezaCuenta.Acreedora, 4, true);
 
         Add("2.2.2", "Previsiones", TipoCuenta.Pasivo, NaturalezaCuenta.Acreedora, 3);
-        Add("2.2.2.01", "Previsi髇 para Indemnizaci髇", TipoCuenta.Pasivo, NaturalezaCuenta.Acreedora, 4, true);
-        Add("2.2.2.02", "Previsi髇 para Aguinaldos", TipoCuenta.Pasivo, NaturalezaCuenta.Acreedora, 4, true);
+        Add("2.2.2.01", "Previsi贸n para Indemnizaci贸n", TipoCuenta.Pasivo, NaturalezaCuenta.Acreedora, 4, true);
+        Add("2.2.2.02", "Previsi贸n para Aguinaldos", TipoCuenta.Pasivo, NaturalezaCuenta.Acreedora, 4, true);
 
         // ????????????????????????????????????????????
         // 3. PATRIMONIO
@@ -395,7 +447,7 @@ public class CuentaContableService : ICuentaContableService
         Add("3.2.1", "Reservas de Capital", TipoCuenta.Patrimonio, NaturalezaCuenta.Acreedora, 3);
         Add("3.2.1.01", "Reserva Legal", TipoCuenta.Patrimonio, NaturalezaCuenta.Acreedora, 4, true);
         Add("3.2.1.02", "Reservas Estatutarias", TipoCuenta.Patrimonio, NaturalezaCuenta.Acreedora, 4, true);
-        Add("3.2.1.03", "Ajuste por Inflaci髇", TipoCuenta.Patrimonio, NaturalezaCuenta.Acreedora, 4, true);
+        Add("3.2.1.03", "Ajuste por Inflaci贸n", TipoCuenta.Patrimonio, NaturalezaCuenta.Acreedora, 4, true);
 
         Add("3.3", "RESULTADOS", TipoCuenta.Patrimonio, NaturalezaCuenta.Acreedora, 2);
         Add("3.3.1", "Resultados Acumulados", TipoCuenta.Patrimonio, NaturalezaCuenta.Acreedora, 3);
@@ -409,7 +461,7 @@ public class CuentaContableService : ICuentaContableService
 
         Add("4.1", "INGRESOS OPERACIONALES", TipoCuenta.Ingreso, NaturalezaCuenta.Acreedora, 2);
         Add("4.1.1", "Ventas", TipoCuenta.Ingreso, NaturalezaCuenta.Acreedora, 3);
-        Add("4.1.1.01", "Ventas de Mercader韆s", TipoCuenta.Ingreso, NaturalezaCuenta.Acreedora, 4, true);
+        Add("4.1.1.01", "Ventas de Mercader铆as", TipoCuenta.Ingreso, NaturalezaCuenta.Acreedora, 4, true);
         Add("4.1.1.02", "Ventas de Servicios", TipoCuenta.Ingreso, NaturalezaCuenta.Acreedora, 4, true);
         Add("4.1.1.03", "Devoluciones sobre Ventas", TipoCuenta.Ingreso, NaturalezaCuenta.Deudora, 4, true);
         Add("4.1.1.04", "Descuentos sobre Ventas", TipoCuenta.Ingreso, NaturalezaCuenta.Deudora, 4, true);
@@ -425,28 +477,28 @@ public class CuentaContableService : ICuentaContableService
         // ????????????????????????????????????????????
         Add("5", "GASTOS", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 1);
 
-        Add("5.1", "GASTOS DE ADMINISTRACI覰", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 2);
+        Add("5.1", "GASTOS DE ADMINISTRACI脫N", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 2);
         Add("5.1.1", "Gastos de Personal", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 3);
         Add("5.1.1.01", "Sueldos y Salarios", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 4, true);
         Add("5.1.1.02", "Horas Extra", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 4, true);
         Add("5.1.1.03", "Bonos y Comisiones", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 4, true);
         Add("5.1.1.04", "Aportes Patronales", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 4, true);
         Add("5.1.1.05", "Aguinaldos", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 4, true);
-        Add("5.1.1.06", "Indemnizaci髇", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 4, true);
+        Add("5.1.1.06", "Indemnizaci贸n", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 4, true);
 
         Add("5.1.2", "Gastos Generales", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 3);
         Add("5.1.2.01", "Alquileres", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 4, true);
-        Add("5.1.2.02", "Servicios B醩icos", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 4, true);
+        Add("5.1.2.02", "Servicios B谩sicos", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 4, true);
         Add("5.1.2.03", "Comunicaciones", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 4, true);
         Add("5.1.2.04", "Material de Escritorio", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 4, true);
         Add("5.1.2.05", "Seguros", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 4, true);
         Add("5.1.2.06", "Mantenimiento y Reparaciones", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 4, true);
-        Add("5.1.2.07", "Depreciaci髇", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 4, true);
+        Add("5.1.2.07", "Depreciaci贸n", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 4, true);
         Add("5.1.2.08", "Gastos de Viaje", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 4, true);
         Add("5.1.2.09", "Honorarios Profesionales", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 4, true);
         Add("5.1.2.10", "Gastos Varios", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 4, true);
 
-        Add("5.2", "GASTOS DE COMERCIALIZACI覰", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 2);
+        Add("5.2", "GASTOS DE COMERCIALIZACI脫N", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 2);
         Add("5.2.1", "Gastos de Venta", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 3);
         Add("5.2.1.01", "Publicidad y Propaganda", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 4, true);
         Add("5.2.1.02", "Comisiones sobre Ventas", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 4, true);
@@ -457,7 +509,7 @@ public class CuentaContableService : ICuentaContableService
         Add("5.3.1", "Costos Financieros", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 3);
         Add("5.3.1.01", "Intereses Bancarios", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 4, true);
         Add("5.3.1.02", "Comisiones Bancarias", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 4, true);
-        Add("5.3.1.03", "Diferencia de Cambio (P閞dida)", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 4, true);
+        Add("5.3.1.03", "Diferencia de Cambio (P茅rdida)", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 4, true);
         Add("5.3.1.04", "ITF", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 4, true);
 
         Add("5.4", "IMPUESTOS", TipoCuenta.Gasto, NaturalezaCuenta.Deudora, 2);
@@ -471,17 +523,17 @@ public class CuentaContableService : ICuentaContableService
         Add("6", "COSTOS", TipoCuenta.Costo, NaturalezaCuenta.Deudora, 1);
 
         Add("6.1", "COSTO DE VENTAS", TipoCuenta.Costo, NaturalezaCuenta.Deudora, 2);
-        Add("6.1.1", "Costo de Mercader韆s Vendidas", TipoCuenta.Costo, NaturalezaCuenta.Deudora, 3);
+        Add("6.1.1", "Costo de Mercader铆as Vendidas", TipoCuenta.Costo, NaturalezaCuenta.Deudora, 3);
         Add("6.1.1.01", "Costo de Ventas", TipoCuenta.Costo, NaturalezaCuenta.Deudora, 4, true);
 
-        Add("6.2", "COSTOS DE IMPORTACI覰", TipoCuenta.Costo, NaturalezaCuenta.Deudora, 2);
-        Add("6.2.1", "Costos de Importaci髇", TipoCuenta.Costo, NaturalezaCuenta.Deudora, 3);
-        Add("6.2.1.01", "Fletes de Importaci髇", TipoCuenta.Costo, NaturalezaCuenta.Deudora, 4, true);
-        Add("6.2.1.02", "Seguros de Importaci髇", TipoCuenta.Costo, NaturalezaCuenta.Deudora, 4, true);
+        Add("6.2", "COSTOS DE IMPORTACI脫N", TipoCuenta.Costo, NaturalezaCuenta.Deudora, 2);
+        Add("6.2.1", "Costos de Importaci贸n", TipoCuenta.Costo, NaturalezaCuenta.Deudora, 3);
+        Add("6.2.1.01", "Fletes de Importaci贸n", TipoCuenta.Costo, NaturalezaCuenta.Deudora, 4, true);
+        Add("6.2.1.02", "Seguros de Importaci贸n", TipoCuenta.Costo, NaturalezaCuenta.Deudora, 4, true);
         Add("6.2.1.03", "Aranceles e Impuestos Aduana", TipoCuenta.Costo, NaturalezaCuenta.Deudora, 4, true);
         Add("6.2.1.04", "Gastos de Agencia Despachante", TipoCuenta.Costo, NaturalezaCuenta.Deudora, 4, true);
         Add("6.2.1.05", "Almacenaje y Manipuleo", TipoCuenta.Costo, NaturalezaCuenta.Deudora, 4, true);
-        Add("6.2.1.06", "Otros Costos de Importaci髇", TipoCuenta.Costo, NaturalezaCuenta.Deudora, 4, true);
+        Add("6.2.1.06", "Otros Costos de Importaci贸n", TipoCuenta.Costo, NaturalezaCuenta.Deudora, 4, true);
 
         return cuentas;
     }

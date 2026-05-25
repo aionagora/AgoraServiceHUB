@@ -1,0 +1,414 @@
+@page "/contabilidad/centros-costo"
+@attribute [Authorize]
+@inject CentroCostoHttpService CcService
+@inject IJSRuntime JS
+
+<PageTitle>Centros de Costo - AgoraHub360 ERP</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3><i class="bi bi-diagram-3-fill"></i> Centros de Costo</h3>
+            <p class="text-muted mb-0">Gestión de centros de costo para distribución de gastos</p>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-primary" @onclick="NuevoCentroCosto">
+                <i class="bi bi-plus-circle"></i> Nuevo Centro de Costo
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show">
+            <i class="bi bi-check-circle-fill"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show">
+            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (loading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border" style="color:#8b5cf6"></div>
+            <p class="mt-2 text-muted">Cargando centros de costo...</p>
+        </div>
+    }
+    else if (!showForm)
+    {
+        @* LISTA *@
+        <div class="card mb-3">
+            <div class="card-body py-2">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label mb-1 small">Buscar</label>
+                        <input type="text" class="form-control form-control-sm" placeholder="Código o nombre..."
+                               @bind="filtroSearch" @oninput="FiltrarLista" />
+                    </div>
+                    <div class="col-auto">
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="LoadData">
+                            <i class="bi bi-arrow-clockwise"></i> Actualizar
+                        </button>
+                    </div>
+                    <div class="col-auto ms-auto">
+                        <span class="badge bg-secondary">@centrosFiltrados.Count registros</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="table-responsive">
+                <table class="table table-hover table-sm mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Código</th>
+                            <th>Nombre</th>
+                            <th>Centro Padre</th>
+                            <th>Descripción</th>
+                            <th class="text-end" style="width:130px">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (centrosFiltrados.Count == 0)
+                        {
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    <i class="bi bi-diagram-3 fs-3 d-block mb-2"></i>
+                                    No hay centros de costo registrados
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var cc in centrosFiltrados.OrderBy(c => c.Codigo))
+                            {
+                                <tr>
+                                    <td><code class="text-purple">@cc.Codigo</code></td>
+                                    <td class="fw-semibold">
+                                        @if (cc.ParentId.HasValue)
+                                        {
+                                            <span class="text-muted me-1" style="font-size:0.75rem">└</span>
+                                        }
+                                        @cc.Nombre
+                                    </td>
+                                    <td class="text-muted small">@(cc.ParentNombre ?? "—")</td>
+                                    <td class="text-muted small">@(cc.Descripcion ?? "—")</td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-outline-primary me-1" title="Editar"
+                                                @onclick="() => EditarCentroCosto(cc)">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" title="Eliminar"
+                                                @onclick="() => ConfirmarEliminar(cc)">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+    else
+    {
+        @* FORMULARIO CREAR / EDITAR *@
+        <div class="card">
+            <div class="card-header py-3 d-flex align-items-center justify-content-between">
+                <h5 class="mb-0">
+                    <i class="bi bi-diagram-3-fill me-2" style="color:#8b5cf6"></i>
+                    @(editMode ? "Editar Centro de Costo" : "Nuevo Centro de Costo")
+                </h5>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="CancelarFormulario">
+                    <i class="bi bi-x-circle"></i> Cancelar
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    @if (!editMode)
+                    {
+                        <div class="col-md-3">
+                            <label class="form-label">Código <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control @(validationErrors.ContainsKey("Codigo") ? "is-invalid" : "")"
+                                   placeholder="Ej: CC-001"
+                                   @bind="formCodigo" maxlength="20" />
+                            @if (validationErrors.ContainsKey("Codigo"))
+                            {
+                                <div class="invalid-feedback">@validationErrors["Codigo"]</div>
+                            }
+                        </div>
+                    }
+                    <div class="col-md-@(editMode ? "6" : "5")">
+                        <label class="form-label">Nombre <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control @(validationErrors.ContainsKey("Nombre") ? "is-invalid" : "")"
+                               placeholder="Nombre del centro de costo"
+                               @bind="formNombre" maxlength="100" />
+                        @if (validationErrors.ContainsKey("Nombre"))
+                        {
+                            <div class="invalid-feedback">@validationErrors["Nombre"]</div>
+                        }
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Centro Padre (opcional)</label>
+                        <select class="form-select" @bind="formParentId">
+                            <option value="">— Sin padre (nivel raíz) —</option>
+                            @foreach (var p in centros.Where(c => c.Id != editId))
+                            {
+                                <option value="@p.Id">@p.Codigo – @p.Nombre</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Descripción</label>
+                        <textarea class="form-control" rows="2" placeholder="Descripción opcional..."
+                                  @bind="formDescripcion" maxlength="300"></textarea>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 mt-4">
+                    <button class="btn btn-primary" @onclick="GuardarCentroCosto" disabled="@saving">
+                        @if (saving)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        <i class="bi bi-floppy-fill me-1"></i>
+                        @(editMode ? "Actualizar" : "Crear Centro de Costo")
+                    </button>
+                    <button class="btn btn-outline-secondary" @onclick="CancelarFormulario">
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@* Modal confirmación eliminar *@
+@if (showDeleteConfirm && ccAEliminar is not null)
+{
+    <div class="modal fade show d-block" style="background:rgba(0,0,0,0.5)">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmar eliminación
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CancelarEliminar"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Está seguro de eliminar el centro de costo <strong>@ccAEliminar.Codigo – @ccAEliminar.Nombre</strong>?</p>
+                    <p class="text-muted small mb-0">Esta acción desactivará el registro. Los asientos contables existentes no se verán afectados.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CancelarEliminar">Cancelar</button>
+                    <button class="btn btn-danger" @onclick="EliminarCentroCosto" disabled="@deleting">
+                        @if (deleting) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        <i class="bi bi-trash me-1"></i> Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .text-purple { color: #8b5cf6; }
+</style>
+
+@code {
+    // Estado
+    private bool loading = true;
+    private bool saving = false;
+    private bool deleting = false;
+    private bool showForm = false;
+    private bool editMode = false;
+    private bool showDeleteConfirm = false;
+
+    private string? successMessage;
+    private string? errorMessage;
+    private string filtroSearch = "";
+
+    // Datos
+    private List<CentroCostoDto> centros = new();
+    private List<CentroCostoDto> centrosFiltrados = new();
+    private CentroCostoDto? ccAEliminar;
+
+    // Formulario
+    private int editId;
+    private string formCodigo = "";
+    private string formNombre = "";
+    private string formDescripcion = "";
+    private int? formParentId;
+    private Dictionary<string, string> validationErrors = new();
+
+    protected override async Task OnInitializedAsync() => await LoadData();
+
+    private async Task LoadData()
+    {
+        loading = true;
+        errorMessage = null;
+        try
+        {
+            centros = await CcService.GetAllAsync();
+            FiltrarLista(null);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar centros de costo: {ex.Message}";
+        }
+        finally { loading = false; }
+    }
+
+    private void FiltrarLista(ChangeEventArgs? e)
+    {
+        if (e is not null) filtroSearch = e.Value?.ToString() ?? "";
+        centrosFiltrados = string.IsNullOrWhiteSpace(filtroSearch)
+            ? centros.ToList()
+            : centros.Where(c =>
+                c.Codigo.Contains(filtroSearch, StringComparison.OrdinalIgnoreCase) ||
+                c.Nombre.Contains(filtroSearch, StringComparison.OrdinalIgnoreCase) ||
+                (c.Descripcion?.Contains(filtroSearch, StringComparison.OrdinalIgnoreCase) ?? false)
+            ).ToList();
+    }
+
+    private void NuevoCentroCosto()
+    {
+        editMode = false;
+        editId = 0;
+        formCodigo = "";
+        formNombre = "";
+        formDescripcion = "";
+        formParentId = null;
+        validationErrors.Clear();
+        showForm = true;
+        successMessage = null;
+        errorMessage = null;
+    }
+
+    private void EditarCentroCosto(CentroCostoDto cc)
+    {
+        editMode = true;
+        editId = cc.Id;
+        formCodigo = cc.Codigo;
+        formNombre = cc.Nombre;
+        formDescripcion = cc.Descripcion ?? "";
+        formParentId = cc.ParentId;
+        validationErrors.Clear();
+        showForm = true;
+        successMessage = null;
+        errorMessage = null;
+    }
+
+    private async Task GuardarCentroCosto()
+    {
+        validationErrors.Clear();
+
+        // Validaciones
+        if (!editMode && string.IsNullOrWhiteSpace(formCodigo))
+            validationErrors["Codigo"] = "El código es obligatorio.";
+        if (string.IsNullOrWhiteSpace(formNombre))
+            validationErrors["Nombre"] = "El nombre es obligatorio.";
+
+        if (validationErrors.Count > 0) return;
+
+        saving = true;
+        errorMessage = null;
+        try
+        {
+            if (!editMode)
+            {
+                var dto = new CreateCentroCostoDto
+                {
+                    Codigo = formCodigo.Trim().ToUpper(),
+                    Nombre = formNombre.Trim(),
+                    Descripcion = string.IsNullOrWhiteSpace(formDescripcion) ? null : formDescripcion.Trim(),
+                    ParentId = formParentId
+                };
+                var result = await CcService.CreateAsync(dto);
+                if (!result.Success)
+                {
+                    errorMessage = result.Message ?? "Error al crear el centro de costo.";
+                    return;
+                }
+                successMessage = $"Centro de costo '{dto.Codigo}' creado correctamente.";
+            }
+            else
+            {
+                var dto = new UpdateCentroCostoDto
+                {
+                    Nombre = formNombre.Trim(),
+                    Descripcion = string.IsNullOrWhiteSpace(formDescripcion) ? null : formDescripcion.Trim(),
+                    ParentId = formParentId
+                };
+                var result = await CcService.UpdateAsync(editId, dto);
+                if (!result.Success)
+                {
+                    errorMessage = result.Message ?? "Error al actualizar el centro de costo.";
+                    return;
+                }
+                successMessage = "Centro de costo actualizado correctamente.";
+            }
+
+            showForm = false;
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error inesperado: {ex.Message}";
+        }
+        finally { saving = false; }
+    }
+
+    private void CancelarFormulario()
+    {
+        showForm = false;
+        validationErrors.Clear();
+        errorMessage = null;
+    }
+
+    private void ConfirmarEliminar(CentroCostoDto cc)
+    {
+        ccAEliminar = cc;
+        showDeleteConfirm = true;
+    }
+
+    private void CancelarEliminar()
+    {
+        ccAEliminar = null;
+        showDeleteConfirm = false;
+    }
+
+    private async Task EliminarCentroCosto()
+    {
+        if (ccAEliminar is null) return;
+        deleting = true;
+        try
+        {
+            var result = await CcService.DeleteAsync(ccAEliminar.Id);
+            if (!result.Success)
+            {
+                errorMessage = result.Message ?? "Error al eliminar.";
+                showDeleteConfirm = false;
+                return;
+            }
+            successMessage = $"Centro de costo '{ccAEliminar.Codigo}' eliminado correctamente.";
+            showDeleteConfirm = false;
+            ccAEliminar = null;
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al eliminar: {ex.Message}";
+            showDeleteConfirm = false;
+        }
+        finally { deleting = false; }
+    }
+}

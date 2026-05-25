@@ -41,7 +41,7 @@ public class ProductUomService : IProductUomService
         var dup = await _repo.FindAsync(
             pu => pu.ProductId == dto.ProductId && pu.UomId == dto.UomId, ct);
         if (dup.Any())
-            return Result<ProductUomDto>.Failure("Esta unidad de medida ya est· asignada al producto.");
+            return Result<ProductUomDto>.Failure("Esta unidad de medida ya est√° asignada al producto.");
 
         var uom = await _uomRepo.GetByIdAsync(dto.UomId, ct);
         if (uom is null) return Result<ProductUomDto>.Failure($"UdM {dto.UomId} no encontrada.");

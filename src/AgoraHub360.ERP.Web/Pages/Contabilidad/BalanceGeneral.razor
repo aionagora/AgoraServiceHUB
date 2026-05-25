@@ -1,19 +1,21 @@
 @page "/contabilidad/balance-general"
 @attribute [Authorize]
 @inject EstadoFinancieroHttpService ReporteService
+@inject HttpExportEstadosFinancierosService ExportService
+@inject FileDownloadService FileDownload
 @inject IJSRuntime JS
 
 <PageTitle>Balance General - AgoraHub360 ERP</PageTitle>
 
 <div class="container-fluid">
-    <div class="row mb-3">
+    <div class="row mb-3 d-print-none">
         <div class="col">
             <h3><i class="bi bi-bar-chart-line-fill"></i> Balance General</h3>
-            <p class="text-muted mb-0">Estado de Situación Financiera</p>
+            <p class="text-muted mb-0">Estado de SituaciÃ³n Financiera</p>
         </div>
     </div>
 
-    <div class="card mb-3">
+    <div class="card mb-3 d-print-none">
         <div class="card-body py-2">
             <div class="row g-2 align-items-end">
                 <div class="col-md-3">
@@ -25,12 +27,11 @@
                         @if (loading) { <span class="spinner-border spinner-border-sm me-1"></span> }
                         <i class="bi bi-calculator"></i> Generar
                     </button>
-                </div>
-                <div class="col-md-auto">
-                    <button class="btn btn-sm btn-success" @onclick="ExportarExcel" disabled="@(exportando || data == null)">
-                        @if (exportando) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                        <i class="bi bi-file-earmark-excel"></i> Excel
-                    </button>
+                    <ExportButtons Disabled="@(data == null)" 
+                                   ExportandoExcel="_exportandoExcel" 
+                                   ExportandoPdf="_exportandoPdf" 
+                                   OnExcel="ExportarExcel" 
+                                   OnPdf="ExportarPdf" />
                 </div>
                 <div class="col-md-auto">
                     <button class="btn btn-sm btn-outline-secondary" @onclick="Imprimir" disabled="@(data == null)">
@@ -57,7 +58,7 @@
                     <div class="text-center mb-4">
                         <h4 class="fw-bold">@data.Empresa</h4>
                         <h5>BALANCE GENERAL</h5>
-                        <p class="text-muted">Al @data.FechaCorte.ToString("dd/MM/yyyy") — Gestión @data.Gestion</p>
+                        <p class="text-muted">Al @data.FechaCorte.ToString("dd/MM/yyyy") â€” GestiÃ³n @data.Gestion</p>
                         <p class="small text-muted">(Expresado en Bolivianos)</p>
                     </div>
 
@@ -98,11 +99,11 @@
                     <div class="text-center mt-4">
                         @if (data.Cuadrado)
                         {
-                            <span class="badge bg-success fs-6"><i class="bi bi-check-circle-fill"></i> Balance cuadrado — Activos = Pasivos + Patrimonio</span>
+                            <span class="badge bg-success fs-6"><i class="bi bi-check-circle-fill"></i> Balance cuadrado â€” Activos = Pasivos + Patrimonio</span>
                         }
                         else
                         {
-                            <span class="badge bg-danger fs-6"><i class="bi bi-exclamation-triangle-fill"></i> Balance NO cuadra — Diferencia: @Math.Abs(data.TotalActivos - data.TotalPasivoPatrimonio).ToString("N2")</span>
+                            <span class="badge bg-danger fs-6"><i class="bi bi-exclamation-triangle-fill"></i> Balance NO cuadra â€” Diferencia: @Math.Abs(data.TotalActivos - data.TotalPasivoPatrimonio).ToString("N2")</span>
                         }
                     </div>
                 </div>
@@ -115,8 +116,9 @@
     private DateTime fechaCorte = DateTime.Today;
     private BalanceGeneralDto? data;
     private bool loading;
-    private bool exportando;
     private string? errorMessage;
+    private bool _exportandoExcel;
+    private bool _exportandoPdf;
 
     private async Task Generar()
     {
@@ -132,18 +134,32 @@
 
     private async Task ExportarExcel()
     {
-        exportando = true;
         try
         {
-            var bytes = await ReporteService.ExportBalanceGeneralExcelAsync(fechaCorte);
-            if (bytes != null)
-                await JS.InvokeVoidAsync("downloadFile",
-                    $"Balance_General_{fechaCorte:yyyyMMdd}.xlsx",
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    Convert.ToBase64String(bytes));
+            _exportandoExcel = true;
+            var url = ExportService.GetBalanceGeneralExportUrl(fechaCorte, "xlsx");
+            await FileDownload.DownloadFromApiAsync(url, $"BalanceGeneral_{fechaCorte:yyyyMMdd}.xlsx");
         }
-        catch (Exception ex) { errorMessage = ex.Message; }
-        finally { exportando = false; }
+        catch (Exception ex) { errorMessage = $"Error al exportar Excel: {ex.Message}"; }
+        finally
+        {
+            _exportandoExcel = false;
+        }
+    }
+
+    private async Task ExportarPdf()
+    {
+        try
+        {
+            _exportandoPdf = true;
+            var url = ExportService.GetBalanceGeneralExportUrl(fechaCorte, "pdf");
+            await FileDownload.DownloadFromApiAsync(url, $"BalanceGeneral_{fechaCorte:yyyyMMdd}.pdf");
+        }
+        catch (Exception ex) { errorMessage = $"Error al exportar PDF: {ex.Message}"; }
+        finally
+        {
+            _exportandoPdf = false;
+        }
     }
 
     private async Task Imprimir()

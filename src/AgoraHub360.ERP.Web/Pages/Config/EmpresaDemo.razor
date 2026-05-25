@@ -26,16 +26,16 @@
                         </div>
                         <div>
                             <h5 class="mb-0 fw-bold">Muebles Andinos Import S.R.L.</h5>
-                            <span class="text-muted small">Empresa importadora de muebles — Datos de demostración completos</span>
+                            <span class="text-muted small">Empresa importadora de muebles â€” Datos de demostraciÃ³n completos</span>
                         </div>
                     </div>
 
                     <p class="text-muted mb-4">
                         Este asistente crea una empresa de ejemplo con <strong>datos reales de negocio</strong> para explorar todas las
-                        funcionalidades del sistema. El proceso toma aproximadamente <strong>30–60 segundos</strong>.
+                        funcionalidades del sistema. El proceso toma aproximadamente <strong>30â€“60 segundos</strong>.
                     </p>
 
-                    @* Resumen de lo que se creará *@
+                    @* Resumen de lo que se crearÃ¡ *@
                     <div class="row g-3 mb-4">
                         @foreach (var (icon, titulo, detalle, color) in _resumenItems)
                         {
@@ -55,13 +55,13 @@
                         <i class="bi bi-exclamation-triangle-fill mt-1 flex-shrink-0"></i>
                         <div class="small">
                             <strong>Aviso:</strong> Este proceso crea datos reales en la base de datos mediante la API.
-                            Solo ejecutar en ambientes de <strong>demostración o prueba</strong>.
+                            Solo ejecutar en ambientes de <strong>demostraciÃ³n o prueba</strong>.
                         </div>
                     </div>
 
                     <div class="d-flex gap-2">
                         <button class="btn btn-primary px-4" @onclick="IniciarAsync">
-                            <i class="bi bi-play-circle-fill me-2"></i>Iniciar Creación DEMO
+                            <i class="bi bi-play-circle-fill me-2"></i>Iniciar CreaciÃ³n DEMO
                         </button>
                         <button class="btn btn-outline-secondary" @onclick='() => Nav.NavigateTo("/config/empresas")'>
                             <i class="bi bi-arrow-left me-1"></i>Volver
@@ -143,7 +143,7 @@
                     <div class="d-flex align-items-center gap-3 mb-3">
                         <i class="bi bi-x-circle-fill text-danger fs-2"></i>
                         <div>
-                            <div class="fw-bold text-danger">El proceso encontró un error</div>
+                            <div class="fw-bold text-danger">El proceso encontrÃ³ un error</div>
                             <div class="text-muted small">Algunos datos pueden haberse creado parcialmente</div>
                         </div>
                     </div>
@@ -168,21 +168,21 @@
     </div>
 }
 
-@* ?? Éxito ?? *@
+@* ?? Ã‰xito ?? *@
 @if (DemoSvc.Completado)
 {
     <div class="row justify-content-center">
         <div class="col-lg-8">
             <div class="card border-0 shadow-sm" style="border-top:4px solid #22c55e !important">
                 <div class="card-body p-4">
-                    @* Cabecera éxito *@
+                    @* Cabecera Ã©xito *@
                     <div class="d-flex align-items-center gap-3 mb-4">
                         <div class="rounded-3 d-flex align-items-center justify-content-center text-white"
                              style="width:52px;height:52px;background:#22c55e;flex-shrink:0">
                             <i class="bi bi-check-circle fs-3"></i>
                         </div>
                         <div>
-                            <h5 class="mb-0 fw-bold text-success">¡Empresa DEMO creada exitosamente!</h5>
+                            <h5 class="mb-0 fw-bold text-success">Â¡Empresa DEMO creada exitosamente!</h5>
                             <span class="text-muted small">@DemoSvc.Resultado.EmpresaNombre</span>
                         </div>
                     </div>
@@ -208,36 +208,36 @@
                         </summary>
                         <div class="row g-3 mt-2">
                             <div class="col-md-6">
-                                <div class="small fw-semibold mb-1"><i class="bi bi-person-gear me-1 text-primary"></i>Usuarios (contraseña: Demo2025!)</div>
+                                <div class="small fw-semibold mb-1"><i class="bi bi-person-gear me-1 text-primary"></i>Usuarios (contraseÃ±a: Demo2025!)</div>
                                 @foreach (var u in DemoSvc.Resultado.Usuarios)
-                                { <div class="text-muted small">• @u</div> }
+                                { <div class="text-muted small">â€¢ @u</div> }
                             </div>
                             <div class="col-md-6">
                                 <div class="small fw-semibold mb-1"><i class="bi bi-house-gear me-1 text-success"></i>Almacenes</div>
                                 @foreach (var a in DemoSvc.Resultado.Almacenes)
-                                { <div class="text-muted small">• @a.Nombre</div> }
+                                { <div class="text-muted small">â€¢ @a.Nombre</div> }
                             </div>
                             <div class="col-md-6">
                                 <div class="small fw-semibold mb-1"><i class="bi bi-truck me-1 text-warning"></i>Proveedores</div>
                                 @foreach (var p in DemoSvc.Resultado.Proveedores)
-                                { <div class="text-muted small">• @p</div> }
+                                { <div class="text-muted small">â€¢ @p</div> }
                             </div>
                             <div class="col-md-6">
                                 <div class="small fw-semibold mb-1"><i class="bi bi-people me-1 text-info"></i>Clientes</div>
                                 @foreach (var c in DemoSvc.Resultado.Clientes)
-                                { <div class="text-muted small">• @c</div> }
+                                { <div class="text-muted small">â€¢ @c</div> }
                             </div>
                             <div class="col-md-6">
                                 <div class="small fw-semibold mb-1"><i class="bi bi-box-seam me-1" style="color:#8b5cf6"></i>Productos (primeros 5)</div>
                                 @foreach (var p in DemoSvc.Resultado.Productos.Take(5))
-                                { <div class="text-muted small">• [@p.Sku] @p.Nombre</div> }
+                                { <div class="text-muted small">â€¢ [@p.Sku] @p.Nombre</div> }
                                 @if (DemoSvc.Resultado.Productos.Count > 5)
-                                { <div class="text-muted small">• ... y @(DemoSvc.Resultado.Productos.Count - 5) más</div> }
+                                { <div class="text-muted small">â€¢ ... y @(DemoSvc.Resultado.Productos.Count - 5) mÃ¡s</div> }
                             </div>
                             <div class="col-md-6">
                                 <div class="small fw-semibold mb-1"><i class="bi bi-journal-text me-1 text-danger"></i>Asientos contables</div>
                                 @foreach (var a in DemoSvc.Resultado.Asientos)
-                                { <div class="text-muted small">• @a</div> }
+                                { <div class="text-muted small">â€¢ @a</div> }
                             </div>
                         </div>
                     </details>
@@ -275,8 +275,8 @@
         "Proveedores",
         "Clientes",
         "Plan de cuentas",
-        "Períodos contables 2025",
-        "Catálogo de productos",
+        "PerÃ­odos contables 2025",
+        "CatÃ¡logo de productos",
         "Stock inicial",
         "Asientos contables demo",
     };
@@ -284,14 +284,14 @@
     // Tarjetas de info en la pantalla inicial
     private readonly (string Icon, string Titulo, string Detalle, string Color)[] _resumenItems =
     {
-        ("bi-person-badge-fill",    "5 Usuarios",                "Gerente, Contador, Compras, Almacén, Ventas",   "#3b82f6"),
-        ("bi-house-gear-fill",      "4 Almacenes",               "Central LP, Showroom, Santa Cruz, Tránsito",    "#22c55e"),
+        ("bi-person-badge-fill",    "5 Usuarios",                "Gerente, Contador, Compras, AlmacÃ©n, Ventas",   "#3b82f6"),
+        ("bi-house-gear-fill",      "4 Almacenes",               "Central LP, Showroom, Santa Cruz, TrÃ¡nsito",    "#22c55e"),
         ("bi-truck",                "6 Proveedores",              "3 internacionales + 2 nacionales + 1 agencia", "#f59e0b"),
         ("bi-people-fill",          "8 Clientes",                 "Hoteles, constructoras, distribuidoras...",    "#06b6d4"),
-        ("bi-box-seam-fill",        "20 Productos de mueblería",  "Sala, dormitorio, comedor, oficina",           "#8b5cf6"),
+        ("bi-box-seam-fill",        "20 Productos de mueblerÃ­a",  "Sala, dormitorio, comedor, oficina",           "#8b5cf6"),
         ("bi-journal-bookmark-fill","Plan de cuentas completo",   "50+ cuentas para importadora de muebles",     "#ef4444"),
-        ("bi-calendar3",            "12 Períodos contables 2025", "Enero–Diciembre aperturados",                  "#f97316"),
-        ("bi-journal-text",         "10 Asientos contables",      "Apertura, compras, ventas, planilla, más...", "#6366f1"),
+        ("bi-calendar3",            "12 PerÃ­odos contables 2025", "Eneroâ€“Diciembre aperturados",                  "#f97316"),
+        ("bi-journal-text",         "10 Asientos contables",      "Apertura, compras, ventas, planilla, mÃ¡s...", "#6366f1"),
     };
 
     protected override void OnInitialized()
@@ -341,7 +341,7 @@
         }
         if (r.Almacenes.Count > 0)
         {
-            <span class="badge bg-secondary me-1">@r.Almacenes.Count almacén(es)</span>
+            <span class="badge bg-secondary me-1">@r.Almacenes.Count almacÃ©n(es)</span>
         }
         if (r.Cuentas.Count > 0)
         {

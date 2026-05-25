@@ -2,6 +2,7 @@ namespace AgoraHub360.ERP.Api.Controllers.V1;
 
 using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Shared.DTOs;
+using AgoraHub360.ERP.Shared.DTOs.Auth;
 using AgoraHub360.ERP.Shared.DTOs.Empresa;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
@@ -96,9 +97,24 @@ public class AuthController : ControllerBase
         var empresaIds = asignaciones.Value!.Select(a => a.EmpresaId).ToHashSet();
         var todasEmpresas = await _empresaService.GetAllAsync(ct);
         var misEmpresas = todasEmpresas.Value!
-            .Where(e => empresaIds.Contains(e.Id))
+            .Where(e => empresaIds.Contains(e.Id) && e.Activo)
             .ToList() as IReadOnlyList<EmpresaDto>;
 
         return Ok(ApiResponse<IReadOnlyList<EmpresaDto>>.Ok(misEmpresas));
+    }
+
+    [HttpPost("seleccionar-empresa")]
+    [Authorize]
+    public async Task<IActionResult> SeleccionarEmpresa([FromBody] SeleccionarEmpresaRequestDto request, CancellationToken ct)
+    {
+        var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!int.TryParse(userIdStr, out var userId))
+            return Unauthorized(ApiResponse<CambiarEmpresaResponseDto>.Fail("Usuario no identificado."));
+
+        var result = await _authService.CambiarEmpresaActivaAsync(userId, request.EmpresaId, ct);
+        if (!result.IsSuccess)
+            return BadRequest(ApiResponse<CambiarEmpresaResponseDto>.Fail(result.Error!));
+
+        return Ok(ApiResponse<CambiarEmpresaResponseDto>.Ok(result.Value!));
     }
 }

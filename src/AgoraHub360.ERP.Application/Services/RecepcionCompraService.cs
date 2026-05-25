@@ -104,13 +104,13 @@ public class RecepcionCompraService : IRecepcionCompraService
             return Result<RecepcionCompraDto>.Failure(
                 $"Only approved or partially received orders can be received. Current status: {oc.Estado}.");
 
-        // ?? Validar almacén ??
+        // ?? Validar almacÃ©n ??
         var almacenId = dto.AlmacenId ?? oc.AlmacenDestinoId;
         var almacen = await _almacenRepo.GetByIdAsync(almacenId, ct);
         if (almacen is null || almacen.EmpresaId != empresaId.Value)
             return Result<RecepcionCompraDto>.Failure("Warehouse not found.");
 
-        // ?? Validar líneas ??
+        // ?? Validar lÃ­neas ??
         if (dto.Lineas is null || dto.Lineas.Count == 0)
             return Result<RecepcionCompraDto>.Failure("At least one reception line is required.");
 
@@ -132,10 +132,10 @@ public class RecepcionCompraService : IRecepcionCompraService
                     $"Received quantity ({lineaDto.CantidadRecibida:N2}) exceeds pending ({pendiente:N2}) on line {ocLinea.NumeroLinea}.");
         }
 
-        // ?? Generar número ??
+        // ?? Generar nÃºmero ??
         var numero = await GenerarNumeroAsync(empresaId.Value, ct);
 
-        // ?? Crear recepción ??
+        // ?? Crear recepciÃ³n ??
         var recepcion = new RecepcionCompra
         {
             EmpresaId = empresaId.Value,
@@ -159,19 +159,19 @@ public class RecepcionCompraService : IRecepcionCompraService
         await _recRepo.AddAsync(recepcion, ct);
         await _unitOfWork.SaveChangesAsync(ct);
 
-        // ?? Crear líneas + movimientos de inventario ??
+        // ?? Crear lÃ­neas + movimientos de inventario ??
         foreach (var lineaDto in dto.Lineas)
         {
             var ocLinea = ocLineasMap[lineaDto.OrdenCompraLineaId];
             var costoUnit = lineaDto.CostoUnitario ?? ocLinea.PrecioUnitario;
 
-            // Línea de recepción
+            // LÃ­nea de recepciÃ³n
             var recLinea = new RecepcionCompraLinea
             {
                 RecepcionCompraId = recepcion.RecepcionCompraId,
                 OrdenCompraLineaId = lineaDto.OrdenCompraLineaId,
                 CantidadRecibida = lineaDto.CantidadRecibida,
-                CantidadDañada = lineaDto.CantidadDañada,
+                CantidadDaÃ±ada = lineaDto.CantidadDaÃ±ada,
                 CantidadSobrante = lineaDto.CantidadSobrante,
                 CantidadFaltante = lineaDto.CantidadFaltante,
                 CostoUnitario = costoUnit,
@@ -180,7 +180,7 @@ public class RecepcionCompraService : IRecepcionCompraService
             };
             await _recLineaRepo.AddAsync(recLinea, ct);
 
-            // Actualizar CantidadRecepcionada en la línea de OC
+            // Actualizar CantidadRecepcionada en la lÃ­nea de OC
             ocLinea.CantidadRecepcionada += lineaDto.CantidadRecibida;
             await _ocLineaRepo.UpdateAsync(ocLinea, ct);
 
@@ -198,7 +198,7 @@ public class RecepcionCompraService : IRecepcionCompraService
                 UnitCost = costoUnit,
                 TotalCost = costoUnit * lineaDto.CantidadRecibida,
                 Reference = $"{oc.Numero} ? {numero}",
-                Notes = $"Recepción automática de OC {oc.Numero}, línea {ocLinea.NumeroLinea}",
+                Notes = $"RecepciÃ³n automÃ¡tica de OC {oc.Numero}, lÃ­nea {ocLinea.NumeroLinea}",
                 Activo = true
             };
             await _movRepo.AddAsync(movimiento, ct);
@@ -225,14 +225,14 @@ public class RecepcionCompraService : IRecepcionCompraService
 
         await _unitOfWork.SaveChangesAsync(ct);
 
-        // ?? Contabilización automática ??
+        // ?? ContabilizaciÃ³n automÃ¡tica ??
         var subtotal = dto.Lineas.Sum(l =>
         {
             var ocL = ocLineasMap[l.OrdenCompraLineaId];
             var costo = l.CostoUnitario ?? ocL.PrecioUnitario;
             return costo * l.CantidadRecibida;
         });
-        var impuesto = subtotal * 0.13m; // IVA 13% — configurable via plantilla
+        var impuesto = subtotal * 0.13m; // IVA 13% â€” configurable via plantilla
         var totalRecepcion = subtotal + impuesto;
 
         await _contabilizacion.ContabilizarDocumentoAsync(
@@ -355,10 +355,10 @@ public class RecepcionCompraService : IRecepcionCompraService
             rec.EmpresaId,
             rec.Numero,
             rec.OrdenCompraId,
-            oc?.Numero ?? "—",
+            oc?.Numero ?? "â€”",
             rec.FechaRecepcion,
             rec.AlmacenId,
-            almacenes.FirstOrDefault()?.Nombre ?? "—",
+            almacenes.FirstOrDefault()?.Nombre ?? "â€”",
             rec.DocumentoProveedor,
             rec.Observaciones,
             rec.Confirmada,
@@ -376,13 +376,13 @@ public class RecepcionCompraService : IRecepcionCompraService
                     l.RecepcionCompraLineaId,
                     l.OrdenCompraLineaId,
                     ocl?.NumeroLinea ?? 0,
-                    cpMap.GetValueOrDefault(ocl?.CompanyProductId ?? 0, "—"),
-                    ocl?.Descripcion ?? "—",
+                    cpMap.GetValueOrDefault(ocl?.CompanyProductId ?? 0, "â€”"),
+                    ocl?.Descripcion ?? "â€”",
                     ocl?.UnidadMedida ?? "UND",
                     ocl?.Cantidad ?? 0,
                     ocl?.CantidadPendiente ?? 0,
                     l.CantidadRecibida,
-                    l.CantidadDañada,
+                    l.CantidadDaÃ±ada,
                     l.CantidadSobrante,
                     l.CantidadFaltante,
                     l.CantidadAceptada,

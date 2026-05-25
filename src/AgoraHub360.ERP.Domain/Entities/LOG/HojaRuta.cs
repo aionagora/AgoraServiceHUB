@@ -3,47 +3,47 @@ namespace AgoraHub360.ERP.Domain.Entities.LOG;
 using AgoraHub360.ERP.Domain.Common;
 
 /// <summary>
-/// Hoja de Ruta para control de procesos logísticos.
-/// Dos grandes categorías:
-///   INTERNA  ? operaciones entre almacenes/importación (flujo aduanero).
+/// Hoja de Ruta para control de procesos logÃ­sticos.
+/// Dos grandes categorÃ­as:
+///   INTERNA  ? operaciones entre almacenes/importaciÃ³n (flujo aduanero).
 ///   CLIENTE  ? entregas, recojos, devoluciones al cliente.
 /// </summary>
 public class HojaRuta : TenantEntity
 {
     public long HojaRutaId { get; set; }
 
-    /// <summary>Número autogenerado desde NumeracionDocumento (ej: HR-000001).</summary>
+    /// <summary>NÃºmero autogenerado desde NumeracionDocumento (ej: HR-000001).</summary>
     public string NumeroHojaRuta { get; set; } = string.Empty;
 
-    /// <summary>Categoría principal: INTERNA | CLIENTE.</summary>
+    /// <summary>CategorÃ­a principal: INTERNA | CLIENTE.</summary>
     public string TipoOP { get; set; } = "INTERNA";
 
     /// <summary>
-    /// Sub-tipo según categoría.
+    /// Sub-tipo segÃºn categorÃ­a.
     /// INTERNA  ? IMPORTACION | TRASPASO_INTERNO | DEVOLUCION | AJUSTE
     /// CLIENTE  ? ENTREGA | RECOJO | DEVOLUCION_CLI
     /// </summary>
     public string SubTipo { get; set; } = string.Empty;
 
-    /// <summary>Almacén de origen (obligatorio para INTERNA).</summary>
+    /// <summary>AlmacÃ©n de origen (obligatorio para INTERNA).</summary>
     public int AlmacenOrigenId { get; set; }
 
-    /// <summary>Almacén destino (opcional, TRASPASO_INTERNO).</summary>
+    /// <summary>AlmacÃ©n destino (opcional, TRASPASO_INTERNO).</summary>
     public int? AlmacenDestinoId { get; set; }
 
     /// <summary>Nombre del proveedor (INTERNA) o cliente (CLIENTE).</summary>
     public string? ProveedorCliente { get; set; }
 
-    /// <summary>Dirección de entrega (CLIENTE - ENTREGA).</summary>
+    /// <summary>DirecciÃ³n de entrega (CLIENTE - ENTREGA).</summary>
     public string? DireccionEntrega { get; set; }
 
-    /// <summary>Contacto del cliente: teléfono o email (CLIENTE).</summary>
+    /// <summary>Contacto del cliente: telÃ©fono o email (CLIENTE).</summary>
     public string? ContactoCliente { get; set; }
 
-    /// <summary>Usuario responsable (readonly desde sesión).</summary>
+    /// <summary>Usuario responsable (readonly desde sesiÃ³n).</summary>
     public string ResponsableUsuario { get; set; } = string.Empty;
 
-    /// <summary>Fecha de registro automática.</summary>
+    /// <summary>Fecha de registro automÃ¡tica.</summary>
     public DateTime FechaRegistro { get; set; }
 
     /// <summary>Fecha del documento (obligatoria).</summary>
@@ -67,11 +67,11 @@ public class HojaRuta : TenantEntity
     public string? Observaciones { get; set; }
 
     /// <summary>
-    /// OP que originó esta Hoja de Ruta (opcional).
+    /// OP que originÃ³ esta Hoja de Ruta (opcional).
     /// Permite navegar desde una OrdenPedido a su HR de seguimiento.
     /// </summary>
     public long? OrdenPedidoId { get; set; }
 
-    // Navegación
+    // NavegaciÃ³n
     public ICollection<HojaRutaHistorial> Historial { get; set; } = new List<HojaRutaHistorial>();
 }

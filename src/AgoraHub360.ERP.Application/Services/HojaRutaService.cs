@@ -17,20 +17,20 @@ public class HojaRutaService : IHojaRutaService
     private readonly IUnitOfWork _uow;
     private readonly ICurrentUserService _currentUser;
 
-    // Tipos principales v·lidos
+    // Tipos principales v√°lidos
     private static readonly HashSet<string> TiposOPValidos = new(StringComparer.OrdinalIgnoreCase)
     {
         "INTERNA", "CLIENTE"
     };
 
-    // Sub-tipos v·lidos por tipo principal
+    // Sub-tipos v√°lidos por tipo principal
     private static readonly Dictionary<string, HashSet<string>> SubTiposValidos = new(StringComparer.OrdinalIgnoreCase)
     {
         ["INTERNA"] = new(StringComparer.OrdinalIgnoreCase) { "IMPORTACION", "TRASPASO_INTERNO", "DEVOLUCION", "AJUSTE" },
         ["CLIENTE"] = new(StringComparer.OrdinalIgnoreCase) { "ENTREGA", "RECOJO", "DEVOLUCION_CLI" },
     };
 
-    // Transiciones v·lidas por tipo:
+    // Transiciones v√°lidas por tipo:
     // INTERNA: BORRADOR ? EN_PROCESO (flujo aduanero) ? COMPLETADO
     // CLIENTE: BORRADOR ? EN_PROCESO (flujo entrega)  ? COMPLETADO
     private static readonly Dictionary<(string Estado, string SubEstado), List<(string Estado, string SubEstado)>> TransicionesValidas = new()
@@ -133,23 +133,23 @@ public class HojaRutaService : IHojaRutaService
             return Result<HojaRutaDto>.Failure("No se pudo determinar la empresa activa.");
 
         if (!TiposOPValidos.Contains(dto.TipoOP))
-            return Result<HojaRutaDto>.Failure($"Tipo de operaciÛn inv·lido. Valores permitidos: {string.Join(", ", TiposOPValidos)}");
+            return Result<HojaRutaDto>.Failure($"Tipo de operaci√≥n inv√°lido. Valores permitidos: {string.Join(", ", TiposOPValidos)}");
 
         if (!string.IsNullOrEmpty(dto.SubTipo) &&
             SubTiposValidos.TryGetValue(dto.TipoOP, out var subTiposPermitidos) &&
             !subTiposPermitidos.Contains(dto.SubTipo))
             return Result<HojaRutaDto>.Failure(
-                $"Sub-tipo '{dto.SubTipo}' no v·lido para {dto.TipoOP}. " +
+                $"Sub-tipo '{dto.SubTipo}' no v√°lido para {dto.TipoOP}. " +
                 $"Valores permitidos: {string.Join(", ", subTiposPermitidos)}");
 
         if (dto.AlmacenOrigenId <= 0)
-            return Result<HojaRutaDto>.Failure("Debe seleccionar un almacÈn de origen.");
+            return Result<HojaRutaDto>.Failure("Debe seleccionar un almac√©n de origen.");
 
         var almacen = await _almacenRepo.GetByIdAsync(dto.AlmacenOrigenId, ct);
         if (almacen is null || almacen.EmpresaId != empresaId.Value)
-            return Result<HojaRutaDto>.Failure("AlmacÈn de origen no v·lido.");
+            return Result<HojaRutaDto>.Failure("Almac√©n de origen no v√°lido.");
 
-        // N˙mero 100% din·mico desde core.NumeracionesDocumento
+        // N√∫mero 100% din√°mico desde core.NumeracionesDocumento
         var numeroResult = await GenerarNumeroAsync(empresaId.Value, ct);
         if (!numeroResult.IsSuccess)
             return Result<HojaRutaDto>.Failure(numeroResult.Error!);
@@ -209,21 +209,21 @@ public class HojaRutaService : IHojaRutaService
             return Result<HojaRutaDto>.Failure("Solo se pueden editar hojas de ruta en estado BORRADOR.");
 
         if (!TiposOPValidos.Contains(dto.TipoOP))
-            return Result<HojaRutaDto>.Failure($"Tipo de operaciÛn inv·lido. Valores permitidos: {string.Join(", ", TiposOPValidos)}");
+            return Result<HojaRutaDto>.Failure($"Tipo de operaci√≥n inv√°lido. Valores permitidos: {string.Join(", ", TiposOPValidos)}");
 
         if (!string.IsNullOrEmpty(dto.SubTipo) &&
             SubTiposValidos.TryGetValue(dto.TipoOP, out var subTiposPermitidos) &&
             !subTiposPermitidos.Contains(dto.SubTipo))
             return Result<HojaRutaDto>.Failure(
-                $"Sub-tipo '{dto.SubTipo}' no v·lido para {dto.TipoOP}. " +
+                $"Sub-tipo '{dto.SubTipo}' no v√°lido para {dto.TipoOP}. " +
                 $"Valores permitidos: {string.Join(", ", subTiposPermitidos)}");
 
         if (dto.AlmacenOrigenId <= 0)
-            return Result<HojaRutaDto>.Failure("Debe seleccionar un almacÈn de origen.");
+            return Result<HojaRutaDto>.Failure("Debe seleccionar un almac√©n de origen.");
 
         var almacen = await _almacenRepo.GetByIdAsync(dto.AlmacenOrigenId, ct);
         if (almacen is null || almacen.EmpresaId != empresaId.Value)
-            return Result<HojaRutaDto>.Failure("AlmacÈn de origen no v·lido.");
+            return Result<HojaRutaDto>.Failure("Almac√©n de origen no v√°lido.");
 
         entity.TipoOP           = dto.TipoOP.ToUpperInvariant();
         entity.SubTipo          = dto.SubTipo?.ToUpperInvariant() ?? string.Empty;
@@ -257,7 +257,7 @@ public class HojaRutaService : IHojaRutaService
 
         if (!TransicionesValidas.TryGetValue(claveActual, out var destinos) || !destinos.Contains(destino))
             return Result<HojaRutaDto>.Failure(
-                $"TransiciÛn no permitida: ({entity.Estado}/{entity.SubEstado}) ? ({destino.Item1}/{destino.Item2}).");
+                $"Transici√≥n no permitida: ({entity.Estado}/{entity.SubEstado}) ? ({destino.Item1}/{destino.Item2}).");
 
         // No se puede anular una hoja ya COMPLETADA o ANULADA
         if (entity.Estado == "COMPLETADO" || entity.Estado == "ANULADO")
@@ -331,9 +331,9 @@ public class HojaRutaService : IHojaRutaService
     // ?? Helpers ??????????????????????????????????????????????????????????????
 
     /// <summary>
-    /// Lee prefijo, dÌgitos y correlativo 100% desde <c>core.NumeracionesDocumento</c>
-    /// (TipoDocumento = 'HR', Activo = true). Sin ning˙n valor hardcodeado.
-    /// Devuelve <see cref="Result{T}"/> con mensaje legible si la fila no existe o est· inactiva,
+    /// Lee prefijo, d√≠gitos y correlativo 100% desde <c>core.NumeracionesDocumento</c>
+    /// (TipoDocumento = 'HR', Activo = true). Sin ning√∫n valor hardcodeado.
+    /// Devuelve <see cref="Result{T}"/> con mensaje legible si la fila no existe o est√° inactiva,
     /// para que <see cref="CreateAsync"/> pueda propagarlo sin lanzar excepciones.
     /// </summary>
     private async Task<Result<string>> GenerarNumeroAsync(int empresaId, CancellationToken ct)
@@ -344,11 +344,11 @@ public class HojaRutaService : IHojaRutaService
 
         if (numeracion is null)
             return Result<string>.Failure(
-                "No existe una numeraciÛn activa para Hojas de Ruta (TipoDocumento = 'HR'). " +
-                "Config˙rela en Par·metros ? NumeraciÛn antes de crear una Hoja de Ruta.");
+                "No existe una numeraci√≥n activa para Hojas de Ruta (TipoDocumento = 'HR'). " +
+                "Config√∫rela en Par√°metros ? Numeraci√≥n antes de crear una Hoja de Ruta.");
 
         // GenerarSiguiente() aplica: Prefijo + SiguienteNumero.PadLeft(Digitos, '0')
-        // y avanza el contador internamente. Todo configurable desde la UI de NumeraciÛn.
+        // y avanza el contador internamente. Todo configurable desde la UI de Numeraci√≥n.
         var numero = numeracion.GenerarSiguiente();
         await _numRepo.UpdateAsync(numeracion, ct);
         return Result<string>.Success(numero);

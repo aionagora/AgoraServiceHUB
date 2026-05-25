@@ -4,6 +4,13 @@ namespace AgoraHub360.ERP.Shared.DTOs.Compras;
 public record OrdenPedidoDto(
     long OrdenPedidoId,
     int EmpresaId,
+    string EmpresaNombre,
+    int? SucursalId,
+    string? SucursalNombre,
+    int? ClienteId,
+    string? ClienteNombre,
+    int? ClienteSucursalId,
+    string? ClienteSucursalNombre,
     string Numero,
     DateTime FechaEmision,
     DateTime? FechaRequerida,
@@ -14,6 +21,9 @@ public record OrdenPedidoDto(
     int AlmacenDestinoId,
     string AlmacenDestinoNombre,
     string Estado,
+    string? DireccionEntrega,
+    string? ReferenciaEntrega,
+    string? ContactoRelacionado,
     string? Observaciones,
     string? MotivoRechazo,
     bool? StockCubre,
@@ -21,7 +31,7 @@ public record OrdenPedidoDto(
     bool Activo,
     List<OrdenPedidoLineaDto> Lineas);
 
-/// <summary>DTO de lectura para línea de Orden de Pedido.</summary>
+/// <summary>DTO de lectura para lÃ­nea de Orden de Pedido.</summary>
 public record OrdenPedidoLineaDto(
     long OrdenPedidoLineaId,
     int NumeroLinea,
@@ -43,10 +53,13 @@ public record CreateOrdenPedidoDto(
     /// <summary>Normal | Urgente | Critico</summary>
     string Urgencia,
     int AlmacenDestinoId,
+    int? SucursalId = null,
+    int? ClienteId = null,
+    int? ClienteSucursalId = null,
     string? Observaciones = null,
     List<CreateOrdenPedidoLineaDto>? Lineas = null);
 
-/// <summary>DTO para crear una línea de Orden de Pedido.</summary>
+/// <summary>DTO para crear una lÃ­nea de Orden de Pedido.</summary>
 public record CreateOrdenPedidoLineaDto(
     long CompanyProductId,
     string Descripcion,
@@ -62,17 +75,20 @@ public record UpdateOrdenPedidoDto(
     /// <summary>Normal | Urgente | Critico</summary>
     string Urgencia,
     int AlmacenDestinoId,
-    string? Observaciones);
+    string? Observaciones,
+    int? SucursalId = null,
+    int? ClienteId = null,
+    int? ClienteSucursalId = null);
 
 /// <summary>
-/// DTO para registrar la revisión de stock por Compras Central.
+/// DTO para registrar la revisiÃ³n de stock por Compras Central.
 /// </summary>
 public record RevisarStockOrdenPedidoDto(
     bool StockCubre,
     string? ObservacionesRevisionStock,
     List<RevisionStockLineaDto>? Lineas = null);
 
-/// <summary>DTO para registrar disponibilidad de stock en una línea de OP.</summary>
+/// <summary>DTO para registrar disponibilidad de stock en una lÃ­nea de OP.</summary>
 public record RevisionStockLineaDto(
     long OrdenPedidoLineaId,
     decimal CantidadStockDisponible,

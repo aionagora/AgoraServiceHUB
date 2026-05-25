@@ -6,7 +6,7 @@ using AgoraHub360.ERP.Domain.Enums;
 
 /// <summary>
 /// Orden de Compra (Purchase Order).
-/// Documento maestro con cabecera + líneas de detalle.
+/// Documento maestro con cabecera + lÃ­neas de detalle.
 /// Flujo: Borrador ? Confirmado ? PendienteAprobacion ? Aprobado
 ///        ? EnviadaProveedor ? (EnNegociacion ? ajuste) ? ConfirmadaProveedor
 ///        ? PagoProgramado ? EnTransito/Expediente ? RecepcionParcial ? Cerrado.
@@ -15,7 +15,7 @@ public class OrdenCompra : TenantEntity
 {
     public long OrdenCompraId { get; set; }
 
-    /// <summary>Número único generado desde NumeracionDocumento (ej: OC-000001).</summary>
+    /// <summary>NÃºmero Ãºnico generado desde NumeracionDocumento (ej: OC-000001).</summary>
     public string Numero { get; set; } = string.Empty;
 
     public DateTime FechaEmision { get; set; }
@@ -26,7 +26,7 @@ public class OrdenCompra : TenantEntity
     public int ProveedorId { get; set; }
     public Proveedor? Proveedor { get; set; }
 
-    /// <summary>Almacén destino donde se recibirá la mercadería.</summary>
+    /// <summary>AlmacÃ©n destino donde se recibirÃ¡ la mercaderÃ­a.</summary>
     public int AlmacenDestinoId { get; set; }
     public Almacen? AlmacenDestino { get; set; }
 
@@ -39,7 +39,7 @@ public class OrdenCompra : TenantEntity
     /// <summary>Estado del documento.</summary>
     public EstadoDocumento Estado { get; set; } = EstadoDocumento.Borrador;
 
-    /// <summary>Condición de pago (ej: Contado, 30 días, etc.).</summary>
+    /// <summary>CondiciÃ³n de pago (ej: Contado, 30 dÃ­as, etc.).</summary>
     public string? CondicionPago { get; set; }
 
     /// <summary>Incoterm negociado (FOB, CIF, EXW, DDP, etc.).</summary>
@@ -48,34 +48,34 @@ public class OrdenCompra : TenantEntity
     /// <summary>Observaciones generales de la OC.</summary>
     public string? Observaciones { get; set; }
 
-    /// <summary>Referencia externa (ej: Nro. cotización del proveedor).</summary>
+    /// <summary>Referencia externa (ej: Nro. cotizaciÃ³n del proveedor).</summary>
     public string? ReferenciaExterna { get; set; }
 
-    /// <summary>Motivo de rechazo cuando Finanzas/Dirección no aprueba.</summary>
+    /// <summary>Motivo de rechazo cuando Finanzas/DirecciÃ³n no aprueba.</summary>
     public string? MotivoRechazo { get; set; }
 
-    // ?? Totales (calculados desde las líneas) ??????????????????????????????
+    // ?? Totales (calculados desde las lÃ­neas) ??????????????????????????????
     public decimal Subtotal { get; set; }
     public decimal Descuento { get; set; }
     public decimal Impuesto { get; set; }
     public decimal Total { get; set; }
 
-    // ?? Vínculos de flujo ??????????????????????????????????????????????????
+    // ?? VÃ­nculos de flujo ??????????????????????????????????????????????????
 
-    /// <summary>Orden de Pedido que originó esta OC (puede ser null si se creó directamente).</summary>
+    /// <summary>Orden de Pedido que originÃ³ esta OC (puede ser null si se creÃ³ directamente).</summary>
     public long? OrdenPedidoId { get; set; }
     public OrdenPedido? OrdenPedido { get; set; }
 
-    /// <summary>Expediente de importación al que pertenece esta OC.</summary>
+    /// <summary>Expediente de importaciÃ³n al que pertenece esta OC.</summary>
     public long? ExpedienteImportacionId { get; set; }
     public ExpedienteImportacion? ExpedienteImportacion { get; set; }
 
-    // Navegación
+    // NavegaciÃ³n
     public ICollection<OrdenCompraLinea> Lineas { get; set; } = new List<OrdenCompraLinea>();
     public ICollection<ConfirmacionProveedor> ConfirmacionesProveedor { get; set; } = new List<ConfirmacionProveedor>();
     public ICollection<PagoOrdenCompra> Pagos { get; set; } = new List<PagoOrdenCompra>();
 
-    /// <summary>Recalcula los totales a partir de las líneas.</summary>
+    /// <summary>Recalcula los totales a partir de las lÃ­neas.</summary>
     public void RecalcularTotales()
     {
         Subtotal = Lineas.Sum(l => l.Subtotal);

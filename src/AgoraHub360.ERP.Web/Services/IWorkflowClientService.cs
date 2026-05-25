@@ -3,7 +3,7 @@ namespace AgoraHub360.ERP.Web.Services;
 using AgoraHub360.ERP.Shared.DTOs.Workflow;
 
 /// <summary>
-/// Abstracci髇 del cliente HTTP del m骴ulo Workflow para Blazor WASM.
+/// Abstracci贸n del cliente HTTP del m贸dulo Workflow para Blazor WASM.
 /// Permite inyectar un mock en tests de componentes sin depender de HttpClient.
 /// </summary>
 public interface IWorkflowClientService
@@ -11,7 +11,7 @@ public interface IWorkflowClientService
     /// <summary>Tareas activas de un documento, ordenadas por Orden.</summary>
     Task<List<TareaDto>> GetByEntityAsync(string entityType, int entityId);
 
-    /// <summary>Resumen de progreso: conteos por estado, % avance y pr髕ima fecha.</summary>
+    /// <summary>Resumen de progreso: conteos por estado, % avance y pr贸xima fecha.</summary>
     Task<TareaResumenDto?> GetResumenAsync(string entityType, int entityId);
 
     /// <summary>Crea una tarea individual para un documento.</summary>
@@ -23,7 +23,7 @@ public interface IWorkflowClientService
     /// <summary>Genera los hitos de un documento desde la plantilla configurada.</summary>
     Task GenerarHitosAsync(GenerarHitosDto dto);
 
-    /// <summary>Actualizaci髇 parcial (patch) de una tarea.</summary>
+    /// <summary>Actualizaci贸n parcial (patch) de una tarea.</summary>
     Task<TareaDto?> UpdateAsync(int id, TareaUpdateDto dto);
 
     /// <summary>Reordena las tareas tras drag-and-drop en la UI.</summary>
@@ -43,6 +43,6 @@ public interface IWorkflowClientService
     /// <summary>Actualiza una plantilla de empresa.</summary>
     Task<PlantillaTareaDto?> UpdatePlantillaAsync(int id, PlantillaTareaUpdateDto dto);
 
-    /// <summary>Desactiva l骻icamente una plantilla de empresa.</summary>
+    /// <summary>Desactiva l贸gicamente una plantilla de empresa.</summary>
     Task DeletePlantillaAsync(int id);
 }

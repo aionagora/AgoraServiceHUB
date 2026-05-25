@@ -23,14 +23,18 @@ builder.Services.AddScoped<JwtAuthStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<JwtAuthStateProvider>());
 
 // ──── Servicios HTTP ────
+builder.Services.AddScoped<FileDownloadService>();
 builder.Services.AddScoped<AuthHttpService>();
 builder.Services.AddScoped<EmpresaHttpService>();
 builder.Services.AddScoped<EmpresaStateService>();
+builder.Services.AddScoped<HttpSucursalService>();
+builder.Services.AddScoped<GeoCatalogHttpService>();
 builder.Services.AddScoped<RolHttpService>();
 builder.Services.AddScoped<UsuarioHttpService>();
 builder.Services.AddScoped<AuditLogHttpService>();
 builder.Services.AddScoped<ParametroHttpService>();
 builder.Services.AddScoped<NumeracionHttpService>();
+builder.Services.AddScoped<CierreContableHttpService>();
 
 // ──── Servicios HTTP MDM (legacy) ────
 builder.Services.AddScoped<CategoriaProductoHttpService>();
@@ -38,6 +42,7 @@ builder.Services.AddScoped<CatalogoHttpService>();
 builder.Services.AddScoped<UnidadMedidaHttpService>();
 builder.Services.AddScoped<ProductoHttpService>();
 builder.Services.AddScoped<ClienteHttpService>();
+builder.Services.AddScoped<ClienteSucursalHttpService>();
 builder.Services.AddScoped<ProveedorHttpService>();
 builder.Services.AddScoped<AlmacenHttpService>();
 
@@ -61,7 +66,10 @@ builder.Services.AddScoped<AsientoContableHttpService>();
 builder.Services.AddScoped<PeriodoContableHttpService>();
 builder.Services.AddScoped<PlantillaContableHttpService>();
 builder.Services.AddScoped<EstadoFinancieroHttpService>();
+builder.Services.AddScoped<HttpExportEstadosFinancierosService>();
 builder.Services.AddScoped<CentroCostoHttpService>();
+builder.Services.AddScoped<HttpFlujoDEfectivoService>();
+builder.Services.AddScoped<HttpLibroMayorService>();
 
 // ──── Servicios HTTP Compras ────
 builder.Services.AddScoped<OrdenPedidoHttpService>();
@@ -69,6 +77,9 @@ builder.Services.AddScoped<OrdenCompraHttpService>();
 builder.Services.AddScoped<RecepcionCompraHttpService>();
 builder.Services.AddScoped<HojaImportacionHttpService>();
 builder.Services.AddScoped<ExpedienteImportacionHttpService>();
+
+// Ventas
+builder.Services.AddScoped<PedidoVentaHttpService>();
 
 // ──── Servicios HTTP Logística ────
 builder.Services.AddScoped<HojaRutaHttpService>();
@@ -78,6 +89,8 @@ builder.Services.AddScoped<IWorkflowClientService, WorkflowHttpService>();
 
 // ──── Dashboard ────
 builder.Services.AddScoped<DashboardDataService>();
+builder.Services.AddScoped<SeguridadDinamicaHttpService>();
+builder.Services.AddScoped<SesionUsuarioStateService>();
 
 // ──── Demo Seed ────
 builder.Services.AddScoped<EmpresaDemoService>();

@@ -10,20 +10,31 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
-        // ?? Validadores FluentValidation ??????????????????????????????????????
+        // MemoryCache for plan de cuentas and similar catalog structures
+        services.AddMemoryCache();
+
+        // ?? Validadores FluentValidation??????????????????????????????????????
         // Registra todos los AbstractValidator<T> del assembly Application.
         services.AddValidatorsFromAssemblyContaining<TareaCreateValidator>();
 
         services.AddScoped<IEmpresaService, EmpresaService>();
+        services.AddScoped<ISucursalService, SucursalService>();
         services.AddScoped<IRolService, RolService>();
+        services.AddScoped<ISeguridadDinamicaService, SeguridadDinamicaService>();
         services.AddScoped<IUsuarioService, UsuarioService>();
+        services.AddScoped<IUsuarioSucursalAccesoService, UsuarioSucursalAccesoService>();
         services.AddScoped<IParametroSistemaService, ParametroSistemaService>();
         services.AddScoped<INumeracionDocumentoService, NumeracionDocumentoService>();
+        services.AddScoped<IGeografiaService, GeografiaService>();
 
         // MDM: third parties
         services.AddScoped<IClienteService, ClienteService>();
+        services.AddScoped<IClienteSucursalService, ClienteSucursalService>();
+        services.AddScoped<IContactoService, ContactoService>();
+        services.AddScoped<IContactoUsuarioAccesoService, ContactoUsuarioAccesoService>();
         services.AddScoped<IProveedorService, ProveedorService>();
         services.AddScoped<IAlmacenService, AlmacenService>();
+        services.AddScoped<IPedidoVentaService, PedidoVentaService>();
 
         // MDM: unified catalog
         services.AddScoped<ICatalogService, CatalogService>();
@@ -71,6 +82,23 @@ public static class DependencyInjection
         services.AddScoped<IEstadoFinancieroService, EstadoFinancieroService>();
         services.AddScoped<ICentroCostoService, CentroCostoService>();
         services.AddScoped<IComprobanteDocumentoService, ComprobanteDocumentoService>();
+        services.AddScoped<ICierreContableService, CierreContableService>();
+
+        // Notificaciones
+        services.AddScoped<INotificacionService, LogNotificacionService>();
+        services.AddScoped<IPeriodoContableNotificacionService, PeriodoContableNotificacionService>();
+
+        // TRB: Tributario
+        services.AddScoped<IImpuestoService, ImpuestoService>();
+
+        // ACT: Activos Fijos
+        services.AddScoped<IActivoFijoService, ActivoFijoService>();
+
+        // ACC: Presupuestos
+        services.AddScoped<IPresupuestoService, PresupuestoService>();
+
+        // BNC: Conciliación Bancaria
+        services.AddScoped<IConciliacionBancariaService, ConciliacionBancariaService>();
 
         // WF: Workflow
         services.AddScoped<IWorkflowService, WorkflowService>();

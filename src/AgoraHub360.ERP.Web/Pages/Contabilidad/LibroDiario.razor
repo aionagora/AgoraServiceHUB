@@ -1,19 +1,20 @@
 @page "/contabilidad/libro-diario"
 @attribute [Authorize]
 @inject EstadoFinancieroHttpService ReporteService
+@inject FileDownloadService FileDownload
 @inject IJSRuntime JS
 
 <PageTitle>Libro Diario - AgoraHub360 ERP</PageTitle>
 
 <div class="container-fluid">
-    <div class="row mb-3">
+    <div class="row mb-3 d-print-none">
         <div class="col">
             <h3><i class="bi bi-journal-bookmark-fill"></i> Libro Diario</h3>
-            <p class="text-muted mb-0">Registro cronológico de comprobantes contables</p>
+            <p class="text-muted mb-0">Registro cronolÃ³gico de comprobantes contables</p>
         </div>
     </div>
 
-    <div class="card mb-3">
+    <div class="card mb-3 d-print-none">
         <div class="card-body py-2">
             <div class="row g-2 align-items-end">
                 <div class="col-md-2">
@@ -40,9 +41,13 @@
                     </button>
                 </div>
                 <div class="col-md-auto">
-                    <button class="btn btn-sm btn-success" @onclick="ExportarExcel" disabled="@(exportando || data == null)">
+                    <button class="btn btn-sm btn-success" @onclick="ExportarExcel" disabled="@(exportando || _exportandoPdf || data == null)">
                         @if (exportando) { <span class="spinner-border spinner-border-sm me-1"></span> }
                         <i class="bi bi-file-earmark-excel"></i> Excel
+                    </button>
+                    <button class="btn btn-sm btn-danger ms-1" @onclick="ExportarPdfConConfirmacion" disabled="@(exportando || _exportandoPdf || data == null)">
+                        @if (_exportandoPdf) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                        <i class="bi bi-file-earmark-pdf"></i> PDF
                     </button>
                 </div>
                 <div class="col-md-auto">
@@ -62,6 +67,27 @@
         </div>
     }
 
+    @if (showModalPdf)
+    {
+        <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-warning text-dark">
+                        <h5 class="modal-title"><i class="bi bi-exclamation-triangle-fill"></i> ConfirmaciÃ³n</h5>
+                        <button type="button" class="btn-close" @onclick="() => showModalPdf = false"></button>
+                    </div>
+                    <div class="modal-body">
+                        El PDF puede ser grande y tardar mÃ¡s tiempo en generarse. Â¿Desea continuar?
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="() => showModalPdf = false">Cancelar</button>
+                        <button type="button" class="btn btn-primary" @onclick="ExportarPdfConfirmado">Continuar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
     @if (data != null)
     {
         <div id="printArea">
@@ -70,7 +96,7 @@
                     <div class="text-center mb-4">
                         <h4 class="fw-bold">@data.Empresa</h4>
                         <h5>LIBRO DIARIO</h5>
-                        <p class="text-muted">Del @data.FechaDesde.ToString("dd/MM/yyyy") al @data.FechaHasta.ToString("dd/MM/yyyy") — Gestión @data.Gestion</p>
+                        <p class="text-muted">Del @data.FechaDesde.ToString("dd/MM/yyyy") al @data.FechaHasta.ToString("dd/MM/yyyy") â€” GestiÃ³n @data.Gestion</p>
                         <p class="small text-muted">(Expresado en Bolivianos)</p>
                     </div>
 
@@ -78,7 +104,7 @@
                     {
                         <div class="text-center py-5 text-muted">
                             <i class="bi bi-journal-x" style="font-size:2.5rem;"></i>
-                            <p class="mt-3">No hay comprobantes en el período seleccionado.</p>
+                            <p class="mt-3">No hay comprobantes en el perÃ­odo seleccionado.</p>
                         </div>
                     }
                     else
@@ -89,7 +115,7 @@
                                     <tr>
                                         <th style="width:100px">Fecha</th>
                                         <th style="width:140px">Nro. Comprobante</th>
-                                        <th style="width:120px">Código</th>
+                                        <th style="width:120px">CÃ³digo</th>
                                         <th>Cuenta / Glosa</th>
                                         <th class="text-end" style="width:130px">Debe</th>
                                         <th class="text-end" style="width:130px">Haber</th>
@@ -110,7 +136,7 @@
                                             <td></td>
                                             <td></td>
                                         </tr>
-                                        @* Líneas del comprobante *@
+                                        @* LÃ­neas del comprobante *@
                                         @foreach (var linea in entrada.Lineas)
                                         {
                                             <tr>
@@ -149,7 +175,7 @@
                         </div>
 
                         <div class="mt-3 text-muted small d-flex justify-content-between">
-                            <span><strong>@data.Entradas.Count</strong> comprobantes en el período.</span>
+                            <span><strong>@data.Entradas.Count</strong> comprobantes en el perÃ­odo.</span>
                             <span>
                                 @if (data.TotalDebe == data.TotalHaber)
                                 {
@@ -175,6 +201,8 @@
     private LibroDiarioDto? data;
     private bool loading;
     private bool exportando;
+    private bool _exportandoPdf;
+    private bool showModalPdf = false;
     private string? errorMessage;
 
     private async Task Generar()
@@ -198,13 +226,45 @@
             var estado = string.IsNullOrEmpty(filtroEstado) ? null : filtroEstado;
             var bytes = await ReporteService.ExportLibroDiarioExcelAsync(fechaDesde, fechaHasta, estado);
             if (bytes != null)
-                await JS.InvokeVoidAsync("downloadFile",
+                await FileDownload.DownloadFromBase64Async(
                     $"Libro_Diario_{fechaDesde:yyyyMMdd}_{fechaHasta:yyyyMMdd}.xlsx",
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    Convert.ToBase64String(bytes));
+                    bytes);
         }
         catch (Exception ex) { errorMessage = ex.Message; }
         finally { exportando = false; }
+    }
+
+    private void ExportarPdfConConfirmacion()
+    {
+        if ((fechaHasta - fechaDesde).TotalDays > 31)
+        {
+            showModalPdf = true;
+        }
+        else
+        {
+            _ = ExportarPdfReal();
+        }
+    }
+
+    private async Task ExportarPdfConfirmado()
+    {
+        showModalPdf = false;
+        await ExportarPdfReal();
+    }
+
+    private async Task ExportarPdfReal()
+    {
+        _exportandoPdf = true;
+        StateHasChanged();
+        try
+        {
+            var estadoQuery = string.IsNullOrEmpty(filtroEstado) ? "" : $"&estado={filtroEstado}";
+            var url = $"api/v1/contabilidad/estados-financieros/libro-diario/export?desde={fechaDesde:yyyy-MM-dd}&hasta={fechaHasta:yyyy-MM-dd}{estadoQuery}&format=pdf";
+            await FileDownload.DownloadFromApiAsync(url, $"Libro_Diario_{fechaDesde:yyyyMMdd}_{fechaHasta:yyyyMMdd}.pdf");
+        }
+        catch (Exception ex) { errorMessage = ex.Message; }
+        finally { _exportandoPdf = false; StateHasChanged(); }
     }
 
     private async Task Imprimir()
@@ -220,3 +280,4 @@
         _ => "bg-secondary"
     };
 }
+

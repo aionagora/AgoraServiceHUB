@@ -9,12 +9,12 @@
 <div class="container-fluid">
     <div class="row mb-3">
         <div class="col">
-            <h3><i class="bi bi-globe-americas"></i> Hojas de Importación</h3>
-            <p class="text-muted mb-0">Distribución de gastos de importación (Landed Cost) sobre Órdenes de Compra</p>
+            <h3><i class="bi bi-globe-americas"></i> Hojas de ImportaciÃ³n</h3>
+            <p class="text-muted mb-0">DistribuciÃ³n de gastos de importaciÃ³n (Landed Cost) sobre Ã“rdenes de Compra</p>
         </div>
         <div class="col-auto">
             <button class="btn btn-primary" @onclick="ShowCreateModal">
-                <i class="bi bi-plus-circle"></i> Nueva Importación
+                <i class="bi bi-plus-circle"></i> Nueva ImportaciÃ³n
             </button>
         </div>
     </div>
@@ -37,7 +37,7 @@
     @* ?? Lista ?? *@
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center py-3">
-            <span>Hojas de Importación <span class="badge bg-secondary ms-1">@hojas.Count</span></span>
+            <span>Hojas de ImportaciÃ³n <span class="badge bg-secondary ms-1">@hojas.Count</span></span>
         </div>
         <div class="card-body p-0">
             @if (loading)
@@ -48,7 +48,7 @@
             {
                 <div class="text-center py-5">
                     <i class="bi bi-inbox" style="font-size:2.5rem;"></i>
-                    <p class="text-muted mt-3">No hay hojas de importación registradas.</p>
+                    <p class="text-muted mt-3">No hay hojas de importaciÃ³n registradas.</p>
                 </div>
             }
             else
@@ -58,11 +58,11 @@
                         <thead class="table-light">
                             <tr>
                                 <th style="width:40px"></th>
-                                <th>Número</th>
+                                <th>NÃºmero</th>
                                 <th>Fecha</th>
                                 <th>OC</th>
                                 <th>Ref. Aduanera</th>
-                                <th>Método</th>
+                                <th>MÃ©todo</th>
                                 <th class="text-end">Total Gastos</th>
                                 <th>Estado</th>
                                 <th class="text-end">Acciones</th>
@@ -80,7 +80,7 @@
                                     <td><strong>@h.Numero</strong></td>
                                     <td>@h.Fecha.ToString("dd/MM/yyyy")</td>
                                     <td><span class="badge bg-info text-dark">@h.OrdenCompraNumero</span></td>
-                                    <td>@(h.ReferenciaAduanera ?? "—")</td>
+                                    <td>@(h.ReferenciaAduanera ?? "â€”")</td>
                                     <td><span class="badge bg-outline-secondary border">@h.MetodoDistribucionNombre</span></td>
                                     <td class="text-end"><strong>@h.TotalGastos.ToString("N2")</strong></td>
                                     <td>
@@ -109,11 +109,11 @@
                                             <div class="p-3">
                                                 @* ?? Gastos ?? *@
                                                 <div class="d-flex justify-content-between align-items-center mb-2">
-                                                    <strong><i class="bi bi-cash-stack"></i> Gastos de Importación</strong>
+                                                    <strong><i class="bi bi-cash-stack"></i> Gastos de ImportaciÃ³n</strong>
                                                 </div>
                                                 <table class="table table-sm table-bordered mb-3">
                                                     <thead>
-                                                        <tr><th>Tipo</th><th>Descripción</th><th class="text-end">Monto</th><th>Moneda</th><th class="text-end">T/C</th><th class="text-end">Monto Base</th><th>Referencia</th>
+                                                        <tr><th>Tipo</th><th>DescripciÃ³n</th><th class="text-end">Monto</th><th>Moneda</th><th class="text-end">T/C</th><th class="text-end">Monto Base</th><th>Referencia</th>
                                                             @if (!h.Liquidada) { <th></th> }
                                                         </tr>
                                                     </thead>
@@ -122,12 +122,12 @@
                                                         {
                                                             <tr>
                                                                 <td><span class="badge bg-primary">@g.TipoGasto</span></td>
-                                                                <td>@(g.Descripcion ?? "—")</td>
+                                                                <td>@(g.Descripcion ?? "â€”")</td>
                                                                 <td class="text-end">@g.Monto.ToString("N2")</td>
                                                                 <td>@g.MonedaId</td>
                                                                 <td class="text-end">@g.TasaCambio.ToString("N4")</td>
                                                                 <td class="text-end"><strong>@g.MontoBase.ToString("N2")</strong></td>
-                                                                <td><small>@(g.Referencia ?? "—")</small></td>
+                                                                <td><small>@(g.Referencia ?? "â€”")</small></td>
                                                                 @if (!h.Liquidada)
                                                                 {
                                                                     <td class="text-end">
@@ -146,14 +146,14 @@
                                                     </tfoot>
                                                 </table>
 
-                                                @* ?? Distribución (solo si liquidada) ?? *@
+                                                @* ?? DistribuciÃ³n (solo si liquidada) ?? *@
                                                 @if (h.Liquidada && h.Lineas.Count > 0)
                                                 {
-                                                    <div class="mb-2"><strong><i class="bi bi-diagram-3"></i> Distribución Landed Cost</strong></div>
+                                                    <div class="mb-2"><strong><i class="bi bi-diagram-3"></i> DistribuciÃ³n Landed Cost</strong></div>
                                                     <table class="table table-sm table-bordered mb-0">
                                                         <thead>
                                                             <tr>
-                                                                <th>#</th><th>Producto</th><th>Descripción</th>
+                                                                <th>#</th><th>Producto</th><th>DescripciÃ³n</th>
                                                                 <th class="text-end">Cant. Recibida</th>
                                                                 <th class="text-end">FOB Unit.</th><th class="text-end">FOB Total</th>
                                                                 <th class="text-end">% Dist.</th><th class="text-end">Gasto Asig.</th>
@@ -214,7 +214,7 @@
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-globe-americas"></i> Nueva Hoja de Importación</h5>
+                    <h5 class="modal-title"><i class="bi bi-globe-americas"></i> Nueva Hoja de ImportaciÃ³n</h5>
                     <button type="button" class="btn-close" @onclick="() => showCreateModal = false"></button>
                 </div>
                 <div class="modal-body">
@@ -225,7 +225,7 @@
                                 <option value="0">-- Seleccionar --</option>
                                 @foreach (var oc in ocDisponibles)
                                 {
-                                    <option value="@oc.OrdenCompraId">@oc.Numero — @oc.ProveedorNombre (@oc.Estado) — Total: @oc.Total.ToString("N2")</option>
+                                    <option value="@oc.OrdenCompraId">@oc.Numero â€” @oc.ProveedorNombre (@oc.Estado) â€” Total: @oc.Total.ToString("N2")</option>
                                 }
                             </select>
                         </div>
@@ -234,7 +234,7 @@
                             <input type="date" class="form-control" @bind="formFecha" />
                         </div>
                         <div class="col-md-2">
-                            <label class="form-label">Método Distribución</label>
+                            <label class="form-label">MÃ©todo DistribuciÃ³n</label>
                             <select class="form-select" @bind="formMetodo">
                                 <option value="3">Por Valor FOB</option>
                                 <option value="4">Por Unidades</option>
@@ -256,7 +256,7 @@
 
                     <hr />
                     <div class="d-flex justify-content-between align-items-center mb-2">
-                        <strong><i class="bi bi-cash-stack"></i> Gastos de Importación</strong>
+                        <strong><i class="bi bi-cash-stack"></i> Gastos de ImportaciÃ³n</strong>
                     </div>
                     <div class="row g-2 align-items-end mb-2">
                         <div class="col-md-2">
@@ -267,12 +267,12 @@
                                 <option value="Arancel">Arancel</option>
                                 <option value="Agencia">Agencia</option>
                                 <option value="Almacenaje">Almacenaje</option>
-                                <option value="Inspección">Inspección</option>
+                                <option value="InspecciÃ³n">InspecciÃ³n</option>
                                 <option value="Otros">Otros</option>
                             </select>
                         </div>
                         <div class="col-md-2">
-                            <label class="form-label small">Descripción</label>
+                            <label class="form-label small">DescripciÃ³n</label>
                             <input class="form-control form-control-sm" @bind="newGastoDesc" />
                         </div>
                         <div class="col-md-2">
@@ -306,12 +306,12 @@
                                     var g = tempGastos[i];
                                     <tr>
                                         <td><span class="badge bg-primary">@g.TipoGasto</span></td>
-                                        <td>@(g.Descripcion ?? "—")</td>
+                                        <td>@(g.Descripcion ?? "â€”")</td>
                                         <td class="text-end">@g.Monto.ToString("N2")</td>
                                         <td>@g.MonedaId</td>
                                         <td class="text-end">@g.TasaCambio.ToString("N4")</td>
                                         <td class="text-end"><strong>@((g.Monto * g.TasaCambio).ToString("N2"))</strong></td>
-                                        <td>@(g.Referencia ?? "—")</td>
+                                        <td>@(g.Referencia ?? "â€”")</td>
                                         <td class="text-end"><button class="btn btn-sm btn-outline-danger" @onclick="() => tempGastos.RemoveAt(idx)"><i class="bi bi-x-lg"></i></button></td>
                                     </tr>
                                 }
@@ -353,10 +353,10 @@
                     <div class="mb-3"><label class="form-label">Tipo *</label>
                         <select class="form-select" @bind="gastoFormTipo">
                             <option value="Flete">Flete</option><option value="Seguro">Seguro</option><option value="Arancel">Arancel</option>
-                            <option value="Agencia">Agencia</option><option value="Almacenaje">Almacenaje</option><option value="Inspección">Inspección</option><option value="Otros">Otros</option>
+                            <option value="Agencia">Agencia</option><option value="Almacenaje">Almacenaje</option><option value="InspecciÃ³n">InspecciÃ³n</option><option value="Otros">Otros</option>
                         </select>
                     </div>
-                    <div class="mb-3"><label class="form-label">Descripción</label><input class="form-control" @bind="gastoFormDesc" /></div>
+                    <div class="mb-3"><label class="form-label">DescripciÃ³n</label><input class="form-control" @bind="gastoFormDesc" /></div>
                     <div class="row">
                         <div class="col-md-4 mb-3"><label class="form-label">Monto *</label><input type="number" step="0.01" class="form-control" @bind="gastoFormMonto" /></div>
                         <div class="col-md-4 mb-3"><label class="form-label">Moneda</label><input class="form-control" @bind="gastoFormMoneda" /></div>
@@ -457,7 +457,7 @@
                 MetodoDistribucion: formMetodo,
                 Gastos: tempGastos.Count > 0 ? tempGastos : null);
             var r = await ImpService.CreateAsync(dto);
-            if (r.Success) { successMessage = $"Hoja {r.Data?.Numero} creada. Puede agregar más gastos o liquidar."; showCreateModal = false; await LoadData(); }
+            if (r.Success) { successMessage = $"Hoja {r.Data?.Numero} creada. Puede agregar mÃ¡s gastos o liquidar."; showCreateModal = false; await LoadData(); }
             else errorMessage = r.Message;
         }
         catch (Exception ex) { errorMessage = ex.Message; }
@@ -486,7 +486,7 @@
 
     private async Task RemoveGasto(long hojaId, long gastoId)
     {
-        if (!await JS.InvokeAsync<bool>("confirm", "¿Eliminar este gasto?")) return;
+        if (!await JS.InvokeAsync<bool>("confirm", "Â¿Eliminar este gasto?")) return;
         try
         {
             var r = await ImpService.RemoveGastoAsync(hojaId, gastoId);
@@ -498,7 +498,7 @@
     // ?? Liquidar ??
     private async Task Liquidar(HojaImportacionDto hoja)
     {
-        if (!await JS.InvokeAsync<bool>("confirm", $"¿Liquidar {hoja.Numero}? Esto distribuirá los gastos y actualizará los costos de inventario.")) return;
+        if (!await JS.InvokeAsync<bool>("confirm", $"Â¿Liquidar {hoja.Numero}? Esto distribuirÃ¡ los gastos y actualizarÃ¡ los costos de inventario.")) return;
         try
         {
             var r = await ImpService.LiquidarAsync(hoja.HojaImportacionId);
@@ -510,7 +510,7 @@
 
     private async Task DeleteHoja(HojaImportacionDto hoja)
     {
-        if (!await JS.InvokeAsync<bool>("confirm", $"¿Eliminar {hoja.Numero}?")) return;
+        if (!await JS.InvokeAsync<bool>("confirm", $"Â¿Eliminar {hoja.Numero}?")) return;
         try
         {
             var r = await ImpService.DeleteAsync(hoja.HojaImportacionId);

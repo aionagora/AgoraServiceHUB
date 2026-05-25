@@ -6,7 +6,7 @@
 
 <div class="page-header d-flex justify-content-between align-items-center">
     <div>
-        <h1><i class="bi bi-box-seam-fill me-2 text-success"></i>Dashboard — Inventario</h1>
+        <h1><i class="bi bi-box-seam-fill me-2 text-success"></i>Dashboard â€” Inventario</h1>
         <p class="text-muted mb-0">Stock, movimientos y alertas del mes en curso</p>
     </div>
     <button class="btn btn-sm btn-outline-secondary" @onclick="Refresh" disabled="@loading">
@@ -26,7 +26,7 @@ else
             <div class="stat-card text-center">
                 <div class="stat-label">Productos Activos</div>
                 <div class="stat-value text-success">@kpis.ProductosActivos</div>
-                <a href="/mdm/productos-empresa" class="small text-muted">Ver catálogo</a>
+                <a href="/mdm/productos-empresa" class="small text-muted">Ver catÃ¡logo</a>
             </div>
         </div>
         <div class="col-sm-6 col-xl-3">
@@ -103,7 +103,7 @@ else
         <div class="col-lg-8">
             <div class="card h-100">
                 <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                    <span><i class="bi bi-clock-history me-1"></i>Últimos Movimientos del Mes</span>
+                    <span><i class="bi bi-clock-history me-1"></i>Ãšltimos Movimientos del Mes</span>
                     <a href="/inventario/movimientos" class="btn btn-sm btn-link py-0">Ver todos</a>
                 </div>
                 <div class="card-body p-0">
@@ -118,11 +118,11 @@ else
                         <table class="table table-sm table-hover mb-0">
                             <thead class="table-light">
                                 <tr>
-                                    <th>Nº</th>
+                                    <th>NÂº</th>
                                     <th>Fecha</th>
                                     <th>Tipo</th>
                                     <th>Producto</th>
-                                    <th>Almacén</th>
+                                    <th>AlmacÃ©n</th>
                                     <th class="text-end">Cantidad</th>
                                     <th class="text-end">Costo Total</th>
                                 </tr>
@@ -153,13 +153,13 @@ else
         </div>
     </div>
 
-    @* Links rápidos módulos relacionados *@
+    @* Links rÃ¡pidos mÃ³dulos relacionados *@
     <div class="row g-3">
         <div class="col-12">
             <div class="card">
                 <div class="card-body py-3">
                     <div class="row g-2 align-items-center">
-                        <div class="col-auto text-muted small fw-semibold">Módulos relacionados:</div>
+                        <div class="col-auto text-muted small fw-semibold">MÃ³dulos relacionados:</div>
                         <div class="col-auto"><a href="/inventario/almacenes" class="btn btn-sm btn-outline-secondary"><i class="bi bi-house-gear-fill me-1"></i>Almacenes</a></div>
                         <div class="col-auto"><a href="/inventario/stock" class="btn btn-sm btn-outline-secondary"><i class="bi bi-box-seam-fill me-1"></i>Stock Actual</a></div>
                         <div class="col-auto"><a href="/inventario/kardex" class="btn btn-sm btn-outline-secondary"><i class="bi bi-journal-text me-1"></i>Kardex</a></div>

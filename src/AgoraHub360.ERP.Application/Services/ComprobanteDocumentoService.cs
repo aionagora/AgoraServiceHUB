@@ -85,7 +85,7 @@ public class ComprobanteDocumentoService : IComprobanteDocumentoService
                && cd.DocumentId == dto.DocumentId
                && cd.EmpresaId  == empresaId.Value, ct);
         if (yaExiste.Count > 0)
-            return Result<ComprobanteDocumentoDto>.Failure("El documento ya est· adjunto a este comprobante.");
+            return Result<ComprobanteDocumentoDto>.Failure("El documento ya est√° adjunto a este comprobante.");
 
         var adjunto = new ComprobanteDocumento
         {

@@ -3,15 +3,23 @@ namespace AgoraHub360.ERP.Domain.Entities.ACC;
 using AgoraHub360.ERP.Domain.Common;
 using AgoraHub360.ERP.Domain.Enums;
 
+public enum ClasificacionFlujoEfectivo
+{
+    NoAplica = 0,
+    Operacional = 1,
+    Inversion = 2,
+    Financiacion = 3
+}
+
 /// <summary>
 /// Cuenta del Plan de Cuentas contable.
-/// Estructura jer·rquica N-nivel con cÛdigo estructurado (ej: 1.1.3.01).
+/// Estructura jer√°rquica N-nivel con c√≥digo estructurado (ej: 1.1.3.01).
 /// </summary>
 public class CuentaContable : TenantEntity
 {
     public int CuentaContableId { get; set; }
 
-    /// <summary>CÛdigo estructurado de la cuenta (ej: "1", "1.1", "1.1.3", "1.1.3.01").</summary>
+    /// <summary>C√≥digo estructurado de la cuenta (ej: "1", "1.1", "1.1.3", "1.1.3.01").</summary>
     public string Codigo { get; set; } = string.Empty;
 
     /// <summary>Nombre descriptivo de la cuenta.</summary>
@@ -23,7 +31,7 @@ public class CuentaContable : TenantEntity
     /// <summary>Naturaleza del saldo: Deudora o Acreedora.</summary>
     public NaturalezaCuenta Naturaleza { get; set; }
 
-    /// <summary>Nivel jer·rquico (1=grupo, 2=subgrupo, 3=cuenta, 4=subcuentaÖ).</summary>
+    /// <summary>Nivel jer√°rquico (1=grupo, 2=subgrupo, 3=cuenta, 4=subcuenta‚Ä¶).</summary>
     public int Nivel { get; set; } = 1;
 
     /// <summary>Id de la cuenta padre (null para cuentas de nivel 1).</summary>
@@ -33,12 +41,21 @@ public class CuentaContable : TenantEntity
     /// <summary>True si acepta movimientos (es hoja). False si es solo agrupadora.</summary>
     public bool PermiteMovimientos { get; set; }
 
-    /// <summary>DescripciÛn o notas adicionales.</summary>
+    /// <summary>Descripci√≥n o notas adicionales.</summary>
     public string? Descripcion { get; set; }
 
     /// <summary>Saldo actual de la cuenta (se actualiza con cada asiento).</summary>
     public decimal SaldoActual { get; set; }
 
-    // NavegaciÛn
+    /// <summary>Clasificaci√≥n para el estado del flujo de efectivo.</summary>
+    public ClasificacionFlujoEfectivo ClasificacionFlujo { get; private set; } = ClasificacionFlujoEfectivo.NoAplica;
+
+    // Navegaci√≥n
     public ICollection<CuentaContable> SubCuentas { get; set; } = new List<CuentaContable>();
+
+    /// <summary>Actualiza la clasificaci√≥n para el flujo de efectivo.</summary>
+    public void ActualizarClasificacionFlujo(ClasificacionFlujoEfectivo clasificacion)
+    {
+        ClasificacionFlujo = clasificacion;
+    }
 }

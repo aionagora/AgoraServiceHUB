@@ -43,7 +43,7 @@ public class HojaImportacionHttpService
             return ApiResponse<HojaImportacionDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<HojaImportacionDto>>()
-            ?? ApiResponse<HojaImportacionDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<HojaImportacionDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<HojaImportacionDto>> AddGastoAsync(long hojaId, AddGastoImportacionDto dto)
@@ -55,7 +55,7 @@ public class HojaImportacionHttpService
             return ApiResponse<HojaImportacionDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<HojaImportacionDto>>()
-            ?? ApiResponse<HojaImportacionDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<HojaImportacionDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<HojaImportacionDto>> RemoveGastoAsync(long hojaId, long gastoId)
@@ -67,7 +67,7 @@ public class HojaImportacionHttpService
             return ApiResponse<HojaImportacionDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<HojaImportacionDto>>()
-            ?? ApiResponse<HojaImportacionDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<HojaImportacionDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<HojaImportacionDto>> LiquidarAsync(long hojaId)
@@ -79,7 +79,7 @@ public class HojaImportacionHttpService
             return ApiResponse<HojaImportacionDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<HojaImportacionDto>>()
-            ?? ApiResponse<HojaImportacionDto>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<HojaImportacionDto>.Fail("Error de comunicaci贸n.");
     }
 
     public async Task<ApiResponse<bool>> DeleteAsync(long id)
@@ -91,6 +91,6 @@ public class HojaImportacionHttpService
             return ApiResponse<bool>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<bool>>()
-            ?? ApiResponse<bool>.Fail("Error de comunicaci髇.");
+            ?? ApiResponse<bool>.Fail("Error de comunicaci贸n.");
     }
 }

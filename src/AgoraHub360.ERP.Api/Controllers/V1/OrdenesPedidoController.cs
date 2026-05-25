@@ -26,15 +26,18 @@ public class OrdenesPedidoController : ControllerBase
         [FromQuery] string? estado,
         [FromQuery] DateTime? desde,
         [FromQuery] DateTime? hasta,
+        [FromQuery] int? sucursalId,
+        [FromQuery] int? clienteId,
+        [FromQuery] int? clienteSucursalId,
         CancellationToken ct)
     {
-        var result = await _service.GetAllAsync(estado, desde, hasta, ct);
+        var result = await _service.GetAllAsync(estado, desde, hasta, sucursalId, clienteId, clienteSucursalId, ct);
         if (!result.IsSuccess)
             return BadRequest(ApiResponse<IReadOnlyList<OrdenPedidoDto>>.Fail(result.Error!));
         return Ok(ApiResponse<IReadOnlyList<OrdenPedidoDto>>.Ok(result.Value!));
     }
 
-    /// <summary>Obtiene una OP por Id con sus l韓eas.</summary>
+    /// <summary>Obtiene una OP por Id con sus l铆neas.</summary>
     [HttpGet("{id:long}")]
     public async Task<IActionResult> GetById(long id, CancellationToken ct)
     {
@@ -67,14 +70,14 @@ public class OrdenesPedidoController : ControllerBase
         return Ok(ApiResponse<OrdenPedidoDto>.Ok(result.Value!, "Orden de pedido actualizada."));
     }
 
-    /// <summary>Env韆 la OP a Compras Central para revisi髇 (Borrador ? EnRevision).</summary>
+    /// <summary>Env铆a la OP a Compras Central para revisi贸n (Borrador ? EnRevision).</summary>
     [HttpPost("{id:long}/enviar-revision")]
     public async Task<IActionResult> EnviarRevision(long id, CancellationToken ct)
     {
         var result = await _service.EnviarARevisionAsync(id, ct);
         if (!result.IsSuccess)
             return BadRequest(ApiResponse<OrdenPedidoDto>.Fail(result.Error!));
-        return Ok(ApiResponse<OrdenPedidoDto>.Ok(result.Value!, "Orden de pedido enviada a revisi髇."));
+        return Ok(ApiResponse<OrdenPedidoDto>.Ok(result.Value!, "Orden de pedido enviada a revisi贸n."));
     }
 
     /// <summary>
@@ -88,10 +91,10 @@ public class OrdenesPedidoController : ControllerBase
         if (!result.IsSuccess)
             return BadRequest(ApiResponse<OrdenPedidoDto>.Fail(result.Error!));
         return Ok(ApiResponse<OrdenPedidoDto>.Ok(result.Value!,
-            dto.StockCubre ? "Stock suficiente. OP abastecida con stock." : "Stock insuficiente. OP pendiente de aprobaci髇."));
+            dto.StockCubre ? "Stock suficiente. OP abastecida con stock." : "Stock insuficiente. OP pendiente de aprobaci贸n."));
     }
 
-    /// <summary>Gate de aprobaci髇: Finanzas/Direcci髇 aprueba o rechaza.</summary>
+    /// <summary>Gate de aprobaci贸n: Finanzas/Direcci贸n aprueba o rechaza.</summary>
     [HttpPost("{id:long}/aprobar")]
     public async Task<IActionResult> AprobarRechazar(long id, [FromBody] AprobarRechazarOrdenPedidoDto dto, CancellationToken ct)
     {

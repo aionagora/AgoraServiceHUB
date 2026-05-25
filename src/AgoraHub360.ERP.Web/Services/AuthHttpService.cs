@@ -2,6 +2,7 @@ namespace AgoraHub360.ERP.Web.Services;
 
 using System.Net.Http.Json;
 using AgoraHub360.ERP.Shared.DTOs;
+using AgoraHub360.ERP.Shared.DTOs.Auth;
 
 /// <summary>
 /// Servicio HTTP para autenticación contra la API.
@@ -21,5 +22,12 @@ public class AuthHttpService
         var response = await _http.PostAsJsonAsync($"{BaseUrl}/login", request);
         return await response.Content.ReadFromJsonAsync<ApiResponse<AuthResponseDto>>()
             ?? ApiResponse<AuthResponseDto>.Fail("Error de comunicación con el servidor.");
+    }
+
+    public async Task<ApiResponse<CambiarEmpresaResponseDto>> SeleccionarEmpresaAsync(SeleccionarEmpresaRequestDto request)
+    {
+        var response = await _http.PostAsJsonAsync($"{BaseUrl}/seleccionar-empresa", request);
+        return await response.Content.ReadFromJsonAsync<ApiResponse<CambiarEmpresaResponseDto>>()
+            ?? ApiResponse<CambiarEmpresaResponseDto>.Fail("Error de comunicación con el servidor.");
     }
 }

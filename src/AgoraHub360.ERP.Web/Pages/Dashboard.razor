@@ -7,7 +7,7 @@
 <div class="page-header d-flex justify-content-between align-items-center">
     <div>
         <h1><i class="bi bi-grid-1x2-fill me-2"></i>Dashboard Ejecutivo</h1>
-        <p class="text-muted mb-0">Control general · @DateTime.Today.ToString("dddd, dd MMMM yyyy")</p>
+        <p class="text-muted mb-0">Control general Â· @DateTime.Today.ToString("dddd, dd MMMM yyyy")</p>
     </div>
     <button class="btn btn-sm btn-outline-secondary" @onclick="Refresh" disabled="@loading">
         <i class="bi @(loading ? "bi-arrow-repeat" : "bi-arrow-clockwise")"></i> Actualizar
@@ -31,7 +31,7 @@ else
                     <div>
                         <div class="stat-label">Productos Activos</div>
                         <div class="stat-value">@mdm.ProductosActivos</div>
-                        <small class="text-muted">@mdm.ClientesActivos clientes · @mdm.ProveedoresActivos proveedores</small>
+                        <small class="text-muted">@mdm.ClientesActivos clientes Â· @mdm.ProveedoresActivos proveedores</small>
                     </div>
                     <div class="stat-icon" style="background:rgba(245,158,11,.1);color:var(--agora-warning)">
                         <i class="bi bi-box-seam-fill"></i>
@@ -45,7 +45,7 @@ else
                     <div>
                         <div class="stat-label">Compras del Mes</div>
                         <div class="stat-value">@compras.TotalComprasMes.ToString("N0")</div>
-                        <small class="text-muted">@compras.OcTotal OC · @compras.RecepcionesMes recepciones</small>
+                        <small class="text-muted">@compras.OcTotal OC Â· @compras.RecepcionesMes recepciones</small>
                     </div>
                     <div class="stat-icon" style="background:rgba(59,130,246,.1);color:var(--agora-info)">
                         <i class="bi bi-cart-check-fill"></i>
@@ -59,7 +59,7 @@ else
                     <div>
                         <div class="stat-label">Movimientos Inventario (mes)</div>
                         <div class="stat-value">@inventario.MovimientosMes</div>
-                        <small class="text-muted">@inventario.EntradaMes entradas · @inventario.SalidaMes salidas</small>
+                        <small class="text-muted">@inventario.EntradaMes entradas Â· @inventario.SalidaMes salidas</small>
                     </div>
                     <div class="stat-icon" style="background:rgba(34,197,94,.1);color:var(--agora-success)">
                         <i class="bi bi-arrow-left-right"></i>
@@ -73,7 +73,7 @@ else
                     <div>
                         <div class="stat-label">Asientos del Mes</div>
                         <div class="stat-value">@contabilidad.AsientosMes</div>
-                        <small class="text-muted">@contabilidad.AsientosContabilizados contabilizados · @contabilidad.AsientosBorrador borradores</small>
+                        <small class="text-muted">@contabilidad.AsientosContabilizados contabilizados Â· @contabilidad.AsientosBorrador borradores</small>
                     </div>
                     <div class="stat-icon" style="background:rgba(139,92,246,.1);color:#8b5cf6">
                         <i class="bi bi-journal-bookmark-fill"></i>
@@ -88,7 +88,7 @@ else
         <div class="col-12">
             <div class="card">
                 <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                    <span><i class="bi bi-diagram-3 me-1"></i>Flujo de Compras — Estado Actual</span>
+                    <span><i class="bi bi-diagram-3 me-1"></i>Flujo de Compras â€” Estado Actual</span>
                     <a href="/dashboard/compras" class="btn btn-sm btn-outline-primary">Ver detalle</a>
                 </div>
                 <div class="card-body">
@@ -102,7 +102,7 @@ else
                                     <div class="small text-muted">Pedidos Internos</div>
                                     @if (compras.OpPendienteAprobacion > 0)
                                     {
-                                        <span class="badge bg-warning text-dark mt-1">@compras.OpPendienteAprobacion pte. aprobación</span>
+                                        <span class="badge bg-warning text-dark mt-1">@compras.OpPendienteAprobacion pte. aprobaciÃ³n</span>
                                     }
                                 </div>
                             </a>
@@ -112,7 +112,7 @@ else
                             <a href="/compras/ordenes" class="text-decoration-none">
                                 <div class="border rounded p-3 @(compras.OcBorrador > 0 ? "border-info bg-info bg-opacity-10" : "")">
                                     <div class="fs-4 fw-bold text-primary">@compras.OcTotal</div>
-                                    <div class="small text-muted">Órdenes de Compra</div>
+                                    <div class="small text-muted">Ã“rdenes de Compra</div>
                                     @if (compras.OcAprobadas > 0) { <span class="badge bg-success mt-1">@compras.OcAprobadas aprobadas</span> }
                                     @if (compras.OcBorrador > 0) { <span class="badge bg-secondary mt-1">@compras.OcBorrador borradores</span> }
                                 </div>
@@ -136,7 +136,7 @@ else
                                         @(compras.ExpEnTransito + compras.ExpEnAduana + compras.ExpLiberados)
                                     </div>
                                     <div class="small text-muted">Expedientes Activos</div>
-                                    @if (compras.ExpEnTransito > 0) { <span class="badge bg-info text-dark mt-1">@compras.ExpEnTransito tránsito</span> }
+                                    @if (compras.ExpEnTransito > 0) { <span class="badge bg-info text-dark mt-1">@compras.ExpEnTransito trÃ¡nsito</span> }
                                     @if (compras.ExpEnAduana > 0) { <span class="badge bg-warning text-dark mt-1">@compras.ExpEnAduana aduana</span> }
                                 </div>
                             </a>
@@ -167,7 +167,7 @@ else
                         {
                             <li class="list-group-item list-group-item-warning px-3 py-2">
                                 <a href="/compras/pedidos" class="text-decoration-none text-dark d-flex justify-content-between">
-                                    <span><i class="bi bi-clipboard2-check me-2"></i><strong>@compras.OpPendienteAprobacion</strong> pedido(s) pte. aprobación</span>
+                                    <span><i class="bi bi-clipboard2-check me-2"></i><strong>@compras.OpPendienteAprobacion</strong> pedido(s) pte. aprobaciÃ³n</span>
                                     <i class="bi bi-chevron-right"></i>
                                 </a>
                             </li>
@@ -194,7 +194,7 @@ else
                         {
                             <li class="list-group-item list-group-item-danger px-3 py-2">
                                 <a href="/compras/recepciones" class="text-decoration-none text-dark d-flex justify-content-between">
-                                    <span><i class="bi bi-exclamation-triangle me-2"></i><strong>@compras.RecepcionesConDif</strong> recepción(es) con diferencias</span>
+                                    <span><i class="bi bi-exclamation-triangle me-2"></i><strong>@compras.RecepcionesConDif</strong> recepciÃ³n(es) con diferencias</span>
                                     <i class="bi bi-chevron-right"></i>
                                 </a>
                             </li>
@@ -252,8 +252,8 @@ else
                                         <div>
                                             <strong class="small">@exp.Numero</strong>
                                             <div class="text-muted" style="font-size:.75rem">
-                                                @(exp.PaisOrigen ?? "—") ? @(exp.PuertoDestino ?? "—")
-                                                @if (exp.ETA.HasValue) { <span> · ETA @exp.ETA.Value.ToString("dd/MM")</span> }
+                                                @(exp.PaisOrigen ?? "â€”") ? @(exp.PuertoDestino ?? "â€”")
+                                                @if (exp.ETA.HasValue) { <span> Â· ETA @exp.ETA.Value.ToString("dd/MM")</span> }
                                             </div>
                                         </div>
                                         <span class="badge @GetExpBadge(exp.Estado)" style="font-size:.7rem">@GetExpLabel(exp.Estado)</span>
@@ -268,9 +268,9 @@ else
 
         <div class="col-lg-4">
             <div class="card h-100">
-                <div class="card-header py-3"><i class="bi bi-lightning-charge-fill text-warning me-1"></i>Accesos Rápidos</div>
+                <div class="card-header py-3"><i class="bi bi-lightning-charge-fill text-warning me-1"></i>Accesos RÃ¡pidos</div>
                 <div class="card-body">
-                    <p class="text-muted small mb-2">Dashboards por módulo</p>
+                    <p class="text-muted small mb-2">Dashboards por mÃ³dulo</p>
                     <div class="d-grid gap-2 mb-3">
                         <a href="/dashboard/compras" class="btn btn-outline-primary btn-sm text-start"><i class="bi bi-cart-check-fill me-2"></i>Dashboard Compras</a>
                         <a href="/dashboard/inventario" class="btn btn-outline-success btn-sm text-start"><i class="bi bi-box-seam-fill me-2"></i>Dashboard Inventario</a>
@@ -288,20 +288,20 @@ else
         </div>
     </div>
 
-    @* Últimas recepciones *@
+    @* Ãšltimas recepciones *@
     @if (compras.UltimasRecepciones.Count > 0)
     {
         <div class="row g-3">
             <div class="col-12">
                 <div class="card">
                     <div class="card-header py-3 d-flex justify-content-between align-items-center">
-                        <span><i class="bi bi-box-seam me-1"></i>Últimas Recepciones</span>
+                        <span><i class="bi bi-box-seam me-1"></i>Ãšltimas Recepciones</span>
                         <a href="/compras/recepciones" class="btn btn-sm btn-link">Ver todas</a>
                     </div>
                     <div class="table-responsive">
                         <table class="table table-sm table-hover mb-0">
                             <thead class="table-light">
-                                <tr><th>Número</th><th>Fecha</th><th>OC Origen</th><th>Almacén</th><th>Diferencias</th><th>Cuarentena</th></tr>
+                                <tr><th>NÃºmero</th><th>Fecha</th><th>OC Origen</th><th>AlmacÃ©n</th><th>Diferencias</th><th>Cuarentena</th></tr>
                             </thead>
                             <tbody>
                                 @foreach (var r in compras.UltimasRecepciones)
@@ -312,7 +312,7 @@ else
                                         <td>@r.OrdenCompraNumero</td>
                                         <td>@r.AlmacenNombre</td>
                                         <td>@if (r.TieneDiferencias) { <span class="badge bg-danger">@(r.TipoDiferencia ?? "Diferencias")</span> } else { <span class="badge bg-success">OK</span> }</td>
-                                        <td>@if (r.EnCuarentena) { <span class="badge bg-warning text-dark">Cuarentena</span> } else { <span class="text-muted small">—</span> }</td>
+                                        <td>@if (r.EnCuarentena) { <span class="badge bg-warning text-dark">Cuarentena</span> } else { <span class="text-muted small">â€”</span> }</td>
                                     </tr>
                                 }
                             </tbody>
@@ -364,7 +364,7 @@ else
 
     private static string GetExpLabel(string estado) => estado switch
     {
-        "EnTransito"        => "En Tránsito",
+        "EnTransito"        => "En TrÃ¡nsito",
         "EnAduana"          => "En Aduana",
         "ObservacionAduana" => "Obs. Aduana",
         _                   => estado

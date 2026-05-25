@@ -1,6 +1,6 @@
 namespace AgoraHub360.ERP.Shared.DTOs.Compras;
 
-/// <summary>DTO de lectura para Recepción de Compra.</summary>
+/// <summary>DTO de lectura para RecepciÃ³n de Compra.</summary>
 public record RecepcionCompraDto(
     long RecepcionCompraId,
     int EmpresaId,
@@ -22,7 +22,7 @@ public record RecepcionCompraDto(
     string? ResultadoControlCalidad,
     List<RecepcionCompraLineaDto> Lineas);
 
-/// <summary>DTO de lectura para línea de recepción.</summary>
+/// <summary>DTO de lectura para lÃ­nea de recepciÃ³n.</summary>
 public record RecepcionCompraLineaDto(
     long RecepcionCompraLineaId,
     long OrdenCompraLineaId,
@@ -33,14 +33,14 @@ public record RecepcionCompraLineaDto(
     decimal CantidadOrdenada,
     decimal CantidadPendiente,
     decimal CantidadRecibida,
-    decimal CantidadDañada,
+    decimal CantidadDaÃ±ada,
     decimal CantidadSobrante,
     decimal CantidadFaltante,
     decimal CantidadAceptada,
     decimal CostoUnitario,
     string? Notas);
 
-/// <summary>DTO para crear una recepción con sus líneas.</summary>
+/// <summary>DTO para crear una recepciÃ³n con sus lÃ­neas.</summary>
 public record CreateRecepcionCompraDto(
     long OrdenCompraId,
     DateTime FechaRecepcion,
@@ -56,11 +56,11 @@ public record CreateRecepcionCompraDto(
     string? ResultadoControlCalidad = null,
     List<CreateRecepcionCompraLineaDto>? Lineas = null);
 
-/// <summary>DTO para crear una línea de recepción.</summary>
+/// <summary>DTO para crear una lÃ­nea de recepciÃ³n.</summary>
 public record CreateRecepcionCompraLineaDto(
     long OrdenCompraLineaId,
     decimal CantidadRecibida,
-    decimal CantidadDañada = 0,
+    decimal CantidadDaÃ±ada = 0,
     decimal CantidadSobrante = 0,
     decimal CantidadFaltante = 0,
     decimal? CostoUnitario = null,

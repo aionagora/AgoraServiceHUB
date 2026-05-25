@@ -1,20 +1,21 @@
 @page "/mdm/clientes"
 @attribute [Authorize]
+@inject NavigationManager Nav
 @inject ClienteHttpService ClienteService
+@inject EmpresaStateService EmpresaState
 @inject IJSRuntime JS
 @using ClienteDto = AgoraHub360.ERP.Shared.DTOs.MDM.ClienteDto
-@using CreateClienteDto = AgoraHub360.ERP.Shared.DTOs.MDM.CreateClienteDto
-@using UpdateClienteDto = AgoraHub360.ERP.Shared.DTOs.MDM.UpdateClienteDto
+@implements IDisposable
 
 <PageTitle>Clientes</PageTitle>
 
 <div class="container-fluid">
     <div class="row mb-3">
         <div class="col">
-            <h3>?? Clientes</h3>
+            <h3>ðŸ‘¥ Clientes</h3>
         </div>
         <div class="col-auto">
-            <button class="btn btn-primary" @onclick="ShowCreateModal">
+            <button class="btn btn-primary" @onclick="GoToCreate">
                 <i class="bi bi-plus-circle"></i> Nuevo Cliente
             </button>
         </div>
@@ -48,7 +49,7 @@
     else if (clientes.Count == 0)
     {
         <div class="alert alert-info">
-            <i class="bi bi-info-circle"></i> No hay clientes registrados. Crea el primer cliente usando el botón "Nuevo Cliente".
+            <i class="bi bi-info-circle"></i> No hay clientes registrados. Crea el primer cliente usando el botÃ³n "Nuevo Cliente".
         </div>
     }
     else
@@ -59,10 +60,10 @@
                     <table class="table table-hover">
                         <thead>
                             <tr>
-                                <th>Código</th>
-                                <th>Razón Social</th>
+                                <th>CÃ³digo</th>
+                                <th>RazÃ³n Social</th>
                                 <th>NIT</th>
-                                <th>Teléfono</th>
+                                <th>TelÃ©fono</th>
                                 <th>Email</th>
                                 <th>Tipo</th>
                                 <th>Estado</th>
@@ -90,7 +91,7 @@
                                         }
                                     </td>
                                     <td class="text-end">
-                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditModal(cliente)">
+                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => GoToEdit(cliente)">
                                             <i class="bi bi-pencil"></i>
                                         </button>
                                         <button class="btn btn-sm btn-outline-danger ms-1" @onclick="() => DeleteCliente(cliente)">
@@ -107,200 +108,21 @@
     }
 </div>
 
-@* Modal Crear *@
-@if (showCreateModal)
-{
-    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Nuevo Cliente</h5>
-                    <button type="button" class="btn-close" @onclick="CloseCreateModal"></button>
-                </div>
-                <div class="modal-body">
-                    <EditForm Model="createDto" OnValidSubmit="CreateCliente">
-                        <DataAnnotationsValidator />
-                        <ValidationSummary class="text-danger" />
-
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">Código *</label>
-                                <InputText class="form-control" @bind-Value="createDto.Codigo" placeholder="Ej: CLI-001" />
-                                <ValidationMessage For="@(() => createDto.Codigo)" />
-                            </div>
-                            <div class="col-md-8 mb-3">
-                                <label class="form-label">Razón Social *</label>
-                                <InputText class="form-control" @bind-Value="createDto.RazonSocial" placeholder="Nombre o razón social" />
-                                <ValidationMessage For="@(() => createDto.RazonSocial)" />
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">NIT</label>
-                                <InputText class="form-control" @bind-Value="createDto.NIT" placeholder="NIT o CI" />
-                                <ValidationMessage For="@(() => createDto.NIT)" />
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">Tipo de Cliente *</label>
-                                <InputSelect class="form-select" @bind-Value="createDto.TipoCliente">
-                                    <option value="General">General</option>
-                                    <option value="Mayorista">Mayorista</option>
-                                    <option value="Minorista">Minorista</option>
-                                    <option value="Corporativo">Corporativo</option>
-                                </InputSelect>
-                                <ValidationMessage For="@(() => createDto.TipoCliente)" />
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">Teléfono</label>
-                                <InputText class="form-control" @bind-Value="createDto.Telefono" placeholder="77123456" />
-                                <ValidationMessage For="@(() => createDto.Telefono)" />
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Email</label>
-                                <InputText class="form-control" type="email" @bind-Value="createDto.Email" placeholder="cliente@ejemplo.com" />
-                                <ValidationMessage For="@(() => createDto.Email)" />
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Nombre Contacto</label>
-                                <InputText class="form-control" @bind-Value="createDto.NombreContacto" placeholder="Persona de contacto" />
-                                <ValidationMessage For="@(() => createDto.NombreContacto)" />
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Dirección</label>
-                            <InputTextArea class="form-control" @bind-Value="createDto.Direccion" rows="2" placeholder="Dirección completa" />
-                            <ValidationMessage For="@(() => createDto.Direccion)" />
-                        </div>
-
-                        <div class="d-flex justify-content-end gap-2">
-                            <button type="button" class="btn btn-secondary" @onclick="CloseCreateModal">Cancelar</button>
-                            <button type="submit" class="btn btn-primary" disabled="@saving">
-                                @if (saving)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-1"></span>
-                                }
-                                Guardar
-                            </button>
-                        </div>
-                    </EditForm>
-                </div>
-            </div>
-        </div>
-    </div>
-}
-
-@* Modal Editar *@
-@if (showEditModal)
-{
-    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Editar Cliente</h5>
-                    <button type="button" class="btn-close" @onclick="CloseEditModal"></button>
-                </div>
-                <div class="modal-body">
-                    <EditForm Model="updateDto" OnValidSubmit="UpdateCliente">
-                        <DataAnnotationsValidator />
-                        <ValidationSummary class="text-danger" />
-
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">Código *</label>
-                                <InputText class="form-control" @bind-Value="updateDto.Codigo" placeholder="Ej: CLI-001" />
-                                <ValidationMessage For="@(() => updateDto.Codigo)" />
-                            </div>
-                            <div class="col-md-8 mb-3">
-                                <label class="form-label">Razón Social *</label>
-                                <InputText class="form-control" @bind-Value="updateDto.RazonSocial" placeholder="Nombre o razón social" />
-                                <ValidationMessage For="@(() => updateDto.RazonSocial)" />
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">NIT</label>
-                                <InputText class="form-control" @bind-Value="updateDto.NIT" placeholder="NIT o CI" />
-                                <ValidationMessage For="@(() => updateDto.NIT)" />
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">Tipo de Cliente *</label>
-                                <InputSelect class="form-select" @bind-Value="updateDto.TipoCliente">
-                                    <option value="General">General</option>
-                                    <option value="Mayorista">Mayorista</option>
-                                    <option value="Minorista">Minorista</option>
-                                    <option value="Corporativo">Corporativo</option>
-                                </InputSelect>
-                                <ValidationMessage For="@(() => updateDto.TipoCliente)" />
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">Teléfono</label>
-                                <InputText class="form-control" @bind-Value="updateDto.Telefono" placeholder="77123456" />
-                                <ValidationMessage For="@(() => updateDto.Telefono)" />
-                            </div>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Email</label>
-                                <InputText class="form-control" type="email" @bind-Value="updateDto.Email" placeholder="cliente@ejemplo.com" />
-                                <ValidationMessage For="@(() => updateDto.Email)" />
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Nombre Contacto</label>
-                                <InputText class="form-control" @bind-Value="updateDto.NombreContacto" placeholder="Persona de contacto" />
-                                <ValidationMessage For="@(() => updateDto.NombreContacto)" />
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Dirección</label>
-                            <InputTextArea class="form-control" @bind-Value="updateDto.Direccion" rows="2" placeholder="Dirección completa" />
-                            <ValidationMessage For="@(() => updateDto.Direccion)" />
-                        </div>
-
-                        <div class="mb-3 form-check">
-                            <InputCheckbox class="form-check-input" id="activoCheck" @bind-Value="updateDto.Activo" />
-                            <label class="form-check-label" for="activoCheck">Activo</label>
-                        </div>
-
-                        <div class="d-flex justify-content-end gap-2">
-                            <button type="button" class="btn btn-secondary" @onclick="CloseEditModal">Cancelar</button>
-                            <button type="submit" class="btn btn-primary" disabled="@saving">
-                                @if (saving)
-                                {
-                                    <span class="spinner-border spinner-border-sm me-1"></span>
-                                }
-                                Actualizar
-                            </button>
-                        </div>
-                    </EditForm>
-                </div>
-            </div>
-        </div>
-    </div>
-}
-
 @code {
     private List<ClienteDto> clientes = new();
     private bool loading = true;
-    private bool saving = false;
-    private bool showCreateModal = false;
-    private bool showEditModal = false;
     private string? errorMessage;
     private string? successMessage;
-    private CreateClienteDto createDto = new();
-    private UpdateClienteDto updateDto = new();
-    private int editingId;
 
     protected override async Task OnInitializedAsync()
     {
+        EmpresaState.OnChange += HandleEmpresaChanged;
         await LoadClientes();
+    }
+
+    private void HandleEmpresaChanged()
+    {
+        _ = InvokeAsync(async () => await LoadClientes());
     }
 
     private async Task LoadClientes()
@@ -321,99 +143,24 @@
         }
     }
 
-    private void ShowCreateModal()
+    public void Dispose()
     {
-        createDto = new CreateClienteDto();
-        showCreateModal = true;
+        EmpresaState.OnChange -= HandleEmpresaChanged;
     }
 
-    private void CloseCreateModal() => showCreateModal = false;
-
-    private void ShowEditModal(ClienteDto cliente)
+    private void GoToCreate()
     {
-        updateDto = new UpdateClienteDto
-        {
-            Codigo = cliente.Codigo,
-            RazonSocial = cliente.RazonSocial,
-            NIT = cliente.NIT,
-            Telefono = cliente.Telefono,
-            Email = cliente.Email,
-            Direccion = cliente.Direccion,
-            NombreContacto = cliente.NombreContacto,
-            TipoCliente = cliente.TipoCliente,
-            Activo = cliente.Activo
-        };
-        editingId = cliente.Id;
-        showEditModal = true;
+        Nav.NavigateTo("/mdm/clientes/nuevo");
     }
 
-    private void CloseEditModal() => showEditModal = false;
-
-    private async Task CreateCliente()
+    private void GoToEdit(ClienteDto cliente)
     {
-        try
-        {
-            saving = true;
-            errorMessage = null;
-            successMessage = null;
-
-            var response = await ClienteService.CreateAsync(createDto);
-
-            if (response.Success)
-            {
-                successMessage = "Cliente creado exitosamente";
-                CloseCreateModal();
-                await LoadClientes();
-            }
-            else
-            {
-                errorMessage = response.Message;
-            }
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Error: {ex.Message}";
-        }
-        finally
-        {
-            saving = false;
-        }
-    }
-
-    private async Task UpdateCliente()
-    {
-        try
-        {
-            saving = true;
-            errorMessage = null;
-            successMessage = null;
-
-            var response = await ClienteService.UpdateAsync(editingId, updateDto);
-
-            if (response.Success)
-            {
-                successMessage = "Cliente actualizado exitosamente";
-                CloseEditModal();
-                await LoadClientes();
-            }
-            else
-            {
-                errorMessage = response.Message;
-            }
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Error: {ex.Message}";
-        }
-        finally
-        {
-            saving = false;
-        }
+        Nav.NavigateTo($"/mdm/clientes/editar/{cliente.Id}");
     }
 
     private async Task DeleteCliente(ClienteDto cliente)
     {
-        if (!await JS.InvokeAsync<bool>("confirm", $"¿Eliminar el cliente '{cliente.RazonSocial}'?"))
+        if (!await JS.InvokeAsync<bool>("confirm", $"Â¿Eliminar el cliente '{cliente.RazonSocial}'?"))
             return;
 
         try

@@ -1,0 +1,515 @@
+@page "/compras/pedidos/nuevo"
+@page "/compras/pedidos/editar/{Id:long}"
+@attribute [Authorize]
+@using System.ComponentModel.DataAnnotations
+@using AgoraHub360.ERP.Shared.DTOs.Compras
+@using AgoraHub360.ERP.Shared.DTOs.MDM
+@using SucursalListadoDto = AgoraHub360.ERP.Shared.DTOs.Sucursal.SucursalListadoDto
+@using MdmClienteDto = AgoraHub360.ERP.Shared.DTOs.MDM.ClienteDto
+@inject OrdenPedidoHttpService OpService
+@inject AlmacenHttpService AlmacenService
+@inject HttpSucursalService SucursalService
+@inject ClienteHttpService ClienteService
+@inject ClienteSucursalHttpService ClienteSucursalService
+@inject MdmCompanyProductHttpService CompanyProductService
+@inject EmpresaStateService EmpresaState
+@inject NavigationManager Nav
+
+<PageTitle>@(_isEdit ? "Editar Pedido" : "Nuevo Pedido") - AgoraHub360 ERP</PageTitle>
+
+<div class="page-header mb-3">
+    <h1>@(_isEdit ? "Editar Pedido" : "Nuevo Pedido")</h1>
+    <p class="text-muted mb-0">Compras &rsaquo; Pedidos &rsaquo; @(_isEdit ? "Edición" : "Creación")</p>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(_mensaje))
+{
+    <div class="alert @(_error ? "alert-danger" : "alert-success") alert-dismissible fade show" role="alert">
+        @_mensaje
+        <button type="button" class="btn-close" @onclick="() => _mensaje = null"></button>
+    </div>
+}
+
+@if (_loading)
+{
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="text-muted mt-2">Cargando formulario de pedido...</p>
+        </div>
+    </div>
+}
+else
+{
+    <EditForm Model="_model" OnValidSubmit="GuardarAsync">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="position-sticky top-0 z-3 bg-body border rounded shadow-sm p-3 mb-3 d-flex justify-content-between align-items-center">
+            <div>
+                @if (_isEdit)
+                {
+                    <span class="badge text-bg-secondary">@_numeroPedido</span>
+                }
+                @if (EmpresaState.EmpresaActiva is not null)
+                {
+                    <span class="ms-2 text-muted small">Empresa: @EmpresaState.EmpresaActiva.Nombre</span>
+                }
+            </div>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary" @onclick="Cancelar" disabled="@_saving">Cancelar</button>
+                <button type="submit" class="btn btn-primary" disabled="@_saving">
+                    @if (_saving)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                    }
+                    Guardar
+                </button>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">Datos generales</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Fecha Emisión *</label>
+                        <InputDate class="form-control" @bind-Value="_model.FechaEmision" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Fecha Requerida</label>
+                        <InputDate class="form-control" @bind-Value="_model.FechaRequerida" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Urgencia *</label>
+                        <InputSelect class="form-select" @bind-Value="_model.Urgencia">
+                            <option value="Normal">Normal</option>
+                            <option value="Urgente">Urgente</option>
+                            <option value="Critico">Crítico</option>
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Sucursal empresa</label>
+                        <InputSelect class="form-select" @bind-Value="_model.SucursalId">
+                            <option value="">— Seleccionar —</option>
+                            @foreach (var s in _sucursalesEmpresa)
+                            {
+                                <option value="@s.Id">@s.Nombre</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Almacén destino *</label>
+                        <InputSelect class="form-select" @bind-Value="_model.AlmacenDestinoId">
+                            <option value="0">— Seleccionar —</option>
+                            @foreach (var a in _almacenes)
+                            {
+                                <option value="@a.Id">@a.Nombre</option>
+                            }
+                        </InputSelect>
+                        <ValidationMessage For="() => _model.AlmacenDestinoId" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Centro de costo</label>
+                        <InputText class="form-control" @bind-Value="_model.CentroCosto" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">Cliente y entrega</div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Cliente</label>
+                        <InputSelect class="form-select" @bind-Value="_model.ClienteId" @onchange="OnClienteChangedAsync">
+                            <option value="">— Seleccionar cliente —</option>
+                            @foreach (var c in _clientes)
+                            {
+                                <option value="@c.Id">[@c.Codigo] @c.RazonSocial</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Sucursal del cliente</label>
+                        <InputSelect class="form-select" @bind-Value="_model.ClienteSucursalId" @onchange="OnClienteSucursalChangedAsync" disabled="@(!_model.ClienteId.HasValue)">
+                            <option value="">— Seleccionar sucursal de cliente —</option>
+                            @foreach (var s in _clienteSucursales)
+                            {
+                                <option value="@s.Id">@s.Nombre (@s.Codigo)</option>
+                            }
+                        </InputSelect>
+                    </div>
+                </div>
+
+                @if (_clienteSucursalSeleccionada is not null)
+                {
+                    <div class="alert alert-light border mt-3 mb-0">
+                        <div class="row g-2">
+                            <div class="col-md-6"><strong>Dirección:</strong> @(_clienteSucursalSeleccionada.Direccion ?? "—")</div>
+                            <div class="col-md-6"><strong>Referencia:</strong> @(_clienteSucursalSeleccionada.Referencia ?? "—")</div>
+                            <div class="col-md-4"><strong>Latitud:</strong> @(_clienteSucursalSeleccionada.Latitud?.ToString() ?? "—")</div>
+                            <div class="col-md-4"><strong>Longitud:</strong> @(_clienteSucursalSeleccionada.Longitud?.ToString() ?? "—")</div>
+                            <div class="col-md-4"><strong>Contacto principal:</strong> @(_clienteSucursalSeleccionada.ContactoPrincipalId?.ToString() ?? "—")</div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span>Detalle del pedido</span>
+                @if (!_isEdit)
+                {
+                    <button type="button" class="btn btn-sm btn-outline-success" @onclick="AgregarLinea">
+                        <i class="bi bi-plus"></i> Agregar línea
+                    </button>
+                }
+            </div>
+            <div class="card-body p-0">
+                @if (_lineas.Count == 0)
+                {
+                    <div class="p-3 text-muted">No hay líneas del pedido.</div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Producto</th>
+                                    <th>Descripción</th>
+                                    <th>UdM</th>
+                                    <th class="text-end">Cantidad</th>
+                                    <th>Notas</th>
+                                    <th style="width:40px"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (var i = 0; i < _lineas.Count; i++)
+                                {
+                                    var idx = i;
+                                    <tr>
+                                        <td>
+                                            <select class="form-select form-select-sm" value="@_lineas[idx].CompanyProductId" @onchange="e => OnProductoChanged(idx, e)" disabled="@_isEdit">
+                                                <option value="0">— Producto —</option>
+                                                @foreach (var cp in _productos)
+                                                {
+                                                    <option value="@cp.CompanyProductId">[@cp.Sku] @cp.NombreComercial</option>
+                                                }
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <input class="form-control form-control-sm" value="@_lineas[idx].Descripcion" @onchange="e => UpdateLineaDescripcion(idx, e.Value?.ToString())" readonly="@_isEdit" />
+                                        </td>
+                                        <td>
+                                            <input class="form-control form-control-sm" value="@_lineas[idx].UnidadMedida" @onchange="e => UpdateLineaUdm(idx, e.Value?.ToString())" readonly="@_isEdit" />
+                                        </td>
+                                        <td>
+                                            <input type="number" min="0.01" step="0.01" class="form-control form-control-sm text-end" value="@_lineas[idx].CantidadSolicitada" @onchange="e => UpdateLineaCantidad(idx, e.Value?.ToString())" readonly="@_isEdit" />
+                                        </td>
+                                        <td>
+                                            <input class="form-control form-control-sm" value="@_lineas[idx].Notas" @onchange="e => UpdateLineaNotas(idx, e.Value?.ToString())" readonly="@_isEdit" />
+                                        </td>
+                                        <td>
+                                            @if (!_isEdit)
+                                            {
+                                                <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => EliminarLinea(idx)">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                @if (_isEdit)
+                {
+                    <div class="p-2 small text-muted border-top">Las líneas se mantienen en modo edición de cabecera para compatibilidad actual del servicio.</div>
+                }
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-header">Observaciones</div>
+            <div class="card-body">
+                <InputTextArea class="form-control" rows="3" @bind-Value="_model.Observaciones" />
+            </div>
+        </div>
+    </EditForm>
+}
+
+@code {
+    [Parameter] public long? Id { get; set; }
+
+    private bool _isEdit => Id.HasValue;
+    private bool _loading = true;
+    private bool _saving;
+    private bool _error;
+    private string? _mensaje;
+    private string _numeroPedido = string.Empty;
+
+    private PedidoFormModel _model = new();
+    private List<AlmacenDto> _almacenes = new();
+    private List<SucursalListadoDto> _sucursalesEmpresa = new();
+    private List<MdmClienteDto> _clientes = new();
+    private List<ClienteSucursalDto> _clienteSucursales = new();
+    private ClienteSucursalDto? _clienteSucursalSeleccionada;
+    private List<CompanyProductDto> _productos = new();
+    private List<CreateOrdenPedidoLineaDto> _lineas = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarCatalogosAsync();
+
+        if (_isEdit)
+            await CargarPedidoAsync(Id!.Value);
+        else
+        {
+            _model.FechaEmision = DateTime.Today;
+            _lineas.Add(new CreateOrdenPedidoLineaDto(0, string.Empty, "UND", 1));
+        }
+
+        _loading = false;
+    }
+
+    private async Task CargarCatalogosAsync()
+    {
+        _almacenes = await AlmacenService.GetAllAsync();
+        _clientes = await ClienteService.GetAllAsync();
+        _productos = await CompanyProductService.GetAllAsync();
+
+        if (EmpresaState.EmpresaActivaId.HasValue)
+            _sucursalesEmpresa = await SucursalService.GetAllAsync();
+    }
+
+    private async Task CargarPedidoAsync(long id)
+    {
+        var pedido = await OpService.GetByIdAsync(id);
+        if (pedido is null)
+        {
+            _error = true;
+            _mensaje = "No se pudo cargar el pedido.";
+            return;
+        }
+
+        _numeroPedido = pedido.Numero;
+        _model = new PedidoFormModel
+        {
+            FechaEmision = pedido.FechaEmision,
+            FechaRequerida = pedido.FechaRequerida,
+            CentroCosto = pedido.CentroCosto,
+            Urgencia = pedido.Urgencia,
+            AlmacenDestinoId = pedido.AlmacenDestinoId,
+            SucursalId = pedido.SucursalId,
+            ClienteId = pedido.ClienteId,
+            ClienteSucursalId = pedido.ClienteSucursalId,
+            Observaciones = pedido.Observaciones
+        };
+
+        _lineas = pedido.Lineas.Select(l => new CreateOrdenPedidoLineaDto(
+            l.CompanyProductId,
+            l.Descripcion,
+            l.UnidadMedida,
+            l.CantidadSolicitada,
+            l.Notas)).ToList();
+
+        if (_model.ClienteId.HasValue)
+        {
+            _clienteSucursales = await ClienteSucursalService.GetByClienteAsync(_model.ClienteId.Value);
+            if (_model.ClienteSucursalId.HasValue)
+                _clienteSucursalSeleccionada = _clienteSucursales.FirstOrDefault(x => x.Id == _model.ClienteSucursalId.Value);
+        }
+    }
+
+    private async Task OnClienteChangedAsync(ChangeEventArgs e)
+    {
+        _clienteSucursalSeleccionada = null;
+        _model.ClienteSucursalId = null;
+
+        if (!int.TryParse(e.Value?.ToString(), out var clienteId) || clienteId <= 0)
+        {
+            _model.ClienteId = null;
+            _clienteSucursales.Clear();
+            return;
+        }
+
+        _model.ClienteId = clienteId;
+        _clienteSucursales = await ClienteSucursalService.GetByClienteAsync(clienteId);
+    }
+
+    private Task OnClienteSucursalChangedAsync(ChangeEventArgs e)
+    {
+        if (!int.TryParse(e.Value?.ToString(), out var sucursalId) || sucursalId <= 0)
+        {
+            _model.ClienteSucursalId = null;
+            _clienteSucursalSeleccionada = null;
+            return Task.CompletedTask;
+        }
+
+        _model.ClienteSucursalId = sucursalId;
+        _clienteSucursalSeleccionada = _clienteSucursales.FirstOrDefault(x => x.Id == sucursalId);
+        return Task.CompletedTask;
+    }
+
+    private void AgregarLinea() => _lineas.Add(new CreateOrdenPedidoLineaDto(0, string.Empty, "UND", 1));
+
+    private void EliminarLinea(int index)
+    {
+        if (index >= 0 && index < _lineas.Count)
+            _lineas.RemoveAt(index);
+    }
+
+    private void OnProductoChanged(int index, ChangeEventArgs e)
+    {
+        if (index < 0 || index >= _lineas.Count)
+            return;
+
+        if (!long.TryParse(e.Value?.ToString(), out var companyProductId))
+            return;
+
+        var producto = _productos.FirstOrDefault(p => p.CompanyProductId == companyProductId);
+        if (producto is null)
+            return;
+
+        _lineas[index] = _lineas[index] with
+        {
+            CompanyProductId = companyProductId,
+            Descripcion = producto.NombreComercial,
+            UnidadMedida = "UND"
+        };
+    }
+
+    private void UpdateLineaDescripcion(int index, string? value)
+    {
+        if (index < 0 || index >= _lineas.Count) return;
+        _lineas[index] = _lineas[index] with { Descripcion = value ?? string.Empty };
+    }
+
+    private void UpdateLineaUdm(int index, string? value)
+    {
+        if (index < 0 || index >= _lineas.Count) return;
+        _lineas[index] = _lineas[index] with { UnidadMedida = value ?? "UND" };
+    }
+
+    private void UpdateLineaCantidad(int index, string? value)
+    {
+        if (index < 0 || index >= _lineas.Count) return;
+        var cantidad = decimal.TryParse(value, out var c) ? c : 1m;
+        _lineas[index] = _lineas[index] with { CantidadSolicitada = cantidad <= 0 ? 1 : cantidad };
+    }
+
+    private void UpdateLineaNotas(int index, string? value)
+    {
+        if (index < 0 || index >= _lineas.Count) return;
+        _lineas[index] = _lineas[index] with { Notas = value };
+    }
+
+    private async Task GuardarAsync()
+    {
+        _saving = true;
+        _mensaje = null;
+        _error = false;
+
+        try
+        {
+            if (_model.AlmacenDestinoId <= 0)
+            {
+                _error = true;
+                _mensaje = "Debe seleccionar almacén destino.";
+                return;
+            }
+
+            if (!_isEdit && _lineas.Count == 0)
+            {
+                _error = true;
+                _mensaje = "Debe agregar al menos una línea.";
+                return;
+            }
+
+            if (_isEdit)
+            {
+                var updateDto = new UpdateOrdenPedidoDto(
+                    _model.FechaEmision,
+                    _model.FechaRequerida,
+                    _model.CentroCosto,
+                    _model.Urgencia,
+                    _model.AlmacenDestinoId,
+                    _model.Observaciones,
+                    _model.SucursalId,
+                    _model.ClienteId,
+                    _model.ClienteSucursalId);
+
+                var result = await OpService.UpdateAsync(Id!.Value, updateDto);
+                if (!result.Success)
+                {
+                    _error = true;
+                    _mensaje = result.Message;
+                    return;
+                }
+
+                Nav.NavigateTo("/compras/pedidos");
+                return;
+            }
+
+            var createDto = new CreateOrdenPedidoDto(
+                _model.FechaEmision,
+                _model.FechaRequerida,
+                _model.CentroCosto,
+                _model.Urgencia,
+                _model.AlmacenDestinoId,
+                _model.SucursalId,
+                _model.ClienteId,
+                _model.ClienteSucursalId,
+                _model.Observaciones,
+                _lineas);
+
+            var createResult = await OpService.CreateAsync(createDto);
+            if (!createResult.Success)
+            {
+                _error = true;
+                _mensaje = createResult.Message;
+                return;
+            }
+
+            Nav.NavigateTo("/compras/pedidos");
+        }
+        catch (Exception ex)
+        {
+            _error = true;
+            _mensaje = ex.Message;
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void Cancelar() => Nav.NavigateTo("/compras/pedidos");
+
+    private sealed class PedidoFormModel
+    {
+        [Required]
+        public DateTime FechaEmision { get; set; }
+
+        public DateTime? FechaRequerida { get; set; }
+
+        public string? CentroCosto { get; set; }
+
+        [Required]
+        public string Urgencia { get; set; } = "Normal";
+
+        [Range(1, int.MaxValue, ErrorMessage = "Debe seleccionar un almacén destino válido.")]
+        public int AlmacenDestinoId { get; set; }
+
+        public int? SucursalId { get; set; }
+        public int? ClienteId { get; set; }
+        public int? ClienteSucursalId { get; set; }
+
+        public string? Observaciones { get; set; }
+    }
+}

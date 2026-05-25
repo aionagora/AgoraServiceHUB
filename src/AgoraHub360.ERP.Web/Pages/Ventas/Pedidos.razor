@@ -1,4 +1,6 @@
 @page "/ventas/pedidos"
+@using AgoraHub360.ERP.Shared.DTOs.Ventas
+@using AgoraHub360.ERP.Web.Services
 
 <PageTitle>Pedidos - AgoraHub360 ERP</PageTitle>
 
@@ -10,24 +12,67 @@
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center py-3">
         <span>Listado de Pedidos</span>
-        <button class="btn btn-primary btn-sm" disabled>
+        <button class="btn btn-primary btn-sm" @onclick="GoToNuevo">
             <i class="bi bi-plus-circle me-1"></i> Nuevo Pedido
         </button>
     </div>
-    <div class="card-body text-center py-5">
-        <i class="bi bi-receipt" style="font-size: 3rem; color: var(--agora-text-light);"></i>
-        <p class="text-muted mt-3">Módulo en construcción.</p>
+    <div class="card-body">
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <div class="alert alert-danger" role="alert">@errorMessage</div>
+        }
+        else if (isLoading)
+        {
+            <div class="text-center py-4 text-muted">Cargando pedidos...</div>
+        }
+        else if (pedidos.Count == 0)
+        {
+            <div class="text-center py-5">
+                <i class="bi bi-receipt" style="font-size: 3rem; color: var(--agora-text-light);"></i>
+                <p class="text-muted mt-3">No hay pedidos registrados.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>NÃºmero</th>
+                            <th>Fecha</th>
+                            <th>Estado</th>
+                            <th class="text-end">Subtotal</th>
+                            <th class="text-end">Impuestos</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var pedido in pedidos)
+                        {
+                            <tr>
+                                <td>@pedido.Numero</td>
+                                <td>@pedido.FechaEmision.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>@pedido.Estado</td>
+                                <td class="text-end">@pedido.Subtotal.ToString("N2")</td>
+                                <td class="text-end">@pedido.Impuestos.ToString("N2")</td>
+                                <td class="text-end fw-semibold">@pedido.Total.ToString("N2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
     </div>
 </div>
 
-@* ?? Preview del componente de Workflow (disponible al implementar el módulo) ?? *@
+@* ?? Preview del componente de Workflow (disponible al implementar el mÃ³dulo) ?? *@
 @if (mostrarPreviewWorkflow)
 {
     <div class="card mt-3">
         <div class="card-header py-2">
             <small class="text-muted">
                 <i class="bi bi-info-circle me-1"></i>
-                Preview — TareasTab para OrdenVenta. Se activará con el módulo de ventas.
+                Preview â€” TareasTab para OrdenVenta. Se activarÃ¡ con el mÃ³dulo de ventas.
             </small>
         </div>
         <div class="card-body">
@@ -40,15 +85,43 @@
 }
 
 @code {
-    // Variables preparadas para el módulo de OrdenVenta
-    // Se conectarán al servicio cuando el módulo esté implementado.
+    @inject NavigationManager Nav
+    @inject PedidoVentaHttpService PedidoService
+
+    // Variables preparadas para el mÃ³dulo de OrdenVenta
     private bool mostrarPreviewWorkflow = false;
     private int  previewOrdenVentaId   = 0;
     private bool previewIsReadOnly     = false;
+    private List<PedidoVentaDto> pedidos = new();
+    private bool isLoading;
+    private string? errorMessage;
 
-    // Firma estándar que usará cada fila del listado de ventas:
-    //   <TareasTab EntityType="OrdenVenta"
-    //              EntityId="@ov.OrdenVentaId"
-    //              IsReadOnly="@(ov.Estado is "ENTREGADA" or "COBRADA")"
-    //              OnTareaCompletada="LoadData" />
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPedidosAsync();
+    }
+
+    private async Task LoadPedidosAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            pedidos = await PedidoService.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"No se pudo cargar el listado de pedidos: {ex.Message}";
+            pedidos = new();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void GoToNuevo()
+    {
+        Nav.NavigateTo("/ventas/pedidos/nuevo");
+    }
 }

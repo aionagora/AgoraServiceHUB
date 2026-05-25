@@ -6,10 +6,10 @@ using AgoraHub360.ERP.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 
 /// <summary>
-/// Implementación de <see cref="IWorkflowRepository"/> sobre EF Core.
-/// Todas las queries de lectura usan AsNoTracking para máximo rendimiento.
-/// Las escrituras no llaman SaveChanges — la responsabilidad es del servicio
-/// a través de IUnitOfWork.
+/// ImplementaciÃ³n de <see cref="IWorkflowRepository"/> sobre EF Core.
+/// Todas las queries de lectura usan AsNoTracking para mÃ¡ximo rendimiento.
+/// Las escrituras no llaman SaveChanges â€” la responsabilidad es del servicio
+/// a travÃ©s de IUnitOfWork.
 /// </summary>
 public sealed class WorkflowRepository : IWorkflowRepository
 {
@@ -24,9 +24,9 @@ public sealed class WorkflowRepository : IWorkflowRepository
 
     /// <inheritdoc/>
     /// <remarks>
-    /// Usa el índice IX_Tareas_Entity (EmpresaId, EntityType, EntityId, Orden)
+    /// Usa el Ã­ndice IX_Tareas_Entity (EmpresaId, EntityType, EntityId, Orden)
     /// con INCLUDE(Estado, Completado, FechaReal) ? Index Seek O(log n),
-    /// sin Key Lookup para las columnas más frecuentes.
+    /// sin Key Lookup para las columnas mÃ¡s frecuentes.
     /// </remarks>
     public async Task<List<Tarea>> GetByEntityAsync(
         string entityType, int entityId, int empresaId, CancellationToken ct = default)
@@ -49,7 +49,7 @@ public sealed class WorkflowRepository : IWorkflowRepository
 
     /// <inheritdoc/>
     /// <remarks>
-    /// Usa el índice único IX_Tareas_Codigo_UQ (EmpresaId, EntityType, EntityId, Codigo).
+    /// Usa el Ã­ndice Ãºnico IX_Tareas_Codigo_UQ (EmpresaId, EntityType, EntityId, Codigo).
     /// </remarks>
     public async Task<Tarea?> GetByCodigoAsync(
         string entityType, int entityId, string codigo, int empresaId, CancellationToken ct = default)
@@ -74,10 +74,10 @@ public sealed class WorkflowRepository : IWorkflowRepository
 
     /// <inheritdoc/>
     /// <remarks>
-    /// Algoritmo de resolución de plantilla (empresa-first con fallback a global):
+    /// Algoritmo de resoluciÃ³n de plantilla (empresa-first con fallback a global):
     /// 1. Busca plantillas con EmpresaId == empresaId.
     /// 2. Si no encuentra ninguna ? usa plantillas con EmpresaId == null.
-    /// En ambos casos filtra por SubTipo exacto O SubTipo == null (genéricas).
+    /// En ambos casos filtra por SubTipo exacto O SubTipo == null (genÃ©ricas).
     /// </remarks>
     public async Task<List<PlantillaTarea>> GetPlantillasAsync(
         string entityType, string? subTipo, int? empresaId, CancellationToken ct = default)
@@ -109,7 +109,7 @@ public sealed class WorkflowRepository : IWorkflowRepository
             .ToListAsync(ct);
     }
 
-    // ?? Resúmenes / Agregados ?????????????????????????????????????????????????
+    // ?? ResÃºmenes / Agregados ?????????????????????????????????????????????????
 
     /// <inheritdoc/>
     public async Task<Dictionary<string, int>> GetResumenEstadosPorEmpresaAsync(
@@ -140,9 +140,9 @@ public sealed class WorkflowRepository : IWorkflowRepository
 
     /// <inheritdoc/>
     /// <remarks>
-    /// Carga las entidades con tracking para aplicar la baja lógica en bloque.
-    /// Más eficiente que ExecuteUpdate cuando el número de filas es pequeño
-    /// (típicamente 5–15 hitos por documento).
+    /// Carga las entidades con tracking para aplicar la baja lÃ³gica en bloque.
+    /// MÃ¡s eficiente que ExecuteUpdate cuando el nÃºmero de filas es pequeÃ±o
+    /// (tÃ­picamente 5â€“15 hitos por documento).
     /// </remarks>
     public async Task DesactivarPorEntityAsync(
         string entityType, int entityId, int empresaId, CancellationToken ct = default)
@@ -157,7 +157,7 @@ public sealed class WorkflowRepository : IWorkflowRepository
         foreach (var t in tareas)
             t.Activo = false;
 
-        // No SaveChanges — el servicio llama a IUnitOfWork.SaveChangesAsync()
+        // No SaveChanges â€” el servicio llama a IUnitOfWork.SaveChangesAsync()
     }
 
     // ?? ABM de PlantillaTarea (empresa) ???????????????????????????????????????

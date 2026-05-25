@@ -28,7 +28,7 @@ public record OrdenCompraDto(
     long? ExpedienteImportacionId,
     List<OrdenCompraLineaDto> Lineas);
 
-/// <summary>DTO de lectura para línea de OC.</summary>
+/// <summary>DTO de lectura para lÃ­nea de OC.</summary>
 public record OrdenCompraLineaDto(
     long OrdenCompraLineaId,
     int NumeroLinea,
@@ -47,7 +47,7 @@ public record OrdenCompraLineaDto(
     decimal CantidadRecepcionada,
     decimal CantidadPendiente);
 
-/// <summary>DTO para crear una OC con sus líneas.</summary>
+/// <summary>DTO para crear una OC con sus lÃ­neas.</summary>
 public record CreateOrdenCompraDto(
     DateTime FechaEmision,
     DateTime? FechaEntregaEstimada,
@@ -62,7 +62,7 @@ public record CreateOrdenCompraDto(
     long? OrdenPedidoId = null,
     List<CreateOrdenCompraLineaDto>? Lineas = null);
 
-/// <summary>DTO para crear una línea de OC.</summary>
+/// <summary>DTO para crear una lÃ­nea de OC.</summary>
 public record CreateOrdenCompraLineaDto(
     long CompanyProductId,
     string Descripcion,
@@ -85,7 +85,7 @@ public record UpdateOrdenCompraDto(
     string? Observaciones,
     string? ReferenciaExterna);
 
-/// <summary>DTO para agregar una línea a una OC existente.</summary>
+/// <summary>DTO para agregar una lÃ­nea a una OC existente.</summary>
 public record AddOrdenCompraLineaDto(
     long CompanyProductId,
     string Descripcion,
@@ -95,7 +95,7 @@ public record AddOrdenCompraLineaDto(
     decimal PorcentajeDescuento = 0,
     decimal PorcentajeImpuesto = 0);
 
-/// <summary>DTO para actualizar una línea existente.</summary>
+/// <summary>DTO para actualizar una lÃ­nea existente.</summary>
 public record UpdateOrdenCompraLineaDto(
     string Descripcion,
     string UnidadMedida,
@@ -104,7 +104,7 @@ public record UpdateOrdenCompraLineaDto(
     decimal PorcentajeDescuento,
     decimal PorcentajeImpuesto);
 
-/// <summary>DTO para aprobar o rechazar la OC (gate de Finanzas/Dirección).</summary>
+/// <summary>DTO para aprobar o rechazar la OC (gate de Finanzas/DirecciÃ³n).</summary>
 public record AprobarRechazarOrdenCompraDto(
     bool Aprobado,
     string? MotivoRechazo = null);

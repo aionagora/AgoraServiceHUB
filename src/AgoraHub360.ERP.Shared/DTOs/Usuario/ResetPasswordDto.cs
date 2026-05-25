@@ -3,15 +3,15 @@ namespace AgoraHub360.ERP.Shared.DTOs.Usuario;
 using System.ComponentModel.DataAnnotations;
 
 /// <summary>
-/// Usado por el Admin para resetear la contraseña de cualquier usuario.
+/// Usado por el Admin para resetear la contraseÃ±a de cualquier usuario.
 /// </summary>
 public class ResetPasswordDto
 {
-    [Required(ErrorMessage = "La nueva contraseña es obligatoria.")]
-    [MinLength(6, ErrorMessage = "La contraseña debe tener al menos 6 caracteres.")]
+    [Required(ErrorMessage = "La nueva contraseÃ±a es obligatoria.")]
+    [MinLength(6, ErrorMessage = "La contraseÃ±a debe tener al menos 6 caracteres.")]
     public string NuevaPassword { get; set; } = string.Empty;
 
-    [Required(ErrorMessage = "Confirme la contraseña.")]
-    [Compare(nameof(NuevaPassword), ErrorMessage = "Las contraseñas no coinciden.")]
+    [Required(ErrorMessage = "Confirme la contraseÃ±a.")]
+    [Compare(nameof(NuevaPassword), ErrorMessage = "Las contraseÃ±as no coinciden.")]
     public string ConfirmarPassword { get; set; } = string.Empty;
 }

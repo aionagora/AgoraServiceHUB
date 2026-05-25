@@ -22,6 +22,7 @@ public class AsientoContableService : IAsientoContableService
     private readonly IRepository<CentroCosto> _centroCostoRepo;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICurrentUserService _currentUser;
+    private readonly IServiceProvider _serviceProvider;
 
     public AsientoContableService(
         IRepository<AsientoContable> asientoRepo,
@@ -34,7 +35,8 @@ public class AsientoContableService : IAsientoContableService
         IRepository<NumeracionDocumento> numRepo,
         IRepository<CentroCosto> centroCostoRepo,
         IUnitOfWork unitOfWork,
-        ICurrentUserService currentUser)
+        ICurrentUserService currentUser,
+        IServiceProvider serviceProvider)
     {
         _asientoRepo     = asientoRepo;
         _lineaRepo       = lineaRepo;
@@ -47,6 +49,7 @@ public class AsientoContableService : IAsientoContableService
         _centroCostoRepo = centroCostoRepo;
         _unitOfWork      = unitOfWork;
         _currentUser     = currentUser;
+        _serviceProvider = serviceProvider;
     }
 
     // ??????????????????????????????????????????????????????????????????
@@ -104,12 +107,15 @@ public class AsientoContableService : IAsientoContableService
         // Validate tipo comprobante
         var tipoComp = await _tipoCompRepo.GetByIdAsync(dto.TipoComprobanteId, ct);
         if (tipoComp is null || tipoComp.EmpresaId != empresaId.Value || !tipoComp.Activo)
-            return Result<AsientoContableDto>.Failure("Tipo de comprobante no v·lido.");
+            return Result<AsientoContableDto>.Failure("Tipo de comprobante no v√°lido.");
 
         // Validate period
         var periodError = await ValidarPeriodoAbiertoAsync(empresaId.Value, dto.Fecha, ct);
         if (periodError != null)
             return Result<AsientoContableDto>.Failure(periodError);
+
+        // Validate cierre contable
+        await ValidarCierreContableAsync(empresaId.Value, dto.Fecha.Year, ct);
 
         // Validate lines
         var lineError = ValidarLineas(dto.Lineas);
@@ -123,9 +129,9 @@ public class AsientoContableService : IAsientoContableService
             if (cuenta is null || cuenta.EmpresaId != empresaId.Value || !cuenta.Activo)
                 return Result<AsientoContableDto>.Failure($"Cuenta {l.CuentaContableId} no encontrada.");
             if (!cuenta.PermiteMovimientos)
-                return Result<AsientoContableDto>.Failure($"La cuenta '{cuenta.Codigo} ñ {cuenta.Nombre}' no permite movimientos (cuenta agrupadora).");
+                return Result<AsientoContableDto>.Failure($"La cuenta '{cuenta.Codigo} ‚Äì {cuenta.Nombre}' no permite movimientos (cuenta agrupadora).");
 
-            // Validate centro de costo (nullable ó no rompe datos existentes)
+            // Validate centro de costo (nullable ‚Äî no rompe datos existentes)
             if (l.CentroCostoId.HasValue)
             {
                 var cc = await _centroCostoRepo.GetByIdAsync(l.CentroCostoId.Value, ct);
@@ -150,7 +156,7 @@ public class AsientoContableService : IAsientoContableService
         }
 
         var gestion = dto.Fecha.Year;
-        var numero = await GenerarNumeroComprobanteAsync(empresaId.Value, tipoComp, gestion, ct);
+        var numero = await GenerarNumeroComprobanteAsync(empresaId.Value, tipoComp, gestion, dto.Fecha.Month, ct);
 
         var asiento = new AsientoContable
         {
@@ -172,10 +178,12 @@ public class AsientoContableService : IAsientoContableService
             OrigenTipo = dto.OrigenTipo,
             OrigenId = dto.OrigenId,
             OrigenReferencia = dto.OrigenReferencia,
-            TotalDebe = totalDebe,
-            TotalHaber = totalHaber,
             Activo = true
         };
+
+        asiento.EstablecerTotales(totalDebe, totalHaber);
+        if (!asiento.EstaCuadrado())
+            return Result<AsientoContableDto>.Failure("El comprobante no cuadra de acuerdo a las reglas de dominio.");
 
         await _asientoRepo.AddAsync(asiento, ct);
         await _unitOfWork.SaveChangesAsync(ct);
@@ -204,11 +212,17 @@ public class AsientoContableService : IAsientoContableService
 
         var tipoComp = await _tipoCompRepo.GetByIdAsync(dto.TipoComprobanteId, ct);
         if (tipoComp is null || tipoComp.EmpresaId != empresaId.Value || !tipoComp.Activo)
-            return Result<AsientoContableDto>.Failure("Tipo de comprobante no v·lido.");
+            return Result<AsientoContableDto>.Failure("Tipo de comprobante no v√°lido.");
 
         var periodError = await ValidarPeriodoAbiertoAsync(empresaId.Value, dto.Fecha, ct);
         if (periodError != null)
             return Result<AsientoContableDto>.Failure(periodError);
+
+        await ValidarCierreContableAsync(empresaId.Value, asiento.Fecha.Year, ct);
+        if (asiento.Fecha.Year != dto.Fecha.Year)
+        {
+            await ValidarCierreContableAsync(empresaId.Value, dto.Fecha.Year, ct);
+        }
 
         var lineError = ValidarLineas(dto.Lineas);
         if (lineError != null)
@@ -247,7 +261,7 @@ public class AsientoContableService : IAsientoContableService
         if (asiento.TipoComprobanteId != dto.TipoComprobanteId)
         {
             asiento.TipoComprobanteId = dto.TipoComprobanteId;
-            asiento.Numero = await GenerarNumeroComprobanteAsync(empresaId.Value, tipoComp, dto.Fecha.Year, ct);
+            asiento.Numero = await GenerarNumeroComprobanteAsync(empresaId.Value, tipoComp, dto.Fecha.Year, dto.Fecha.Month, ct);
         }
 
         asiento.Fecha = dto.Fecha;
@@ -258,8 +272,9 @@ public class AsientoContableService : IAsientoContableService
         asiento.ValorTipoCambio = valorTc;
         asiento.TipoPagoId = dto.TipoPagoId;
         asiento.NumeroDocumentoPago = dto.NumeroDocumentoPago;
-        asiento.TotalDebe = totalDebe;
-        asiento.TotalHaber = totalHaber;
+        asiento.EstablecerTotales(totalDebe, totalHaber);
+        if (!asiento.EstaCuadrado())
+            return Result<AsientoContableDto>.Failure("El comprobante no cuadra.");
 
         await _asientoRepo.UpdateAsync(asiento, ct);
 
@@ -297,7 +312,10 @@ public class AsientoContableService : IAsientoContableService
 
         var hoy = DateTime.Today;
         var gestion = hoy.Year;
-        var numero = await GenerarNumeroComprobanteAsync(empresaId.Value, tipoComp, gestion, ct);
+
+        await ValidarCierreContableAsync(empresaId.Value, gestion, ct);
+
+        var numero = await GenerarNumeroComprobanteAsync(empresaId.Value, tipoComp, gestion, hoy.Month, ct);
 
         var copia = new AsientoContable
         {
@@ -316,10 +334,10 @@ public class AsientoContableService : IAsientoContableService
             NumeroDocumentoPago = null,
             RegistradoPorId = _currentUser.UserIdInt,
             RegistradoPorNombre = _currentUser.UserName,
-            TotalDebe = original.TotalDebe,
-            TotalHaber = original.TotalHaber,
             Activo = true
         };
+
+        copia.EstablecerTotales(original.TotalDebe, original.TotalHaber);
 
         await _asientoRepo.AddAsync(copia, ct);
         await _unitOfWork.SaveChangesAsync(ct);
@@ -366,15 +384,21 @@ public class AsientoContableService : IAsientoContableService
         if (periodError != null)
             return Result<AsientoContableDto>.Failure(periodError);
 
+        await ValidarCierreContableAsync(empresaId.Value, asiento.Fecha.Year, ct);
+
         var lineas = await _lineaRepo.FindAsync(l => l.AsientoContableId == id && l.Activo, ct);
         if (lineas.Count < 2)
-            return Result<AsientoContableDto>.Failure("Un comprobante requiere al menos 2 lÌneas.");
+            return Result<AsientoContableDto>.Failure("Un comprobante requiere al menos 2 l√≠neas.");
 
         var totalDebe = lineas.Sum(l => l.Debe);
         var totalHaber = lineas.Sum(l => l.Haber);
-        if (totalDebe != totalHaber)
-            return Result<AsientoContableDto>.Failure(
-                $"El comprobante no cuadra. Debe: {totalDebe:N2}, Haber: {totalHaber:N2}.");
+        asiento.EstablecerTotales(totalDebe, totalHaber);
+
+        var contabilizarResult = asiento.Contabilizar(_currentUser.UserName);
+        if (!contabilizarResult.IsSuccess)
+        {
+            return Result<AsientoContableDto>.Failure(contabilizarResult.Error!);
+        }
 
         foreach (var linea in lineas)
         {
@@ -389,9 +413,6 @@ public class AsientoContableService : IAsientoContableService
             await _cuentaRepo.UpdateAsync(cuenta, ct);
         }
 
-        asiento.Estado = "Contabilizado";
-        asiento.TotalDebe = totalDebe;
-        asiento.TotalHaber = totalHaber;
         await _asientoRepo.UpdateAsync(asiento, ct);
         await _unitOfWork.SaveChangesAsync(ct);
 
@@ -411,8 +432,13 @@ public class AsientoContableService : IAsientoContableService
         if (asiento is null || asiento.EmpresaId != empresaId.Value || !asiento.Activo)
             return Result<AsientoContableDto>.Failure("Comprobante no encontrado.");
 
-        if (asiento.Estado != "Contabilizado")
-            return Result<AsientoContableDto>.Failure($"Solo comprobantes Contabilizados pueden anularse. Estado actual: {asiento.Estado}.");
+        await ValidarCierreContableAsync(empresaId.Value, asiento.Fecha.Year, ct);
+
+        var anularResult = asiento.Anular("Anulado por usuario");
+        if (!anularResult.IsSuccess)
+        {
+            return Result<AsientoContableDto>.Failure(anularResult.Error!);
+        }
 
         var lineas = await _lineaRepo.FindAsync(l => l.AsientoContableId == id && l.Activo, ct);
         foreach (var linea in lineas)
@@ -428,7 +454,6 @@ public class AsientoContableService : IAsientoContableService
             await _cuentaRepo.UpdateAsync(cuenta, ct);
         }
 
-        asiento.Estado = "Anulado";
         await _asientoRepo.UpdateAsync(asiento, ct);
         await _unitOfWork.SaveChangesAsync(ct);
 
@@ -451,6 +476,8 @@ public class AsientoContableService : IAsientoContableService
         if (asiento.Estado != "Borrador")
             return Result<bool>.Failure("Solo comprobantes en Borrador pueden eliminarse.");
 
+        await ValidarCierreContableAsync(empresaId.Value, asiento.Fecha.Year, ct);
+
         asiento.Activo = false;
         await _asientoRepo.UpdateAsync(asiento, ct);
         await _unitOfWork.SaveChangesAsync(ct);
@@ -459,7 +486,7 @@ public class AsientoContableService : IAsientoContableService
     }
 
     // ??????????????????????????????????????????????????????????????????
-    // CAT¡LOGOS
+    // CAT√ÅLOGOS
     // ??????????????????????????????????????????????????????????????????
     public async Task<Result<IReadOnlyList<TipoComprobanteDto>>> GetTiposComprobanteAsync(CancellationToken ct)
     {
@@ -541,7 +568,7 @@ public class AsientoContableService : IAsientoContableService
         {
             await _tipoCambioRepo.AddAsync(new TipoCambio
             {
-                EmpresaId = empresaId.Value, Moneda = "USD", Nombre = "DÛlar Americano",
+                EmpresaId = empresaId.Value, Moneda = "USD", Nombre = "D√≥lar Americano",
                 Simbolo = "$", TasaCompra = 6.96m, TasaVenta = 6.96m,
                 FechaVigencia = DateTime.Today, Activo = true
             }, ct);
@@ -565,8 +592,8 @@ public class AsientoContableService : IAsientoContableService
                 ("CHQ", "Cheque", true, 3),
                 ("TRF", "Transferencia Bancaria", true, 4),
                 ("QR", "Pago QR", true, 5),
-                ("TJD", "Tarjeta de DÈbito", true, 6),
-                ("TJC", "Tarjeta de CrÈdito", true, 7),
+                ("TJD", "Tarjeta de D√©bito", true, 6),
+                ("TJC", "Tarjeta de Cr√©dito", true, 7),
             };
             foreach (var (cod, nom, req, ord) in pagos)
             {
@@ -590,15 +617,15 @@ public class AsientoContableService : IAsientoContableService
     private static string? ValidarLineas(List<CreateAsientoLineaDto> lineas)
     {
         if (lineas.Count < 2)
-            return "Un comprobante requiere al menos 2 lÌneas.";
+            return "Un comprobante requiere al menos 2 l√≠neas.";
         foreach (var l in lineas)
         {
             if (l.Debe < 0 || l.Haber < 0)
                 return "Los montos no pueden ser negativos.";
             if (l.Debe == 0 && l.Haber == 0)
-                return "Cada lÌnea debe tener un monto en Debe o en Haber.";
+                return "Cada l√≠nea debe tener un monto en Debe o en Haber.";
             if (l.Debe > 0 && l.Haber > 0)
-                return "Una lÌnea no puede tener monto en Debe y Haber simult·neamente.";
+                return "Una l√≠nea no puede tener monto en Debe y Haber simult√°neamente.";
         }
         return null;
     }
@@ -614,14 +641,37 @@ public class AsientoContableService : IAsientoContableService
         return null;
     }
 
-    private async Task<string> GenerarNumeroComprobanteAsync(int empresaId, TipoComprobante tipo, int gestion, CancellationToken ct)
+    private async Task ValidarCierreContableAsync(int empresaId, int gestion, CancellationToken ct)
     {
-        // Number per type + gestion: CI-001, CE-001, CT-001
-        var existentes = await _asientoRepo.FindAsync(
-            a => a.EmpresaId == empresaId && a.TipoComprobanteId == tipo.TipoComprobanteId
-                && a.Gestion == gestion, ct);
-        var siguiente = existentes.Count + 1;
-        return $"{tipo.Prefijo}-{siguiente:D4}";
+        var cierreContableService = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions.GetRequiredService<ICierreContableService>(_serviceProvider);
+        var existeCierre = await cierreContableService.ExisteCierreAsync(empresaId, gestion, ct);
+        if (existeCierre)
+        {
+            throw new InvalidOperationException($"La gesti√≥n {gestion} ya cuenta con un cierre contable definitivo.");
+        }
+    }
+
+    private async Task<string> GenerarNumeroComprobanteAsync(
+        int empresaId, TipoComprobante tipo, int gestion, int mes, CancellationToken ct)
+    {
+        // Formato: {Prefijo}-{Mes:D2}-{secuencial:D4}  ‚Üí  CT-04-0001
+        // Alcance: Empresa + Gesti√≥n + TipoComprobante + Periodo (mes)
+        var prefijoMes = $"{tipo.Prefijo}-{mes:D2}-";
+
+        var enMismoPeriodo = await _asientoRepo.FindAsync(
+            a => a.EmpresaId == empresaId
+              && a.Gestion == gestion
+              && a.Numero.StartsWith(prefijoMes), ct);
+
+        var maxSeq = 0;
+        foreach (var a in enMismoPeriodo)
+        {
+            var lastDash = a.Numero.LastIndexOf('-');
+            if (lastDash >= 0 && int.TryParse(a.Numero[(lastDash + 1)..], out int n) && n > maxSeq)
+                maxSeq = n;
+        }
+
+        return $"{tipo.Prefijo}-{mes:D2}-{(maxSeq + 1):D4}";
     }
 
     private async Task SaveLineasAsync(long asientoId, List<CreateAsientoLineaDto> lineas, CancellationToken ct)
@@ -654,7 +704,7 @@ public class AsientoContableService : IAsientoContableService
             : new List<CuentaContable>();
         var cuentaMap = cuentas.ToDictionary(c => c.CuentaContableId);
 
-        // Cargar centros de costo referenciados en las lÌneas
+        // Cargar centros de costo referenciados en las l√≠neas
         var ccIds = lineas
             .Where(l => l.CentroCostoId.HasValue)
             .Select(l => l.CentroCostoId!.Value)
@@ -677,8 +727,8 @@ public class AsientoContableService : IAsientoContableService
             AsientoContableId = asiento.AsientoContableId,
             EmpresaId = asiento.EmpresaId,
             TipoComprobanteId = asiento.TipoComprobanteId,
-            TipoComprobanteCodigo = tipoComp?.Codigo ?? "ó",
-            TipoComprobanteNombre = tipoComp?.Nombre ?? "ó",
+            TipoComprobanteCodigo = tipoComp?.Codigo ?? "‚Äî",
+            TipoComprobanteNombre = tipoComp?.Nombre ?? "‚Äî",
             Numero = asiento.Numero,
             Fecha = asiento.Fecha,
             Gestion = asiento.Gestion,
@@ -710,8 +760,8 @@ public class AsientoContableService : IAsientoContableService
                     AsientoContableLineaId = l.AsientoContableLineaId,
                     NumeroLinea            = l.NumeroLinea,
                     CuentaContableId       = l.CuentaContableId,
-                    CuentaCodigo           = cuenta?.Codigo ?? "ñ",
-                    CuentaNombre           = cuenta?.Nombre ?? "ñ",
+                    CuentaCodigo           = cuenta?.Codigo ?? "‚Äì",
+                    CuentaNombre           = cuenta?.Nombre ?? "‚Äì",
                     Debe                   = l.Debe,
                     Haber                  = l.Haber,
                     Glosa                  = l.Glosa,

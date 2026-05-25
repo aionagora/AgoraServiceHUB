@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 /// <summary>
-/// Endpoints REST del mÛdulo Workflow.
+/// Endpoints REST del m√≥dulo Workflow.
 /// Gestiona tareas de hitos sobre cualquier documento del ERP
 /// (OrdenPedido, OrdenCompra, OrdenVenta, Embarque).
 /// </summary>
@@ -34,7 +34,7 @@ public class WorkflowController : ControllerBase
 
     /// <summary>
     /// Obtiene el EmpresaId del usuario autenticado.
-    /// Retorna un BadRequest si el claim no est· presente.
+    /// Retorna un BadRequest si el claim no est√° presente.
     /// </summary>
     private bool TryGetEmpresaId(out int empresaId)
     {
@@ -66,7 +66,7 @@ public class WorkflowController : ControllerBase
     // ?? GET /api/wf/tareas/{id}/resumen ???????????????????????????????????????
 
     /// <summary>
-    /// Resumen de progreso del workflow: conteos por estado, % avance y prÛxima fecha.
+    /// Resumen de progreso del workflow: conteos por estado, % avance y pr√≥xima fecha.
     /// </summary>
     [HttpGet("tareas/{id:int}/resumen")]
     public async Task<IActionResult> GetResumen(
@@ -88,7 +88,7 @@ public class WorkflowController : ControllerBase
     // ?? POST /api/wf/tareas ???????????????????????????????????????????????????
 
     /// <summary>
-    /// Crea una tarea individual para un documento (creaciÛn manual).
+    /// Crea una tarea individual para un documento (creaci√≥n manual).
     /// </summary>
     [HttpPost("tareas")]
     public async Task<IActionResult> CreateTarea(
@@ -103,7 +103,7 @@ public class WorkflowController : ControllerBase
         if (!validation.IsValid)
         {
             var errors = validation.Errors.Select(e => e.ErrorMessage).ToList();
-            return BadRequest(ApiResponse<TareaDto>.Fail("Datos de tarea inv·lidos.", errors));
+            return BadRequest(ApiResponse<TareaDto>.Fail("Datos de tarea inv√°lidos.", errors));
         }
 
         var result = await _service.CreateTareaAsync(dto, empresaId, ct);
@@ -119,7 +119,7 @@ public class WorkflowController : ControllerBase
     // ?? POST /api/wf/tareas/generar-iniciales ?????????????????????????????????
 
     /// <summary>
-    /// Instancia autom·ticamente los hitos de un documento desde la plantilla configurada.
+    /// Instancia autom√°ticamente los hitos de un documento desde la plantilla configurada.
     /// </summary>
     [HttpPost("tareas/generar-iniciales")]
     public async Task<IActionResult> GenerarIniciales(
@@ -131,7 +131,7 @@ public class WorkflowController : ControllerBase
         if (!validation.IsValid)
         {
             var errors = validation.Errors.Select(e => e.ErrorMessage).ToList();
-            return BadRequest(ApiResponse<bool>.Fail("Datos inv·lidos para generar hitos.", errors));
+            return BadRequest(ApiResponse<bool>.Fail("Datos inv√°lidos para generar hitos.", errors));
         }
 
         var result = await _service.GenerarHitosInicialesAsync(dto, ct);
@@ -144,7 +144,7 @@ public class WorkflowController : ControllerBase
     // ?? PATCH /api/wf/tareas/{id} ?????????????????????????????????????????????
 
     /// <summary>
-    /// Actualiza parcialmente una tarea (ediciÛn inline en grilla).
+    /// Actualiza parcialmente una tarea (edici√≥n inline en grilla).
     /// </summary>
     [HttpPatch("tareas/{id:int}")]
     public async Task<IActionResult> UpdateTarea(
@@ -184,7 +184,7 @@ public class WorkflowController : ControllerBase
         if (!validation.IsValid)
         {
             var errors = validation.Errors.Select(e => e.ErrorMessage).ToList();
-            return BadRequest(ApiResponse<TareaDto>.Fail("Datos inv·lidos para completar tarea.", errors));
+            return BadRequest(ApiResponse<TareaDto>.Fail("Datos inv√°lidos para completar tarea.", errors));
         }
 
         var result = await _service.CompletarTareaAsync(dto, empresaId, ct);
@@ -217,7 +217,7 @@ public class WorkflowController : ControllerBase
     // ?? DELETE /api/wf/tareas/entity ?????????????????????????????????????????
 
     /// <summary>
-    /// Desactiva lÛgicamente todas las tareas de un documento.
+    /// Desactiva l√≥gicamente todas las tareas de un documento.
     /// Requiere rol SUPERVISOR o GERENCIA.
     /// </summary>
     [HttpDelete("tareas/entity")]
@@ -315,7 +315,7 @@ public class WorkflowController : ControllerBase
 
     // ?? DELETE /api/wf/plantillas/{id} ????????????????????????????????????????
 
-    /// <summary>Desactiva lÛgicamente una plantilla de empresa.</summary>
+    /// <summary>Desactiva l√≥gicamente una plantilla de empresa.</summary>
     [HttpDelete("plantillas/{id:int}")]
     public async Task<IActionResult> DeletePlantilla(int id, CancellationToken ct)
     {
