@@ -1,0 +1,90 @@
+# ==========================================
+# GUIA RAPIDA - DIAGNOSTICO Y SOLUCION
+# ==========================================
+
+## PROBLEMA: "No hay conexion con el servidor"
+
+## PASO 1: VERIFICAR SQL SERVER
+# ==========================================
+
+# Test manual de conexion SQL Server:
+Test-NetConnection -ComputerName 192.168.88.14 -Port 56885
+
+# Si FALLA:
+#   ✗ SQL Server no esta accesible
+#   Soluciones:
+#     1. Verifica que SQL Server este corriendo
+#     2. Verifica firewall en 192.168.88.14
+#     3. Verifica que SQL Server escuche en puerto 56885
+#     4. Ejecuta en SQL Server:
+#        EXEC sp_configure 'remote access', 1;
+#        RECONFIGURE;
+
+## PASO 2: INICIAR LA API
+# ==========================================
+
+# Abrir terminal PowerShell en Visual Studio (Ctrl+`)
+# Ejecutar:
+
+cd src\AgoraHub360.ERP.Api
+dotnet build
+
+# Si hay errores de compilacion, revisarlos primero
+# Si compila OK:
+
+dotnet run
+
+# La API debe mostrar:
+#   "Now listening on: https://localhost:7001"
+# Si muestra error de conexion a BD, ver PASO 1
+
+## PASO 3: INICIAR BLAZOR WASM
+# ==========================================
+
+# Abrir SEGUNDA terminal PowerShell (Ctrl+Shift+`)
+# Ejecutar:
+
+cd src\AgoraHub360.ERP.Web
+dotnet build
+dotnet run
+
+# Blazor debe mostrar:
+#   "Now listening on: https://localhost:5002"
+
+## PASO 4: PROBAR EN NAVEGADOR
+# ==========================================
+
+# Abrir navegador:
+#   https://localhost:5002
+
+# Debe redirigir automaticamente a /login
+
+# Si NO redirige o da error de conexion:
+#   1. Abre DevTools (F12)
+#   2. Ve a Console y Network
+#   3. Busca errores CORS o fallos de peticion
+
+## SOLUCION RAPIDA SI TODO FALLA
+# ==========================================
+
+# 1. Verifica puertos usados:
+Get-NetTCPConnection -LocalPort 7001,5002 -ErrorAction SilentlyContinue
+
+# 2. Si estan ocupados, matalos:
+# Get-Process -Id (Get-NetTCPConnection -LocalPort 7001).OwningProcess | Stop-Process -Force
+
+# 3. Reinicia VS Code/Visual Studio
+
+# 4. Limpia y reconstruye:
+dotnet clean
+dotnet build
+
+# 5. Vuelve a ejecutar API y Blazor
+
+## CONFIGURACION ACTUAL
+# ==========================================
+# API:    https://localhost:7001/
+# BLAZOR: https://localhost:5002/
+# BD:     192.168.88.14,56885
+#         db_AgoraERP_Core
+#         usagora / Sinnada123.**
