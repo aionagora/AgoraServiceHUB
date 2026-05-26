@@ -80,6 +80,7 @@ builder.Services.AddScoped<ExpedienteImportacionHttpService>();
 
 // Ventas
 builder.Services.AddScoped<PedidoVentaHttpService>();
+builder.Services.AddScoped<VentaHttpService>();
 
 // ──── Servicios HTTP Logística ────
 builder.Services.AddScoped<HojaRutaHttpService>();

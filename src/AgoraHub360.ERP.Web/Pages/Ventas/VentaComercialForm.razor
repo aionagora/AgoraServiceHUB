@@ -1,0 +1,1015 @@
+@page "/ventas/comercial/nueva"
+@page "/ventas/comercial/{Id:long}"
+@attribute [Authorize]
+@using AgoraHub360.ERP.Shared.DTOs.MDM
+@using AgoraHub360.ERP.Shared.DTOs.Sucursal
+@using AgoraHub360.ERP.Shared.DTOs.Ventas
+@using MdmClienteDto = AgoraHub360.ERP.Shared.DTOs.MDM.ClienteDto
+@inject VentaHttpService VentaService
+@inject ClienteHttpService ClienteService
+@inject HttpSucursalService SucursalService
+@inject AlmacenHttpService AlmacenService
+@inject MdmCompanyProductHttpService CompanyProductService
+@inject NavigationManager Nav
+
+<PageTitle>@(IsNew ? "Nueva Venta Comercial" : "Editar Venta Comercial") - AgoraHub360 ERP</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3 align-items-center">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a href="/ventas/comercial">Ventas Comercial</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">@(IsNew ? "Nueva" : "Editar")</li>
+                </ol>
+            </nav>
+            <h3 class="mb-0">
+                <i class="bi bi-receipt-cutoff me-2"></i>
+                @(IsNew ? "Nueva Venta Comercial" : $"Venta {form.NumeroVentaVisual}")
+            </h3>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>@errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-1"></i>@successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="text-muted mt-2">Cargando formulario...</p>
+        </div>
+    }
+    else
+    {
+        <EditForm Model="form" OnValidSubmit="GuardarAsync">
+            <DataAnnotationsValidator />
+
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-light fw-bold">
+                    <i class="bi bi-journal-text me-1"></i> Datos de Venta
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Tipo Venta</label>
+                            <InputSelect class="form-select form-select-sm" @bind-Value="form.TipoVenta" disabled="@(!IsNew)">
+                                @foreach (var opt in tipoVentaOptions)
+                                {
+                                    <option value="@opt">@opt</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Pedido Venta Id</label>
+                            <InputNumber class="form-control form-control-sm" @bind-Value="form.PedidoVentaId" disabled="@(form.TipoVenta != "DesdePedido")" />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Sucursal *</label>
+                            <InputSelect TValue="int" class="form-select form-select-sm"
+                                         Value="form.SucursalId"
+                                         ValueChanged="@((int v) => OnSucursalChanged(v))"
+                                         ValueExpression="@(() => form.SucursalId)">
+                                <option value="0">-- Seleccione sucursal --</option>
+                                @foreach (var s in sucursales)
+                                {
+                                    <option value="@s.Id">@s.Nombre</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Almacén</label>
+                            <InputSelect class="form-select form-select-sm" @bind-Value="form.AlmacenId">
+                                <option value="">-- Sin almacén --</option>
+                                @foreach (var a in almacenesFiltrados)
+                                {
+                                    <option value="@a.Id">@a.Nombre</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Fecha Venta</label>
+                            <InputDate class="form-control form-control-sm" @bind-Value="form.FechaVenta" />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Moneda Código</label>
+                            <InputText class="form-control form-control-sm" @bind-Value="form.MonedaCodigo" />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Tipo Cambio</label>
+                            <InputNumber class="form-control form-control-sm text-end" @bind-Value="form.TipoCambio" />
+                        </div>
+
+                        <div class="col-md-12">
+                            <label class="form-label">Observaciones</label>
+                            <InputText class="form-control form-control-sm" @bind-Value="form.Observaciones" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-light fw-bold d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-person me-1"></i> Cliente Comercial</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" disabled>
+                        <i class="bi bi-person-plus me-1"></i> Registro rápido (próximamente)
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Cliente</label>
+                            <InputSelect class="form-select form-select-sm" @bind-Value="form.ClienteId">
+                                <option value="">-- Sin cliente --</option>
+                                @foreach (var c in clientes)
+                                {
+                                    <option value="@c.Id">@c.Codigo - @c.RazonSocial</option>
+                                }
+                            </InputSelect>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <span class="fw-bold"><i class="bi bi-box-seam me-1"></i> Detalle Productos / Servicios</span>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary" @onclick="AgregarProducto">
+                            <i class="bi bi-plus-circle me-1"></i> Agregar producto
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="AgregarServicio">
+                            <i class="bi bi-plus-circle me-1"></i> Agregar servicio
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    @if (form.Detalles.Count == 0)
+                    {
+                        <div class="text-center py-4 text-muted">Agregue líneas de producto o servicio.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Tipo</th>
+                                        <th>Producto</th>
+                                        <th>Almacén</th>
+                                        <th>Descripción</th>
+                                        <th class="text-end">Cant.</th>
+                                        <th class="text-end">P.Unit</th>
+                                        <th class="text-end">Desc %</th>
+                                        <th class="text-end">Desc Monto</th>
+                                        <th class="text-end">Imp Monto</th>
+                                        <th class="text-end">Total Línea</th>
+                                        <th class="text-center">Desc. Inv.</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (var i = 0; i < form.Detalles.Count; i++)
+                                    {
+                                        var det = form.Detalles[i];
+                                        var idx = i;
+                                        <tr>
+                                            <td>
+                                                <InputSelect TValue="string" class="form-select form-select-sm"
+                                                             Value="det.TipoItemVenta"
+                                                             ValueChanged="@((string v) => OnTipoItemChanged(idx, v))"
+                                                             ValueExpression="@(() => det.TipoItemVenta)">
+                                                    @foreach (var tipo in tipoItemOptions)
+                                                    {
+                                                        <option value="@tipo">@tipo</option>
+                                                    }
+                                                </InputSelect>
+                                            </td>
+                                            <td>
+                                                @if (EsProducto(det))
+                                                {
+                                                    <InputSelect class="form-select form-select-sm" @bind-Value="det.CompanyProductId">
+                                                        <option value="">-- Seleccione --</option>
+                                                        @foreach (var p in productos)
+                                                        {
+                                                            <option value="@p.CompanyProductId">@p.Sku - @p.NombreComercial</option>
+                                                        }
+                                                    </InputSelect>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted small">No aplica</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (EsProducto(det))
+                                                {
+                                                    <InputSelect class="form-select form-select-sm" @bind-Value="det.AlmacenId">
+                                                        <option value="">-- Opcional --</option>
+                                                        @foreach (var a in almacenesFiltrados)
+                                                        {
+                                                            <option value="@a.Id">@a.Nombre</option>
+                                                        }
+                                                    </InputSelect>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted small">No aplica</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <InputText class="form-control form-control-sm" @bind-Value="det.Descripcion" />
+                                            </td>
+                                            <td>
+                                                <InputNumber class="form-control form-control-sm text-end" @bind-Value="det.Cantidad" @bind-Value:after="RecalcularTotales" />
+                                            </td>
+                                            <td>
+                                                <InputNumber class="form-control form-control-sm text-end" @bind-Value="det.PrecioUnitario" @bind-Value:after="RecalcularTotales" />
+                                            </td>
+                                            <td>
+                                                <InputNumber class="form-control form-control-sm text-end" @bind-Value="det.DescuentoPorcentaje" @bind-Value:after="RecalcularTotales" />
+                                            </td>
+                                            <td>
+                                                <InputNumber class="form-control form-control-sm text-end" @bind-Value="det.DescuentoMonto" @bind-Value:after="RecalcularTotales" />
+                                            </td>
+                                            <td>
+                                                <InputNumber class="form-control form-control-sm text-end" @bind-Value="det.ImpuestoMonto" @bind-Value:after="RecalcularTotales" />
+                                            </td>
+                                            <td class="text-end fw-semibold">@CalcularTotalLinea(det).ToString("N2")</td>
+                                            <td class="text-center">
+                                                <InputCheckbox @bind-Value="det.DescuentaInventario" disabled="@(!EsProducto(det))" />
+                                            </td>
+                                            <td>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => RemoveDetalle(idx)">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-light fw-bold">
+                    <i class="bi bi-receipt me-1"></i> Facturación
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <div class="form-check mt-2">
+                                <InputCheckbox class="form-check-input" @bind-Value="form.FacturacionDatos.Facturar" />
+                                <label class="form-check-label">Facturar</label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check mt-2">
+                                <InputCheckbox class="form-check-input" @bind-Value="form.FacturacionDatos.FacturarAlMismoCliente" disabled="@(!form.FacturacionDatos.Facturar)" />
+                                <label class="form-check-label">Facturar al mismo cliente</label>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Tipo Documento</label>
+                            <InputText class="form-control form-control-sm" @bind-Value="form.FacturacionDatos.TipoDocumentoIdentidad" disabled="@(!form.FacturacionDatos.Facturar)" />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">NIT Factura</label>
+                            <InputText class="form-control form-control-sm" @bind-Value="form.FacturacionDatos.NitFactura" disabled="@(!form.FacturacionDatos.Facturar)" />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Complemento</label>
+                            <InputText class="form-control form-control-sm" @bind-Value="form.FacturacionDatos.Complemento" disabled="@(!form.FacturacionDatos.Facturar)" />
+                        </div>
+
+                        <div class="col-md-5">
+                            <label class="form-label">Razón Social Factura</label>
+                            <InputText class="form-control form-control-sm" @bind-Value="form.FacturacionDatos.RazonSocialFactura" disabled="@(!form.FacturacionDatos.Facturar)" />
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Email Factura</label>
+                            <InputText class="form-control form-control-sm" @bind-Value="form.FacturacionDatos.EmailFactura" disabled="@(!form.FacturacionDatos.Facturar)" />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Teléfono Factura</label>
+                            <InputText class="form-control form-control-sm" @bind-Value="form.FacturacionDatos.TelefonoFactura" disabled="@(!form.FacturacionDatos.Facturar)" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <span class="fw-bold"><i class="bi bi-cash-coin me-1"></i> Pagos Iniciales</span>
+                    <button type="button" class="btn btn-sm btn-outline-primary" @onclick="AgregarPago">
+                        <i class="bi bi-plus-circle me-1"></i> Agregar pago
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    @if (form.Pagos.Count == 0)
+                    {
+                        <div class="text-center py-3 text-muted">Sin pagos iniciales.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Tipo Pago</th>
+                                        <th>Modo Pago</th>
+                                        <th class="text-end">Monto</th>
+                                        <th>Moneda</th>
+                                        <th class="text-end">Tipo Cambio</th>
+                                        <th>Referencia</th>
+                                        <th>CuentaCajaBancoId</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (var i = 0; i < form.Pagos.Count; i++)
+                                    {
+                                        var p = form.Pagos[i];
+                                        <tr>
+                                            <td><InputDate class="form-control form-control-sm" @bind-Value="p.FechaPago" /></td>
+                                            <td>
+                                                <InputSelect class="form-select form-select-sm" @bind-Value="p.TipoPago">
+                                                    @foreach (var tipo in tipoPagoOptions)
+                                                    {
+                                                        <option value="@tipo">@tipo</option>
+                                                    }
+                                                </InputSelect>
+                                            </td>
+                                            <td>
+                                                <InputSelect class="form-select form-select-sm" @bind-Value="p.ModoPago">
+                                                    @foreach (var modo in modoPagoOptions)
+                                                    {
+                                                        <option value="@modo">@modo</option>
+                                                    }
+                                                </InputSelect>
+                                            </td>
+                                            <td><InputNumber class="form-control form-control-sm text-end" @bind-Value="p.Monto" @bind-Value:after="RecalcularTotales" /></td>
+                                            <td><InputText class="form-control form-control-sm" @bind-Value="p.MonedaCodigo" /></td>
+                                            <td><InputNumber class="form-control form-control-sm text-end" @bind-Value="p.TipoCambio" /></td>
+                                            <td><InputText class="form-control form-control-sm" @bind-Value="p.Referencia" /></td>
+                                            <td><InputNumber class="form-control form-control-sm" @bind-Value="p.CuentaCajaBancoId" /></td>
+                                            <td>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => RemovePago(i)">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light fw-bold">
+                    <i class="bi bi-calculator me-1"></i> Resumen
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-2">
+                            <label class="form-label text-muted">Subtotal</label>
+                            <div class="fw-semibold text-end">@resumen.Subtotal.ToString("N2")</div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-muted">Descuento Total</label>
+                            <div class="fw-semibold text-end">@resumen.DescuentoTotal.ToString("N2")</div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-muted">Impuesto Total</label>
+                            <div class="fw-semibold text-end">@resumen.ImpuestoTotal.ToString("N2")</div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-muted">Total</label>
+                            <div class="fw-bold text-end text-primary">@resumen.Total.ToString("N2")</div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-muted">Total Pagado</label>
+                            <div class="fw-semibold text-end">@resumen.TotalPagado.ToString("N2")</div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-muted">Saldo</label>
+                            <div class="fw-bold text-end @(resumen.Saldo > 0 ? "text-warning" : "text-success")">@resumen.Saldo.ToString("N2")</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2 mb-4">
+                <button type="button" class="btn btn-outline-secondary" @onclick="VolverListado" disabled="@isSaving">
+                    <i class="bi bi-arrow-left me-1"></i> Volver al listado
+                </button>
+
+                @if (!IsNew)
+                {
+                    <button type="button" class="btn btn-outline-danger" @onclick="AnularAsync" disabled="@isSaving">
+                        <i class="bi bi-x-circle me-1"></i> Anular
+                    </button>
+
+                    <button type="button" class="btn btn-outline-success" @onclick="ConfirmarAsync" disabled="@isSaving">
+                        <i class="bi bi-check-circle me-1"></i> Confirmar
+                    </button>
+                }
+
+                <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                    @if (isSaving)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    }
+                    <i class="bi bi-save me-1"></i> Guardar borrador
+                </button>
+            </div>
+        </EditForm>
+    }
+</div>
+
+@code {
+    [Parameter] public long? Id { get; set; }
+
+    private bool IsNew => !Id.HasValue || Id.Value == 0;
+
+    private readonly VentaFormModel form = new();
+    private readonly VentaResumenUx resumen = new();
+
+    private List<MdmClienteDto> clientes = new();
+    private List<SucursalListadoDto> sucursales = new();
+    private List<AlmacenDto> almacenes = new();
+    private List<AlmacenDto> almacenesFiltrados = new();
+    private List<CompanyProductDto> productos = new();
+
+    private bool isLoading = true;
+    private bool isSaving;
+    private string? errorMessage;
+    private string? successMessage;
+
+    private readonly string[] tipoVentaOptions = ["Directa", "DesdePedido"];
+    private readonly string[] tipoItemOptions = ["Producto", "Servicio"];
+    private readonly string[] tipoPagoOptions = ["Contado", "Credito", "Mixto"];
+    private readonly string[] modoPagoOptions = ["Efectivo", "QR", "Transferencia", "Tarjeta", "Cheque", "Deposito", "Otro"];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCatalogosAsync();
+
+        if (!IsNew)
+        {
+            await LoadVentaAsync(Id!.Value);
+        }
+        else
+        {
+            form.MonedaCodigo = "BOB";
+            form.TipoCambio = 1m;
+            form.FechaVenta = DateTime.Today;
+            form.TipoVenta = "Directa";
+        }
+
+        RecalcularTotales();
+        isLoading = false;
+    }
+
+    private async Task LoadCatalogosAsync()
+    {
+        try
+        {
+            var clientesTask = ClienteService.GetAllAsync();
+            var sucursalesTask = SucursalService.GetActivasAsync();
+            var almacenesTask = AlmacenService.GetAllAsync();
+            var productosTask = CompanyProductService.GetAllAsync();
+
+            await Task.WhenAll(clientesTask, sucursalesTask, almacenesTask, productosTask);
+
+            clientes = (await clientesTask).Where(x => x.Activo).OrderBy(x => x.RazonSocial).ToList();
+            sucursales = (await sucursalesTask).Where(x => x.Activo).OrderBy(x => x.Nombre).ToList();
+            almacenes = (await almacenesTask).Where(x => x.Activo).OrderBy(x => x.Nombre).ToList();
+            productos = (await productosTask).Where(x => x.Activo).OrderBy(x => x.NombreComercial).ToList();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"No se pudieron cargar catálogos: {ex.Message}";
+        }
+
+        FiltrarAlmacenes();
+    }
+
+    private async Task LoadVentaAsync(long id)
+    {
+        try
+        {
+            var venta = await VentaService.GetByIdAsync(id);
+            if (venta is null)
+            {
+                errorMessage = "No se pudo cargar la venta solicitada.";
+                return;
+            }
+
+            form.Id = venta.Id;
+            form.NumeroVentaVisual = venta.NumeroVenta;
+            form.TipoVenta = string.IsNullOrWhiteSpace(venta.TipoVenta) ? "Directa" : venta.TipoVenta;
+            form.PedidoVentaId = venta.PedidoVentaId;
+            form.SucursalId = venta.SucursalId;
+            form.AlmacenId = venta.AlmacenId;
+            form.FechaVenta = venta.FechaVenta;
+            form.MonedaCodigo = venta.MonedaCodigo ?? venta.MonedaId ?? "BOB";
+            form.TipoCambio = venta.TipoCambio <= 0 ? 1m : venta.TipoCambio;
+            form.Observaciones = venta.Observaciones;
+            form.ClienteId = venta.ClienteId;
+
+            form.FacturacionDatos = venta.FacturacionDatos ?? new VentaFacturacionDatosDto
+            {
+                Facturar = false,
+                FacturarAlMismoCliente = true
+            };
+
+            form.Detalles = venta.Detalles.Select(d => new VentaDetalleDto
+            {
+                Id = d.Id,
+                TipoItemVenta = string.IsNullOrWhiteSpace(d.TipoItemVenta) ? "Producto" : d.TipoItemVenta,
+                CompanyProductId = d.CompanyProductId,
+                AlmacenId = d.AlmacenId,
+                Descripcion = d.Descripcion,
+                Cantidad = d.Cantidad,
+                UnidadMedidaId = d.UnidadMedidaId,
+                PrecioUnitario = d.PrecioUnitario,
+                DescuentoPorcentaje = d.DescuentoPorcentaje,
+                DescuentoMonto = d.DescuentoMonto,
+                ImpuestoMonto = d.ImpuestoMonto,
+                TotalLinea = d.TotalLinea,
+                CostoUnitario = d.CostoUnitario,
+                DescuentaInventario = d.DescuentaInventario
+            }).ToList();
+
+            form.Pagos = venta.Pagos.Select(p => new VentaPagoDto
+            {
+                FechaPago = p.FechaPago,
+                TipoPago = p.TipoPago,
+                ModoPago = p.ModoPago,
+                CuentaCajaBancoId = p.CuentaCajaBancoId,
+                Monto = p.Monto,
+                MonedaId = p.MonedaId,
+                MonedaCodigo = p.MonedaCodigo,
+                TipoCambio = p.TipoCambio,
+                Referencia = p.Referencia,
+                EstadoPago = p.EstadoPago
+            }).ToList();
+
+            FiltrarAlmacenes();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"No se pudo cargar la venta: {ex.Message}";
+        }
+    }
+
+    private void OnSucursalChanged(int sucursalId)
+    {
+        form.SucursalId = sucursalId;
+        FiltrarAlmacenes();
+
+        if (form.AlmacenId.HasValue && !almacenesFiltrados.Any(a => a.Id == form.AlmacenId.Value))
+            form.AlmacenId = null;
+
+        foreach (var det in form.Detalles.Where(EsProducto))
+        {
+            if (det.AlmacenId.HasValue && !almacenesFiltrados.Any(a => a.Id == det.AlmacenId.Value))
+                det.AlmacenId = null;
+        }
+    }
+
+    private void FiltrarAlmacenes()
+    {
+        almacenesFiltrados = form.SucursalId > 0
+            ? almacenes.Where(a => a.SucursalId == form.SucursalId).OrderBy(a => a.Nombre).ToList()
+            : new List<AlmacenDto>();
+    }
+
+    private void AgregarProducto()
+    {
+        form.Detalles.Add(new VentaDetalleDto
+        {
+            TipoItemVenta = "Producto",
+            Cantidad = 1,
+            PrecioUnitario = 0,
+            DescuentoPorcentaje = 0,
+            DescuentoMonto = 0,
+            ImpuestoMonto = 0,
+            DescuentaInventario = true,
+            AlmacenId = form.AlmacenId
+        });
+
+        RecalcularTotales();
+    }
+
+    private void AgregarServicio()
+    {
+        form.Detalles.Add(new VentaDetalleDto
+        {
+            TipoItemVenta = "Servicio",
+            Cantidad = 1,
+            PrecioUnitario = 0,
+            DescuentoPorcentaje = 0,
+            DescuentoMonto = 0,
+            ImpuestoMonto = 0,
+            CompanyProductId = null,
+            AlmacenId = null,
+            DescuentaInventario = false
+        });
+
+        RecalcularTotales();
+    }
+
+    private void OnTipoItemChanged(int idx, string tipo)
+    {
+        if (idx < 0 || idx >= form.Detalles.Count) return;
+
+        var det = form.Detalles[idx];
+        det.TipoItemVenta = tipo;
+
+        if (string.Equals(tipo, "Servicio", StringComparison.OrdinalIgnoreCase))
+        {
+            det.CompanyProductId = null;
+            det.AlmacenId = null;
+            det.DescuentaInventario = false;
+        }
+        else
+        {
+            det.DescuentaInventario = true;
+            det.AlmacenId ??= form.AlmacenId;
+        }
+
+        RecalcularTotales();
+    }
+
+    private void RemoveDetalle(int idx)
+    {
+        if (idx < 0 || idx >= form.Detalles.Count) return;
+        form.Detalles.RemoveAt(idx);
+        RecalcularTotales();
+    }
+
+    private void AgregarPago()
+    {
+        form.Pagos.Add(new VentaPagoDto
+        {
+            FechaPago = DateTime.Today,
+            TipoPago = "Contado",
+            ModoPago = "Efectivo",
+            Monto = 0,
+            MonedaCodigo = form.MonedaCodigo,
+            TipoCambio = form.TipoCambio <= 0 ? 1m : form.TipoCambio,
+            EstadoPago = "Pendiente"
+        });
+
+        RecalcularTotales();
+    }
+
+    private void RemovePago(int idx)
+    {
+        if (idx < 0 || idx >= form.Pagos.Count) return;
+        form.Pagos.RemoveAt(idx);
+        RecalcularTotales();
+    }
+
+    private async Task GuardarAsync()
+    {
+        errorMessage = null;
+        successMessage = null;
+
+        var validation = ValidateForm();
+        if (!string.IsNullOrWhiteSpace(validation))
+        {
+            errorMessage = validation;
+            return;
+        }
+
+        isSaving = true;
+
+        try
+        {
+            ApiResponse<VentaDto> response;
+
+            if (IsNew)
+            {
+                response = await VentaService.CreateAsync(BuildCreateRequest());
+            }
+            else
+            {
+                response = await VentaService.UpdateAsync(form.Id!.Value, BuildUpdateRequest());
+            }
+
+            if (!response.Success || response.Data is null)
+            {
+                errorMessage = BuildErrorMessage(response);
+                return;
+            }
+
+            successMessage = IsNew ? "Venta creada en borrador." : "Venta actualizada en borrador.";
+
+            if (IsNew)
+            {
+                Nav.NavigateTo($"/ventas/comercial/{response.Data.Id}");
+                return;
+            }
+
+            await LoadVentaAsync(form.Id!.Value);
+            RecalcularTotales();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"No se pudo guardar la venta: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task ConfirmarAsync()
+    {
+        if (IsNew || !form.Id.HasValue) return;
+
+        isSaving = true;
+        errorMessage = null;
+        successMessage = null;
+
+        var response = await VentaService.ConfirmarAsync(form.Id.Value, new ConfirmarVentaRequestDto
+        {
+            Observaciones = form.Observaciones
+        });
+
+        if (response.Success)
+        {
+            successMessage = "Venta confirmada correctamente.";
+            await LoadVentaAsync(form.Id.Value);
+            RecalcularTotales();
+        }
+        else
+        {
+            errorMessage = BuildErrorMessage(response);
+        }
+
+        isSaving = false;
+    }
+
+    private async Task AnularAsync()
+    {
+        if (IsNew || !form.Id.HasValue) return;
+
+        isSaving = true;
+        errorMessage = null;
+        successMessage = null;
+
+        var response = await VentaService.AnularAsync(form.Id.Value, new AnularVentaRequestDto
+        {
+            MotivoAnulacion = string.IsNullOrWhiteSpace(form.Observaciones)
+                ? "Anulación desde formulario comercial"
+                : form.Observaciones!
+        });
+
+        if (response.Success)
+        {
+            successMessage = "Venta anulada correctamente.";
+            await LoadVentaAsync(form.Id.Value);
+            RecalcularTotales();
+        }
+        else
+        {
+            errorMessage = BuildErrorMessage(response);
+        }
+
+        isSaving = false;
+    }
+
+    private void VolverListado() => Nav.NavigateTo("/ventas/comercial");
+
+    private CrearVentaRequestDto BuildCreateRequest()
+    {
+        NormalizeDetalles();
+
+        return new CrearVentaRequestDto
+        {
+            SucursalId = form.SucursalId,
+            AlmacenId = form.AlmacenId,
+            ClienteId = form.ClienteId,
+            PedidoVentaId = form.TipoVenta == "DesdePedido" ? form.PedidoVentaId : null,
+            TipoVenta = form.TipoVenta,
+            FechaVenta = form.FechaVenta,
+            MonedaCodigo = form.MonedaCodigo,
+            TipoCambio = form.TipoCambio,
+            Observaciones = form.Observaciones,
+            Detalles = form.Detalles,
+            FacturacionDatos = form.FacturacionDatos,
+            Pagos = form.Pagos.Count == 0 ? null : form.Pagos
+        };
+    }
+
+    private ActualizarVentaRequestDto BuildUpdateRequest()
+    {
+        NormalizeDetalles();
+
+        return new ActualizarVentaRequestDto
+        {
+            SucursalId = form.SucursalId,
+            AlmacenId = form.AlmacenId,
+            ClienteId = form.ClienteId,
+            FechaVenta = form.FechaVenta,
+            MonedaCodigo = form.MonedaCodigo,
+            TipoCambio = form.TipoCambio,
+            Observaciones = form.Observaciones,
+            Detalles = form.Detalles,
+            FacturacionDatos = form.FacturacionDatos
+        };
+    }
+
+    private void NormalizeDetalles()
+    {
+        foreach (var det in form.Detalles)
+        {
+            if (!EsProducto(det))
+            {
+                det.CompanyProductId = null;
+                det.AlmacenId = null;
+                det.DescuentaInventario = false;
+            }
+            else
+            {
+                det.DescuentaInventario = true;
+            }
+
+            det.TotalLinea = CalcularTotalLinea(det);
+        }
+    }
+
+    private string? ValidateForm()
+    {
+        if (form.SucursalId <= 0)
+            return "Debe seleccionar una sucursal.";
+
+        if (form.TipoVenta == "DesdePedido" && (!form.PedidoVentaId.HasValue || form.PedidoVentaId <= 0))
+            return "Debe indicar PedidoVentaId cuando el tipo de venta es DesdePedido.";
+
+        if (form.Detalles.Count == 0)
+            return "Debe registrar al menos una línea de detalle.";
+
+        for (var i = 0; i < form.Detalles.Count; i++)
+        {
+            var d = form.Detalles[i];
+            var nro = i + 1;
+
+            if (string.IsNullOrWhiteSpace(d.TipoItemVenta))
+                return $"La línea {nro} no tiene TipoItemVenta.";
+
+            if (EsProducto(d) && (!d.CompanyProductId.HasValue || d.CompanyProductId <= 0))
+                return $"La línea {nro} es Producto y requiere CompanyProductId.";
+
+            if (!EsProducto(d))
+            {
+                d.CompanyProductId = null;
+                d.AlmacenId = null;
+                d.DescuentaInventario = false;
+            }
+
+            if (d.Cantidad <= 0)
+                return $"La línea {nro} debe tener cantidad mayor a cero.";
+
+            if (d.PrecioUnitario < 0)
+                return $"La línea {nro} tiene precio unitario inválido.";
+
+            if (string.IsNullOrWhiteSpace(d.Descripcion) && !d.CompanyProductId.HasValue)
+                return $"La línea {nro} debe tener descripción o producto seleccionado.";
+        }
+
+        if (form.FacturacionDatos.Facturar)
+        {
+            if (string.IsNullOrWhiteSpace(form.FacturacionDatos.NitFactura))
+                return "NIT Factura es obligatorio cuando Facturar = true.";
+
+            if (string.IsNullOrWhiteSpace(form.FacturacionDatos.RazonSocialFactura))
+                return "Razón Social Factura es obligatorio cuando Facturar = true.";
+        }
+
+        for (var i = 0; i < form.Pagos.Count; i++)
+        {
+            var p = form.Pagos[i];
+            if (p.Monto <= 0)
+                return $"El pago #{i + 1} debe tener monto mayor a cero.";
+        }
+
+        return null;
+    }
+
+    private static bool EsProducto(VentaDetalleDto d)
+        => string.Equals(d.TipoItemVenta, "Producto", StringComparison.OrdinalIgnoreCase);
+
+    private decimal CalcularTotalLinea(VentaDetalleDto det)
+    {
+        var baseLinea = det.Cantidad * det.PrecioUnitario;
+        var descuentoPorcentaje = baseLinea * (det.DescuentoPorcentaje / 100m);
+        var descuentoTotalLinea = descuentoPorcentaje + det.DescuentoMonto;
+        var total = baseLinea - descuentoTotalLinea + det.ImpuestoMonto;
+        return total < 0 ? 0 : decimal.Round(total, 2);
+    }
+
+    private void RecalcularTotales()
+    {
+        decimal subtotal = 0;
+        decimal descuento = 0;
+        decimal impuesto = 0;
+        decimal total = 0;
+
+        foreach (var det in form.Detalles)
+        {
+            var baseLinea = det.Cantidad * det.PrecioUnitario;
+            var descuentoPorcentaje = baseLinea * (det.DescuentoPorcentaje / 100m);
+            var descuentoLinea = descuentoPorcentaje + det.DescuentoMonto;
+            var totalLinea = CalcularTotalLinea(det);
+            det.TotalLinea = totalLinea;
+
+            subtotal += baseLinea;
+            descuento += descuentoLinea;
+            impuesto += det.ImpuestoMonto;
+            total += totalLinea;
+        }
+
+        var totalPagado = form.Pagos.Sum(x => x.Monto);
+
+        resumen.Subtotal = decimal.Round(subtotal, 2);
+        resumen.DescuentoTotal = decimal.Round(descuento, 2);
+        resumen.ImpuestoTotal = decimal.Round(impuesto, 2);
+        resumen.Total = decimal.Round(total, 2);
+        resumen.TotalPagado = decimal.Round(totalPagado, 2);
+        resumen.Saldo = decimal.Round(total - totalPagado, 2);
+    }
+
+    private static string BuildErrorMessage(ApiResponse<VentaDto> response)
+    {
+        if (response.Errors is { Count: > 0 })
+            return $"{response.Message} {string.Join(" | ", response.Errors)}";
+
+        return response.Message ?? "Error no controlado al ejecutar la operación.";
+    }
+
+    private class VentaFormModel
+    {
+        public long? Id { get; set; }
+        public string NumeroVentaVisual { get; set; } = "BORRADOR";
+        public string TipoVenta { get; set; } = "Directa";
+        public long? PedidoVentaId { get; set; }
+        public int SucursalId { get; set; }
+        public int? AlmacenId { get; set; }
+        public DateTime FechaVenta { get; set; } = DateTime.Today;
+        public string? MonedaCodigo { get; set; } = "BOB";
+        public decimal TipoCambio { get; set; } = 1m;
+        public string? Observaciones { get; set; }
+        public int? ClienteId { get; set; }
+        public List<VentaDetalleDto> Detalles { get; set; } = new();
+        public VentaFacturacionDatosDto FacturacionDatos { get; set; } = new()
+        {
+            Facturar = false,
+            FacturarAlMismoCliente = true
+        };
+        public List<VentaPagoDto> Pagos { get; set; } = new();
+    }
+
+    private class VentaResumenUx
+    {
+        public decimal Subtotal { get; set; }
+        public decimal DescuentoTotal { get; set; }
+        public decimal ImpuestoTotal { get; set; }
+        public decimal Total { get; set; }
+        public decimal TotalPagado { get; set; }
+        public decimal Saldo { get; set; }
+    }
+}
