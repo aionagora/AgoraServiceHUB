@@ -35,6 +35,7 @@ public static class DependencyInjection
         services.AddScoped<IProveedorService, ProveedorService>();
         services.AddScoped<IAlmacenService, AlmacenService>();
         services.AddScoped<IPedidoVentaService, PedidoVentaService>();
+        services.AddScoped<IVentaService, VentaService>();
 
         // MDM: unified catalog
         services.AddScoped<ICatalogService, CatalogService>();

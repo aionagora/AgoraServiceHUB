@@ -17,6 +17,7 @@ using AgoraHub360.ERP.Domain.Entities.VER;
 using AgoraHub360.ERP.Domain.Entities.TRB;
 using AgoraHub360.ERP.Domain.Entities.ACT;
 using AgoraHub360.ERP.Domain.Entities.BNC;
+using AgoraHub360.ERP.Domain.Entities.VTA;
 using AgoraHub360.ERP.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -176,6 +177,12 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     // ── BNC: Conciliacion Bancaria ────────────────────────────────────────────
     public DbSet<ExtractoBancario> ExtractosBancarios => Set<ExtractoBancario>();
     public DbSet<ConciliacionBancaria> ConciliacionesBancarias => Set<ConciliacionBancaria>();
+
+    // ── VTA: Ventas comerciales ───────────────────────────────────────────────
+    public DbSet<Venta> Ventas => Set<Venta>();
+    public DbSet<VentaDetalle> VentaDetalles => Set<VentaDetalle>();
+    public DbSet<VentaFacturacionDatos> VentaFacturacionDatos => Set<VentaFacturacionDatos>();
+    public DbSet<VentaPago> VentaPagos => Set<VentaPago>();
 
     // ── Audit ─────────────────────────────────────────────────────────────────
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();

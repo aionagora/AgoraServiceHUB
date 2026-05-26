@@ -29,28 +29,25 @@ public class ConciliacionBancariaController : ControllerBase
     [ProducesResponseType(typeof(ApiResponse<ImportExtractoResultDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<ImportExtractoResultDto>), StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Importar(
-        [FromForm] IFormFile archivo,
-        [FromForm] int cuentaId,
-        [FromForm] int periodoId,
-        [FromForm] string formato,
+        [FromForm] ImportarExtractoFormRequestDto request,
         CancellationToken ct)
     {
-        if (archivo == null || archivo.Length == 0)
+        if (request.Archivo == null || request.Archivo.Length == 0)
             return BadRequest(ApiResponse<ImportExtractoResultDto>.Fail("Archivo no proporcionado o vacío."));
 
-        if (cuentaId <= 0)
+        if (request.CuentaId <= 0)
             return BadRequest(ApiResponse<ImportExtractoResultDto>.Fail("Cuenta contable inválida."));
 
-        if (periodoId <= 0)
+        if (request.PeriodoId <= 0)
             return BadRequest(ApiResponse<ImportExtractoResultDto>.Fail("Período contable inválido."));
 
-        var formatoLimpio = formato?.ToLower().Trim();
+        var formatoLimpio = request.Formato?.ToLower().Trim();
         if (formatoLimpio != "csv" && formatoLimpio != "excel" && formatoLimpio != "xlsx")
             return BadRequest(ApiResponse<ImportExtractoResultDto>.Fail("Formato no soportado. Use 'csv' o 'excel'."));
 
-        using var stream = archivo.OpenReadStream();
+        using var stream = request.Archivo.OpenReadStream();
 
-        var result = await _service.ImportarExtractoAsync(cuentaId, periodoId, stream, formatoLimpio, ct);
+        var result = await _service.ImportarExtractoAsync(request.CuentaId, request.PeriodoId, stream, formatoLimpio, ct);
         
         if (!result.IsSuccess)
             return BadRequest(ApiResponse<ImportExtractoResultDto>.Fail(result.Error!));
@@ -154,5 +151,13 @@ public class ConciliacionBancariaController : ControllerBase
             return BadRequest(ApiResponse<string>.Fail(result.Error!));
 
         return Ok(ApiResponse<string>.Ok("Conciliación aprobada con éxito."));
+    }
+
+    public class ImportarExtractoFormRequestDto
+    {
+        public IFormFile? Archivo { get; set; }
+        public int CuentaId { get; set; }
+        public int PeriodoId { get; set; }
+        public string? Formato { get; set; }
     }
 }

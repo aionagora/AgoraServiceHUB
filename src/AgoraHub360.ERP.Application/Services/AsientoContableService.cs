@@ -8,6 +8,7 @@ using AgoraHub360.ERP.Domain.Entities.CST;
 using AgoraHub360.ERP.Domain.Enums;
 using AgoraHub360.ERP.Domain.Interfaces;
 using AgoraHub360.ERP.Shared.DTOs.Contabilidad;
+using TipoPagoAcc = AgoraHub360.ERP.Domain.Entities.ACC.TipoPago;
 
 public class AsientoContableService : IAsientoContableService
 {
@@ -17,7 +18,7 @@ public class AsientoContableService : IAsientoContableService
     private readonly IRepository<PeriodoContable> _periodoRepo;
     private readonly IRepository<TipoComprobante> _tipoCompRepo;
     private readonly IRepository<TipoCambio> _tipoCambioRepo;
-    private readonly IRepository<TipoPago> _tipoPagoRepo;
+    private readonly IRepository<TipoPagoAcc> _tipoPagoRepo;
     private readonly IRepository<NumeracionDocumento> _numRepo;
     private readonly IRepository<CentroCosto> _centroCostoRepo;
     private readonly IUnitOfWork _unitOfWork;
@@ -31,7 +32,7 @@ public class AsientoContableService : IAsientoContableService
         IRepository<PeriodoContable> periodoRepo,
         IRepository<TipoComprobante> tipoCompRepo,
         IRepository<TipoCambio> tipoCambioRepo,
-        IRepository<TipoPago> tipoPagoRepo,
+        IRepository<TipoPagoAcc> tipoPagoRepo,
         IRepository<NumeracionDocumento> numRepo,
         IRepository<CentroCosto> centroCostoRepo,
         IUnitOfWork unitOfWork,
@@ -597,7 +598,7 @@ public class AsientoContableService : IAsientoContableService
             };
             foreach (var (cod, nom, req, ord) in pagos)
             {
-                await _tipoPagoRepo.AddAsync(new TipoPago
+                await _tipoPagoRepo.AddAsync(new TipoPagoAcc
                 {
                     EmpresaId = empresaId.Value, Codigo = cod, Nombre = nom,
                     RequiereReferencia = req, Orden = ord, Activo = true
@@ -719,7 +720,7 @@ public class AsientoContableService : IAsientoContableService
             ? await _tipoCompRepo.GetByIdAsync(asiento.TipoComprobanteId.Value, ct) : null;
         TipoCambio? tipoCambio = asiento.TipoCambioId.HasValue
             ? await _tipoCambioRepo.GetByIdAsync(asiento.TipoCambioId.Value, ct) : null;
-        TipoPago? tipoPago = asiento.TipoPagoId.HasValue
+        TipoPagoAcc? tipoPago = asiento.TipoPagoId.HasValue
             ? await _tipoPagoRepo.GetByIdAsync(asiento.TipoPagoId.Value, ct) : null;
 
         return new AsientoContableDto
