@@ -87,6 +87,7 @@
 @code {
     @inject NavigationManager Nav
     @inject PedidoVentaHttpService PedidoService
+    @inject VentaHttpService VentaService
 
     // Variables preparadas para el módulo de OrdenVenta
     private bool mostrarPreviewWorkflow = false;
@@ -94,6 +95,7 @@
     private bool previewIsReadOnly     = false;
     private List<PedidoVentaDto> pedidos = new();
     private bool isLoading;
+    private bool isGeneratingVenta;
     private string? errorMessage;
 
     protected override async Task OnInitializedAsync()
@@ -123,5 +125,50 @@
     private void GoToNuevo()
     {
         Nav.NavigateTo("/ventas/pedidos/nuevo");
+    }
+
+    private static bool CanGenerarVenta(PedidoVentaDto pedido)
+    {
+        var estado = pedido.Estado?.Trim();
+        return string.Equals(estado, "Confirmado", StringComparison.OrdinalIgnoreCase)
+               && !string.Equals(estado, "Anulado", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task GenerarVentaDesdePedidoAsync(PedidoVentaDto pedido)
+    {
+        isGeneratingVenta = true;
+        errorMessage = null;
+
+        try
+        {
+            var response = await VentaService.CrearDesdePedidoAsync(new GenerarVentaDesdePedidoRequestDto
+            {
+                PedidoVentaId = pedido.Id
+            });
+
+            if (response.Success && response.Data is not null)
+            {
+                Nav.NavigateTo($"/ventas/comercial/{response.Data.Id}");
+                return;
+            }
+
+            errorMessage = BuildGenerarVentaError(response);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"No se pudo generar la venta desde el pedido {pedido.Numero}: {ex.Message}";
+        }
+        finally
+        {
+            isGeneratingVenta = false;
+        }
+    }
+
+    private static string BuildGenerarVentaError(ApiResponse<VentaDto> response)
+    {
+        if (response.Errors is { Count: > 0 })
+            return $"{response.Message} {string.Join(" | ", response.Errors)}";
+
+        return response.Message ?? "No se pudo generar la venta desde el pedido seleccionado.";
     }
 }

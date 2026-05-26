@@ -6,11 +6,13 @@
 @using AgoraHub360.ERP.Shared.DTOs.Ventas
 @using MdmClienteDto = AgoraHub360.ERP.Shared.DTOs.MDM.ClienteDto
 @inject VentaHttpService VentaService
+@inject FacturaVentaHttpService FacturaVentaService
 @inject ClienteHttpService ClienteService
 @inject HttpSucursalService SucursalService
 @inject AlmacenHttpService AlmacenService
 @inject MdmCompanyProductHttpService CompanyProductService
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
 <PageTitle>@(IsNew ? "Nueva Venta Comercial" : "Editar Venta Comercial") - AgoraHub360 ERP</PageTitle>
 
@@ -43,6 +45,22 @@
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             <i class="bi bi-check-circle-fill me-1"></i>@successMessage
             <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+
+    @if (form.PedidoVentaId.HasValue && form.PedidoVentaId.Value > 0)
+    {
+        <div class="alert alert-info" role="alert">
+            <i class="bi bi-link-45deg me-1"></i>
+            Generada desde Pedido @form.PedidoVentaId.Value
+        </div>
+    }
+
+    @if (!IsNew && form.FacturaGenerada)
+    {
+        <div class="alert alert-success" role="alert">
+            <span class="badge bg-success me-2">Factura generada</span>
+            La venta tiene facturación interna registrada.
         </div>
     }
 
@@ -320,9 +338,87 @@
                             <label class="form-label">Teléfono Factura</label>
                             <InputText class="form-control form-control-sm" @bind-Value="form.FacturacionDatos.TelefonoFactura" disabled="@(!form.FacturacionDatos.Facturar)" />
                         </div>
+
+                        @if (!IsNew)
+                        {
+                            <div class="col-12">
+                                @if (!HasValidFiscalData())
+                                {
+                                    <div class="alert alert-warning py-2 mb-0" role="alert">
+                                        <i class="bi bi-exclamation-triangle me-1"></i>
+                                        Complete NIT y Razón Social para generar factura.
+                                    </div>
+                                }
+
+                                <div class="d-flex flex-wrap gap-2 mt-2">
+                                    @if (CanGenerateFactura())
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-success" @onclick="GenerarFacturaAsync" disabled="@isFacturaActionLoading">
+                                            @if (isFacturaActionLoading)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                            }
+                                            <i class="bi bi-file-earmark-plus me-1"></i> Generar Factura
+                                        </button>
+                                    }
+
+                                    @if (CanAnularFactura())
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-danger" @onclick="AnularFacturaAsync" disabled="@isFacturaActionLoading">
+                                            @if (isFacturaActionLoading)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                            }
+                                            <i class="bi bi-file-earmark-x me-1"></i> Anular Factura
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
+
+            @if (!IsNew && facturaActual is not null)
+            {
+                <div class="card shadow-sm mb-3 border-success">
+                    <div class="card-header bg-success bg-opacity-10 fw-bold text-success">
+                        <i class="bi bi-file-earmark-text me-1"></i> Resumen Factura Interna
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label text-muted">Número Factura</label>
+                                <div class="fw-semibold">@facturaActual.NumeroFactura</div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label text-muted">Fecha Emisión</label>
+                                <div class="fw-semibold">@facturaActual.FechaEmision.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label text-muted">NIT</label>
+                                <div class="fw-semibold">@facturaActual.NitFactura</div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label text-muted">Razón Social</label>
+                                <div class="fw-semibold">@facturaActual.RazonSocialFactura</div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label text-muted">Total</label>
+                                <div class="fw-bold text-primary">@facturaActual.Total.ToString("N2")</div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label text-muted">Estado Factura</label>
+                                <div><span class="badge @GetEstadoFacturaBadge(facturaActual.EstadoFactura)">@facturaActual.EstadoFactura</span></div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label text-muted">Estado SIAT</label>
+                                <div><span class="badge @GetEstadoSiatBadge(facturaActual.EstadoSiat)">@facturaActual.EstadoSiat</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
 
             <div class="card shadow-sm mb-3">
                 <div class="card-header bg-light d-flex justify-content-between align-items-center">
@@ -472,8 +568,10 @@
 
     private bool isLoading = true;
     private bool isSaving;
+    private bool isFacturaActionLoading;
     private string? errorMessage;
     private string? successMessage;
+    private FacturaVentaDto? facturaActual;
 
     private readonly string[] tipoVentaOptions = ["Directa", "DesdePedido"];
     private readonly string[] tipoItemOptions = ["Producto", "Servicio"];
@@ -487,6 +585,7 @@
         if (!IsNew)
         {
             await LoadVentaAsync(Id!.Value);
+            await LoadFacturaAsync(Id!.Value);
         }
         else
         {
@@ -538,6 +637,8 @@
             form.Id = venta.Id;
             form.NumeroVentaVisual = venta.NumeroVenta;
             form.TipoVenta = string.IsNullOrWhiteSpace(venta.TipoVenta) ? "Directa" : venta.TipoVenta;
+            form.EstadoVenta = venta.EstadoVenta;
+            form.FacturaGenerada = venta.FacturaGenerada;
             form.PedidoVentaId = venta.PedidoVentaId;
             form.SucursalId = venta.SucursalId;
             form.AlmacenId = venta.AlmacenId;
@@ -590,6 +691,119 @@
         catch (Exception ex)
         {
             errorMessage = $"No se pudo cargar la venta: {ex.Message}";
+        }
+    }
+
+    private async Task LoadFacturaAsync(long ventaId)
+    {
+        try
+        {
+            facturaActual = await FacturaVentaService.GetByVentaIdAsync(ventaId);
+        }
+        catch
+        {
+            facturaActual = null;
+        }
+    }
+
+    private bool CanGenerateFactura()
+        => !IsNew
+           && form.Id.HasValue
+           && !string.Equals(form.EstadoVenta, "Anulada", StringComparison.OrdinalIgnoreCase)
+           && !form.FacturaGenerada
+           && HasValidFiscalData()
+           && facturaActual is null;
+
+    private bool CanAnularFactura()
+        => facturaActual is not null
+           && !string.Equals(facturaActual.EstadoFactura, "Anulada", StringComparison.OrdinalIgnoreCase)
+           && !isFacturaActionLoading;
+
+    private bool HasValidFiscalData()
+        => !string.IsNullOrWhiteSpace(form.FacturacionDatos.NitFactura)
+           && !string.IsNullOrWhiteSpace(form.FacturacionDatos.RazonSocialFactura);
+
+    private async Task GenerarFacturaAsync()
+    {
+        if (!form.Id.HasValue) return;
+
+        isFacturaActionLoading = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var response = await FacturaVentaService.GenerarAsync(new GenerarFacturaVentaRequestDto
+            {
+                VentaId = form.Id.Value,
+                TipoDocumentoFactura = "Factura",
+                NitFactura = form.FacturacionDatos.NitFactura,
+                Complemento = form.FacturacionDatos.Complemento,
+                RazonSocialFactura = form.FacturacionDatos.RazonSocialFactura,
+                EmailFactura = form.FacturacionDatos.EmailFactura,
+                TelefonoFactura = form.FacturacionDatos.TelefonoFactura,
+                Observaciones = form.Observaciones
+            });
+
+            if (!response.Success || response.Data is null)
+            {
+                errorMessage = BuildErrorMessage(response);
+                return;
+            }
+
+            successMessage = "Factura interna generada correctamente.";
+            await LoadVentaAsync(form.Id.Value);
+            await LoadFacturaAsync(form.Id.Value);
+            RecalcularTotales();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"No se pudo generar la factura: {ex.Message}";
+        }
+        finally
+        {
+            isFacturaActionLoading = false;
+        }
+    }
+
+    private async Task AnularFacturaAsync()
+    {
+        if (!form.Id.HasValue || facturaActual is null) return;
+
+        var confirmado = await JS.InvokeAsync<bool>("confirm", "¿Desea anular la factura interna de esta venta?");
+        if (!confirmado) return;
+
+        isFacturaActionLoading = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var response = await FacturaVentaService.AnularAsync(facturaActual.Id, new AnularFacturaVentaRequestDto
+            {
+                MotivoAnulacion = string.IsNullOrWhiteSpace(form.Observaciones)
+                    ? "Anulación desde formulario comercial"
+                    : form.Observaciones!
+            });
+
+            if (!response.Success || response.Data is null)
+            {
+                errorMessage = BuildErrorMessage(response);
+                return;
+            }
+
+            successMessage = "Factura interna anulada correctamente.";
+            await LoadVentaAsync(form.Id.Value);
+            await LoadFacturaAsync(form.Id.Value);
+            RecalcularTotales();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"No se pudo anular la factura: {ex.Message}";
+        }
+        finally
+        {
+            isFacturaActionLoading = false;
         }
     }
 
@@ -981,11 +1195,49 @@
         return response.Message ?? "Error no controlado al ejecutar la operación.";
     }
 
+    private static string BuildErrorMessage(ApiResponse<FacturaVentaDto> response)
+    {
+        if (response.Errors is { Count: > 0 })
+            return $"{response.Message} {string.Join(" | ", response.Errors)}";
+
+        return response.Message ?? "Error no controlado al ejecutar la operación de factura.";
+    }
+
+    private static string GetEstadoFacturaBadge(string? estado)
+    {
+        if (string.IsNullOrWhiteSpace(estado)) return "bg-secondary";
+
+        return estado.ToLowerInvariant() switch
+        {
+            "generada" => "bg-success",
+            "anulada" => "bg-danger",
+            "borrador" => "bg-secondary",
+            _ => "bg-secondary"
+        };
+    }
+
+    private static string GetEstadoSiatBadge(string? estado)
+    {
+        if (string.IsNullOrWhiteSpace(estado)) return "bg-secondary";
+
+        return estado.ToLowerInvariant() switch
+        {
+            "noenviada" => "bg-secondary",
+            "pendiente" => "bg-warning text-dark",
+            "validada" => "bg-success",
+            "rechazada" => "bg-danger",
+            "anulada" => "bg-dark",
+            _ => "bg-secondary"
+        };
+    }
+
     private class VentaFormModel
     {
         public long? Id { get; set; }
         public string NumeroVentaVisual { get; set; } = "BORRADOR";
         public string TipoVenta { get; set; } = "Directa";
+        public string EstadoVenta { get; set; } = "Borrador";
+        public bool FacturaGenerada { get; set; }
         public long? PedidoVentaId { get; set; }
         public int SucursalId { get; set; }
         public int? AlmacenId { get; set; }
