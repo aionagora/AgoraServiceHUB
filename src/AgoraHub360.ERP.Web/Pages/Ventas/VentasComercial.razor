@@ -1,0 +1,245 @@
+@page "/ventas/comercial"
+@attribute [Authorize]
+@using AgoraHub360.ERP.Shared.DTOs.Ventas
+@inject VentaHttpService VentaService
+@inject NavigationManager Nav
+
+<PageTitle>Ventas Comercial - AgoraHub360 ERP</PageTitle>
+
+<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+        <h1 class="mb-0">Ventas Comercial</h1>
+        <p class="text-muted mb-0">Ventas &rsaquo; Comercial</p>
+    </div>
+    <button class="btn btn-primary" @onclick="GoToNueva">
+        <i class="bi bi-plus-circle me-1"></i> Nueva venta
+    </button>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(successMessage))
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle-fill me-1"></i>@successMessage
+        <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+    </div>
+}
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i>@errorMessage
+        <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+    </div>
+}
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center py-3">
+        <span>Listado de Ventas</span>
+        <button class="btn btn-sm btn-outline-secondary" @onclick="LoadAsync" disabled="@isLoading">
+            <i class="bi bi-arrow-repeat me-1"></i> Recargar
+        </button>
+    </div>
+    <div class="card-body p-0">
+        @if (isLoading)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="text-muted mt-2 mb-0">Cargando ventas...</p>
+            </div>
+        }
+        else if (ventas.Count == 0)
+        {
+            <div class="text-center py-5">
+                <i class="bi bi-receipt-cutoff" style="font-size: 3rem; color: var(--agora-text-light);"></i>
+                <p class="text-muted mt-3 mb-0">No hay ventas registradas.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Número</th>
+                            <th>Fecha</th>
+                            <th>Cliente</th>
+                            <th>Tipo</th>
+                            <th>Estado Venta</th>
+                            <th>Estado Pago</th>
+                            <th class="text-end">Total</th>
+                            <th>Factura</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var venta in ventas)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@venta.NumeroVenta</td>
+                                <td>@venta.FechaVenta.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>@(string.IsNullOrWhiteSpace(venta.ClienteNombre) ? "-" : venta.ClienteNombre)</td>
+                                <td>
+                                    <span class="badge bg-secondary">@venta.TipoVenta</span>
+                                </td>
+                                <td>
+                                    <span class="badge @GetEstadoVentaBadge(venta.EstadoVenta)">@venta.EstadoVenta</span>
+                                </td>
+                                <td>
+                                    <span class="badge @GetEstadoPagoBadge(venta.EstadoPago)">@venta.EstadoPago</span>
+                                </td>
+                                <td class="text-end fw-semibold">@venta.Total.ToString("N2")</td>
+                                <td>
+                                    <span class="badge @(venta.FacturaGenerada ? "bg-success" : "bg-secondary")">
+                                        @(venta.FacturaGenerada ? "Generada" : "Sin generar")
+                                    </span>
+                                </td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => GoToDetalle(venta.Id)">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+
+                                    @if (IsBorrador(venta.EstadoVenta))
+                                    {
+                                        <button class="btn btn-sm btn-outline-success ms-1"
+                                                @onclick="() => ConfirmarAsync(venta.Id)"
+                                                disabled="@isActionLoading">
+                                            <i class="bi bi-check2-circle"></i>
+                                        </button>
+                                    }
+
+                                    @if (!IsAnulada(venta.EstadoVenta))
+                                    {
+                                        <button class="btn btn-sm btn-outline-danger ms-1"
+                                                @onclick="() => AnularAsync(venta.Id)"
+                                                disabled="@isActionLoading">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    private readonly List<VentaResumenDto> ventas = new();
+    private bool isLoading;
+    private bool isActionLoading;
+    private string? errorMessage;
+    private string? successMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var data = await VentaService.GetAllAsync();
+            ventas.Clear();
+            ventas.AddRange(data.OrderByDescending(x => x.FechaVenta));
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"No se pudo cargar el listado de ventas: {ex.Message}";
+            ventas.Clear();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void GoToNueva() => Nav.NavigateTo("/ventas/comercial/nueva");
+
+    private void GoToDetalle(long id) => Nav.NavigateTo($"/ventas/comercial/{id}");
+
+    private async Task ConfirmarAsync(long id)
+    {
+        isActionLoading = true;
+        errorMessage = null;
+        successMessage = null;
+
+        var response = await VentaService.ConfirmarAsync(id, new ConfirmarVentaRequestDto());
+        if (response.Success)
+        {
+            successMessage = "Venta confirmada correctamente.";
+            await LoadAsync();
+        }
+        else
+        {
+            errorMessage = response.Message ?? "No se pudo confirmar la venta.";
+        }
+
+        isActionLoading = false;
+    }
+
+    private async Task AnularAsync(long id)
+    {
+        isActionLoading = true;
+        errorMessage = null;
+        successMessage = null;
+
+        var response = await VentaService.AnularAsync(id, new AnularVentaRequestDto
+        {
+            MotivoAnulacion = "Anulación desde listado comercial"
+        });
+
+        if (response.Success)
+        {
+            successMessage = "Venta anulada correctamente.";
+            await LoadAsync();
+        }
+        else
+        {
+            errorMessage = response.Message ?? "No se pudo anular la venta.";
+        }
+
+        isActionLoading = false;
+    }
+
+    private static bool IsBorrador(string? estadoVenta)
+        => string.Equals(estadoVenta, "Borrador", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsAnulada(string? estadoVenta)
+        => string.Equals(estadoVenta, "Anulada", StringComparison.OrdinalIgnoreCase)
+           || string.Equals(estadoVenta, "Anulado", StringComparison.OrdinalIgnoreCase);
+
+    private static string GetEstadoVentaBadge(string? estado)
+    {
+        if (string.IsNullOrWhiteSpace(estado)) return "bg-secondary";
+
+        return estado.ToLowerInvariant() switch
+        {
+            "borrador" => "bg-secondary",
+            "confirmada" => "bg-info text-dark",
+            "facturada" => "bg-primary",
+            "anulada" => "bg-danger",
+            "anulado" => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    private static string GetEstadoPagoBadge(string? estado)
+    {
+        if (string.IsNullOrWhiteSpace(estado)) return "bg-secondary";
+
+        return estado.ToLowerInvariant() switch
+        {
+            "pendiente" => "bg-warning text-dark",
+            "parcial" => "bg-info text-dark",
+            "pagado" => "bg-success",
+            "anulado" => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+}

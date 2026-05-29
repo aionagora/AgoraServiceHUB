@@ -4,6 +4,7 @@ using AgoraHub360.ERP.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AgoraHub360.ERP.Persistence.Migrations
 {
     [DbContext(typeof(AgoraDbContext))]
-    partial class AgoraDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260526031629_AddVentasCommercialModule")]
+    partial class AddVentasCommercialModule
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -5978,248 +5981,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.ToTable("EntityVersions", "ver");
                 });
 
-            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.VTA.FacturaVenta", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<bool>("Activo")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("CodigoControl")
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.Property<string>("CodigoExcepcion")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("CodigoRecepcion")
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.Property<string>("Complemento")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
-                    b.Property<string>("CreadoPor")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Cuf")
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.Property<string>("Cufd")
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.Property<string>("Cuis")
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.Property<decimal>("DescuentoTotal")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("EmailFactura")
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.Property<int>("EmpresaId")
-                        .HasColumnType("int");
-
-                    b.Property<byte>("EstadoFactura")
-                        .HasColumnType("tinyint");
-
-                    b.Property<byte>("EstadoSiat")
-                        .HasColumnType("tinyint");
-
-                    b.Property<DateTime?>("FechaAnulacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("FechaCreacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime>("FechaEmision")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("FechaModificacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("ImpuestoTotal")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("Leyenda")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("ModificadoPor")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("MonedaCodigo")
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
-                    b.Property<string>("MotivoAnulacion")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("NitFactura")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("NumeroAutorizacion")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("NumeroFactura")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<string>("Observaciones")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<string>("RazonSocialFactura")
-                        .IsRequired()
-                        .HasMaxLength(250)
-                        .HasColumnType("nvarchar(250)");
-
-                    b.Property<decimal>("Subtotal")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("TelefonoFactura")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<decimal>("TipoCambio")
-                        .HasColumnType("decimal(18,6)");
-
-                    b.Property<byte>("TipoDocumentoFactura")
-                        .HasColumnType("tinyint");
-
-                    b.Property<decimal>("Total")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<long>("VentaId")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EmpresaId");
-
-                    b.HasIndex("EstadoFactura");
-
-                    b.HasIndex("NitFactura");
-
-                    b.HasIndex("VentaId");
-
-                    b.HasIndex("EmpresaId", "FechaEmision");
-
-                    b.HasIndex("EmpresaId", "NumeroFactura")
-                        .IsUnique();
-
-                    b.HasIndex("EmpresaId", "VentaId")
-                        .IsUnique();
-
-                    b.ToTable("FacturasVenta", "vta");
-                });
-
-            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.VTA.FacturaVentaDetalle", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<bool>("Activo")
-                        .HasColumnType("bit");
-
-                    b.Property<decimal>("Cantidad")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<string>("CodigoProducto")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("CreadoPor")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("Descripcion")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<decimal>("DescuentoMonto")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("DetalleAdicional")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<int>("EmpresaId")
-                        .HasColumnType("int");
-
-                    b.Property<long>("FacturaVentaId")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime>("FechaCreacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("FechaModificacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("ImpuestoMonto")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("ModificadoPor")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<decimal>("PrecioUnitario")
-                        .HasPrecision(18, 4)
-                        .HasColumnType("decimal(18,4)");
-
-                    b.Property<byte>("TipoItemVenta")
-                        .HasColumnType("tinyint");
-
-                    b.Property<decimal>("TotalLinea")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("UnidadMedida")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<long?>("VentaDetalleId")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("EmpresaId");
-
-                    b.HasIndex("FacturaVentaId");
-
-                    b.HasIndex("VentaDetalleId");
-
-                    b.ToTable("FacturaVentaDetalles", "vta");
-                });
-
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.VTA.PedidoVenta", b =>
                 {
                     b.Property<long>("Id")
@@ -6584,10 +6345,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Property<decimal>("DescuentoPorcentaje")
                         .HasPrecision(9, 4)
                         .HasColumnType("decimal(9,4)");
-
-                    b.Property<string>("DetalleAdicional")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<int>("EmpresaId")
                         .HasColumnType("int");
@@ -8774,35 +8531,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Navigation("PeriodoContable");
                 });
 
-            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.VTA.FacturaVenta", b =>
-                {
-                    b.HasOne("AgoraHub360.ERP.Domain.Entities.VTA.Venta", "Venta")
-                        .WithMany()
-                        .HasForeignKey("VentaId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Venta");
-                });
-
-            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.VTA.FacturaVentaDetalle", b =>
-                {
-                    b.HasOne("AgoraHub360.ERP.Domain.Entities.VTA.FacturaVenta", "FacturaVenta")
-                        .WithMany("Detalles")
-                        .HasForeignKey("FacturaVentaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("AgoraHub360.ERP.Domain.Entities.VTA.VentaDetalle", "VentaDetalle")
-                        .WithMany()
-                        .HasForeignKey("VentaDetalleId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("FacturaVenta");
-
-                    b.Navigation("VentaDetalle");
-                });
-
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.VTA.PedidoVenta", b =>
                 {
                     b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.Almacen", "Almacen")
@@ -9228,11 +8956,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.RUL.Industry", b =>
                 {
                     b.Navigation("Rules");
-                });
-
-            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.VTA.FacturaVenta", b =>
-                {
-                    b.Navigation("Detalles");
                 });
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.VTA.PedidoVenta", b =>

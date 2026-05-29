@@ -67,7 +67,8 @@ public class PresupuestoController : ControllerBase
     }
 
     [HttpPost("importar")]
-    public async Task<IActionResult> Importar([FromForm] IFormFile file, [FromForm] int gestion, CancellationToken ct)
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> Importar(IFormFile file, [FromForm] int gestion, CancellationToken ct)
     {
         if (file == null || file.Length == 0) return BadRequest(ApiResponse<CargaMasivaResultDto>.Fail("Archivo no proporcionado."));
         if (gestion <= 0) return BadRequest(ApiResponse<CargaMasivaResultDto>.Fail("Gestión inválida."));
