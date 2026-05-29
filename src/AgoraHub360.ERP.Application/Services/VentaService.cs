@@ -21,6 +21,7 @@ public class VentaService : IVentaService
     private readonly IRepository<PedidoVenta> _pedidoVentaRepo;
     private readonly IRepository<PedidoVentaDetalle> _pedidoVentaDetalleRepo;
     private readonly IRepository<CompanyProduct> _companyProductRepo;
+    private readonly IRepository<Product> _productRepo;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -35,6 +36,7 @@ public class VentaService : IVentaService
         IRepository<PedidoVenta> pedidoVentaRepo,
         IRepository<PedidoVentaDetalle> pedidoVentaDetalleRepo,
         IRepository<CompanyProduct> companyProductRepo,
+        IRepository<Product> productRepo,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork)
     {
@@ -48,6 +50,7 @@ public class VentaService : IVentaService
         _pedidoVentaRepo = pedidoVentaRepo;
         _pedidoVentaDetalleRepo = pedidoVentaDetalleRepo;
         _companyProductRepo = companyProductRepo;
+        _productRepo = productRepo;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
     }
@@ -535,7 +538,8 @@ public class VentaService : IVentaService
                 ImpuestoMonto = dto.ImpuestoMonto,
                 CostoUnitario = dto.CostoUnitario,
                 DescuentaInventario = dto.DescuentaInventario,
-                Descripcion = dto.Descripcion?.Trim() ?? string.Empty
+                Descripcion = dto.Descripcion?.Trim() ?? string.Empty,
+                DetalleAdicional = string.IsNullOrWhiteSpace(dto.DetalleAdicional) ? null : dto.DetalleAdicional.Trim()
             };
 
             if (tipoItemVenta == TipoItemVenta.Producto)
@@ -546,6 +550,13 @@ public class VentaService : IVentaService
                 var companyProduct = await _companyProductRepo.GetByIdAsync(dto.CompanyProductId.Value, ct);
                 if (companyProduct is null || companyProduct.EmpresaId != empresaId)
                     return Result<List<VentaDetalle>>.Failure($"El CompanyProduct {dto.CompanyProductId} no existe o no pertenece a la empresa activa.");
+
+                var product = await _productRepo.GetByIdAsync(companyProduct.ProductId, ct);
+                if (product is null || product.EmpresaId != empresaId)
+                    return Result<List<VentaDetalle>>.Failure($"El Product asociado al CompanyProduct {dto.CompanyProductId} no existe o no pertenece a la empresa activa.");
+
+                if (product.ProductKind == 2)
+                    return Result<List<VentaDetalle>>.Failure("No se permiten servicios catalogados en líneas de tipo Producto.");
 
                 if (dto.AlmacenId.HasValue)
                 {
@@ -562,7 +573,32 @@ public class VentaService : IVentaService
             }
             else
             {
-                detalle.CompanyProductId = null;
+                if (dto.CompanyProductId.HasValue && dto.CompanyProductId.Value > 0)
+                {
+                    var companyProduct = await _companyProductRepo.GetByIdAsync(dto.CompanyProductId.Value, ct);
+                    if (companyProduct is null || companyProduct.EmpresaId != empresaId)
+                        return Result<List<VentaDetalle>>.Failure($"El CompanyProduct {dto.CompanyProductId} no existe o no pertenece a la empresa activa.");
+
+                    var product = await _productRepo.GetByIdAsync(companyProduct.ProductId, ct);
+                    if (product is null || product.EmpresaId != empresaId)
+                        return Result<List<VentaDetalle>>.Failure($"El Product asociado al CompanyProduct {dto.CompanyProductId} no existe o no pertenece a la empresa activa.");
+
+                    var esServicioCatalogado = product.ProductKind == 2 || !product.IsStockable;
+                    if (!esServicioCatalogado)
+                        return Result<List<VentaDetalle>>.Failure("Para TipoItemVenta=Servicio, el CompanyProduct debe ser de tipo Servicio o no stockeable.");
+
+                    if (!product.IsSellable)
+                        return Result<List<VentaDetalle>>.Failure("Para TipoItemVenta=Servicio, el CompanyProduct debe estar marcado como vendible.");
+
+                    detalle.CompanyProductId = dto.CompanyProductId.Value;
+                    if (string.IsNullOrWhiteSpace(detalle.Descripcion))
+                        detalle.Descripcion = product.CommercialName;
+                }
+                else
+                {
+                    detalle.CompanyProductId = null;
+                }
+
                 detalle.AlmacenId = null;
                 detalle.DescuentaInventario = false;
                 if (string.IsNullOrWhiteSpace(detalle.Descripcion))
@@ -797,6 +833,7 @@ public class VentaService : IVentaService
                 CompanyProductId = d.CompanyProductId,
                 AlmacenId = d.AlmacenId,
                 Descripcion = d.Descripcion,
+                DetalleAdicional = d.DetalleAdicional,
                 Cantidad = d.Cantidad,
                 UnidadMedidaId = d.UnidadMedidaId,
                 PrecioUnitario = d.PrecioUnitario,

@@ -65,6 +65,7 @@ public class VentaDetalleDto
     public int? AlmacenId { get; set; }
 
     public string Descripcion { get; set; } = string.Empty;
+    public string? DetalleAdicional { get; set; }
 
     public decimal Cantidad { get; set; }
     public int? UnidadMedidaId { get; set; }

@@ -24,6 +24,9 @@ public class FacturaVentaDetalleConfiguration : IEntityTypeConfiguration<Factura
             .IsRequired()
             .HasMaxLength(500);
 
+        builder.Property(x => x.DetalleAdicional)
+            .HasMaxLength(1000);
+
         builder.Property(x => x.Cantidad)
             .HasPrecision(18, 4);
 

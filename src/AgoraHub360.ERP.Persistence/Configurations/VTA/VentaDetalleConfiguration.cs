@@ -21,6 +21,9 @@ public class VentaDetalleConfiguration : IEntityTypeConfiguration<VentaDetalle>
             .IsRequired()
             .HasMaxLength(500);
 
+        builder.Property(x => x.DetalleAdicional)
+            .HasMaxLength(1000);
+
         builder.Property(x => x.Cantidad).HasPrecision(18, 4);
         builder.Property(x => x.PrecioUnitario).HasPrecision(18, 4);
         builder.Property(x => x.CostoUnitario).HasPrecision(18, 4);

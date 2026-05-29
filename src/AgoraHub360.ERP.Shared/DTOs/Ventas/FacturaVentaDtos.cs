@@ -73,6 +73,7 @@ public class FacturaVentaDetalleDto
 
     public string? CodigoProducto { get; set; }
     public string Descripcion { get; set; } = string.Empty;
+    public string? DetalleAdicional { get; set; }
 
     public decimal Cantidad { get; set; }
     public string? UnidadMedida { get; set; }

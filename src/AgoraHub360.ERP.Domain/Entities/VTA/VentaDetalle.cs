@@ -20,6 +20,7 @@ public class VentaDetalle : TenantEntity
     public Almacen? Almacen { get; set; }
 
     public string Descripcion { get; set; } = string.Empty;
+    public string? DetalleAdicional { get; set; }
 
     public decimal Cantidad { get; set; }
 

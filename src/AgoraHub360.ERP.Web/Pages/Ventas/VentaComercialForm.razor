@@ -11,6 +11,7 @@
 @inject HttpSucursalService SucursalService
 @inject AlmacenHttpService AlmacenService
 @inject MdmCompanyProductHttpService CompanyProductService
+@inject ProductoHttpService ProductoService
 @inject NavigationManager Nav
 @inject IJSRuntime JS
 
@@ -192,9 +193,10 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th>Tipo</th>
-                                        <th>Producto</th>
+                                        <th>Ítem catálogo</th>
                                         <th>Almacén</th>
                                         <th>Descripción</th>
+                                        <th>Detalle adicional</th>
                                         <th class="text-end">Cant.</th>
                                         <th class="text-end">P.Unit</th>
                                         <th class="text-end">Desc %</th>
@@ -225,9 +227,12 @@
                                             <td>
                                                 @if (EsProducto(det))
                                                 {
-                                                    <InputSelect class="form-select form-select-sm" @bind-Value="det.CompanyProductId">
+                                                    <InputSelect TValue="long?" class="form-select form-select-sm"
+                                                                 Value="det.CompanyProductId"
+                                                                 ValueChanged="@((long? v) => OnCompanyProductSelected(idx, v))"
+                                                                 ValueExpression="@(() => det.CompanyProductId)">
                                                         <option value="">-- Seleccione --</option>
-                                                        @foreach (var p in productos)
+                                                        @foreach (var p in productosCatalogados)
                                                         {
                                                             <option value="@p.CompanyProductId">@p.Sku - @p.NombreComercial</option>
                                                         }
@@ -235,7 +240,16 @@
                                                 }
                                                 else
                                                 {
-                                                    <span class="text-muted small">No aplica</span>
+                                                    <InputSelect TValue="long?" class="form-select form-select-sm"
+                                                                 Value="det.CompanyProductId"
+                                                                 ValueChanged="@((long? v) => OnCompanyProductSelected(idx, v))"
+                                                                 ValueExpression="@(() => det.CompanyProductId)">
+                                                        <option value="">-- Seleccione servicio --</option>
+                                                        @foreach (var p in serviciosCatalogados)
+                                                        {
+                                                            <option value="@p.CompanyProductId">@p.Sku - @p.NombreComercial</option>
+                                                        }
+                                                    </InputSelect>
                                                 }
                                             </td>
                                             <td>
@@ -258,6 +272,12 @@
                                                 <InputText class="form-control form-control-sm" @bind-Value="det.Descripcion" />
                                             </td>
                                             <td>
+                                                <InputTextArea class="form-control form-control-sm"
+                                                               rows="2"
+                                                               placeholder="Detalle adicional del producto/servicio..."
+                                                               @bind-Value="det.DetalleAdicional" />
+                                            </td>
+                                            <td>
                                                 <InputNumber class="form-control form-control-sm text-end" @bind-Value="det.Cantidad" @bind-Value:after="RecalcularTotales" />
                                             </td>
                                             <td>
@@ -274,7 +294,7 @@
                                             </td>
                                             <td class="text-end fw-semibold">@CalcularTotalLinea(det).ToString("N2")</td>
                                             <td class="text-center">
-                                                <InputCheckbox @bind-Value="det.DescuentaInventario" disabled="@(!EsProducto(det))" />
+                                                <InputCheckbox @bind-Value="det.DescuentaInventario" disabled="true" />
                                             </td>
                                             <td>
                                                 <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => RemoveDetalle(idx)">
@@ -565,6 +585,7 @@
     private List<AlmacenDto> almacenes = new();
     private List<AlmacenDto> almacenesFiltrados = new();
     private List<CompanyProductDto> productos = new();
+    private Dictionary<long, ProductDto2> productosBasePorId = new();
 
     private bool isLoading = true;
     private bool isSaving;
@@ -607,19 +628,22 @@
             var sucursalesTask = SucursalService.GetActivasAsync();
             var almacenesTask = AlmacenService.GetAllAsync();
             var productosTask = CompanyProductService.GetAllAsync();
+            var productosBaseTask = ProductoService.GetAllAsync();
 
-            await Task.WhenAll(clientesTask, sucursalesTask, almacenesTask, productosTask);
+            await Task.WhenAll(clientesTask, sucursalesTask, almacenesTask, productosTask, productosBaseTask);
 
             clientes = (await clientesTask).Where(x => x.Activo).OrderBy(x => x.RazonSocial).ToList();
             sucursales = (await sucursalesTask).Where(x => x.Activo).OrderBy(x => x.Nombre).ToList();
             almacenes = (await almacenesTask).Where(x => x.Activo).OrderBy(x => x.Nombre).ToList();
             productos = (await productosTask).Where(x => x.Activo).OrderBy(x => x.NombreComercial).ToList();
+            productosBasePorId = (await productosBaseTask).Where(x => x.Activo).ToDictionary(x => x.ProductId, x => x);
         }
         catch (Exception ex)
         {
             errorMessage = $"No se pudieron cargar catálogos: {ex.Message}";
         }
 
+        ApplyAutoSelectionsForNewVenta();
         FiltrarAlmacenes();
     }
 
@@ -661,6 +685,7 @@
                 CompanyProductId = d.CompanyProductId,
                 AlmacenId = d.AlmacenId,
                 Descripcion = d.Descripcion,
+                DetalleAdicional = d.DetalleAdicional,
                 Cantidad = d.Cantidad,
                 UnidadMedidaId = d.UnidadMedidaId,
                 PrecioUnitario = d.PrecioUnitario,
@@ -827,6 +852,18 @@
         almacenesFiltrados = form.SucursalId > 0
             ? almacenes.Where(a => a.SucursalId == form.SucursalId).OrderBy(a => a.Nombre).ToList()
             : new List<AlmacenDto>();
+
+        if (IsNew && !form.AlmacenId.HasValue && almacenesFiltrados.Count == 1)
+            form.AlmacenId = almacenesFiltrados[0].Id;
+    }
+
+    private void ApplyAutoSelectionsForNewVenta()
+    {
+        if (!IsNew)
+            return;
+
+        if (form.SucursalId <= 0 && sucursales.Count == 1)
+            form.SucursalId = sucursales[0].Id;
     }
 
     private void AgregarProducto()
@@ -873,17 +910,69 @@
 
         if (string.Equals(tipo, "Servicio", StringComparison.OrdinalIgnoreCase))
         {
-            det.CompanyProductId = null;
             det.AlmacenId = null;
             det.DescuentaInventario = false;
+
+            if (det.CompanyProductId.HasValue)
+            {
+                var cp = serviciosCatalogados.FirstOrDefault(x => x.CompanyProductId == det.CompanyProductId.Value);
+                if (cp is null)
+                {
+                    det.CompanyProductId = null;
+                }
+                else
+                {
+                    if (string.IsNullOrWhiteSpace(det.Descripcion))
+                        det.Descripcion = cp.NombreComercial;
+                }
+            }
         }
         else
         {
             det.DescuentaInventario = true;
             det.AlmacenId ??= form.AlmacenId;
+
+            if (det.CompanyProductId.HasValue && !productosCatalogados.Any(x => x.CompanyProductId == det.CompanyProductId.Value))
+                det.CompanyProductId = null;
         }
 
         RecalcularTotales();
+    }
+
+    private void OnCompanyProductSelected(int idx, long? companyProductId)
+    {
+        if (idx < 0 || idx >= form.Detalles.Count) return;
+
+        var det = form.Detalles[idx];
+        det.CompanyProductId = companyProductId;
+
+        if (!companyProductId.HasValue)
+            return;
+
+        if (EsProducto(det))
+        {
+            var cp = productosCatalogados.FirstOrDefault(x => x.CompanyProductId == companyProductId.Value);
+            if (cp is null)
+            {
+                det.CompanyProductId = null;
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(det.Descripcion))
+                det.Descripcion = cp.NombreComercial;
+            return;
+        }
+
+        var servicio = serviciosCatalogados.FirstOrDefault(x => x.CompanyProductId == companyProductId.Value);
+        if (servicio is null)
+        {
+            return;
+        }
+
+        det.AlmacenId = null;
+        det.DescuentaInventario = false;
+        if (string.IsNullOrWhiteSpace(det.Descripcion))
+            det.Descripcion = servicio.NombreComercial;
     }
 
     private void RemoveDetalle(int idx)
@@ -1031,6 +1120,7 @@
     private CrearVentaRequestDto BuildCreateRequest()
     {
         NormalizeDetalles();
+        var detalles = CloneDetallesForRequest();
 
         return new CrearVentaRequestDto
         {
@@ -1043,7 +1133,7 @@
             MonedaCodigo = form.MonedaCodigo,
             TipoCambio = form.TipoCambio,
             Observaciones = form.Observaciones,
-            Detalles = form.Detalles,
+            Detalles = detalles,
             FacturacionDatos = form.FacturacionDatos,
             Pagos = form.Pagos.Count == 0 ? null : form.Pagos
         };
@@ -1052,6 +1142,7 @@
     private ActualizarVentaRequestDto BuildUpdateRequest()
     {
         NormalizeDetalles();
+        var detalles = CloneDetallesForRequest();
 
         return new ActualizarVentaRequestDto
         {
@@ -1062,10 +1153,28 @@
             MonedaCodigo = form.MonedaCodigo,
             TipoCambio = form.TipoCambio,
             Observaciones = form.Observaciones,
-            Detalles = form.Detalles,
+            Detalles = detalles,
             FacturacionDatos = form.FacturacionDatos
         };
     }
+
+    private List<VentaDetalleDto> CloneDetallesForRequest()
+        => form.Detalles.Select(d => new VentaDetalleDto
+        {
+            TipoItemVenta = d.TipoItemVenta,
+            CompanyProductId = d.CompanyProductId,
+            AlmacenId = d.AlmacenId,
+            Descripcion = d.Descripcion,
+            DetalleAdicional = d.DetalleAdicional,
+            Cantidad = d.Cantidad,
+            PrecioUnitario = d.PrecioUnitario,
+            DescuentoPorcentaje = d.DescuentoPorcentaje,
+            DescuentoMonto = d.DescuentoMonto,
+            ImpuestoMonto = d.ImpuestoMonto,
+            TotalLinea = d.TotalLinea,
+            CostoUnitario = d.CostoUnitario,
+            DescuentaInventario = d.DescuentaInventario
+        }).ToList();
 
     private void NormalizeDetalles()
     {
@@ -1073,7 +1182,6 @@
         {
             if (!EsProducto(det))
             {
-                det.CompanyProductId = null;
                 det.AlmacenId = null;
                 det.DescuentaInventario = false;
             }
@@ -1110,7 +1218,6 @@
 
             if (!EsProducto(d))
             {
-                d.CompanyProductId = null;
                 d.AlmacenId = null;
                 d.DescuentaInventario = false;
             }
@@ -1146,6 +1253,18 @@
 
     private static bool EsProducto(VentaDetalleDto d)
         => string.Equals(d.TipoItemVenta, "Producto", StringComparison.OrdinalIgnoreCase);
+
+    private List<CompanyProductDto> productosCatalogados
+        => productos.Where(cp =>
+            productosBasePorId.TryGetValue(cp.ProductId, out var p)
+            && p.ProductKind != 2)
+            .ToList();
+
+    private List<CompanyProductDto> serviciosCatalogados
+        => productos.Where(cp =>
+            productosBasePorId.TryGetValue(cp.ProductId, out var p)
+            && (p.ProductKind == 2 || !p.IsStockable))
+            .ToList();
 
     private decimal CalcularTotalLinea(VentaDetalleDto det)
     {
