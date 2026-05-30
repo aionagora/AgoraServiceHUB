@@ -1,4 +1,5 @@
 using System.Text;
+using System.Globalization;
 using AgoraHub360.ERP.Api.Auth;
 using AgoraHub360.ERP.Api.BackgroundServices;
 using AgoraHub360.ERP.Api.Middleware;
@@ -8,6 +9,7 @@ using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Infrastructure;
 using AgoraHub360.ERP.Persistence;
 using AgoraHub360.ERP.Persistence.Context;
+using AgoraHub360.ERP.Shared.Configuration;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -15,6 +17,11 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
+
+var numericCulture = AppFormattingOptions.BuildNumericCulture();
+var uiCulture = AppFormattingOptions.BuildUiCulture();
+CultureInfo.DefaultThreadCurrentCulture = numericCulture;
+CultureInfo.DefaultThreadCurrentUICulture = uiCulture;
 
 // ──── Servicios de infraestructura HTTP ────
 builder.Services.AddHttpContextAccessor();

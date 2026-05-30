@@ -1,6 +1,7 @@
 @page "/ventas/comercial/nueva"
 @page "/ventas/comercial/{Id:long}"
 @attribute [Authorize]
+@using AgoraHub360.ERP.Web.Helpers
 @using AgoraHub360.ERP.Shared.DTOs.MDM
 @using AgoraHub360.ERP.Shared.DTOs.Sucursal
 @using AgoraHub360.ERP.Shared.DTOs.Ventas
@@ -315,7 +316,7 @@
                                             <td>
                                                 <InputNumber class="form-control form-control-sm text-end" @bind-Value="det.ImpuestoMonto" @bind-Value:after="RecalcularTotales" />
                                             </td>
-                                            <td class="text-end fw-semibold">@CalcularTotalLinea(det).ToString("N2")</td>
+                                            <td class="text-end fw-semibold">@FormatMoney(CalcularTotalLinea(det))</td>
                                             <td class="text-center">
                                                 <InputCheckbox @bind-Value="det.DescuentaInventario" disabled="true" />
                                             </td>
@@ -517,7 +518,7 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label text-muted">Total</label>
-                                <div class="fw-bold text-primary">@facturaActual.Total.ToString("N2")</div>
+                                <div class="fw-bold text-primary">@FormatMoney(facturaActual.Total)</div>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label text-muted">Estado Factura</label>
@@ -614,27 +615,27 @@
                     <div class="row g-3">
                         <div class="col-md-2">
                             <label class="form-label text-muted">Subtotal</label>
-                            <div class="fw-semibold text-end">@resumen.Subtotal.ToString("N2")</div>
+                            <div class="fw-semibold text-end">@FormatMoney(resumen.Subtotal)</div>
                         </div>
                         <div class="col-md-2">
                             <label class="form-label text-muted">Descuento Total</label>
-                            <div class="fw-semibold text-end">@resumen.DescuentoTotal.ToString("N2")</div>
+                            <div class="fw-semibold text-end">@FormatMoney(resumen.DescuentoTotal)</div>
                         </div>
                         <div class="col-md-2">
                             <label class="form-label text-muted">Impuesto Total</label>
-                            <div class="fw-semibold text-end">@resumen.ImpuestoTotal.ToString("N2")</div>
+                            <div class="fw-semibold text-end">@FormatMoney(resumen.ImpuestoTotal)</div>
                         </div>
                         <div class="col-md-2">
                             <label class="form-label text-muted">Total</label>
-                            <div class="fw-bold text-end text-primary">@resumen.Total.ToString("N2")</div>
+                            <div class="fw-bold text-end text-primary">@FormatMoney(resumen.Total)</div>
                         </div>
                         <div class="col-md-2">
                             <label class="form-label text-muted">Total Pagado</label>
-                            <div class="fw-semibold text-end">@resumen.TotalPagado.ToString("N2")</div>
+                            <div class="fw-semibold text-end">@FormatMoney(resumen.TotalPagado)</div>
                         </div>
                         <div class="col-md-2">
                             <label class="form-label text-muted">Saldo</label>
-                            <div class="fw-bold text-end @(resumen.Saldo > 0 ? "text-warning" : "text-success")">@resumen.Saldo.ToString("N2")</div>
+                            <div class="fw-bold text-end @(resumen.Saldo > 0 ? "text-warning" : "text-success")">@FormatMoney(resumen.Saldo)</div>
                         </div>
                     </div>
                 </div>
@@ -1894,6 +1895,9 @@
             Pagos = form.Pagos.Count == 0 ? null : form.Pagos
         };
     }
+
+    private static string FormatMoney(decimal value)
+        => FormatHelper.Money(value);
 
     private ActualizarVentaRequestDto BuildUpdateRequest()
     {
