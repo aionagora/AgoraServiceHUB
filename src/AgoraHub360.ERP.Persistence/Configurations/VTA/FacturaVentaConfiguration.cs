@@ -98,6 +98,11 @@ public class FacturaVentaConfiguration : IEntityTypeConfiguration<FacturaVenta>
             .HasForeignKey(x => x.VentaId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        builder.HasOne(x => x.ClientePerfilFiscal)
+            .WithMany()
+            .HasForeignKey(x => x.ClientePerfilFiscalId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasMany(x => x.Detalles)
             .WithOne(x => x.FacturaVenta)
             .HasForeignKey(x => x.FacturaVentaId)
@@ -106,6 +111,7 @@ public class FacturaVentaConfiguration : IEntityTypeConfiguration<FacturaVenta>
         builder.HasIndex(x => new { x.EmpresaId, x.NumeroFactura }).IsUnique();
         builder.HasIndex(x => new { x.EmpresaId, x.VentaId }).IsUnique();
         builder.HasIndex(x => new { x.EmpresaId, x.FechaEmision });
+        builder.HasIndex(x => x.ClientePerfilFiscalId);
         builder.HasIndex(x => x.NitFactura);
         builder.HasIndex(x => x.EstadoFactura);
     }

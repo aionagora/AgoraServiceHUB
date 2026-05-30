@@ -16,6 +16,7 @@ public class FacturaVentaService : IFacturaVentaService
     private readonly IRepository<VentaDetalle> _ventaDetalleRepo;
     private readonly IRepository<VentaFacturacionDatos> _ventaFacturacionRepo;
     private readonly IRepository<Cliente> _clienteRepo;
+    private readonly IRepository<ClientePerfilFiscal> _clientePerfilFiscalRepo;
     private readonly IRepository<CompanyProduct> _companyProductRepo;
     private readonly IRepository<Uom> _uomRepo;
     private readonly ICurrentUserService _currentUser;
@@ -28,6 +29,7 @@ public class FacturaVentaService : IFacturaVentaService
         IRepository<VentaDetalle> ventaDetalleRepo,
         IRepository<VentaFacturacionDatos> ventaFacturacionRepo,
         IRepository<Cliente> clienteRepo,
+        IRepository<ClientePerfilFiscal> clientePerfilFiscalRepo,
         IRepository<CompanyProduct> companyProductRepo,
         IRepository<Uom> uomRepo,
         ICurrentUserService currentUser,
@@ -39,6 +41,7 @@ public class FacturaVentaService : IFacturaVentaService
         _ventaDetalleRepo = ventaDetalleRepo;
         _ventaFacturacionRepo = ventaFacturacionRepo;
         _clienteRepo = clienteRepo;
+        _clientePerfilFiscalRepo = clientePerfilFiscalRepo;
         _companyProductRepo = companyProductRepo;
         _uomRepo = uomRepo;
         _currentUser = currentUser;
@@ -155,6 +158,7 @@ public class FacturaVentaService : IFacturaVentaService
             TipoDocumentoFactura = tipoDocumentoFactura,
             EstadoFactura = EstadoFacturaVentaComercial.Generada,
             EstadoSiat = EstadoSiatFactura.NoEnviada,
+            ClientePerfilFiscalId = fiscal.ClientePerfilFiscalId,
             NitFactura = fiscal.NitFactura!,
             Complemento = fiscal.Complemento,
             RazonSocialFactura = fiscal.RazonSocialFactura!,
@@ -291,27 +295,64 @@ public class FacturaVentaService : IFacturaVentaService
         if (venta.ClienteId.HasValue)
             cliente = await _clienteRepo.GetByIdAsync(venta.ClienteId.Value, ct);
 
+        ClientePerfilFiscal? perfilSeleccionado = null;
+        if (venta.ClienteId.HasValue && ventaFact?.ClientePerfilFiscalId is long perfilSeleccionadoId)
+        {
+            var perfil = await _clientePerfilFiscalRepo.GetByIdAsync(perfilSeleccionadoId, ct);
+            if (perfil is not null
+                && perfil.EmpresaId == empresaId
+                && perfil.ClienteId == venta.ClienteId.Value
+                && perfil.Activo)
+            {
+                perfilSeleccionado = perfil;
+            }
+        }
+
+        ClientePerfilFiscal? perfilPredeterminado = null;
+        if (venta.ClienteId.HasValue)
+        {
+            perfilPredeterminado = (await _clientePerfilFiscalRepo.FindAsync(
+                p => p.EmpresaId == empresaId
+                     && p.ClienteId == venta.ClienteId.Value
+                     && p.Activo
+                     && p.EsPredeterminado,
+                ct))
+                .OrderBy(p => p.Id)
+                .FirstOrDefault();
+        }
+
         var nit = fromRequestNit
                   ?? Normalize(ventaFact?.NitFactura)
+                  ?? Normalize(perfilSeleccionado?.NumeroDocumento)
+                  ?? Normalize(perfilPredeterminado?.NumeroDocumento)
                   ?? Normalize(cliente?.NIT);
 
         var complemento = fromRequestComplemento
-                          ?? Normalize(ventaFact?.Complemento);
+                          ?? Normalize(ventaFact?.Complemento)
+                          ?? Normalize(perfilSeleccionado?.Complemento)
+                          ?? Normalize(perfilPredeterminado?.Complemento);
 
         var razon = fromRequestRazon
                     ?? Normalize(ventaFact?.RazonSocialFactura)
+                    ?? Normalize(perfilSeleccionado?.RazonSocial)
+                    ?? Normalize(perfilPredeterminado?.RazonSocial)
                     ?? Normalize(cliente?.RazonSocial);
 
         var email = fromRequestEmail
                     ?? Normalize(ventaFact?.EmailFactura)
+                    ?? Normalize(perfilSeleccionado?.EmailFactura)
+                    ?? Normalize(perfilPredeterminado?.EmailFactura)
                     ?? Normalize(cliente?.Email);
 
         var telefono = fromRequestTelefono
                        ?? Normalize(ventaFact?.TelefonoFactura)
+                       ?? Normalize(perfilSeleccionado?.TelefonoFactura)
+                       ?? Normalize(perfilPredeterminado?.TelefonoFactura)
                        ?? Normalize(cliente?.Telefono);
 
         return Result<FiscalData>.Success(new FiscalData
         {
+            ClientePerfilFiscalId = perfilSeleccionado?.Id ?? perfilPredeterminado?.Id,
             NitFactura = nit,
             Complemento = complemento,
             RazonSocialFactura = razon,
@@ -364,6 +405,7 @@ public class FacturaVentaService : IFacturaVentaService
         {
             Id = f.Id,
             VentaId = f.VentaId,
+            ClientePerfilFiscalId = f.ClientePerfilFiscalId,
             NumeroFactura = f.NumeroFactura,
             FechaEmision = f.FechaEmision,
             EstadoFactura = f.EstadoFactura.ToString(),
@@ -380,6 +422,7 @@ public class FacturaVentaService : IFacturaVentaService
         {
             Id = f.Id,
             VentaId = f.VentaId,
+            ClientePerfilFiscalId = f.ClientePerfilFiscalId,
             NumeroFactura = f.NumeroFactura,
             NumeroAutorizacion = f.NumeroAutorizacion,
             FechaEmision = f.FechaEmision,
@@ -431,6 +474,7 @@ public class FacturaVentaService : IFacturaVentaService
 
     private sealed class FiscalData
     {
+        public long? ClientePerfilFiscalId { get; set; }
         public string? NitFactura { get; set; }
         public string? Complemento { get; set; }
         public string? RazonSocialFactura { get; set; }

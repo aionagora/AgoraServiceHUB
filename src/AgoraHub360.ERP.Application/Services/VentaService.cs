@@ -18,6 +18,7 @@ public class VentaService : IVentaService
     private readonly IRepository<Sucursal> _sucursalRepo;
     private readonly IRepository<Almacen> _almacenRepo;
     private readonly IRepository<Cliente> _clienteRepo;
+    private readonly IRepository<ClientePerfilFiscal> _clientePerfilFiscalRepo;
     private readonly IRepository<PedidoVenta> _pedidoVentaRepo;
     private readonly IRepository<PedidoVentaDetalle> _pedidoVentaDetalleRepo;
     private readonly IRepository<CompanyProduct> _companyProductRepo;
@@ -33,6 +34,7 @@ public class VentaService : IVentaService
         IRepository<Sucursal> sucursalRepo,
         IRepository<Almacen> almacenRepo,
         IRepository<Cliente> clienteRepo,
+        IRepository<ClientePerfilFiscal> clientePerfilFiscalRepo,
         IRepository<PedidoVenta> pedidoVentaRepo,
         IRepository<PedidoVentaDetalle> pedidoVentaDetalleRepo,
         IRepository<CompanyProduct> companyProductRepo,
@@ -47,6 +49,7 @@ public class VentaService : IVentaService
         _sucursalRepo = sucursalRepo;
         _almacenRepo = almacenRepo;
         _clienteRepo = clienteRepo;
+        _clientePerfilFiscalRepo = clientePerfilFiscalRepo;
         _pedidoVentaRepo = pedidoVentaRepo;
         _pedidoVentaDetalleRepo = pedidoVentaDetalleRepo;
         _companyProductRepo = companyProductRepo;
@@ -179,7 +182,7 @@ public class VentaService : IVentaService
 
         var detalles = detallesResult.Value!;
 
-        var factResult = BuildFacturacion(dto.FacturacionDatos);
+        var factResult = await BuildFacturacionAsync(dto.FacturacionDatos, empresaId, dto.ClienteId, ct);
         if (!factResult.IsSuccess)
             return Result<VentaDto>.Failure(factResult.Error!);
 
@@ -263,7 +266,7 @@ public class VentaService : IVentaService
             return Result<VentaDto>.Failure(detallesResult.Error!);
 
         var detalles = detallesResult.Value!;
-        var factResult = BuildFacturacion(dto.FacturacionDatos);
+        var factResult = await BuildFacturacionAsync(dto.FacturacionDatos, empresaId, dto.ClienteId, ct);
         if (!factResult.IsSuccess)
             return Result<VentaDto>.Failure(factResult.Error!);
 
@@ -315,6 +318,7 @@ public class VentaService : IVentaService
                 existingFact.RazonSocialFactura = fact.RazonSocialFactura;
                 existingFact.EmailFactura = fact.EmailFactura;
                 existingFact.TelefonoFactura = fact.TelefonoFactura;
+                existingFact.ClientePerfilFiscalId = fact.ClientePerfilFiscalId;
                 existingFact.EstadoFactura = fact.EstadoFactura;
                 existingFact.FacturaId = fact.FacturaId;
                 await _facturacionRepo.UpdateAsync(existingFact, ct);
@@ -390,7 +394,7 @@ public class VentaService : IVentaService
             ClienteId = pedido.ClienteId,
             PedidoVentaId = pedido.Id,
             TipoVenta = TipoVenta.DesdePedido.ToString(),
-            FechaVenta = DateTime.UtcNow,
+            FechaVenta = DateTime.Now,
             Observaciones = string.IsNullOrWhiteSpace(dto.Observaciones)
                 ? $"Generada desde pedido {pedido.Numero}"
                 : dto.Observaciones,
@@ -629,7 +633,11 @@ public class VentaService : IVentaService
         return Result<List<VentaDetalle>>.Success(detalles);
     }
 
-    private Result<VentaFacturacionDatos?> BuildFacturacion(VentaFacturacionDatosDto? dto)
+    private async Task<Result<VentaFacturacionDatos?>> BuildFacturacionAsync(
+        VentaFacturacionDatosDto? dto,
+        int empresaId,
+        int? clienteId,
+        CancellationToken ct)
     {
         if (dto is null)
             return Result<VentaFacturacionDatos?>.Success(null);
@@ -646,10 +654,42 @@ public class VentaService : IVentaService
                 return Result<VentaFacturacionDatos?>.Failure("RazonSocialFactura es obligatorio cuando Facturar = true.");
         }
 
+        if (dto.ClientePerfilFiscalId.HasValue)
+        {
+            if (!clienteId.HasValue)
+                return Result<VentaFacturacionDatos?>.Failure("No se puede usar ClientePerfilFiscalId sin un cliente asociado a la venta.");
+
+            var perfilFiscal = await _clientePerfilFiscalRepo.GetByIdAsync(dto.ClientePerfilFiscalId.Value, ct);
+            if (perfilFiscal is null || perfilFiscal.EmpresaId != empresaId || !perfilFiscal.Activo)
+                return Result<VentaFacturacionDatos?>.Failure("El perfil fiscal no existe, está inactivo o no pertenece a la empresa activa.");
+
+            if (perfilFiscal.ClienteId != clienteId.Value)
+                return Result<VentaFacturacionDatos?>.Failure("El perfil fiscal no pertenece al cliente seleccionado.");
+
+            var factConSnapshotPerfil = new VentaFacturacionDatos
+            {
+                Facturar = dto.Facturar,
+                FacturarAlMismoCliente = dto.FacturarAlMismoCliente,
+                ClientePerfilFiscalId = dto.ClientePerfilFiscalId,
+                TipoDocumentoIdentidad = perfilFiscal.TipoDocumentoIdentidad,
+                NitFactura = perfilFiscal.NumeroDocumento,
+                Complemento = perfilFiscal.Complemento,
+                RazonSocialFactura = perfilFiscal.RazonSocial,
+                EmailFactura = perfilFiscal.EmailFactura,
+                TelefonoFactura = perfilFiscal.TelefonoFactura,
+                EstadoFactura = estadoFactura,
+                FacturaId = dto.FacturaId,
+                Activo = true
+            };
+
+            return Result<VentaFacturacionDatos?>.Success(factConSnapshotPerfil);
+        }
+
         var fact = new VentaFacturacionDatos
         {
             Facturar = dto.Facturar,
             FacturarAlMismoCliente = dto.FacturarAlMismoCliente,
+            ClientePerfilFiscalId = dto.ClientePerfilFiscalId,
             TipoDocumentoIdentidad = dto.TipoDocumentoIdentidad,
             NitFactura = dto.NitFactura,
             Complemento = dto.Complemento,
@@ -817,6 +857,7 @@ public class VentaService : IVentaService
                 {
                     Facturar = fact.Facturar,
                     FacturarAlMismoCliente = fact.FacturarAlMismoCliente,
+                    ClientePerfilFiscalId = fact.ClientePerfilFiscalId,
                     TipoDocumentoIdentidad = fact.TipoDocumentoIdentidad,
                     NitFactura = fact.NitFactura,
                     Complemento = fact.Complemento,

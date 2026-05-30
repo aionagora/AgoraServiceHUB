@@ -8,6 +8,7 @@
 @inject VentaHttpService VentaService
 @inject FacturaVentaHttpService FacturaVentaService
 @inject ClienteHttpService ClienteService
+@inject ClientePerfilFiscalHttpService ClientePerfilFiscalService
 @inject HttpSucursalService SucursalService
 @inject AlmacenHttpService AlmacenService
 @inject MdmCompanyProductHttpService CompanyProductService
@@ -108,7 +109,10 @@
 
                         <div class="col-md-3">
                             <label class="form-label">Fecha Venta</label>
-                            <InputDate class="form-control form-control-sm" @bind-Value="form.FechaVenta" />
+                            <InputText class="form-control form-control-sm"
+                                       type="datetime-local"
+                                       @bind-Value="fechaVentaLocalTexto"
+                                       @bind-Value:event="oninput" />
                         </div>
 
                         <div class="col-md-3">
@@ -138,15 +142,51 @@
                 </div>
                 <div class="card-body">
                     <div class="row g-3">
-                        <div class="col-md-6">
+                        <div class="col-md-8 position-relative">
                             <label class="form-label">Cliente</label>
-                            <InputSelect class="form-select form-select-sm" @bind-Value="form.ClienteId">
-                                <option value="">-- Sin cliente --</option>
-                                @foreach (var c in clientes)
-                                {
-                                    <option value="@c.Id">@c.Codigo - @c.RazonSocial</option>
-                                }
-                            </InputSelect>
+                            <div class="input-group input-group-sm">
+                                <InputText class="form-control"
+                                           placeholder="Buscar cliente por nombre o NIT..."
+                                           @bind-Value="clienteBusquedaTexto"
+                                           @bind-Value:after="OnClienteBusquedaTextoChanged"
+                                           @onfocus="OnClienteBusquedaFocused" />
+                                <button type="button" class="btn btn-outline-secondary" @onclick="BuscarClientePorNit">
+                                    Buscar por NIT
+                                </button>
+                            </div>
+
+                            @if (mostrarResultadosClientes && clientesFiltradosBusqueda.Count > 0)
+                            {
+                                <div class="list-group position-absolute w-100 shadow-sm mt-1" style="z-index: 1050; max-height: 260px; overflow-y: auto;">
+                                    @foreach (var c in clientesFiltradosBusqueda)
+                                    {
+                                        <button type="button" class="list-group-item list-group-item-action"
+                                                @onclick="(() => SeleccionarClienteBusqueda(c))">
+                                            <div class="fw-semibold">@c.RazonSocial</div>
+                                            <small class="text-muted">@c.Codigo · NIT: @(string.IsNullOrWhiteSpace(c.NIT) ? "S/N" : c.NIT)</small>
+                                        </button>
+                                    }
+                                </div>
+                            }
+
+                            @if (form.ClienteId.HasValue && clienteSeleccionadoActual is not null)
+                            {
+                                <div class="form-text">
+                                    Seleccionado: <span class="fw-semibold">@clienteSeleccionadoActual.RazonSocial</span>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="form-text text-muted">Sin cliente seleccionado.</div>
+                            }
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">NIT cliente (búsqueda rápida)</label>
+                            <InputText class="form-control form-control-sm"
+                                       @bind-Value="nitBusquedaTexto"
+                                       @bind-Value:event="oninput"
+                                       placeholder="Ingrese NIT del cliente" />
                         </div>
                     </div>
                 </div>
@@ -307,10 +347,61 @@
                         </div>
                         <div class="col-md-3">
                             <div class="form-check mt-2">
-                                <InputCheckbox class="form-check-input" @bind-Value="form.FacturacionDatos.FacturarAlMismoCliente" disabled="@(!form.FacturacionDatos.Facturar)" />
+                                <InputCheckbox class="form-check-input"
+                                               Value="form.FacturacionDatos.FacturarAlMismoCliente"
+                                               ValueChanged="OnFacturarAlMismoClienteChanged"
+                                               ValueExpression="@(() => form.FacturacionDatos.FacturarAlMismoCliente)"
+                                               disabled="@(!form.FacturacionDatos.Facturar || !form.ClienteId.HasValue)" />
                                 <label class="form-check-label">Facturar al mismo cliente</label>
                             </div>
                         </div>
+
+                        @if (form.FacturacionDatos.Facturar && !form.FacturacionDatos.FacturarAlMismoCliente)
+                        {
+                            <div class="col-md-6 position-relative">
+                                <label class="form-label">Facturar a</label>
+                                <InputSelect TValue="long?" class="form-select form-select-sm mb-2"
+                                             Value="@GetPerfilFiscalSelectorValue()"
+                                             ValueChanged="@OnPerfilFiscalChanged"
+                                             ValueExpression="@(() => form.FacturacionDatos.ClientePerfilFiscalId)"
+                                             disabled="@(!form.ClienteId.HasValue)">
+                                    <option value="">-- Seleccione perfil fiscal --</option>
+                                    <option value="@PerfilFiscalDatoOcasionalId">Nuevo dato de facturación</option>
+                                    @foreach (var perfil in perfilesFiscalesCliente)
+                                    {
+                                        <option value="@perfil.Id">@perfil.Alias (@perfil.NumeroDocumento)@(perfil.EsPredeterminado ? " [Predeterminado]" : string.Empty)</option>
+                                    }
+                                </InputSelect>
+
+                                <InputText class="form-control form-control-sm"
+                                           placeholder="Buscar por razón social, NIT o alias..."
+                                           @bind-Value="perfilFiscalBusquedaTexto"
+                                           @bind-Value:after="OnRazonSocialBusquedaTextoChanged"
+                                           @onfocus="OnRazonSocialBusquedaFocused"
+                                           disabled="@(!form.ClienteId.HasValue)" />
+
+                                @if (mostrarResultadosPerfilesFiscales && perfilesFiscalesFiltradosBusqueda.Count > 0)
+                                {
+                                    <div class="list-group position-absolute w-100 shadow-sm mt-1" style="z-index: 1050; max-height: 260px; overflow-y: auto;">
+                                        @foreach (var perfil in perfilesFiscalesFiltradosBusqueda)
+                                        {
+                                            <button type="button" class="list-group-item list-group-item-action"
+                                                    @onclick="(() => SeleccionarPerfilFiscalBusqueda(perfil))">
+                                                <div class="fw-semibold">@perfil.RazonSocial</div>
+                                                <small class="text-muted">@perfil.Alias · @perfil.NumeroDocumento</small>
+                                            </button>
+                                        }
+                                    </div>
+                                }
+
+                                @if (form.ClienteId.HasValue && !perfilesFiscalesFiltradosBusqueda.Any() && !string.IsNullOrWhiteSpace(perfilFiscalBusquedaTexto))
+                                {
+                                    <button type="button" class="btn btn-sm btn-outline-primary mt-2" @onclick="GuardarComoNuevoDatoFacturacionAsync">
+                                        Guardar como nuevo dato de facturación
+                                    </button>
+                                }
+                            </div>
+                        }
 
                         <div class="col-md-3">
                             <label class="form-label">Tipo Documento</label>
@@ -319,28 +410,46 @@
 
                         <div class="col-md-3">
                             <label class="form-label">NIT Factura</label>
-                            <InputText class="form-control form-control-sm" @bind-Value="form.FacturacionDatos.NitFactura" disabled="@(!form.FacturacionDatos.Facturar)" />
+                            <InputText class="form-control form-control-sm"
+                                       placeholder="Ingrese NIT o documento"
+                                       @bind-Value="form.FacturacionDatos.NitFactura"
+                                       @bind-Value:after="OnNitFacturaChanged"
+                                       disabled="@(!form.FacturacionDatos.Facturar)" />
                         </div>
 
                         <div class="col-md-3">
                             <label class="form-label">Complemento</label>
-                            <InputText class="form-control form-control-sm" @bind-Value="form.FacturacionDatos.Complemento" disabled="@(!form.FacturacionDatos.Facturar)" />
+                            <InputText class="form-control form-control-sm" placeholder="Ingrese complemento (opcional)" @bind-Value="form.FacturacionDatos.Complemento" disabled="@(!form.FacturacionDatos.Facturar)" />
                         </div>
 
                         <div class="col-md-5">
                             <label class="form-label">Razón Social Factura</label>
-                            <InputText class="form-control form-control-sm" @bind-Value="form.FacturacionDatos.RazonSocialFactura" disabled="@(!form.FacturacionDatos.Facturar)" />
+                            <InputText class="form-control form-control-sm"
+                                       placeholder="Ingrese razón social"
+                                       @bind-Value="form.FacturacionDatos.RazonSocialFactura"
+                                       @bind-Value:after="OnRazonSocialFacturaChanged"
+                                       disabled="@(!form.FacturacionDatos.Facturar)" />
                         </div>
 
                         <div class="col-md-4">
                             <label class="form-label">Email Factura</label>
-                            <InputText class="form-control form-control-sm" @bind-Value="form.FacturacionDatos.EmailFactura" disabled="@(!form.FacturacionDatos.Facturar)" />
+                            <InputText class="form-control form-control-sm" placeholder="correo@empresa.com" @bind-Value="form.FacturacionDatos.EmailFactura" disabled="@(!form.FacturacionDatos.Facturar)" />
                         </div>
 
                         <div class="col-md-3">
                             <label class="form-label">Teléfono Factura</label>
-                            <InputText class="form-control form-control-sm" @bind-Value="form.FacturacionDatos.TelefonoFactura" disabled="@(!form.FacturacionDatos.Facturar)" />
+                            <InputText class="form-control form-control-sm" placeholder="Ingrese teléfono" @bind-Value="form.FacturacionDatos.TelefonoFactura" disabled="@(!form.FacturacionDatos.Facturar)" />
                         </div>
+
+                        @if (DatosFiscalesModificadosManual)
+                        {
+                            <div class="col-12">
+                                <div class="alert alert-info py-2 mb-0" role="alert">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Datos fiscales modificados para esta venta.
+                                </div>
+                            </div>
+                        }
 
                         @if (!IsNew)
                         {
@@ -598,6 +707,9 @@
     private readonly VentaResumenUx resumen = new();
 
     private List<MdmClienteDto> clientes = new();
+    private List<MdmClienteDto> clientesFiltradosBusqueda = new();
+    private MdmClienteDto? clienteSeleccionadoActual;
+    private List<ClientePerfilFiscalDto> perfilesFiscalesCliente = new();
     private List<SucursalListadoDto> sucursales = new();
     private List<AlmacenDto> almacenes = new();
     private List<AlmacenDto> almacenesFiltrados = new();
@@ -611,16 +723,30 @@
     private string? successMessage;
     private FacturaVentaDto? facturaActual;
     private HashSet<VentaPagoDto> pagosCargadosDesdeBackend = new();
+    private const long PerfilFiscalDatoOcasionalId = -1;
     private string modalTitle = string.Empty;
     private string modalMessage = string.Empty;
     private string modalType = "info";
     private bool showModal;
     private Func<Task>? pendingConfirmAction;
+    private string clienteBusquedaTexto = string.Empty;
+    private string nitBusquedaTexto = string.Empty;
+    private bool mostrarResultadosClientes;
+    private string perfilFiscalBusquedaTexto = string.Empty;
+    private bool mostrarResultadosPerfilesFiscales;
+    private List<ClientePerfilFiscalDto> perfilesFiscalesFiltradosBusqueda = new();
+    private bool nitFacturaEditadoManual;
+    private bool razonSocialFacturaEditadaManual;
+    private bool suppressFiscalManualTracking;
+    private const string FechaVentaInputFormat = "yyyy-MM-ddTHH:mm";
+    private string fechaVentaLocalTexto = string.Empty;
 
     private readonly string[] tipoVentaOptions = ["Directa", "DesdePedido"];
     private readonly string[] tipoItemOptions = ["Producto", "Servicio"];
     private readonly string[] tipoPagoOptions = ["Contado", "Credito", "Mixto"];
     private readonly string[] modoPagoOptions = ["Efectivo", "QR", "Transferencia", "Tarjeta", "Cheque", "Deposito", "Otro"];
+
+    private bool DatosFiscalesModificadosManual => nitFacturaEditadoManual || razonSocialFacturaEditadaManual;
 
     protected override async Task OnInitializedAsync()
     {
@@ -635,10 +761,12 @@
         {
             form.MonedaCodigo = "BOB";
             form.TipoCambio = 1m;
-            form.FechaVenta = DateTime.Today;
+            form.FechaVenta = DateTime.Now;
             form.TipoVenta = "Directa";
             pagosCargadosDesdeBackend.Clear();
         }
+
+        SincronizarFechaVentaInput();
 
         RecalcularTotales();
         isLoading = false;
@@ -669,6 +797,8 @@
 
         ApplyAutoSelectionsForNewVenta();
         FiltrarAlmacenes();
+        SincronizarClienteSeleccionado();
+        RefrescarFiltroClientesBusqueda();
     }
 
     private async Task LoadVentaAsync(long id)
@@ -691,16 +821,21 @@
             form.SucursalId = venta.SucursalId;
             form.AlmacenId = venta.AlmacenId;
             form.FechaVenta = venta.FechaVenta;
+            SincronizarFechaVentaInput();
             form.MonedaCodigo = venta.MonedaCodigo ?? venta.MonedaId ?? "BOB";
             form.TipoCambio = venta.TipoCambio <= 0 ? 1m : venta.TipoCambio;
             form.Observaciones = venta.Observaciones;
             form.ClienteId = venta.ClienteId;
+            SincronizarClienteSeleccionado();
 
             form.FacturacionDatos = venta.FacturacionDatos ?? new VentaFacturacionDatosDto
             {
                 Facturar = false,
                 FacturarAlMismoCliente = true
             };
+
+            nitFacturaEditadoManual = false;
+            razonSocialFacturaEditadaManual = false;
 
             form.Detalles = venta.Detalles.Select(d => new VentaDetalleDto
             {
@@ -735,6 +870,8 @@
                 EstadoPago = p.EstadoPago
             }).ToList();
             pagosCargadosDesdeBackend = form.Pagos.ToHashSet();
+
+            await LoadPerfilesFiscalesAsync(form.ClienteId, preserveCurrentSelection: true);
 
             FiltrarAlmacenes();
         }
@@ -827,6 +964,408 @@
         {
             isFacturaActionLoading = false;
         }
+    }
+
+    private async Task OnClienteChanged(int? clienteId)
+    {
+        form.ClienteId = clienteId;
+        SincronizarClienteSeleccionado();
+        mostrarResultadosClientes = false;
+        await LoadPerfilesFiscalesAsync(clienteId, preserveCurrentSelection: false);
+    }
+
+    private Task OnClienteBusquedaTextoChanged()
+    {
+        clienteBusquedaTexto = clienteBusquedaTexto?.Trim() ?? string.Empty;
+        RefrescarFiltroClientesBusqueda();
+
+        if (string.IsNullOrWhiteSpace(clienteBusquedaTexto))
+        {
+            if (form.ClienteId.HasValue && clienteSeleccionadoActual is not null)
+                clienteBusquedaTexto = clienteSeleccionadoActual.RazonSocial;
+            mostrarResultadosClientes = false;
+            return Task.CompletedTask;
+        }
+
+        mostrarResultadosClientes = true;
+        return Task.CompletedTask;
+    }
+
+    private void OnClienteBusquedaFocused()
+    {
+        RefrescarFiltroClientesBusqueda();
+        mostrarResultadosClientes = clientesFiltradosBusqueda.Count > 0;
+    }
+
+    private async Task BuscarClientePorNit()
+    {
+        var nit = (nitBusquedaTexto ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(nit))
+        {
+            ShowWarningModal("Ingrese un NIT para buscar cliente.");
+            return;
+        }
+
+        var cliente = clientes.FirstOrDefault(c =>
+            string.Equals((c.NIT ?? string.Empty).Trim(), nit, StringComparison.OrdinalIgnoreCase));
+
+        if (cliente is null)
+        {
+            ShowWarningModal("No se encontró un cliente con el NIT indicado.");
+            return;
+        }
+
+        await SeleccionarClienteBusqueda(cliente);
+    }
+
+    private async Task SeleccionarClienteBusqueda(MdmClienteDto cliente)
+    {
+        if (cliente is null)
+            return;
+
+        clienteSeleccionadoActual = cliente;
+        clienteBusquedaTexto = cliente.RazonSocial ?? string.Empty;
+            nitBusquedaTexto = cliente.NIT ?? string.Empty;
+        clientesFiltradosBusqueda.Clear();
+        mostrarResultadosClientes = false;
+
+        await OnClienteChanged(cliente.Id);
+    }
+
+    private void SincronizarClienteSeleccionado()
+    {
+        if (!form.ClienteId.HasValue)
+        {
+            clienteSeleccionadoActual = null;
+            return;
+        }
+
+        clienteSeleccionadoActual = clientes.FirstOrDefault(c => c.Id == form.ClienteId.Value);
+        if (clienteSeleccionadoActual is null)
+            return;
+
+        if (string.IsNullOrWhiteSpace(clienteBusquedaTexto))
+            clienteBusquedaTexto = clienteSeleccionadoActual.RazonSocial ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(nitBusquedaTexto))
+            nitBusquedaTexto = clienteSeleccionadoActual.NIT ?? string.Empty;
+    }
+
+    private void RefrescarFiltroClientesBusqueda()
+    {
+        var termino = (clienteBusquedaTexto ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(termino))
+        {
+            clientesFiltradosBusqueda = clientes.Take(8).ToList();
+            return;
+        }
+
+        clientesFiltradosBusqueda = clientes
+            .Where(c => CoincideClienteBusqueda(c, termino))
+            .Take(15)
+            .ToList();
+    }
+
+    private static bool CoincideClienteBusqueda(MdmClienteDto cliente, string termino)
+    {
+        if (cliente is null || string.IsNullOrWhiteSpace(termino))
+            return false;
+
+        return Contiene(cliente.RazonSocial, termino)
+               || Contiene(cliente.Codigo, termino)
+               || Contiene(cliente.NIT, termino)
+               || Contiene(cliente.Email, termino)
+               || Contiene(cliente.Telefono, termino);
+    }
+
+    private static bool Contiene(string? value, string termino)
+        => !string.IsNullOrWhiteSpace(value)
+           && value.Contains(termino, StringComparison.OrdinalIgnoreCase);
+
+    private async Task LoadPerfilesFiscalesAsync(int? clienteId, bool preserveCurrentSelection)
+    {
+        perfilesFiscalesCliente = new List<ClientePerfilFiscalDto>();
+        perfilesFiscalesFiltradosBusqueda = new List<ClientePerfilFiscalDto>();
+        mostrarResultadosPerfilesFiscales = false;
+        perfilFiscalBusquedaTexto = string.Empty;
+
+        if (!clienteId.HasValue || clienteId.Value <= 0)
+        {
+            form.FacturacionDatos.ClientePerfilFiscalId = null;
+            return;
+        }
+
+        try
+        {
+            var perfiles = await ClientePerfilFiscalService.GetByClienteAsync(clienteId.Value);
+            perfilesFiscalesCliente = perfiles
+                .Where(x => x.Activo)
+                .OrderByDescending(x => x.EsPredeterminado)
+                .ThenBy(x => x.Alias)
+                .ToList();
+        }
+        catch
+        {
+            perfilesFiscalesCliente = new List<ClientePerfilFiscalDto>();
+        }
+
+        if (preserveCurrentSelection
+            && form.FacturacionDatos.ClientePerfilFiscalId.HasValue
+            && perfilesFiscalesCliente.Any(x => x.Id == form.FacturacionDatos.ClientePerfilFiscalId.Value))
+        {
+            return;
+        }
+
+        RefrescarFiltroPerfilesFiscalesBusqueda();
+
+        if (form.FacturacionDatos.FacturarAlMismoCliente)
+        {
+            AplicarReglaFacturarMismoCliente(forceOverwrite: !DatosFiscalesModificadosManual);
+            return;
+        }
+
+        if (!preserveCurrentSelection)
+            form.FacturacionDatos.ClientePerfilFiscalId = null;
+    }
+
+    private long? GetPerfilFiscalSelectorValue()
+    {
+        if (form.FacturacionDatos.ClientePerfilFiscalId.HasValue)
+            return form.FacturacionDatos.ClientePerfilFiscalId.Value;
+
+        return IsDatoOcasionalFiscal() ? PerfilFiscalDatoOcasionalId : null;
+    }
+
+    private void OnPerfilFiscalChanged(long? perfilId)
+    {
+        if (!perfilId.HasValue)
+        {
+            form.FacturacionDatos.ClientePerfilFiscalId = null;
+            return;
+        }
+
+        if (perfilId.Value == PerfilFiscalDatoOcasionalId)
+        {
+            form.FacturacionDatos.ClientePerfilFiscalId = null;
+            return;
+        }
+
+        var perfil = perfilesFiscalesCliente.FirstOrDefault(x => x.Id == perfilId.Value);
+        if (perfil is null)
+            return;
+
+        ApplyPerfilFiscal(perfil, markExplicitSelection: true);
+    }
+
+    private void ApplyPerfilFiscal(ClientePerfilFiscalDto perfil, bool markExplicitSelection = false)
+    {
+        suppressFiscalManualTracking = true;
+        form.FacturacionDatos.ClientePerfilFiscalId = perfil.Id;
+        form.FacturacionDatos.TipoDocumentoIdentidad = perfil.TipoDocumentoIdentidad;
+        form.FacturacionDatos.NitFactura = perfil.NumeroDocumento;
+        form.FacturacionDatos.Complemento = perfil.Complemento;
+        form.FacturacionDatos.RazonSocialFactura = perfil.RazonSocial;
+        form.FacturacionDatos.EmailFactura = perfil.EmailFactura;
+        form.FacturacionDatos.TelefonoFactura = perfil.TelefonoFactura;
+        suppressFiscalManualTracking = false;
+
+        if (markExplicitSelection)
+        {
+            nitFacturaEditadoManual = false;
+            razonSocialFacturaEditadaManual = false;
+        }
+
+            perfilFiscalBusquedaTexto = perfil.RazonSocial ?? perfil.Alias ?? string.Empty;
+        mostrarResultadosPerfilesFiscales = false;
+    }
+
+    private Task OnFacturarAlMismoClienteChanged(bool value)
+    {
+        form.FacturacionDatos.FacturarAlMismoCliente = value;
+        if (!form.FacturacionDatos.Facturar || !form.ClienteId.HasValue)
+            return Task.CompletedTask;
+
+        if (value)
+        {
+            AplicarReglaFacturarMismoCliente(forceOverwrite: true);
+            return Task.CompletedTask;
+        }
+
+        form.FacturacionDatos.ClientePerfilFiscalId = null;
+        RefrescarFiltroPerfilesFiscalesBusqueda();
+        return Task.CompletedTask;
+    }
+
+    private void AplicarReglaFacturarMismoCliente(bool forceOverwrite)
+    {
+        if (!form.ClienteId.HasValue)
+            return;
+
+        var predeterminado = perfilesFiscalesCliente.FirstOrDefault(x => x.EsPredeterminado);
+        if (predeterminado is not null)
+        {
+            if (forceOverwrite || !DatosFiscalesModificadosManual)
+                ApplyPerfilFiscal(predeterminado, markExplicitSelection: true);
+
+            return;
+        }
+
+        var cliente = clientes.FirstOrDefault(c => c.Id == form.ClienteId.Value);
+        if (cliente is null)
+            return;
+
+        if (!forceOverwrite && DatosFiscalesModificadosManual)
+            return;
+
+        suppressFiscalManualTracking = true;
+        form.FacturacionDatos.ClientePerfilFiscalId = null;
+        form.FacturacionDatos.TipoDocumentoIdentidad = string.IsNullOrWhiteSpace(form.FacturacionDatos.TipoDocumentoIdentidad)
+            ? "NIT"
+            : form.FacturacionDatos.TipoDocumentoIdentidad;
+        form.FacturacionDatos.NitFactura = cliente.NIT;
+        form.FacturacionDatos.RazonSocialFactura = cliente.RazonSocial;
+        form.FacturacionDatos.EmailFactura = cliente.Email;
+        form.FacturacionDatos.TelefonoFactura = cliente.Telefono;
+        suppressFiscalManualTracking = false;
+        nitFacturaEditadoManual = false;
+        razonSocialFacturaEditadaManual = false;
+
+        if (string.IsNullOrWhiteSpace(form.FacturacionDatos.NitFactura)
+            || string.IsNullOrWhiteSpace(form.FacturacionDatos.RazonSocialFactura))
+        {
+            ShowWarningModal("El cliente no tiene datos fiscales completos.");
+        }
+    }
+
+    private Task OnRazonSocialBusquedaTextoChanged()
+    {
+        perfilFiscalBusquedaTexto = perfilFiscalBusquedaTexto?.Trim() ?? string.Empty;
+        RefrescarFiltroPerfilesFiscalesBusqueda();
+        mostrarResultadosPerfilesFiscales = !string.IsNullOrWhiteSpace(perfilFiscalBusquedaTexto)
+                                          && perfilesFiscalesFiltradosBusqueda.Count > 0;
+        return Task.CompletedTask;
+    }
+
+    private void OnRazonSocialBusquedaFocused()
+    {
+        RefrescarFiltroPerfilesFiscalesBusqueda();
+        mostrarResultadosPerfilesFiscales = perfilesFiscalesFiltradosBusqueda.Count > 0;
+    }
+
+    private void RefrescarFiltroPerfilesFiscalesBusqueda()
+    {
+        if (!form.ClienteId.HasValue)
+        {
+            perfilesFiscalesFiltradosBusqueda = new List<ClientePerfilFiscalDto>();
+            return;
+        }
+
+        var termino = (perfilFiscalBusquedaTexto ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(termino))
+        {
+            perfilesFiscalesFiltradosBusqueda = perfilesFiscalesCliente.Take(10).ToList();
+            return;
+        }
+
+        perfilesFiscalesFiltradosBusqueda = perfilesFiscalesCliente
+            .Where(p => CoincidePerfilFiscalBusqueda(p, termino))
+            .Take(12)
+            .ToList();
+    }
+
+    private static bool CoincidePerfilFiscalBusqueda(ClientePerfilFiscalDto perfil, string termino)
+    {
+        if (perfil is null || string.IsNullOrWhiteSpace(termino))
+            return false;
+
+        return Contiene(perfil.RazonSocial, termino)
+               || Contiene(perfil.NumeroDocumento, termino)
+               || Contiene(perfil.Alias, termino);
+    }
+
+    private Task SeleccionarPerfilFiscalBusqueda(ClientePerfilFiscalDto perfil)
+    {
+        if (perfil is null)
+            return Task.CompletedTask;
+
+        ApplyPerfilFiscal(perfil, markExplicitSelection: true);
+        return Task.CompletedTask;
+    }
+
+    private async Task GuardarComoNuevoDatoFacturacionAsync()
+    {
+        if (!form.ClienteId.HasValue)
+        {
+            ShowWarningModal("Seleccione un cliente antes de guardar un dato de facturación.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(form.FacturacionDatos.NitFactura)
+            || string.IsNullOrWhiteSpace(form.FacturacionDatos.RazonSocialFactura))
+        {
+            ShowWarningModal("Complete NIT y Razón Social para guardar el dato de facturación.");
+            return;
+        }
+
+        var createDto = new CreateClientePerfilFiscalDto
+        {
+            Alias = string.IsNullOrWhiteSpace(perfilFiscalBusquedaTexto)
+                ? form.FacturacionDatos.RazonSocialFactura ?? "Dato fiscal"
+                : perfilFiscalBusquedaTexto,
+            TipoDocumentoIdentidad = string.IsNullOrWhiteSpace(form.FacturacionDatos.TipoDocumentoIdentidad)
+                ? "NIT"
+                : form.FacturacionDatos.TipoDocumentoIdentidad!,
+            NumeroDocumento = form.FacturacionDatos.NitFactura!,
+            Complemento = form.FacturacionDatos.Complemento,
+            RazonSocial = form.FacturacionDatos.RazonSocialFactura!,
+            EmailFactura = form.FacturacionDatos.EmailFactura,
+            TelefonoFactura = form.FacturacionDatos.TelefonoFactura,
+            RequiereEmail = false,
+            EsPredeterminado = false
+        };
+
+        var response = await ClientePerfilFiscalService.CreateAsync(form.ClienteId.Value, createDto);
+        if (!response.Success || response.Data is null)
+        {
+            ShowErrorModal(response.Message ?? "No se pudo guardar el nuevo dato de facturación.");
+            return;
+        }
+
+        await LoadPerfilesFiscalesAsync(form.ClienteId, preserveCurrentSelection: false);
+        ApplyPerfilFiscal(response.Data, markExplicitSelection: true);
+        ShowSuccessModal("Dato de facturación registrado correctamente.");
+    }
+
+    private Task OnNitFacturaChanged()
+    {
+        if (!suppressFiscalManualTracking)
+            nitFacturaEditadoManual = true;
+
+        return Task.CompletedTask;
+    }
+
+    private Task OnRazonSocialFacturaChanged()
+    {
+        if (!suppressFiscalManualTracking)
+            razonSocialFacturaEditadaManual = true;
+
+        if (!form.FacturacionDatos.FacturarAlMismoCliente)
+            perfilFiscalBusquedaTexto = form.FacturacionDatos.RazonSocialFactura ?? string.Empty;
+
+        return Task.CompletedTask;
+    }
+
+    private bool IsDatoOcasionalFiscal()
+    {
+        if (form.FacturacionDatos.ClientePerfilFiscalId.HasValue)
+            return false;
+
+        return !string.IsNullOrWhiteSpace(form.FacturacionDatos.TipoDocumentoIdentidad)
+               || !string.IsNullOrWhiteSpace(form.FacturacionDatos.NitFactura)
+               || !string.IsNullOrWhiteSpace(form.FacturacionDatos.Complemento)
+               || !string.IsNullOrWhiteSpace(form.FacturacionDatos.RazonSocialFactura)
+               || !string.IsNullOrWhiteSpace(form.FacturacionDatos.EmailFactura)
+               || !string.IsNullOrWhiteSpace(form.FacturacionDatos.TelefonoFactura);
     }
 
     private Task RequestAnularFacturaAsync()
@@ -1311,8 +1850,31 @@
 
     private void VolverListado() => Nav.NavigateTo("/ventas/comercial");
 
+    private void SincronizarFechaVentaInput()
+    {
+        var fecha = form.FechaVenta == default ? DateTime.Now : form.FechaVenta;
+        fechaVentaLocalTexto = fecha.ToString(FechaVentaInputFormat, System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private void SincronizarFechaVentaDesdeInput()
+    {
+        if (string.IsNullOrWhiteSpace(fechaVentaLocalTexto))
+            return;
+
+        if (DateTime.TryParseExact(
+                fechaVentaLocalTexto,
+                FechaVentaInputFormat,
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None,
+                out var fechaLocal))
+        {
+            form.FechaVenta = fechaLocal;
+        }
+    }
+
     private CrearVentaRequestDto BuildCreateRequest()
     {
+        SincronizarFechaVentaDesdeInput();
         NormalizeDetalles();
         var detalles = CloneDetallesForRequest();
 
@@ -1335,6 +1897,7 @@
 
     private ActualizarVentaRequestDto BuildUpdateRequest()
     {
+        SincronizarFechaVentaDesdeInput();
         NormalizeDetalles();
         var detalles = CloneDetallesForRequest();
 
@@ -1538,7 +2101,7 @@
         public long? PedidoVentaId { get; set; }
         public int SucursalId { get; set; }
         public int? AlmacenId { get; set; }
-        public DateTime FechaVenta { get; set; } = DateTime.Today;
+        public DateTime FechaVenta { get; set; } = DateTime.Now;
         public string? MonedaCodigo { get; set; } = "BOB";
         public decimal TipoCambio { get; set; } = 1m;
         public string? Observaciones { get; set; }

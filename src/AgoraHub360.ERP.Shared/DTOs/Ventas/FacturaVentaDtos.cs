@@ -4,6 +4,7 @@ public class FacturaVentaDto
 {
     public long Id { get; set; }
     public long VentaId { get; set; }
+    public long? ClientePerfilFiscalId { get; set; }
 
     public string NumeroFactura { get; set; } = string.Empty;
     public string? NumeroAutorizacion { get; set; }
@@ -48,6 +49,7 @@ public class FacturaVentaResumenDto
 {
     public long Id { get; set; }
     public long VentaId { get; set; }
+    public long? ClientePerfilFiscalId { get; set; }
 
     public string NumeroFactura { get; set; } = string.Empty;
     public DateTime FechaEmision { get; set; }

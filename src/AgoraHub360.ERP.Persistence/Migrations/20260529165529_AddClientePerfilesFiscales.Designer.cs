@@ -4,6 +4,7 @@ using AgoraHub360.ERP.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AgoraHub360.ERP.Persistence.Migrations
 {
     [DbContext(typeof(AgoraDbContext))]
-    partial class AgoraDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260529165529_AddClientePerfilesFiscales")]
+    partial class AddClientePerfilesFiscales
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -6117,9 +6120,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Property<bool>("Activo")
                         .HasColumnType("bit");
 
-                    b.Property<long?>("ClientePerfilFiscalId")
-                        .HasColumnType("bigint");
-
                     b.Property<string>("CodigoControl")
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
@@ -6246,8 +6246,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("ClientePerfilFiscalId");
 
                     b.HasIndex("EmpresaId");
 
@@ -6782,9 +6780,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Property<bool>("Activo")
                         .HasColumnType("bit");
 
-                    b.Property<long?>("ClientePerfilFiscalId")
-                        .HasColumnType("bigint");
-
                     b.Property<string>("Complemento")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
@@ -6842,8 +6837,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("ClientePerfilFiscalId");
 
                     b.HasIndex("EmpresaId");
 
@@ -8932,18 +8925,11 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.VTA.FacturaVenta", b =>
                 {
-                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.ClientePerfilFiscal", "ClientePerfilFiscal")
-                        .WithMany()
-                        .HasForeignKey("ClientePerfilFiscalId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("AgoraHub360.ERP.Domain.Entities.VTA.Venta", "Venta")
                         .WithMany()
                         .HasForeignKey("VentaId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.Navigation("ClientePerfilFiscal");
 
                     b.Navigation("Venta");
                 });
@@ -9107,18 +9093,11 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.VTA.VentaFacturacionDatos", b =>
                 {
-                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.ClientePerfilFiscal", "ClientePerfilFiscal")
-                        .WithMany()
-                        .HasForeignKey("ClientePerfilFiscalId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
                     b.HasOne("AgoraHub360.ERP.Domain.Entities.VTA.Venta", "Venta")
                         .WithOne("DatosFacturacion")
                         .HasForeignKey("AgoraHub360.ERP.Domain.Entities.VTA.VentaFacturacionDatos", "VentaId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("ClientePerfilFiscal");
 
                     b.Navigation("Venta");
                 });

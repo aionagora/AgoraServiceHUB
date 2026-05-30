@@ -137,6 +137,8 @@ public class VentaFacturacionDatosDto
     public bool Facturar { get; set; }
     public bool FacturarAlMismoCliente { get; set; } = true;
 
+    public long? ClientePerfilFiscalId { get; set; }
+
     public string? TipoDocumentoIdentidad { get; set; }
     public string? NitFactura { get; set; }
     public string? Complemento { get; set; }

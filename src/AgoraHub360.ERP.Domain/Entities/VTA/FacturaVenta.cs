@@ -1,4 +1,5 @@
 using AgoraHub360.ERP.Domain.Common;
+using AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Enums;
 
 namespace AgoraHub360.ERP.Domain.Entities.VTA;
@@ -23,6 +24,9 @@ public class FacturaVenta : TenantEntity
     public string RazonSocialFactura { get; set; } = string.Empty;
     public string? EmailFactura { get; set; }
     public string? TelefonoFactura { get; set; }
+
+    public long? ClientePerfilFiscalId { get; set; }
+    public ClientePerfilFiscal? ClientePerfilFiscal { get; set; }
 
     public string? MonedaCodigo { get; set; }
     public decimal TipoCambio { get; set; } = 1m;

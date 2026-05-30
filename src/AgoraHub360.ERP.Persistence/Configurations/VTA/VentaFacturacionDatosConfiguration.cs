@@ -32,6 +32,12 @@ public class VentaFacturacionDatosConfiguration : IEntityTypeConfiguration<Venta
             .HasForeignKey<VentaFacturacionDatos>(x => x.VentaId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        builder.HasOne(x => x.ClientePerfilFiscal)
+            .WithMany()
+            .HasForeignKey(x => x.ClientePerfilFiscalId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         builder.HasIndex(x => x.VentaId).IsUnique();
+        builder.HasIndex(x => x.ClientePerfilFiscalId);
     }
 }
