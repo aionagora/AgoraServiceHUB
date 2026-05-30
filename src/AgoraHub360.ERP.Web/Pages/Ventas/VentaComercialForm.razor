@@ -31,6 +31,44 @@
                 <i class="bi bi-receipt-cutoff me-2"></i>
                 @(IsNew ? "Nueva Venta Comercial" : $"Venta {form.NumeroVentaVisual}")
             </h3>
+
+            <div class="card shadow-sm mt-3">
+                <div class="card-body py-2">
+                    <div class="row g-2 align-items-center small">
+                        <div class="col-md-3">
+                            <span class="text-muted me-1">Número:</span>
+                            <span class="fw-semibold">@(IsNew ? "BORRADOR / Sin guardar" : form.NumeroVentaVisual)</span>
+                        </div>
+                        <div class="col-md-2">
+                            <span class="text-muted me-1">Estado venta:</span>
+                            <span class="badge @GetEstadoVentaBadge(form.EstadoVenta)">@form.EstadoVenta</span>
+                        </div>
+                        <div class="col-md-2">
+                            <span class="text-muted me-1">Estado pago:</span>
+                            <span class="badge @GetEstadoPagoBadge(form.EstadoPago)">@form.EstadoPago</span>
+                        </div>
+                        <div class="col-md-2">
+                            <span class="text-muted me-1">Facturación:</span>
+                            @if (facturaActual is not null)
+                            {
+                                <span class="badge @GetEstadoFacturaBadge(facturaActual.EstadoFactura)">@facturaActual.EstadoFactura</span>
+                            }
+                            else
+                            {
+                                <span class="badge @(form.FacturaGenerada ? "bg-success" : "bg-secondary")">@(form.FacturaGenerada ? "Generada" : "Sin generar")</span>
+                            }
+                        </div>
+                        <div class="col-md-1">
+                            <span class="text-muted me-1">Tipo:</span>
+                            <span class="fw-semibold">@form.TipoVenta</span>
+                        </div>
+                        <div class="col-md-2 text-md-end">
+                            <span class="text-muted me-1">Total:</span>
+                            <span class="fw-bold text-primary">@FormatMoney(resumen.Total)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -541,6 +579,14 @@
                     </button>
                 </div>
                 <div class="card-body p-0">
+                    @if (IsNew)
+                    {
+                        <div class="alert alert-info m-3 mb-0 py-2" role="alert">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Este pago se guardará al guardar la venta.
+                        </div>
+                    }
+
                     @if (form.Pagos.Count == 0)
                     {
                         <div class="text-center py-3 text-muted">Sin pagos iniciales.</div>
@@ -559,13 +605,16 @@
                                         <th class="text-end">Tipo Cambio</th>
                                         <th>Referencia</th>
                                         <th>CuentaCajaBancoId</th>
-                                        <th></th>
+                                        <th>Estado</th>
+                                        <th class="text-center">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @for (var i = 0; i < form.Pagos.Count; i++)
                                     {
                                         var pago = form.Pagos[i];
+                                        var pagoRegistrado = IsPagoRegistrado(pago);
+                                        var isPagoGuardando = pagosEnGuardado.Contains(pago);
                                         <tr>
                                             <td><InputDate class="form-control form-control-sm" @bind-Value="pago.FechaPago" /></td>
                                             <td>
@@ -590,9 +639,43 @@
                                             <td><InputText class="form-control form-control-sm" @bind-Value="pago.Referencia" /></td>
                                             <td><InputNumber class="form-control form-control-sm" @bind-Value="pago.CuentaCajaBancoId" /></td>
                                             <td>
+                                                @if (pagoRegistrado)
+                                                {
+                                                    <span class="badge bg-success">Registrado</span>
+                                                }
+                                                else if (IsNew)
+                                                {
+                                                    <span class="badge bg-secondary">Pendiente local</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning text-dark">Pendiente de guardar</span>
+                                                }
+                                            </td>
+                                            <td class="text-center">
+                                                @if (!pagoRegistrado && !IsNew)
+                                                {
+                                                    <button type="button"
+                                                            class="btn btn-outline-success btn-sm me-1"
+                                                            title="Guardar pago"
+                                                            disabled="@isPagoGuardando"
+                                                            @onclick="() => GuardarPagoAsync(pago)">
+                                                        @if (isPagoGuardando)
+                                                        {
+                                                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <i class="bi bi-check2-circle"></i>
+                                                        }
+                                                        <span class="ms-1">Guardar pago</span>
+                                                    </button>
+                                                }
+
                                                 <button type="button"
                                                         class="btn btn-outline-danger btn-sm"
                                                         title="Eliminar pago"
+                                                        disabled="@pagoRegistrado"
                                                         @onclick="() => RemovePagoLocal(pago)"
                                                         @onclick:stopPropagation="true">
                                                     <i class="bi bi-trash"></i>
@@ -724,6 +807,7 @@
     private string? successMessage;
     private FacturaVentaDto? facturaActual;
     private HashSet<VentaPagoDto> pagosCargadosDesdeBackend = new();
+    private HashSet<VentaPagoDto> pagosEnGuardado = new();
     private const long PerfilFiscalDatoOcasionalId = -1;
     private string modalTitle = string.Empty;
     private string modalMessage = string.Empty;
@@ -814,9 +898,11 @@
             }
 
             form.Id = venta.Id;
+            Id = venta.Id;
             form.NumeroVentaVisual = venta.NumeroVenta;
             form.TipoVenta = string.IsNullOrWhiteSpace(venta.TipoVenta) ? "Directa" : venta.TipoVenta;
             form.EstadoVenta = venta.EstadoVenta;
+            form.EstadoPago = string.IsNullOrWhiteSpace(venta.EstadoPago) ? "Pendiente" : venta.EstadoPago;
             form.FacturaGenerada = venta.FacturaGenerada;
             form.PedidoVentaId = venta.PedidoVentaId;
             form.SucursalId = venta.SucursalId;
@@ -957,6 +1043,7 @@
             await LoadFacturaAsync(form.Id.Value);
             RecalcularTotales();
         }
+
         catch (Exception ex)
         {
             ShowErrorModal($"No se pudo generar la factura: {ex.Message}");
@@ -965,6 +1052,102 @@
         {
             isFacturaActionLoading = false;
         }
+    }
+
+    private bool IsPagoRegistrado(VentaPagoDto pago)
+        => pago is not null && pagosCargadosDesdeBackend.Contains(pago);
+
+    private async Task GuardarPagoAsync(VentaPagoDto pago)
+    {
+        if (pago is null)
+            return;
+
+        if (IsNew || !form.Id.HasValue || form.Id.Value <= 0)
+        {
+            ShowWarningModal("Guarde la venta antes de registrar pagos independientes.");
+            return;
+        }
+
+        if (IsPagoRegistrado(pago))
+        {
+            ShowWarningModal("Este pago ya está registrado.");
+            return;
+        }
+
+        var pagoValidation = ValidatePagoForRegistro(pago);
+        if (!string.IsNullOrWhiteSpace(pagoValidation))
+        {
+            ShowWarningModal(pagoValidation);
+            return;
+        }
+
+        pagosEnGuardado.Add(pago);
+
+        try
+        {
+            var response = await VentaService.RegistrarPagoAsync(form.Id.Value, new RegistrarPagoVentaRequestDto
+            {
+                FechaPago = pago.FechaPago,
+                TipoPago = pago.TipoPago,
+                ModoPago = pago.ModoPago,
+                CuentaCajaBancoId = pago.CuentaCajaBancoId,
+                Monto = pago.Monto,
+                MonedaId = pago.MonedaId,
+                MonedaCodigo = pago.MonedaCodigo,
+                TipoCambio = pago.TipoCambio,
+                Referencia = pago.Referencia,
+                EstadoPago = string.IsNullOrWhiteSpace(pago.EstadoPago) ? "Pagado" : pago.EstadoPago
+            });
+
+            if (!response.Success || response.Data is null)
+            {
+                ShowErrorModal(BuildErrorMessage(response));
+                return;
+            }
+
+            await LoadVentaAsync(form.Id.Value);
+            RecalcularTotales();
+            ShowSuccessModal("Pago registrado correctamente.");
+        }
+        catch (Exception ex)
+        {
+            ShowErrorModal($"No se pudo registrar el pago: {ex.Message}");
+        }
+        finally
+        {
+            pagosEnGuardado.Remove(pago);
+        }
+    }
+
+    private string? ValidatePagoForRegistro(VentaPagoDto pago)
+    {
+        if (pago.Monto <= 0)
+            return "El monto del pago debe ser mayor a cero.";
+
+        if (string.IsNullOrWhiteSpace(pago.ModoPago))
+            return "Debe seleccionar el modo de pago.";
+
+        if (string.IsNullOrWhiteSpace(pago.TipoPago))
+            return "Debe seleccionar el tipo de pago.";
+
+        if (pago.FechaPago == default || pago.FechaPago.Year < 2000)
+            return "Debe ingresar una fecha de pago válida.";
+
+        var saldoPendienteRegistrable = ObtenerSaldoPendienteRegistrable();
+        if (pago.Monto > saldoPendienteRegistrable)
+            return $"El monto no puede ser mayor al saldo pendiente ({FormatMoney(saldoPendienteRegistrable)}).";
+
+        return null;
+    }
+
+    private decimal ObtenerSaldoPendienteRegistrable()
+    {
+        var totalRegistrado = form.Pagos
+            .Where(IsPagoRegistrado)
+            .Sum(x => x.Monto);
+
+        var saldo = resumen.Total - totalRegistrado;
+        return saldo <= 0 ? 0 : decimal.Round(saldo, 2);
     }
 
     private async Task OnClienteChanged(int? clienteId)
@@ -1629,8 +1812,11 @@
 
     private Task RequestConfirmarAsync()
     {
-        if (IsNew || !form.Id.HasValue)
+        if (IsNew || !form.Id.HasValue || form.Id.Value <= 0)
+        {
+            ShowWarningModal("Debe guardar la venta antes de confirmar.");
             return Task.CompletedTask;
+        }
 
         ShowConfirmModal(
             "Confirmar venta",
@@ -1642,8 +1828,11 @@
 
     private Task RequestAnularAsync()
     {
-        if (IsNew || !form.Id.HasValue)
+        if (IsNew || !form.Id.HasValue || form.Id.Value <= 0)
+        {
+            ShowWarningModal("Debe guardar la venta antes de anular.");
             return Task.CompletedTask;
+        }
 
         ShowConfirmModal(
             "Anular venta",
@@ -1756,14 +1945,22 @@
         try
         {
             ApiResponse<VentaDto> response;
+            var ventaId = form.Id;
+            var wasNew = IsNew;
 
-            if (IsNew)
+            if (wasNew)
             {
                 response = await VentaService.CreateAsync(BuildCreateRequest());
             }
             else
             {
-                response = await VentaService.UpdateAsync(form.Id!.Value, BuildUpdateRequest());
+                if (!ventaId.HasValue || ventaId.Value <= 0)
+                {
+                    ShowErrorModal("No se pudo identificar el Id de la venta para actualizar. Recargue la página e intente nuevamente.");
+                    return;
+                }
+
+                response = await VentaService.UpdateAsync(ventaId.Value, BuildUpdateRequest());
             }
 
             if (!response.Success || response.Data is null)
@@ -1772,16 +1969,30 @@
                 return;
             }
 
-            ShowSuccessModal(IsNew ? "Venta creada en borrador." : "Venta actualizada en borrador.");
-
-            if (IsNew)
+            if (wasNew)
             {
-                Nav.NavigateTo($"/ventas/comercial/{response.Data.Id}");
-                return;
+                if (response.Data.Id <= 0)
+                {
+                    ShowErrorModal("La venta se guardó, pero no se recibió un Id válido para continuar en modo edición.");
+                    return;
+                }
+
+                ventaId = response.Data.Id;
+                Id = response.Data.Id;
+                form.Id = response.Data.Id;
             }
 
-            await LoadVentaAsync(form.Id!.Value);
-            RecalcularTotales();
+            ShowSuccessModal(wasNew ? "Venta creada en borrador." : "Venta actualizada en borrador.");
+
+            if (ventaId.HasValue && ventaId.Value > 0)
+            {
+                await LoadVentaAsync(ventaId.Value);
+                await LoadFacturaAsync(ventaId.Value);
+                RecalcularTotales();
+
+                if (wasNew)
+                    Nav.NavigateTo($"/ventas/comercial/{ventaId.Value}", replace: true);
+            }
         }
         catch (Exception ex)
         {
@@ -1795,7 +2006,11 @@
 
     private async Task ConfirmarAsync()
     {
-        if (IsNew || !form.Id.HasValue) return;
+        if (IsNew || !form.Id.HasValue || form.Id.Value <= 0)
+        {
+            ShowWarningModal("Debe guardar la venta antes de confirmar.");
+            return;
+        }
 
         isSaving = true;
         errorMessage = null;
@@ -1810,6 +2025,7 @@
         {
             ShowSuccessModal("Venta confirmada correctamente.");
             await LoadVentaAsync(form.Id.Value);
+            await LoadFacturaAsync(form.Id.Value);
             RecalcularTotales();
         }
         else
@@ -2080,6 +2296,35 @@
         };
     }
 
+    private static string GetEstadoVentaBadge(string? estado)
+    {
+        if (string.IsNullOrWhiteSpace(estado)) return "bg-secondary";
+
+        return estado.ToLowerInvariant() switch
+        {
+            "borrador" => "bg-secondary",
+            "confirmada" => "bg-info text-dark",
+            "facturada" => "bg-primary",
+            "anulada" => "bg-danger",
+            "anulado" => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    private static string GetEstadoPagoBadge(string? estado)
+    {
+        if (string.IsNullOrWhiteSpace(estado)) return "bg-secondary";
+
+        return estado.ToLowerInvariant() switch
+        {
+            "pendiente" => "bg-warning text-dark",
+            "parcial" => "bg-info text-dark",
+            "pagado" => "bg-success",
+            "anulado" => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
     private static string GetEstadoSiatBadge(string? estado)
     {
         if (string.IsNullOrWhiteSpace(estado)) return "bg-secondary";
@@ -2101,6 +2346,7 @@
         public string NumeroVentaVisual { get; set; } = "BORRADOR";
         public string TipoVenta { get; set; } = "Directa";
         public string EstadoVenta { get; set; } = "Borrador";
+        public string EstadoPago { get; set; } = "Pendiente";
         public bool FacturaGenerada { get; set; }
         public long? PedidoVentaId { get; set; }
         public int SucursalId { get; set; }
