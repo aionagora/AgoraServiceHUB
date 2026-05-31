@@ -11,15 +11,54 @@ public class NumeracionDocumentoServiceTests
 {
     private readonly NumeracionDocumentoService _sut;
     private readonly FakeNumRepo _repo;
+    private readonly FakeSucursalRepo _sucursalRepo;
     private readonly FakeUow _uow;
     private readonly FakeCurrentUserService _currentUserService;
 
     public NumeracionDocumentoServiceTests()
     {
         _repo = new FakeNumRepo();
+        _sucursalRepo = new FakeSucursalRepo();
         _uow = new FakeUow();
         _currentUserService = new FakeCurrentUserService { EmpresaId = 1 };
-        _sut = new NumeracionDocumentoService(_repo, _uow, _currentUserService);
+        _sut = new NumeracionDocumentoService(_repo, _sucursalRepo, _uow, _currentUserService);
+    }
+
+    private class FakeSucursalRepo : IRepository<Sucursal>
+    {
+        private readonly List<Sucursal> _store = new();
+
+        public Task<Sucursal?> GetByIdAsync(int id, CancellationToken ct = default)
+            => Task.FromResult(_store.FirstOrDefault(x => x.Id == id));
+
+        public Task<Sucursal?> GetByIdAsync(long id, CancellationToken ct = default)
+            => Task.FromResult(_store.FirstOrDefault(x => x.Id == id));
+
+        public Task<Sucursal?> GetByIdIgnoreQueryFiltersAsync(int id, CancellationToken ct = default)
+            => Task.FromResult(_store.FirstOrDefault(x => x.Id == id));
+
+        public Task<IReadOnlyList<Sucursal>> GetAllAsync(CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<Sucursal>>(_store.AsReadOnly());
+
+        public Task<IReadOnlyList<Sucursal>> FindAsync(Expression<Func<Sucursal, bool>> predicate, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<Sucursal>>(_store.Where(predicate.Compile()).ToList().AsReadOnly());
+
+        public Task<IReadOnlyList<Sucursal>> FindIgnoreQueryFiltersAsync(Expression<Func<Sucursal, bool>> predicate, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<Sucursal>>(_store.Where(predicate.Compile()).ToList().AsReadOnly());
+
+        public Task<Sucursal> AddAsync(Sucursal entity, CancellationToken ct = default)
+        {
+            _store.Add(entity);
+            return Task.FromResult(entity);
+        }
+
+        public Task UpdateAsync(Sucursal entity, CancellationToken ct = default) => Task.CompletedTask;
+
+        public Task DeleteAsync(Sucursal entity, CancellationToken ct = default)
+        {
+            _store.Remove(entity);
+            return Task.CompletedTask;
+        }
     }
 
     [Fact]
