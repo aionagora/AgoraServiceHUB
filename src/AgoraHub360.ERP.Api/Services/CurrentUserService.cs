@@ -39,4 +39,7 @@ public class CurrentUserService : ICurrentUserService
             return int.TryParse(claim, out var id) ? id : null;
         }
     }
+
+    public bool IsInRole(string role)
+        => _httpContextAccessor.HttpContext?.User?.IsInRole(role) == true;
 }

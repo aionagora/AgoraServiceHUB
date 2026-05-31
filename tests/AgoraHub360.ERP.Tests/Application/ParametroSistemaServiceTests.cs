@@ -158,5 +158,6 @@ public class ParametroSistemaServiceTests
         public int? UserIdInt { get; set; }
         public string? UserName { get; set; }
         public int? EmpresaId { get; set; }
+        public bool IsInRole(string role) => false;
     }
 }

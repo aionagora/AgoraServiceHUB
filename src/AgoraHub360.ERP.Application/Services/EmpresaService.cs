@@ -13,19 +13,22 @@ public class EmpresaService : IEmpresaService
     private readonly IRepository<AgoraHub360.ERP.Domain.Entities.MDM.Almacen> _almacenRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IEmpresaSeedService _seedService;
+    private readonly IConfiguracionInicialEmpresaService _configuracionInicialEmpresaService;
 
     public EmpresaService(
         IRepository<Empresa> repository, 
         IRepository<Sucursal> sucursalRepository,
         IRepository<AgoraHub360.ERP.Domain.Entities.MDM.Almacen> almacenRepository,
         IUnitOfWork unitOfWork, 
-        IEmpresaSeedService seedService)
+        IEmpresaSeedService seedService,
+        IConfiguracionInicialEmpresaService configuracionInicialEmpresaService)
     {
         _repository = repository;
         _sucursalRepository = sucursalRepository;
         _almacenRepository = almacenRepository;
         _unitOfWork = unitOfWork;
         _seedService = seedService;
+        _configuracionInicialEmpresaService = configuracionInicialEmpresaService;
     }
 
     public async Task<Result<IReadOnlyList<EmpresaDto>>> GetAllAsync(CancellationToken ct = default)
@@ -101,6 +104,9 @@ public class EmpresaService : IEmpresaService
 
         // Seed default MDM data for the new company
         await _seedService.SeedDefaultDataAsync(empresa.Id, ct);
+
+        // Generación idempotente de configuración básica (parámetros, numeraciones y catálogos SIAT)
+        await _configuracionInicialEmpresaService.GenerarConfiguracionBasicaAsync(empresa.Id, ct);
 
         return Result<EmpresaDto>.Success(MapToDto(empresa));
     }

@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
 [ApiVersion("1.0")]
-[Route("api/v{version:apiVersion}/[controller]")]
+[Route("api/v{version:apiVersion}/numeraciones-documento")]
 [Authorize]
 public class NumeracionesController : ControllerBase
 {
@@ -24,6 +24,9 @@ public class NumeracionesController : ControllerBase
     public async Task<IActionResult> GetAll(CancellationToken ct)
     {
         var result = await _service.GetAllAsync(ct);
+        if (!result.IsSuccess)
+            return BadRequest(ApiResponse<IReadOnlyList<NumeracionDocumentoDto>>.Fail(result.Error!));
+
         return Ok(ApiResponse<IReadOnlyList<NumeracionDocumentoDto>>.Ok(result.Value!));
     }
 
@@ -38,7 +41,7 @@ public class NumeracionesController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create([FromBody] CreateNumeracionDto dto, CancellationToken ct)
+    public async Task<IActionResult> Create([FromBody] CrearNumeracionDocumentoRequestDto dto, CancellationToken ct)
     {
         var result = await _service.CreateAsync(dto, ct);
         if (!result.IsSuccess)
@@ -51,7 +54,7 @@ public class NumeracionesController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update(int id, [FromBody] UpdateNumeracionDto dto, CancellationToken ct)
+    public async Task<IActionResult> Update(int id, [FromBody] ActualizarNumeracionDocumentoRequestDto dto, CancellationToken ct)
     {
         var result = await _service.UpdateAsync(id, dto, ct);
         if (!result.IsSuccess)
@@ -64,13 +67,33 @@ public class NumeracionesController : ControllerBase
         return Ok(ApiResponse<NumeracionDocumentoDto>.Ok(result.Value!, "Numeración actualizada exitosamente."));
     }
 
-    [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id, CancellationToken ct)
+    [HttpPatch("{id:int}/activar")]
+    public async Task<IActionResult> Activar(int id, CancellationToken ct)
     {
-        var result = await _service.DeleteAsync(id, ct);
+        var result = await _service.ActivarAsync(id, ct);
         if (!result.IsSuccess)
-            return NotFound(ApiResponse<bool>.Fail(result.Error!));
+        {
+            if (result.Error!.Contains("no encontrada"))
+                return NotFound(ApiResponse<bool>.Fail(result.Error!));
 
-        return Ok(ApiResponse<bool>.Ok(true, "Numeración eliminada exitosamente."));
+            return BadRequest(ApiResponse<bool>.Fail(result.Error!));
+        }
+
+        return Ok(ApiResponse<bool>.Ok(true, "Numeración activada exitosamente."));
+    }
+
+    [HttpPatch("{id:int}/desactivar")]
+    public async Task<IActionResult> Desactivar(int id, CancellationToken ct)
+    {
+        var result = await _service.DesactivarAsync(id, ct);
+        if (!result.IsSuccess)
+        {
+            if (result.Error!.Contains("no encontrada"))
+                return NotFound(ApiResponse<bool>.Fail(result.Error!));
+
+            return BadRequest(ApiResponse<bool>.Fail(result.Error!));
+        }
+
+        return Ok(ApiResponse<bool>.Ok(true, "Numeración desactivada exitosamente."));
     }
 }

@@ -9,4 +9,5 @@ public interface ICurrentUserService
     int? UserIdInt { get; }
     string? UserName { get; }
     int? EmpresaId { get; }
+    bool IsInRole(string role);
 }

@@ -394,14 +394,14 @@ else
                                     <ValidationMessage For="() => _createNumModel.SiguienteNumero" />
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Dígitos</label>
-                                    <InputNumber class="form-control" @bind-Value="_createNumModel.Digitos" />
-                                    <ValidationMessage For="() => _createNumModel.Digitos" />
+                                    <label class="form-label">Longitud</label>
+                                    <InputNumber class="form-control" @bind-Value="_createNumModel.LongitudNumero" />
+                                    <ValidationMessage For="() => _createNumModel.LongitudNumero" />
                                 </div>
                             </div>
                             <div class="alert alert-info small mb-0">
                                 <i class="bi bi-eye me-1"></i>
-                                Preview: <code>@(_createNumModel.Prefijo)@(_createNumModel.SiguienteNumero.ToString().PadLeft(_createNumModel.Digitos, '0'))</code>
+                                Preview: <code>@(_createNumModel.Prefijo)@(_createNumModel.SiguienteNumero.ToString().PadLeft(_createNumModel.LongitudNumero, '0'))</code>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -439,9 +439,9 @@ else
                                     <ValidationMessage For="() => _updateNumModel.SiguienteNumero" />
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Dígitos</label>
-                                    <InputNumber class="form-control" @bind-Value="_updateNumModel.Digitos" />
-                                    <ValidationMessage For="() => _updateNumModel.Digitos" />
+                                    <label class="form-label">Longitud</label>
+                                    <InputNumber class="form-control" @bind-Value="_updateNumModel.LongitudNumero" />
+                                    <ValidationMessage For="() => _updateNumModel.LongitudNumero" />
                                 </div>
                             </div>
                             <div class="form-check mb-3">
@@ -450,7 +450,7 @@ else
                             </div>
                             <div class="alert alert-info small mb-0">
                                 <i class="bi bi-eye me-1"></i>
-                                Preview: <code>@(_updateNumModel.Prefijo)@(_updateNumModel.SiguienteNumero.ToString().PadLeft(_updateNumModel.Digitos, '0'))</code>
+                                Preview: <code>@(_updateNumModel.Prefijo)@(_updateNumModel.SiguienteNumero.ToString().PadLeft(_updateNumModel.LongitudNumero, '0'))</code>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -539,8 +539,8 @@ else
     private bool _showNumForm;
     private int? _editNumId;
     private string _editNumTipo = "";
-    private CreateNumeracionDto _createNumModel = new();
-    private UpdateNumeracionDto _updateNumModel = new();
+    private CrearNumeracionDocumentoRequestDto _createNumModel = new();
+    private ActualizarNumeracionDocumentoRequestDto _updateNumModel = new();
     private NumeracionDocumentoDto? _deleteNumTarget;
 
     // ══════════════════════════════════════════════════
@@ -734,7 +734,7 @@ else
     private void ShowCrearNumeracion()
     {
         _editNumId = null;
-        _createNumModel = new CreateNumeracionDto { SiguienteNumero = 1, Digitos = 6 };
+        _createNumModel = new CrearNumeracionDocumentoRequestDto { SiguienteNumero = 1, LongitudNumero = 6 };
         _showNumForm = true;
     }
 
@@ -742,12 +742,13 @@ else
     {
         _editNumId = num.Id;
         _editNumTipo = num.TipoDocumento;
-        _updateNumModel = new UpdateNumeracionDto
+        _updateNumModel = new ActualizarNumeracionDocumentoRequestDto
         {
+            TipoDocumento = num.TipoDocumento,
             Descripcion = num.Descripcion,
             Prefijo = num.Prefijo,
             SiguienteNumero = num.SiguienteNumero,
-            Digitos = num.Digitos,
+            LongitudNumero = num.Digitos,
             Activo = num.Activo
         };
         _showNumForm = true;
@@ -800,13 +801,13 @@ else
         _saving = true;
         var series = new[]
         {
-            new CreateNumeracionDto { TipoDocumento = "OC",  Descripcion = "Orden de Compra",          Prefijo = "OC-",  SiguienteNumero = 1, Digitos = 6 },
-            new CreateNumeracionDto { TipoDocumento = "REC", Descripcion = "Recepción de Mercadería",  Prefijo = "REC-", SiguienteNumero = 1, Digitos = 6 },
-            new CreateNumeracionDto { TipoDocumento = "FAC", Descripcion = "Factura de Venta",         Prefijo = "FAC-", SiguienteNumero = 1, Digitos = 6 },
-            new CreateNumeracionDto { TipoDocumento = "PED", Descripcion = "Pedido de Venta",          Prefijo = "PED-", SiguienteNumero = 1, Digitos = 6 },
-            new CreateNumeracionDto { TipoDocumento = "NC",  Descripcion = "Nota de Crédito",          Prefijo = "NC-",  SiguienteNumero = 1, Digitos = 6 },
-            new CreateNumeracionDto { TipoDocumento = "ND",  Descripcion = "Nota de Débito",           Prefijo = "ND-",  SiguienteNumero = 1, Digitos = 6 },
-            new CreateNumeracionDto { TipoDocumento = "MOV", Descripcion = "Movimiento de Inventario", Prefijo = "MOV-", SiguienteNumero = 1, Digitos = 6 },
+            new CrearNumeracionDocumentoRequestDto { TipoDocumento = "OC",  Descripcion = "Orden de Compra",          Prefijo = "OC-",  SiguienteNumero = 1, LongitudNumero = 6 },
+            new CrearNumeracionDocumentoRequestDto { TipoDocumento = "REC", Descripcion = "Recepción de Mercadería",  Prefijo = "REC-", SiguienteNumero = 1, LongitudNumero = 6 },
+            new CrearNumeracionDocumentoRequestDto { TipoDocumento = "FAC", Descripcion = "Factura de Venta",         Prefijo = "FAC-", SiguienteNumero = 1, LongitudNumero = 6 },
+            new CrearNumeracionDocumentoRequestDto { TipoDocumento = "PED", Descripcion = "Pedido de Venta",          Prefijo = "PED-", SiguienteNumero = 1, LongitudNumero = 6 },
+            new CrearNumeracionDocumentoRequestDto { TipoDocumento = "NC",  Descripcion = "Nota de Crédito",          Prefijo = "NC-",  SiguienteNumero = 1, LongitudNumero = 6 },
+            new CrearNumeracionDocumentoRequestDto { TipoDocumento = "ND",  Descripcion = "Nota de Débito",           Prefijo = "ND-",  SiguienteNumero = 1, LongitudNumero = 6 },
+            new CrearNumeracionDocumentoRequestDto { TipoDocumento = "MOV", Descripcion = "Movimiento de Inventario", Prefijo = "MOV-", SiguienteNumero = 1, LongitudNumero = 6 },
         };
 
         var errores = 0;
@@ -837,8 +838,8 @@ else
         _saving = true;
         try
         {
-            var result = await NumSvc.DeleteAsync(_deleteNumTarget.Id);
-            _mensaje = result.Success ? "Serie eliminada." : result.Message;
+            var result = await NumSvc.DesactivarAsync(_deleteNumTarget.Id);
+            _mensaje = result.Success ? "Serie desactivada." : result.Message;
             _esError = !result.Success;
             _deleteNumTarget = null;
             _numeraciones = await NumSvc.GetAllAsync();

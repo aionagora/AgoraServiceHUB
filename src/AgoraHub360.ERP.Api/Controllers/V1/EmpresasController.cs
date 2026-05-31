@@ -15,17 +15,20 @@ using Microsoft.AspNetCore.Mvc;
 public class EmpresasController : ControllerBase
 {
     private readonly IEmpresaService _empresaService;
+    private readonly IConfiguracionInicialEmpresaService _configuracionInicialEmpresaService;
     private readonly ICurrentUserService _currentUserService;
     private readonly IUsuarioService _usuarioService;
     private readonly IEmpresaSeedService _seedService;
 
     public EmpresasController(
         IEmpresaService empresaService,
+        IConfiguracionInicialEmpresaService configuracionInicialEmpresaService,
         ICurrentUserService currentUserService,
         IUsuarioService usuarioService,
         IEmpresaSeedService seedService)
     {
         _empresaService = empresaService;
+        _configuracionInicialEmpresaService = configuracionInicialEmpresaService;
         _currentUserService = currentUserService;
         _usuarioService = usuarioService;
         _seedService = seedService;
@@ -143,5 +146,18 @@ public class EmpresasController : ControllerBase
             return BadRequest(ApiResponse<bool>.Fail(result.Error!));
 
         return Ok(ApiResponse<bool>.Ok(true, "Datos base creados exitosamente."));
+    }
+
+    [HttpPost("{empresaId:long}/generar-configuracion-basica")]
+    [Authorize(Roles = Roles.Admin)]
+    public async Task<IActionResult> GenerarConfiguracionBasica(long empresaId, CancellationToken ct)
+    {
+        var result = await _configuracionInicialEmpresaService.GenerarConfiguracionBasicaAsync(empresaId, ct);
+        if (!result.IsSuccess)
+            return BadRequest(ApiResponse<ConfiguracionInicialEmpresaResultadoDto>.Fail(result.Error!));
+
+        return Ok(ApiResponse<ConfiguracionInicialEmpresaResultadoDto>.Ok(
+            result.Value!,
+            "Configuración básica generada exitosamente."));
     }
 }

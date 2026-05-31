@@ -79,6 +79,11 @@
                                 }
                             </td>
                             <td class="text-end">
+                                <button class="btn btn-outline-success btn-sm me-1"
+                                        @onclick="() => GenerarParametrosBasicosAsync(emp)" title="Generar parámetros básicos"
+                                        disabled="@_saving">
+                                    <i class="bi bi-gear-wide-connected"></i>
+                                </button>
                                 <button class="btn btn-outline-primary btn-sm me-1"
                                         @onclick="() => ShowEditar(emp)" title="Editar">
                                     <i class="bi bi-pencil"></i>
@@ -352,6 +357,36 @@
         catch
         {
             _mensaje = "Error de comunicacion con el servidor.";
+            _esError = true;
+        }
+        _saving = false;
+    }
+
+    private async Task GenerarParametrosBasicosAsync(EmpresaDto empresa)
+    {
+        _saving = true;
+        try
+        {
+            var result = await EmpresaSvc.GenerarConfiguracionBasicaAsync(empresa.Id);
+            if (result.Success && result.Data is not null)
+            {
+                var data = result.Data;
+                _mensaje =
+                    $"Configuración básica generada para '{empresa.Nombre}'. " +
+                    $"Parámetros: {data.ParametrosCreados}/{data.ParametrosExistentes}, " +
+                    $"Numeraciones: {data.NumeracionesCreadas}/{data.NumeracionesExistentes}, " +
+                    $"Catálogos: {data.CatalogosCreados}/{data.CatalogosExistentes}.";
+                _esError = false;
+            }
+            else
+            {
+                _mensaje = result.Message ?? "No se pudo generar la configuración básica.";
+                _esError = true;
+            }
+        }
+        catch
+        {
+            _mensaje = "Error de comunicación con el servidor.";
             _esError = true;
         }
         _saving = false;

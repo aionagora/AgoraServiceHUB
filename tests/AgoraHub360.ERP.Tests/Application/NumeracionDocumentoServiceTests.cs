@@ -76,13 +76,13 @@ public class NumeracionDocumentoServiceTests
     [Fact]
     public async Task CreateAsync_Valid_Succeeds()
     {
-        var dto = new CreateNumeracionDto
+        var dto = new CrearNumeracionDocumentoRequestDto
         {
             TipoDocumento = "OC",
             Descripcion = "Orden de Compra",
             Prefijo = "OC-",
             SiguienteNumero = 1,
-            Digitos = 6
+            LongitudNumero = 6
         };
 
         var result = await _sut.CreateAsync(dto);
@@ -99,7 +99,7 @@ public class NumeracionDocumentoServiceTests
     {
         _repo.Seed(new NumeracionDocumento { Id = 1, TipoDocumento = "OC", Prefijo = "OC-", EmpresaId = 1 });
 
-        var dto = new CreateNumeracionDto
+        var dto = new CrearNumeracionDocumentoRequestDto
         {
             TipoDocumento = "OC",
             Descripcion = "Duplicada",
@@ -120,9 +120,9 @@ public class NumeracionDocumentoServiceTests
     }
 
     [Fact]
-    public async Task DeleteAsync_NotFound_Fails()
+    public async Task DesactivarAsync_NotFound_Fails()
     {
-        var result = await _sut.DeleteAsync(999);
+        var result = await _sut.DesactivarAsync(999);
         Assert.False(result.IsSuccess);
     }
 
@@ -185,5 +185,6 @@ public class NumeracionDocumentoServiceTests
         public int? UserIdInt { get; set; }
         public string? UserName { get; set; }
         public int? EmpresaId { get; set; }
+        public bool IsInRole(string role) => false;
     }
 }
