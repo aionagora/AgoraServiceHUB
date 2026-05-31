@@ -86,4 +86,17 @@ public class EmpresaHttpService
         return await response.Content.ReadFromJsonAsync<ApiResponse<bool>>()
             ?? ApiResponse<bool>.Fail("Error de comunicación con el servidor.");
     }
+
+    public async Task<ApiResponse<ConfiguracionInicialEmpresaResultadoDto>> GenerarConfiguracionBasicaAsync(long empresaId)
+    {
+        var response = await _http.PostAsync($"{BaseUrl}/{empresaId}/generar-configuracion-basica", null);
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            return ApiResponse<ConfiguracionInicialEmpresaResultadoDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
+        }
+
+        return await response.Content.ReadFromJsonAsync<ApiResponse<ConfiguracionInicialEmpresaResultadoDto>>()
+            ?? ApiResponse<ConfiguracionInicialEmpresaResultadoDto>.Fail("Error de comunicación con el servidor.");
+    }
 }

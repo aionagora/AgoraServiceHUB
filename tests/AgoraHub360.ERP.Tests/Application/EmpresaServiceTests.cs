@@ -25,7 +25,8 @@ public class EmpresaServiceTests
             _sucursalRepository, 
             _almacenRepository, 
             _unitOfWork, 
-            new FakeSeedService());
+            new FakeSeedService(),
+            new FakeConfiguracionInicialEmpresaService());
     }
 
     [Fact]
@@ -166,6 +167,12 @@ public class EmpresaServiceTests
     {
         public Task<AgoraHub360.ERP.Application.Common.Result<bool>> SeedDefaultDataAsync(int empresaId, CancellationToken ct = default)
             => Task.FromResult(AgoraHub360.ERP.Application.Common.Result<bool>.Success(true));
+    }
+
+    private class FakeConfiguracionInicialEmpresaService : AgoraHub360.ERP.Application.Interfaces.IConfiguracionInicialEmpresaService
+    {
+        public Task<AgoraHub360.ERP.Application.Common.Result<ConfiguracionInicialEmpresaResultadoDto>> GenerarConfiguracionBasicaAsync(long empresaId, CancellationToken ct = default)
+            => Task.FromResult(AgoraHub360.ERP.Application.Common.Result<ConfiguracionInicialEmpresaResultadoDto>.Success(new ConfiguracionInicialEmpresaResultadoDto()));
     }
 
     private class FakeSucursalRepository : IRepository<Sucursal>

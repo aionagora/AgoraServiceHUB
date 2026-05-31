@@ -23,6 +23,7 @@ public class VentaService : IVentaService
     private readonly IRepository<PedidoVentaDetalle> _pedidoVentaDetalleRepo;
     private readonly IRepository<CompanyProduct> _companyProductRepo;
     private readonly IRepository<Product> _productRepo;
+    private readonly INumeracionDocumentoService _numeracionDocumentoService;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
 
@@ -39,6 +40,7 @@ public class VentaService : IVentaService
         IRepository<PedidoVentaDetalle> pedidoVentaDetalleRepo,
         IRepository<CompanyProduct> companyProductRepo,
         IRepository<Product> productRepo,
+        INumeracionDocumentoService numeracionDocumentoService,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork)
     {
@@ -54,6 +56,7 @@ public class VentaService : IVentaService
         _pedidoVentaDetalleRepo = pedidoVentaDetalleRepo;
         _companyProductRepo = companyProductRepo;
         _productRepo = productRepo;
+        _numeracionDocumentoService = numeracionDocumentoService;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
     }
@@ -155,6 +158,10 @@ public class VentaService : IVentaService
         if (!TryParseEnum(dto.TipoVenta, out TipoVenta tipoVenta))
             return Result<VentaDto>.Failure($"TipoVenta inválido: '{dto.TipoVenta}'.");
 
+        var numeracionResult = await _numeracionDocumentoService.GenerarSiguienteNumeroAsync("VTA", dto.SucursalId, ct);
+        if (!numeracionResult.IsSuccess || string.IsNullOrWhiteSpace(numeracionResult.Value))
+            return Result<VentaDto>.Failure($"No se pudo generar el número de venta: {numeracionResult.Error ?? "error no especificado"}.");
+
         var venta = new Venta
         {
             EmpresaId = empresaId,
@@ -162,7 +169,7 @@ public class VentaService : IVentaService
             AlmacenId = dto.AlmacenId,
             ClienteId = dto.ClienteId,
             PedidoVentaId = dto.PedidoVentaId,
-            NumeroVenta = await GenerateNumeroVentaAsync(empresaId, ct),
+            NumeroVenta = numeracionResult.Value,
             FechaVenta = dto.FechaVenta,
             TipoVenta = tipoVenta,
             EstadoVenta = EstadoVenta.Borrador,
@@ -801,14 +808,6 @@ public class VentaService : IVentaService
             return "El pedido de venta no existe o no pertenece a la empresa activa.";
 
         return null;
-    }
-
-    private async Task<string> GenerateNumeroVentaAsync(int empresaId, CancellationToken ct)
-    {
-        var now = DateTime.UtcNow;
-        var prefix = $"VTA-{now:yyyyMMdd}";
-        var existing = await _ventaRepo.FindAsync(v => v.EmpresaId == empresaId && v.NumeroVenta.StartsWith(prefix), ct);
-        return $"{prefix}-{(existing.Count + 1):D4}";
     }
 
     private static bool TryParseEnum<TEnum>(string? value, out TEnum parsed)

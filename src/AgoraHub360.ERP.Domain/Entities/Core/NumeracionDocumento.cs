@@ -10,6 +10,9 @@ public class NumeracionDocumento : TenantEntity
 {
     public int Id { get; set; }
 
+    public int? SucursalId { get; set; }
+    public Sucursal? Sucursal { get; set; }
+
     /// <summary>Código del tipo de documento (ej: "OC", "REC", "FAC", "PED", "NC").</summary>
     public string TipoDocumento { get; set; } = string.Empty;
 
