@@ -62,7 +62,7 @@ public class AuditableEntityInterceptor : SaveChangesInterceptor
     {
         if (context is null) return;
 
-        var now = DateTime.UtcNow;
+        var now = DateTime.Now;
         var user = _currentUserService.UserName ?? "system";
         var empresaId = _currentUserService.EmpresaId;
 
@@ -101,7 +101,7 @@ public class AuditableEntityInterceptor : SaveChangesInterceptor
         if (context is null) return new();
 
         var entries = new List<AuditEntry>();
-        var now = DateTime.UtcNow;
+        var now = DateTime.Now;
         var user = _currentUserService.UserName ?? "system";
         var empresaId = _currentUserService.EmpresaId;
 

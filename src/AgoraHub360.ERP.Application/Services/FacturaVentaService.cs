@@ -154,7 +154,7 @@ public class FacturaVentaService : IFacturaVentaService
             EmpresaId = empresaId,
             VentaId = venta.Id,
             NumeroFactura = numeroFactura,
-            FechaEmision = DateTime.UtcNow,
+            FechaEmision = DateTime.Now,
             TipoDocumentoFactura = tipoDocumentoFactura,
             EstadoFactura = EstadoFacturaVentaComercial.Generada,
             EstadoSiat = EstadoSiatFactura.NoEnviada,
@@ -257,7 +257,7 @@ public class FacturaVentaService : IFacturaVentaService
             return Result<FacturaVentaDto>.Failure("El motivo de anulación es obligatorio.");
 
         factura.EstadoFactura = EstadoFacturaVentaComercial.Anulada;
-        factura.FechaAnulacion = DateTime.UtcNow;
+        factura.FechaAnulacion = DateTime.Now;
         factura.MotivoAnulacion = dto.MotivoAnulacion.Trim();
 
         await _facturaRepo.UpdateAsync(factura, ct);
