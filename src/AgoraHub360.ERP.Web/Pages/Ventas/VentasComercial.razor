@@ -1,5 +1,6 @@
 @page "/ventas/comercial"
 @attribute [Authorize]
+@using AgoraHub360.ERP.Web.Helpers
 @using AgoraHub360.ERP.Shared.DTOs.Ventas
 @inject VentaHttpService VentaService
 @inject NavigationManager Nav
@@ -76,7 +77,7 @@
                         {
                             <tr>
                                 <td class="fw-semibold">@venta.NumeroVenta</td>
-                                <td>@venta.FechaVenta.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>@venta.FechaVenta.ToString("dd/MM/yyyy HH:mm")</td>
                                 <td>@(string.IsNullOrWhiteSpace(venta.ClienteNombre) ? "-" : venta.ClienteNombre)</td>
                                 <td>
                                     <span class="badge bg-secondary">@venta.TipoVenta</span>
@@ -87,7 +88,7 @@
                                 <td>
                                     <span class="badge @GetEstadoPagoBadge(venta.EstadoPago)">@venta.EstadoPago</span>
                                 </td>
-                                <td class="text-end fw-semibold">@venta.Total.ToString("N2")</td>
+                                <td class="text-end fw-semibold">@FormatMoney(venta.Total)</td>
                                 <td>
                                     <span class="badge @(venta.FacturaGenerada ? "bg-success" : "bg-secondary")">
                                         @(venta.FacturaGenerada ? "Generada" : "Sin generar")
@@ -242,4 +243,7 @@
             _ => "bg-secondary"
         };
     }
+
+    private static string FormatMoney(decimal value)
+        => FormatHelper.Money(value);
 }

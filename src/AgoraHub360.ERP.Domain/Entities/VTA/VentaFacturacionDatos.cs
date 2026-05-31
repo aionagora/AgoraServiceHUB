@@ -1,4 +1,5 @@
 using AgoraHub360.ERP.Domain.Common;
+using AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Enums;
 
 namespace AgoraHub360.ERP.Domain.Entities.VTA;
@@ -19,6 +20,9 @@ public class VentaFacturacionDatos : TenantEntity
     public string? RazonSocialFactura { get; set; }
     public string? EmailFactura { get; set; }
     public string? TelefonoFactura { get; set; }
+
+    public long? ClientePerfilFiscalId { get; set; }
+    public ClientePerfilFiscal? ClientePerfilFiscal { get; set; }
 
     public EstadoFacturaVenta EstadoFactura { get; set; } = EstadoFacturaVenta.NoGenerada;
 

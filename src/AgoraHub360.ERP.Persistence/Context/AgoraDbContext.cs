@@ -70,6 +70,7 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     // ── MDM: Third parties ────────────────────────────────────────────────────
     public DbSet<Cliente> Clientes => Set<Cliente>();
     public DbSet<ClienteSucursal> ClienteSucursales => Set<ClienteSucursal>();
+    public DbSet<ClientePerfilFiscal> ClientePerfilesFiscales => Set<ClientePerfilFiscal>();
     public DbSet<Contacto> Contactos => Set<Contacto>();
     public DbSet<ContactoUsuarioAcceso> ContactosUsuariosAccesos => Set<ContactoUsuarioAcceso>();
     public DbSet<Proveedor> Proveedores => Set<Proveedor>();
@@ -183,6 +184,7 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     public DbSet<VentaDetalle> VentaDetalles => Set<VentaDetalle>();
     public DbSet<VentaFacturacionDatos> VentaFacturacionDatos => Set<VentaFacturacionDatos>();
     public DbSet<VentaPago> VentaPagos => Set<VentaPago>();
+    public DbSet<SiatMetodoPago> SiatMetodosPago => Set<SiatMetodoPago>();
     public DbSet<FacturaVenta> FacturasVenta => Set<FacturaVenta>();
     public DbSet<FacturaVentaDetalle> FacturaVentaDetalles => Set<FacturaVentaDetalle>();
 

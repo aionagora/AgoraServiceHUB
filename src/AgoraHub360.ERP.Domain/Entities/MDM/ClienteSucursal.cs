@@ -46,4 +46,5 @@ public class ClienteSucursal : TenantEntity
     public string? Observaciones { get; set; }
 
     public ICollection<Contacto> Contactos { get; set; } = new List<Contacto>();
+    public ICollection<ClientePerfilFiscal> PerfilesFiscales { get; set; } = new List<ClientePerfilFiscal>();
 }

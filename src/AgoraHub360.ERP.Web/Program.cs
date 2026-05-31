@@ -42,6 +42,7 @@ builder.Services.AddScoped<CatalogoHttpService>();
 builder.Services.AddScoped<UnidadMedidaHttpService>();
 builder.Services.AddScoped<ProductoHttpService>();
 builder.Services.AddScoped<ClienteHttpService>();
+builder.Services.AddScoped<ClientePerfilFiscalHttpService>();
 builder.Services.AddScoped<ClienteSucursalHttpService>();
 builder.Services.AddScoped<ProveedorHttpService>();
 builder.Services.AddScoped<AlmacenHttpService>();

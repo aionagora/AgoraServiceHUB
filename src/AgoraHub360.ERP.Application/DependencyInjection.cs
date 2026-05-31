@@ -29,6 +29,7 @@ public static class DependencyInjection
 
         // MDM: third parties
         services.AddScoped<IClienteService, ClienteService>();
+        services.AddScoped<IClientePerfilFiscalService, ClientePerfilFiscalService>();
         services.AddScoped<IClienteSucursalService, ClienteSucursalService>();
         services.AddScoped<IContactoService, ContactoService>();
         services.AddScoped<IContactoUsuarioAccesoService, ContactoUsuarioAccesoService>();
@@ -37,6 +38,7 @@ public static class DependencyInjection
         services.AddScoped<IPedidoVentaService, PedidoVentaService>();
         services.AddScoped<IVentaService, VentaService>();
         services.AddScoped<IFacturaVentaService, FacturaVentaService>();
+        services.AddScoped<ISiatMetodoPagoService, SiatMetodoPagoService>();
 
         // MDM: unified catalog
         services.AddScoped<ICatalogService, CatalogService>();
