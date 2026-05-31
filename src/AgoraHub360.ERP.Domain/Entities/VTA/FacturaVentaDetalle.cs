@@ -15,6 +15,7 @@ public class FacturaVentaDetalle : TenantEntity
 
     public TipoItemVenta TipoItemVenta { get; set; }
 
+    public string? ItemCode { get; set; }
     public string? CodigoProducto { get; set; }
     public string Descripcion { get; set; } = string.Empty;
     public string? DetalleAdicional { get; set; }

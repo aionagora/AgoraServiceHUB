@@ -8,17 +8,35 @@ public class FacturaVentaDto
 
     public string NumeroFactura { get; set; } = string.Empty;
     public string? NumeroAutorizacion { get; set; }
+    public string? BillUuid { get; set; }
     public DateTime FechaEmision { get; set; }
 
+    public string? ActivityCode { get; set; }
     public string TipoDocumentoFactura { get; set; } = string.Empty;
+    public string? IdentityDocTypeCode { get; set; }
     public string EstadoFactura { get; set; } = string.Empty;
     public string EstadoSiat { get; set; } = string.Empty;
 
     public string NitFactura { get; set; } = string.Empty;
     public string? Complemento { get; set; }
     public string RazonSocialFactura { get; set; } = string.Empty;
+    public string? BeneficiaryName { get; set; }
     public string? EmailFactura { get; set; }
     public string? TelefonoFactura { get; set; }
+    public string? PaymentMethodCode { get; set; }
+    public string? CardNumber { get; set; }
+    public decimal? GiftCardAmount { get; set; }
+    public decimal? AdditionalDiscount { get; set; }
+    public string? PieLey { get; set; }
+    public string? EnlaceXml { get; set; }
+    public string? EnlacePdf { get; set; }
+    public string? SiatQr { get; set; }
+    public string? Origen { get; set; }
+    public string? DescripcionFC { get; set; }
+    public int? IdDosificacion { get; set; }
+    public int? CodDePago { get; set; }
+    public int? IdTipo { get; set; }
+    public bool Revertido { get; set; }
 
     public string? MonedaCodigo { get; set; }
     public decimal TipoCambio { get; set; }
@@ -52,16 +70,22 @@ public class FacturaVentaResumenDto
     public long? ClientePerfilFiscalId { get; set; }
 
     public string NumeroFactura { get; set; } = string.Empty;
+    public string? BillUuid { get; set; }
     public DateTime FechaEmision { get; set; }
 
+    public string? ActivityCode { get; set; }
+    public string? IdentityDocTypeCode { get; set; }
     public string EstadoFactura { get; set; } = string.Empty;
     public string EstadoSiat { get; set; } = string.Empty;
 
     public string NitFactura { get; set; } = string.Empty;
     public string RazonSocialFactura { get; set; } = string.Empty;
+    public string? BeneficiaryName { get; set; }
 
     public string? MonedaCodigo { get; set; }
     public decimal Total { get; set; }
+    public decimal? AdditionalDiscount { get; set; }
+    public bool Revertido { get; set; }
     public bool Activo { get; set; }
 }
 
@@ -73,6 +97,7 @@ public class FacturaVentaDetalleDto
 
     public string TipoItemVenta { get; set; } = string.Empty;
 
+    public string? ItemCode { get; set; }
     public string? CodigoProducto { get; set; }
     public string Descripcion { get; set; } = string.Empty;
     public string? DetalleAdicional { get; set; }

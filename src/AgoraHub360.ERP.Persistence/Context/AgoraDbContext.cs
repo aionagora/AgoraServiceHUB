@@ -184,6 +184,7 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     public DbSet<VentaDetalle> VentaDetalles => Set<VentaDetalle>();
     public DbSet<VentaFacturacionDatos> VentaFacturacionDatos => Set<VentaFacturacionDatos>();
     public DbSet<VentaPago> VentaPagos => Set<VentaPago>();
+    public DbSet<SiatMetodoPago> SiatMetodosPago => Set<SiatMetodoPago>();
     public DbSet<FacturaVenta> FacturasVenta => Set<FacturaVenta>();
     public DbSet<FacturaVentaDetalle> FacturaVentaDetalles => Set<FacturaVentaDetalle>();
 

@@ -17,6 +17,9 @@ public class FacturaVentaDetalleConfiguration : IEntityTypeConfiguration<Factura
             .IsRequired()
             .HasConversion<byte>();
 
+        builder.Property(x => x.ItemCode)
+            .HasMaxLength(250);
+
         builder.Property(x => x.CodigoProducto)
             .HasMaxLength(100);
 

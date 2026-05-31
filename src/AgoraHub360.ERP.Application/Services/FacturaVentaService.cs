@@ -15,6 +15,8 @@ public class FacturaVentaService : IFacturaVentaService
     private readonly IRepository<Venta> _ventaRepo;
     private readonly IRepository<VentaDetalle> _ventaDetalleRepo;
     private readonly IRepository<VentaFacturacionDatos> _ventaFacturacionRepo;
+    private readonly IRepository<VentaPago> _ventaPagoRepo;
+    private readonly IRepository<SiatMetodoPago> _siatMetodoPagoRepo;
     private readonly IRepository<Cliente> _clienteRepo;
     private readonly IRepository<ClientePerfilFiscal> _clientePerfilFiscalRepo;
     private readonly IRepository<CompanyProduct> _companyProductRepo;
@@ -28,6 +30,8 @@ public class FacturaVentaService : IFacturaVentaService
         IRepository<Venta> ventaRepo,
         IRepository<VentaDetalle> ventaDetalleRepo,
         IRepository<VentaFacturacionDatos> ventaFacturacionRepo,
+        IRepository<VentaPago> ventaPagoRepo,
+        IRepository<SiatMetodoPago> siatMetodoPagoRepo,
         IRepository<Cliente> clienteRepo,
         IRepository<ClientePerfilFiscal> clientePerfilFiscalRepo,
         IRepository<CompanyProduct> companyProductRepo,
@@ -40,6 +44,8 @@ public class FacturaVentaService : IFacturaVentaService
         _ventaRepo = ventaRepo;
         _ventaDetalleRepo = ventaDetalleRepo;
         _ventaFacturacionRepo = ventaFacturacionRepo;
+        _ventaPagoRepo = ventaPagoRepo;
+        _siatMetodoPagoRepo = siatMetodoPagoRepo;
         _clienteRepo = clienteRepo;
         _clientePerfilFiscalRepo = clientePerfilFiscalRepo;
         _companyProductRepo = companyProductRepo;
@@ -148,22 +154,41 @@ public class FacturaVentaService : IFacturaVentaService
             return Result<FacturaVentaDto>.Failure("No se pudo determinar RazonSocialFactura para generar la factura.");
 
         var numeroFactura = await GenerateNumeroFacturaAsync(empresaId, ct);
+        var paymentMethodCode = await ResolvePaymentMethodCode(venta, ct);
 
         var factura = new FacturaVenta
         {
             EmpresaId = empresaId,
             VentaId = venta.Id,
             NumeroFactura = numeroFactura,
+            BillUuid = null,
             FechaEmision = DateTime.Now,
+            ActivityCode = null,
             TipoDocumentoFactura = tipoDocumentoFactura,
+            IdentityDocTypeCode = fiscal.TipoDocumentoIdentidad,
             EstadoFactura = EstadoFacturaVentaComercial.Generada,
             EstadoSiat = EstadoSiatFactura.NoEnviada,
             ClientePerfilFiscalId = fiscal.ClientePerfilFiscalId,
             NitFactura = fiscal.NitFactura!,
             Complemento = fiscal.Complemento,
             RazonSocialFactura = fiscal.RazonSocialFactura!,
+            BeneficiaryName = fiscal.RazonSocialFactura,
             EmailFactura = fiscal.EmailFactura,
             TelefonoFactura = fiscal.TelefonoFactura,
+            PaymentMethodCode = paymentMethodCode,
+            CardNumber = null,
+            GiftCardAmount = null,
+            AdditionalDiscount = venta.DescuentoTotal > 0 ? venta.DescuentoTotal : null,
+            PieLey = null,
+            EnlaceXml = null,
+            EnlacePdf = null,
+            SiatQr = null,
+            Origen = null,
+            DescripcionFC = null,
+            IdDosificacion = null,
+            CodDePago = null,
+            IdTipo = null,
+            Revertido = false,
             MonedaCodigo = string.IsNullOrWhiteSpace(venta.MonedaCodigo) ? venta.MonedaId : venta.MonedaCodigo,
             TipoCambio = venta.TipoCambio <= 0 ? 1m : venta.TipoCambio,
             Subtotal = venta.Subtotal,
@@ -205,6 +230,8 @@ public class FacturaVentaService : IFacturaVentaService
         {
             companyProductMap.TryGetValue(vd.CompanyProductId ?? 0, out var cp);
             unidadMap.TryGetValue(vd.UnidadMedidaId ?? 0, out var um);
+            var codigoProducto = cp?.CodigoInterno ?? cp?.Sku;
+            var itemCode = cp?.Sku ?? cp?.CodigoInterno ?? codigoProducto;
 
             var fd = new FacturaVentaDetalle
             {
@@ -212,7 +239,8 @@ public class FacturaVentaService : IFacturaVentaService
                 FacturaVentaId = factura.Id,
                 VentaDetalleId = vd.Id,
                 TipoItemVenta = vd.TipoItemVenta,
-                CodigoProducto = cp?.Sku ?? cp?.CodigoInterno,
+                CodigoProducto = codigoProducto,
+                ItemCode = itemCode,
                 Descripcion = vd.Descripcion,
                 DetalleAdicional = vd.DetalleAdicional,
                 Cantidad = vd.Cantidad,
@@ -350,9 +378,14 @@ public class FacturaVentaService : IFacturaVentaService
                        ?? Normalize(perfilPredeterminado?.TelefonoFactura)
                        ?? Normalize(cliente?.Telefono);
 
+        var tipoDocumentoIdentidad = Normalize(ventaFact?.TipoDocumentoIdentidad)
+                                     ?? Normalize(perfilSeleccionado?.TipoDocumentoIdentidad)
+                                     ?? Normalize(perfilPredeterminado?.TipoDocumentoIdentidad);
+
         return Result<FiscalData>.Success(new FiscalData
         {
             ClientePerfilFiscalId = perfilSeleccionado?.Id ?? perfilPredeterminado?.Id,
+            TipoDocumentoIdentidad = tipoDocumentoIdentidad,
             NitFactura = nit,
             Complemento = complemento,
             RazonSocialFactura = razon,
@@ -385,6 +418,48 @@ public class FacturaVentaService : IFacturaVentaService
         return $"{prefijo}{siguiente:D4}";
     }
 
+    private async Task<string> ResolvePaymentMethodCode(Venta venta, CancellationToken ct)
+    {
+        if (!_currentUser.EmpresaId.HasValue)
+            return "1";
+
+        var empresaId = _currentUser.EmpresaId.Value;
+        var metodosActivos = await _siatMetodoPagoRepo.FindAsync(
+            x => x.EmpresaId == empresaId && x.Activo,
+            ct);
+
+        var pagoSeleccionado = (await _ventaPagoRepo.FindAsync(
+                p => p.EmpresaId == empresaId
+                     && p.VentaId == venta.Id
+                     && p.Activo
+                     && p.EstadoPago != EstadoPagoVenta.Anulado,
+                ct))
+            .OrderByDescending(p => p.Monto)
+            .ThenByDescending(p => p.Id)
+            .FirstOrDefault();
+
+        SiatMetodoPago? metodoSeleccionado = null;
+
+        if (pagoSeleccionado is not null)
+        {
+            var modoPagoNombre = pagoSeleccionado.ModoPago.ToString();
+            metodoSeleccionado = metodosActivos.FirstOrDefault(x =>
+                string.Equals(x.ModoPago, modoPagoNombre, StringComparison.OrdinalIgnoreCase));
+
+            if (metodoSeleccionado is null && pagoSeleccionado.ModoPago == ModoPago.Deposito)
+            {
+                metodoSeleccionado = metodosActivos.FirstOrDefault(x =>
+                    string.Equals(x.ModoPago, ModoPago.Transferencia.ToString(), StringComparison.OrdinalIgnoreCase));
+            }
+        }
+
+        metodoSeleccionado ??= metodosActivos.FirstOrDefault(x => x.EsPredeterminado);
+
+        return string.IsNullOrWhiteSpace(metodoSeleccionado?.Codigo)
+            ? "1"
+            : metodoSeleccionado.Codigo;
+    }
+
     private static bool TryParseEnum<TEnum>(string? value, out TEnum parsed) where TEnum : struct, Enum
     {
         if (!string.IsNullOrWhiteSpace(value) && Enum.TryParse(value, true, out parsed))
@@ -407,13 +482,19 @@ public class FacturaVentaService : IFacturaVentaService
             VentaId = f.VentaId,
             ClientePerfilFiscalId = f.ClientePerfilFiscalId,
             NumeroFactura = f.NumeroFactura,
+            BillUuid = f.BillUuid,
             FechaEmision = f.FechaEmision,
+            ActivityCode = f.ActivityCode,
+            IdentityDocTypeCode = f.IdentityDocTypeCode,
             EstadoFactura = f.EstadoFactura.ToString(),
             EstadoSiat = f.EstadoSiat.ToString(),
             NitFactura = f.NitFactura,
             RazonSocialFactura = f.RazonSocialFactura,
+            BeneficiaryName = f.BeneficiaryName,
             MonedaCodigo = f.MonedaCodigo,
             Total = f.Total,
+            AdditionalDiscount = f.AdditionalDiscount,
+            Revertido = f.Revertido,
             Activo = f.Activo
         };
 
@@ -425,15 +506,33 @@ public class FacturaVentaService : IFacturaVentaService
             ClientePerfilFiscalId = f.ClientePerfilFiscalId,
             NumeroFactura = f.NumeroFactura,
             NumeroAutorizacion = f.NumeroAutorizacion,
+            BillUuid = f.BillUuid,
             FechaEmision = f.FechaEmision,
+            ActivityCode = f.ActivityCode,
             TipoDocumentoFactura = f.TipoDocumentoFactura.ToString(),
+            IdentityDocTypeCode = f.IdentityDocTypeCode,
             EstadoFactura = f.EstadoFactura.ToString(),
             EstadoSiat = f.EstadoSiat.ToString(),
             NitFactura = f.NitFactura,
             Complemento = f.Complemento,
             RazonSocialFactura = f.RazonSocialFactura,
+            BeneficiaryName = f.BeneficiaryName,
             EmailFactura = f.EmailFactura,
             TelefonoFactura = f.TelefonoFactura,
+            PaymentMethodCode = f.PaymentMethodCode,
+            CardNumber = f.CardNumber,
+            GiftCardAmount = f.GiftCardAmount,
+            AdditionalDiscount = f.AdditionalDiscount,
+            PieLey = f.PieLey,
+            EnlaceXml = f.EnlaceXml,
+            EnlacePdf = f.EnlacePdf,
+            SiatQr = f.SiatQr,
+            Origen = f.Origen,
+            DescripcionFC = f.DescripcionFC,
+            IdDosificacion = f.IdDosificacion,
+            CodDePago = f.CodDePago,
+            IdTipo = f.IdTipo,
+            Revertido = f.Revertido,
             MonedaCodigo = f.MonedaCodigo,
             TipoCambio = f.TipoCambio,
             Subtotal = f.Subtotal,
@@ -459,6 +558,7 @@ public class FacturaVentaService : IFacturaVentaService
                     FacturaVentaId = d.FacturaVentaId,
                     VentaDetalleId = d.VentaDetalleId,
                     TipoItemVenta = d.TipoItemVenta.ToString(),
+                    ItemCode = d.ItemCode,
                     CodigoProducto = d.CodigoProducto,
                     Descripcion = d.Descripcion,
                     DetalleAdicional = d.DetalleAdicional,
@@ -475,6 +575,7 @@ public class FacturaVentaService : IFacturaVentaService
     private sealed class FiscalData
     {
         public long? ClientePerfilFiscalId { get; set; }
+        public string? TipoDocumentoIdentidad { get; set; }
         public string? NitFactura { get; set; }
         public string? Complemento { get; set; }
         public string? RazonSocialFactura { get; set; }
