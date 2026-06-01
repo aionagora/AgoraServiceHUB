@@ -2,6 +2,7 @@ namespace AgoraHub360.ERP.Api.Services;
 
 using System.Security.Claims;
 using AgoraHub360.ERP.Application.Interfaces;
+using AgoraHub360.ERP.Shared.Constants;
 
 /// <summary>
 /// Implementación de ICurrentUserService que extrae información
@@ -35,10 +36,33 @@ public class CurrentUserService : ICurrentUserService
     {
         get
         {
-            var claim = _httpContextAccessor.HttpContext?.User?.FindFirstValue("EmpresaId");
+            var claim = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypesCustom.EmpresaId);
             return int.TryParse(claim, out var id) ? id : null;
         }
     }
+
+    public int? TenantId
+    {
+        get
+        {
+            var claim = _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypesCustom.TenantId)
+                        ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypesCustom.EmpresaId);
+            return int.TryParse(claim, out var id) ? id : null;
+        }
+    }
+
+    public string PlatformRole
+        => _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypesCustom.PlatformRole)
+           ?? Roles.None;
+
+    public string TenantRole
+        => _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypesCustom.TenantRole)
+           ?? _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.Role)
+           ?? Roles.NoAccess;
+
+    public string TenantStatus
+        => _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypesCustom.TenantStatus)
+           ?? (TenantId.HasValue ? AgoraHub360.ERP.Shared.Constants.TenantStatus.Selected : AgoraHub360.ERP.Shared.Constants.TenantStatus.NotSelected);
 
     public bool IsInRole(string role)
         => _httpContextAccessor.HttpContext?.User?.IsInRole(role) == true;

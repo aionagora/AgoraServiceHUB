@@ -2,6 +2,8 @@
 @attribute [Authorize]
 @inject EmpresaHttpService EmpresaSvc
 @inject EmpresaStateService EmpresaState
+@inject SesionUsuarioStateService SesionState
+@inject UiAuthorizationService UiAuth
 
 <PageTitle>Empresas - AgoraHub360 ERP</PageTitle>
 
@@ -19,35 +21,58 @@
 }
 
 <!-- Listado -->
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center py-3">
-        <span>Listado de Empresas (@_empresas.Count)</span>
-        <button class="btn btn-primary btn-sm" @onclick="ShowCrear">
-            <i class="bi bi-plus-circle me-1"></i> Nueva Empresa
-        </button>
+@if (!_puedeAccederSeccion)
+{
+    <div class="alert alert-warning" role="alert">
+        No tienes permisos para acceder a esta sección.
     </div>
+}
+else
+{
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center py-3">
+            <span>
+                @if (_esModoGlobal)
+                {
+                    <span>Empresas globales (@_empresas.Count)</span>
+                }
+                else
+                {
+                    <span>Empresas de mi tenant (@_empresas.Count)</span>
+                }
+            </span>
+            @if (_puedeCrearEmpresa)
+            {
+                <button class="btn btn-primary btn-sm" @onclick="ShowCrear">
+                    <i class="bi bi-plus-circle me-1"></i> Nueva Empresa
+                </button>
+            }
+        </div>
 
-    @if (_loading)
-    {
-        <div class="card-body text-center py-5">
-            <div class="spinner-border text-primary" role="status"></div>
-            <p class="text-muted mt-2">Cargando empresas...</p>
-        </div>
-    }
-    else if (_empresas.Count == 0)
-    {
-        <div class="card-body text-center py-5">
-            <i class="bi bi-building" style="font-size: 3rem; color: var(--agora-text-light);"></i>
-            <p class="text-muted mt-3">No hay empresas registradas.</p>
-            <button class="btn btn-primary btn-sm" @onclick="ShowCrear">
-                <i class="bi bi-plus-circle me-1"></i> Crear primera empresa
-            </button>
-        </div>
-    }
-    else
-    {
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
+        @if (_loading)
+        {
+            <div class="card-body text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="text-muted mt-2">Cargando empresas...</p>
+            </div>
+        }
+        else if (_empresas.Count == 0)
+        {
+            <div class="card-body text-center py-5">
+                <i class="bi bi-building" style="font-size: 3rem; color: var(--agora-text-light);"></i>
+                <p class="text-muted mt-3">No hay empresas registradas.</p>
+                @if (_puedeCrearEmpresa)
+                {
+                    <button class="btn btn-primary btn-sm" @onclick="ShowCrear">
+                        <i class="bi bi-plus-circle me-1"></i> Crear primera empresa
+                    </button>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
                 <thead>
                     <tr>
                         <th>Nombre</th>
@@ -79,27 +104,31 @@
                                 }
                             </td>
                             <td class="text-end">
-                                <button class="btn btn-outline-success btn-sm me-1"
-                                        @onclick="() => GenerarParametrosBasicosAsync(emp)" title="Generar parámetros básicos"
-                                        disabled="@_saving">
-                                    <i class="bi bi-gear-wide-connected"></i>
-                                </button>
-                                <button class="btn btn-outline-primary btn-sm me-1"
-                                        @onclick="() => ShowEditar(emp)" title="Editar">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                <button class="btn btn-outline-danger btn-sm"
-                                        @onclick="() => ConfirmDelete(emp)" title="Eliminar">
-                                    <i class="bi bi-trash"></i>
-                                </button>
+                                @if (_puedeAdministrarEmpresas)
+                                {
+                                    <button class="btn btn-outline-success btn-sm me-1"
+                                            @onclick="() => GenerarParametrosBasicosAsync(emp)" title="Generar parámetros básicos"
+                                            disabled="@_saving">
+                                        <i class="bi bi-gear-wide-connected"></i>
+                                    </button>
+                                    <button class="btn btn-outline-primary btn-sm me-1"
+                                            @onclick="() => ShowEditar(emp)" title="Editar">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-sm"
+                                            @onclick="() => ConfirmDelete(emp)" title="Eliminar">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                }
                             </td>
                         </tr>
                     }
                 </tbody>
-            </table>
+                </table>
+            </div>
+        }
         </div>
-    }
-</div>
+}
 
 <!-- Modal Crear/Editar -->
 @if (_showForm)
@@ -209,6 +238,10 @@
     private bool _saving;
     private string? _mensaje;
     private bool _esError;
+    private bool _puedeAccederSeccion;
+    private bool _esModoGlobal;
+    private bool _puedeAdministrarEmpresas;
+    private bool _puedeCrearEmpresa;
 
     // Form
     private bool _showForm;
@@ -221,6 +254,25 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _esModoGlobal = UiAuth.IsPlatformAdmin;
+        _puedeAccederSeccion = UiAuth.IsPlatformAdmin || UiAuth.IsTenantAdmin;
+        _puedeAdministrarEmpresas = UiAuth.CanManageEmpresas();
+        _puedeCrearEmpresa = UiAuth.CanCreateEmpresa();
+
+        if (!_puedeAccederSeccion)
+        {
+            _loading = false;
+            return;
+        }
+
+        if (!_esModoGlobal && !SesionState.HasTenantSelected)
+        {
+            _mensaje = "Selecciona una empresa activa para continuar.";
+            _esError = true;
+            _loading = false;
+            return;
+        }
+
         await LoadEmpresasAsync();
     }
 
@@ -229,7 +281,10 @@
         _loading = true;
         try
         {
-            _empresas = await EmpresaSvc.GetAllAsync();
+            _empresas = _esModoGlobal
+                ? await EmpresaSvc.GetAllAsync()
+                : await EmpresaSvc.GetMisEmpresasAsync();
+
             EmpresaState.SetEmpresas(_empresas);
         }
         catch
@@ -242,6 +297,9 @@
 
     private void ShowCrear()
     {
+        if (!_puedeCrearEmpresa)
+            return;
+
         _editId = null;
         _formModel = new CreateEmpresaDto { MonedaBaseId = "BOB" };
         _formActivo = true;
@@ -250,6 +308,9 @@
 
     private void ShowEditar(EmpresaDto emp)
     {
+        if (!_puedeAdministrarEmpresas)
+            return;
+
         _editId = emp.Id;
         _formModel = new CreateEmpresaDto
         {
@@ -272,9 +333,28 @@
 
     private async Task SaveAsync()
     {
+        if (!_puedeAdministrarEmpresas && !_puedeCrearEmpresa)
+            return;
+
         _saving = true;
         try
         {
+            if (!_puedeAdministrarEmpresas && _editId.HasValue)
+            {
+                _mensaje = "No tienes permisos para acceder a esta sección.";
+                _esError = true;
+                _saving = false;
+                return;
+            }
+
+            if (!_puedeCrearEmpresa && !_editId.HasValue)
+            {
+                _mensaje = "No tienes permisos para acceder a esta sección.";
+                _esError = true;
+                _saving = false;
+                return;
+            }
+
             if (_editId.HasValue)
             {
                 var updateDto = new UpdateEmpresaDto
@@ -295,7 +375,7 @@
                 }
                 else
                 {
-                    _mensaje = result.Message;
+                    _mensaje = SanitizeError(result.Message, "No se pudo actualizar la empresa.");
                     _esError = true;
                     _saving = false;
                     return;
@@ -311,7 +391,7 @@
                 }
                 else
                 {
-                    _mensaje = result.Message;
+                    _mensaje = SanitizeError(result.Message, "No se pudo crear la empresa.");
                     _esError = true;
                     _saving = false;
                     return;
@@ -331,11 +411,17 @@
 
     private void ConfirmDelete(EmpresaDto emp)
     {
+        if (!_puedeAdministrarEmpresas)
+            return;
+
         _deleteTarget = emp;
     }
 
     private async Task DeleteAsync()
     {
+        if (!_puedeAdministrarEmpresas)
+            return;
+
         if (_deleteTarget is null) return;
         _saving = true;
         try
@@ -348,7 +434,7 @@
             }
             else
             {
-                _mensaje = result.Message;
+                _mensaje = SanitizeError(result.Message, "No se pudo eliminar la empresa.");
                 _esError = true;
             }
             _deleteTarget = null;
@@ -364,6 +450,9 @@
 
     private async Task GenerarParametrosBasicosAsync(EmpresaDto empresa)
     {
+        if (!_puedeAdministrarEmpresas)
+            return;
+
         _saving = true;
         try
         {
@@ -380,7 +469,7 @@
             }
             else
             {
-                _mensaje = result.Message ?? "No se pudo generar la configuración básica.";
+                _mensaje = SanitizeError(result.Message, "No se pudo generar la configuración básica.");
                 _esError = true;
             }
         }
@@ -390,5 +479,23 @@
             _esError = true;
         }
         _saving = false;
+    }
+
+    private static string SanitizeError(string? message, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+            return fallback;
+
+        if (message.Contains("Error HTTP", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("System.", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("stack", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("trace", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("Exception", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("{"))
+        {
+            return fallback;
+        }
+
+        return message;
     }
 }

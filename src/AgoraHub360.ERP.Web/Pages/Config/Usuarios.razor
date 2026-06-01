@@ -4,7 +4,8 @@
 @inject RolHttpService RolSvc
 @inject EmpresaHttpService EmpresaSvc
 @inject EmpresaStateService EmpresaState
-@inject AuthenticationStateProvider AuthStateProvider
+@inject SesionUsuarioStateService SesionState
+@inject UiAuthorizationService UiAuth
 @implements IDisposable
 
 @using AgoraHub360.ERP.Shared.DTOs.Usuario
@@ -25,23 +26,42 @@
     </div>
 }
 
+<div class="alert alert-warning" role="alert" hidden="@(_puedeAccederSeccion)">
+    No tienes permisos para acceder a esta sección.
+</div>
+<div hidden="@(!_puedeAccederSeccion)">
 <!-- Filtro y Listado -->
 <div class="card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center py-3">
         <div class="d-flex align-items-center gap-3">
-            <span>Usuarios (@UsuariosFiltrados.Count)</span>
-            <select class="form-select form-select-sm" style="width: auto; min-width: 200px;"
-                    @bind="_filtroEmpresaId">
-                <option value="0">Todas las empresas</option>
-                @foreach (var e in _empresas.Where(e => e.Activo))
+            <span>
+                @if (_esModoGlobal)
                 {
-                    <option value="@e.Id">@e.Nombre</option>
+                    <span>Usuarios globales (@UsuariosFiltrados.Count)</span>
                 }
-            </select>
+                @if (!_esModoGlobal)
+                {
+                    <span>Usuarios de mi tenant (@UsuariosFiltrados.Count)</span>
+                }
+            </span>
+            @if (_esModoGlobal)
+            {
+                <select class="form-select form-select-sm" style="width: auto; min-width: 200px;"
+                        @bind="_filtroEmpresaId">
+                    <option value="0">Todas las empresas</option>
+                    @foreach (var e in _empresas.Where(e => e.Activo))
+                    {
+                        <option value="@e.Id">@e.Nombre</option>
+                    }
+                </select>
+            }
         </div>
-        <button class="btn btn-primary btn-sm" @onclick="ShowCrear">
-            <i class="bi bi-plus-circle me-1"></i> Nuevo Usuario
-        </button>
+        @if (_puedeAdministrarUsuarios)
+        {
+            <button class="btn btn-primary btn-sm" @onclick="ShowCrear">
+                <i class="bi bi-plus-circle me-1"></i> Nuevo Usuario
+            </button>
+        }
     </div>
 
     @if (_loading)
@@ -50,7 +70,7 @@
             <div class="spinner-border text-primary"></div>
         </div>
     }
-    else if (UsuariosFiltrados.Count == 0)
+    @if (!_loading && UsuariosFiltrados.Count == 0)
     {
         <div class="card-body text-center py-5">
             <i class="bi bi-person-gear" style="font-size: 3rem; color: var(--agora-text-light);"></i>
@@ -59,14 +79,14 @@
                 {
                     <span>No hay usuarios asignados a esta empresa.</span>
                 }
-                else
+                @if (_filtroEmpresaId <= 0)
                 {
                     <span>No hay usuarios registrados.</span>
                 }
             </p>
         </div>
     }
-    else
+    @if (!_loading && UsuariosFiltrados.Count > 0)
     {
         <div class="table-responsive">
             <table class="table table-hover mb-0">
@@ -92,7 +112,7 @@
                                 {
                                     <span class="text-muted small">Sin asignar</span>
                                 }
-                                else
+                                @if (u.EmpresasAsignadas.Count > 0)
                                 {
                                     @foreach (var ea in u.EmpresasAsignadas)
                                     {
@@ -108,24 +128,28 @@
                                 </span>
                             </td>
                             <td class="text-end">
-                                <button class="btn btn-outline-info btn-sm me-1"
-                                        @onclick="() => ShowAsignar(u)" title="Asignar Rol">
-                                    <i class="bi bi-shield-plus"></i>
-                                </button>
-                                <button class="btn btn-outline-primary btn-sm me-1"
-                                        @onclick="() => ShowEditar(u)" title="Editar">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                <AuthorizeView Roles="Admin">
-                                    <button class="btn btn-outline-warning btn-sm me-1"
-                                            @onclick="() => ShowResetPassword(u)" title="Resetear Contraseña">
-                                        <i class="bi bi-key"></i>
+                                @if (_puedeAdministrarUsuarios)
+                                {
+                                    <button class="btn btn-outline-info btn-sm me-1"
+                                            @onclick="() => ShowAsignar(u)" title="Asignar Rol">
+                                        <i class="bi bi-shield-plus"></i>
                                     </button>
-                                </AuthorizeView>
-                                <button class="btn btn-outline-danger btn-sm"
-                                        @onclick="() => ConfirmDelete(u)" title="Eliminar">
-                                    <i class="bi bi-trash"></i>
-                                </button>
+                                    <button class="btn btn-outline-primary btn-sm me-1"
+                                            @onclick="() => ShowEditar(u)" title="Editar">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    @if (_puedeResetPassword)
+                                    {
+                                        <button class="btn btn-outline-warning btn-sm me-1"
+                                                @onclick="() => ShowResetPassword(u)" title="Resetear Contraseña">
+                                            <i class="bi bi-key"></i>
+                                        </button>
+                                    }
+                                    <button class="btn btn-outline-danger btn-sm"
+                                            @onclick="() => ConfirmDelete(u)" title="Eliminar">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                }
                             </td>
                         </tr>
                     }
@@ -133,6 +157,8 @@
             </table>
         </div>
     }
+</div>
+
 </div>
 
 <!-- Modal Crear/Editar Usuario -->
@@ -377,6 +403,10 @@
     private bool _loading = true, _saving;
     private string? _mensaje;
     private bool _esError;
+    private bool _puedeAccederSeccion;
+    private bool _puedeAdministrarUsuarios;
+    private bool _puedeResetPassword;
+    private bool _esModoGlobal;
 
     // Filtro por empresa
     private int _filtroEmpresaId;
@@ -409,12 +439,37 @@
 
     protected override async Task OnInitializedAsync()
     {
+        _esModoGlobal = UiAuth.IsPlatformAdmin;
+        _puedeAccederSeccion = UiAuth.IsPlatformAdmin || UiAuth.IsTenantAdmin;
+        _puedeAdministrarUsuarios = UiAuth.CanManageUsuarios();
+        _puedeResetPassword = UiAuth.IsPlatformAdmin;
+
+        if (!_puedeAccederSeccion)
+        {
+            _loading = false;
+            return;
+        }
+
+        if (!_esModoGlobal && !SesionState.HasTenantSelected)
+        {
+            _mensaje = "No tienes permisos para acceder a esta sección.";
+            _esError = true;
+            _loading = false;
+            return;
+        }
+
         EmpresaState.OnChange += OnEmpresaChanged;
         await Task.WhenAll(LoadUsuariosAsync(), LoadCatalogosAsync());
+
+        if (!_esModoGlobal && SesionState.TenantId.HasValue)
+            _filtroEmpresaId = SesionState.TenantId.Value;
     }
 
     protected override void OnAfterRender(bool firstRender)
     {
+        if (!_esModoGlobal)
+            return;
+
         if (firstRender && EmpresaState.EmpresaActivaId.HasValue && _filtroEmpresaId == 0)
         {
             _filtroEmpresaId = EmpresaState.EmpresaActivaId.Value;
@@ -435,31 +490,50 @@
         try
         {
             _roles = await RolSvc.GetAllAsync();
-            _empresas = await EmpresaSvc.GetAllAsync();
+            if (!_esModoGlobal)
+            {
+                _roles = _roles.Where(r => !IsPlatformRoleName(r.Nombre)).ToList();
+            }
+
+            _empresas = _esModoGlobal
+                ? await EmpresaSvc.GetAllAsync()
+                : await EmpresaSvc.GetMisEmpresasAsync();
         }
         catch { /* catalogos opcionales en carga inicial */ }
     }
 
     private void OnEmpresaChanged()
     {
-        if (EmpresaState.EmpresaActivaId.HasValue)
+        if (_esModoGlobal && EmpresaState.EmpresaActivaId.HasValue)
             _filtroEmpresaId = EmpresaState.EmpresaActivaId.Value;
+
+        if (!_esModoGlobal && SesionState.TenantId.HasValue)
+            _filtroEmpresaId = SesionState.TenantId.Value;
+
         StateHasChanged();
     }
 
     // ── Crear/Editar ──
     private void ShowCrear()
     {
+        if (!_puedeAdministrarUsuarios)
+            return;
+
         _editId = null;
         _createModel = new CreateUsuarioDto();
         _formActivo = true;
-        _createEmpresaId = EmpresaState.EmpresaActivaId ?? 0;
+        _createEmpresaId = _esModoGlobal
+            ? (EmpresaState.EmpresaActivaId ?? 0)
+            : (SesionState.TenantId ?? 0);
         _createRol = string.Empty;
         _showForm = true;
     }
 
     private void ShowEditar(UsuarioDto u)
     {
+        if (!_puedeAdministrarUsuarios)
+            return;
+
         _editId = u.Id;
         _createModel = new CreateUsuarioDto
         {
@@ -476,6 +550,13 @@
 
     private async Task SaveUsuarioAsync()
     {
+        if (!_puedeAdministrarUsuarios)
+        {
+            _mensaje = "No tienes permisos para acceder a esta sección.";
+            _esError = true;
+            return;
+        }
+
         _saving = true;
         try
         {
@@ -489,7 +570,7 @@
                     Activo = _formActivo
                 };
                 var r = await UsuarioSvc.UpdateAsync(_editId.Value, dto);
-                if (!r.Success) { _mensaje = r.Message; _esError = true; _saving = false; return; }
+                if (!r.Success) { _mensaje = SanitizeError(r.Message, "No se pudo actualizar el usuario."); _esError = true; _saving = false; return; }
                 _mensaje = "Usuario actualizado."; _esError = false;
             }
             else
@@ -497,11 +578,14 @@
                 // Asignar empresa al crear
                 if (_createEmpresaId > 0)
                 {
+                    if (!_esModoGlobal)
+                        _createEmpresaId = SesionState.TenantId ?? 0;
+
                     _createModel.EmpresaId = _createEmpresaId;
                     _createModel.Rol = string.IsNullOrEmpty(_createRol) ? "Viewer" : _createRol;
                 }
                 var r = await UsuarioSvc.CreateAsync(_createModel);
-                if (!r.Success) { _mensaje = r.Message; _esError = true; _saving = false; return; }
+                if (!r.Success) { _mensaje = SanitizeError(r.Message, "No se pudo crear el usuario."); _esError = true; _saving = false; return; }
                 _mensaje = "Usuario criado."; _esError = false;
             }
             CloseForm();
@@ -514,18 +598,40 @@
     // ── Asignar Rol ──
     private void ShowAsignar(UsuarioDto u)
     {
+        if (!_puedeAdministrarUsuarios)
+            return;
+
         _asignarUsuario = u;
-        _asignarEmpresaId = 0;
+        _asignarEmpresaId = _esModoGlobal ? 0 : (SesionState.TenantId ?? 0);
         _asignarRol = string.Empty;
         _showAsignar = true;
     }
 
     private async Task AsignarAsync()
     {
+        if (!_puedeAdministrarUsuarios)
+        {
+            _mensaje = "No tienes permisos para acceder a esta sección.";
+            _esError = true;
+            return;
+        }
+
         if (_asignarUsuario is null) return;
         _saving = true;
         try
         {
+            if (!_esModoGlobal)
+            {
+                _asignarEmpresaId = SesionState.TenantId ?? 0;
+                if (IsPlatformRoleName(_asignarRol))
+                {
+                    _mensaje = "No tienes permisos para acceder a esta sección.";
+                    _esError = true;
+                    _saving = false;
+                    return;
+                }
+            }
+
             var dto = new AsignarRolDto { EmpresaId = _asignarEmpresaId, Rol = _asignarRol };
             var r = await UsuarioSvc.AsignarRolAsync(_asignarUsuario.Id, dto);
             if (r.Success)
@@ -533,7 +639,7 @@
                 _mensaje = "Rol asignado."; _esError = false;
                 await RefreshAsignarUsuario();
             }
-            else { _mensaje = r.Message; _esError = true; }
+            else { _mensaje = SanitizeError(r.Message, "No se pudo asignar el rol."); _esError = true; }
         }
         catch { _mensaje = "Error de comunicacion."; _esError = true; }
         _saving = false;
@@ -541,6 +647,9 @@
 
     private async Task RemoverAsync(int empresaId)
     {
+        if (!_puedeAdministrarUsuarios)
+            return;
+
         if (_asignarUsuario is null) return;
         _saving = true;
         try
@@ -551,7 +660,7 @@
                 _mensaje = "Asignacion removida."; _esError = false;
                 await RefreshAsignarUsuario();
             }
-            else { _mensaje = r.Message; _esError = true; }
+            else { _mensaje = SanitizeError(r.Message, "No se pudo remover la asignación."); _esError = true; }
         }
         catch { _mensaje = "Error de comunicacion."; _esError = true; }
         _saving = false;
@@ -571,16 +680,25 @@
     }
 
     // ── Delete ──
-    private void ConfirmDelete(UsuarioDto u) => _deleteTarget = u;
+    private void ConfirmDelete(UsuarioDto u)
+    {
+        if (!_puedeAdministrarUsuarios)
+            return;
+
+        _deleteTarget = u;
+    }
 
     private async Task DeleteAsync()
     {
+        if (!_puedeAdministrarUsuarios)
+            return;
+
         if (_deleteTarget is null) return;
         _saving = true;
         try
         {
             var r = await UsuarioSvc.DeleteAsync(_deleteTarget.Id);
-            _mensaje = r.Success ? "Usuario eliminado." : r.Message;
+            _mensaje = r.Success ? "Usuario eliminado." : SanitizeError(r.Message, "No se pudo eliminar el usuario.");
             _esError = !r.Success;
             _deleteTarget = null;
             await LoadUsuariosAsync();
@@ -592,6 +710,9 @@
     // ── Reset Password ──
     private void ShowResetPassword(UsuarioDto u)
     {
+        if (!_puedeResetPassword)
+            return;
+
         _resetUsuario = u;
         _resetModel = new ResetPasswordDto();
         _showResetPassword = true;
@@ -599,12 +720,15 @@
 
     private async Task ResetPasswordAsync()
     {
+        if (!_puedeResetPassword)
+            return;
+
         if (_resetUsuario is null) return;
         _saving = true;
         try
         {
             var r = await UsuarioSvc.ResetPasswordAsync(_resetUsuario.Id, _resetModel);
-            _mensaje = r.Success ? "Contraseña reseteada." : r.Message;
+            _mensaje = r.Success ? "Contraseña reseteada." : SanitizeError(r.Message, "No se pudo resetear la contraseña.");
             _esError = !r.Success;
             if (r.Success) CloseResetPassword();
         }
@@ -617,5 +741,34 @@
     public void Dispose()
     {
         EmpresaState.OnChange -= OnEmpresaChanged;
+    }
+
+    private static bool IsPlatformRoleName(string? roleName)
+    {
+        if (string.IsNullOrWhiteSpace(roleName))
+            return false;
+
+        return string.Equals(roleName, AgoraHub360.ERP.Shared.Constants.Roles.SuperAdmin, StringComparison.OrdinalIgnoreCase)
+               || string.Equals(roleName, AgoraHub360.ERP.Shared.Constants.Roles.SystemAdmin, StringComparison.OrdinalIgnoreCase)
+               || string.Equals(roleName, AgoraHub360.ERP.Shared.Constants.Roles.SecurityAuditor, StringComparison.OrdinalIgnoreCase)
+               || string.Equals(roleName, AgoraHub360.ERP.Shared.Constants.Roles.PlatformSupport, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string SanitizeError(string? message, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+            return fallback;
+
+        if (message.Contains("Error HTTP", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("System.", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("stack", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("trace", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("Exception", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("{"))
+        {
+            return fallback;
+        }
+
+        return message;
     }
 }

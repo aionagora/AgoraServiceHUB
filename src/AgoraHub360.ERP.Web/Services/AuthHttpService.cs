@@ -1,6 +1,7 @@
 namespace AgoraHub360.ERP.Web.Services;
 
 using System.Net.Http.Json;
+using System.Text.Json;
 using AgoraHub360.ERP.Shared.DTOs;
 using AgoraHub360.ERP.Shared.DTOs.Auth;
 
@@ -30,4 +31,55 @@ public class AuthHttpService
         return await response.Content.ReadFromJsonAsync<ApiResponse<CambiarEmpresaResponseDto>>()
             ?? ApiResponse<CambiarEmpresaResponseDto>.Fail("Error de comunicación con el servidor.");
     }
+
+    public async Task<AuthMeDto?> GetMeAsync()
+    {
+        try
+        {
+            var response = await _http.GetFromJsonAsync<ApiResponse<JsonElement>>($"{BaseUrl}/me");
+            if (response is null || !response.Success || response.Data.ValueKind == JsonValueKind.Undefined)
+                return null;
+
+            var data = response.Data;
+
+            static string? ReadString(JsonElement root, string propertyName)
+            {
+                if (!root.TryGetProperty(propertyName, out var prop))
+                    return null;
+
+                return prop.ValueKind == JsonValueKind.String
+                    ? prop.GetString()
+                    : prop.ToString();
+            }
+
+            var tenantIdRaw = ReadString(data, nameof(AuthMeDto.TenantId));
+            int? tenantId = int.TryParse(tenantIdRaw, out var parsedTenantId) ? parsedTenantId : null;
+
+            return new AuthMeDto
+            {
+                UserId = ReadString(data, nameof(AuthMeDto.UserId)),
+                UserName = ReadString(data, nameof(AuthMeDto.UserName)),
+                Email = ReadString(data, nameof(AuthMeDto.Email)),
+                PlatformRole = ReadString(data, nameof(AuthMeDto.PlatformRole)),
+                TenantRole = ReadString(data, nameof(AuthMeDto.TenantRole)),
+                TenantStatus = ReadString(data, nameof(AuthMeDto.TenantStatus)),
+                TenantId = tenantId,
+            };
+        }
+        catch
+        {
+            return null;
+        }
+    }
+}
+
+public sealed class AuthMeDto
+{
+    public string? UserId { get; set; }
+    public string? UserName { get; set; }
+    public string? Email { get; set; }
+    public string? PlatformRole { get; set; }
+    public string? TenantRole { get; set; }
+    public int? TenantId { get; set; }
+    public string? TenantStatus { get; set; }
 }

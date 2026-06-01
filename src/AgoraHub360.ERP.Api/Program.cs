@@ -1,6 +1,8 @@
 using System.Text;
 using System.Globalization;
 using AgoraHub360.ERP.Api.Auth;
+using AgoraHub360.ERP.Api.Authorization.Handlers;
+using AgoraHub360.ERP.Api.Authorization.Requirements;
 using AgoraHub360.ERP.Api.BackgroundServices;
 using AgoraHub360.ERP.Api.Middleware;
 using AgoraHub360.ERP.Api.Services;
@@ -9,10 +11,12 @@ using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Infrastructure;
 using AgoraHub360.ERP.Persistence;
 using AgoraHub360.ERP.Persistence.Context;
+using AgoraHub360.ERP.Shared.Constants;
 using AgoraHub360.ERP.Shared.Configuration;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
@@ -62,7 +66,86 @@ builder.Services.AddAuthentication(options =>
     StubAuthHandler.SchemeName, _ => { });
 
 builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddAuthorization();
+builder.Services.AddScoped<IAuthorizationHandler, TenantMembershipHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, BranchAccessHandler>();
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(PolicyNames.RequireAuthenticated, policy =>
+        policy.RequireAuthenticatedUser());
+
+    options.AddPolicy(PolicyNames.RequirePlatformSuperAdmin, policy =>
+        policy.RequireAssertion(context =>
+            string.Equals(
+                context.User.FindFirst(ClaimTypesCustom.PlatformRole)?.Value,
+                Roles.SuperAdmin,
+                StringComparison.OrdinalIgnoreCase)));
+
+    options.AddPolicy(PolicyNames.RequirePlatformAdmin, policy =>
+        policy.RequireAssertion(context =>
+        {
+            var role = context.User.FindFirst(ClaimTypesCustom.PlatformRole)?.Value;
+            return string.Equals(role, Roles.SuperAdmin, StringComparison.OrdinalIgnoreCase)
+                   || string.Equals(role, Roles.SystemAdmin, StringComparison.OrdinalIgnoreCase);
+        }));
+
+    options.AddPolicy(PolicyNames.RequireTenantSelected, policy =>
+        policy.RequireAssertion(context =>
+        {
+            var status = context.User.FindFirst(ClaimTypesCustom.TenantStatus)?.Value;
+            var tenantIdValue = context.User.FindFirst(ClaimTypesCustom.TenantId)?.Value
+                                ?? context.User.FindFirst(ClaimTypesCustom.EmpresaId)?.Value;
+
+            return string.Equals(status, TenantStatus.Selected, StringComparison.OrdinalIgnoreCase)
+                   && int.TryParse(tenantIdValue, out var tenantId)
+                   && tenantId > 0;
+        }));
+
+    options.AddPolicy(PolicyNames.RequireTenantMembership, policy =>
+        policy.Requirements.Add(new TenantMembershipRequirement()));
+
+    options.AddPolicy(PolicyNames.RequireTenantAdmin, policy =>
+        policy.RequireAssertion(context =>
+        {
+            var role = context.User.FindFirst(ClaimTypesCustom.TenantRole)?.Value;
+            return string.Equals(role, Roles.TenantOwner, StringComparison.OrdinalIgnoreCase)
+                   || string.Equals(role, Roles.AdminEmpresa, StringComparison.OrdinalIgnoreCase);
+        }));
+
+    options.AddPolicy(PolicyNames.RequireTenantSupervisor, policy =>
+        policy.RequireAssertion(context =>
+        {
+            var role = context.User.FindFirst(ClaimTypesCustom.TenantRole)?.Value;
+            return string.Equals(role, Roles.TenantOwner, StringComparison.OrdinalIgnoreCase)
+                   || string.Equals(role, Roles.AdminEmpresa, StringComparison.OrdinalIgnoreCase)
+                   || string.Equals(role, Roles.Supervisor, StringComparison.OrdinalIgnoreCase);
+        }));
+
+    options.AddPolicy(PolicyNames.RequireTenantOperator, policy =>
+        policy.RequireAssertion(context =>
+        {
+            var role = context.User.FindFirst(ClaimTypesCustom.TenantRole)?.Value;
+            return string.Equals(role, Roles.TenantOwner, StringComparison.OrdinalIgnoreCase)
+                   || string.Equals(role, Roles.AdminEmpresa, StringComparison.OrdinalIgnoreCase)
+                   || string.Equals(role, Roles.Supervisor, StringComparison.OrdinalIgnoreCase)
+                   || string.Equals(role, Roles.Operador, StringComparison.OrdinalIgnoreCase);
+        }));
+
+    options.AddPolicy(PolicyNames.RequireBranchAccessRead, policy =>
+        policy.Requirements.Add(new BranchAccessRequirement(canOperate: false)));
+
+    options.AddPolicy(PolicyNames.RequireBranchAccessOperate, policy =>
+        policy.Requirements.Add(new BranchAccessRequirement(canOperate: true)));
+
+    options.AddPolicy(PolicyNames.RequireAuditGlobalRead, policy =>
+        policy.RequireAssertion(context =>
+        {
+            var role = context.User.FindFirst(ClaimTypesCustom.PlatformRole)?.Value;
+            return string.Equals(role, Roles.SuperAdmin, StringComparison.OrdinalIgnoreCase)
+                   || string.Equals(role, Roles.SystemAdmin, StringComparison.OrdinalIgnoreCase)
+                   || string.Equals(role, Roles.SecurityAuditor, StringComparison.OrdinalIgnoreCase);
+        }));
+});
 
 // ──── API Versioning ────
 builder.Services

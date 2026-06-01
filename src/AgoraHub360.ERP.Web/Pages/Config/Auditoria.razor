@@ -1,6 +1,7 @@
 @page "/config/auditoria"
 @attribute [Authorize]
 @inject AuditLogHttpService AuditSvc
+@inject UiAuthorizationService UiAuth
 
 <PageTitle>Auditoría - AgoraHub360 ERP</PageTitle>
 
@@ -9,6 +10,14 @@
     <p class="text-muted mb-0">Sistema &rsaquo; Auditoría</p>
 </div>
 
+@if (!UiAuth.CanAccessAuditoria())
+{
+    <div class="alert alert-warning" role="alert">
+        No tienes permisos para acceder a esta sección.
+    </div>
+}
+@if (UiAuth.CanAccessAuditoria())
+{
 <!-- Filtros -->
 <div class="card mb-3">
     <div class="card-body">
@@ -222,6 +231,8 @@
     </div>
 }
 
+}
+
 @code {
     private AgoraHub360.ERP.Shared.DTOs.AuditLog.PaginatedResultDto<AgoraHub360.ERP.Shared.DTOs.AuditLog.AuditLogDto> _result = new();
     private AuditLogFilterDto _filter = new() { TamanoPagina = 50 };
@@ -239,6 +250,12 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if (!UiAuth.CanAccessAuditoria())
+        {
+            _loading = false;
+            return;
+        }
+
         await LoadEntidadesAsync();
         await BuscarAsync();
     }

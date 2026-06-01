@@ -94,6 +94,7 @@ builder.Services.AddScoped<IWorkflowClientService, WorkflowHttpService>();
 builder.Services.AddScoped<DashboardDataService>();
 builder.Services.AddScoped<SeguridadDinamicaHttpService>();
 builder.Services.AddScoped<SesionUsuarioStateService>();
+builder.Services.AddScoped<UiAuthorizationService>();
 
 // ──── Demo Seed ────
 builder.Services.AddScoped<EmpresaDemoService>();

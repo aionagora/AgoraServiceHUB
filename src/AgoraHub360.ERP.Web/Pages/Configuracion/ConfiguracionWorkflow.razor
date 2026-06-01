@@ -1,9 +1,18 @@
-﻿@page "/config/workflow"
-@attribute [Authorize(Roles = "Admin")]
+@page "/config/workflow"
+@attribute [Authorize]
 @inject IWorkflowClientService WfService
+@inject UiAuthorizationService UiAuth
 
 <PageTitle>Configuración Workflow - AgoraHub360 ERP</PageTitle>
 
+@if (!UiAuth.CanAccessWorkflow())
+{
+    <div class="alert alert-warning" role="alert">
+        No tienes permisos para acceder a esta sección.
+    </div>
+}
+@if (UiAuth.CanAccessWorkflow())
+{
 <div class="container-fluid">
 
     @* ?? Cabecera ?? *@
@@ -17,9 +26,12 @@
             </p>
         </div>
         <div class="col-auto">
-            <button class="btn btn-primary" @onclick="ShowCreateModal">
-                <i class="bi bi-plus-circle me-1"></i>Nueva Plantilla
-            </button>
+            @if (UiAuth.CanManageWorkflow())
+            {
+                <button class="btn btn-primary" @onclick="ShowCreateModal">
+                    <i class="bi bi-plus-circle me-1"></i>Nueva Plantilla
+                </button>
+            }
         </div>
     </div>
 
@@ -167,7 +179,7 @@
                                             }
                                         </td>
                                         <td class="text-end">
-                                            @if (!esGlobal)
+                                            @if (!esGlobal && UiAuth.CanManageWorkflow())
                                             {
                                                 <button class="btn btn-xs btn-outline-primary me-1 p-0 px-1"
                                                         @onclick="() => ShowEditModal(p)"
@@ -191,6 +203,7 @@
         </div>
     </div>
 </div>
+}
 
 @* ?? Modal Crear / Editar ?? *@
 @if (showModal)
@@ -358,6 +371,12 @@
 
     private async Task LoadData()
     {
+        if (!UiAuth.CanAccessWorkflow())
+        {
+            loading = false;
+            return;
+        }
+
         loading = true;
         todas   = await WfService.GetAllPlantillasAsync();
         loading = false;
@@ -366,6 +385,9 @@
     // ?? Modales ???????????????????????????????????????????????????????????????
     private void ShowCreateModal()
     {
+        if (!UiAuth.CanManageWorkflow())
+            return;
+
         isEditing      = false;
         editingId      = 0;
         fEntityType    = EntityTypes[0];
@@ -381,6 +403,9 @@
 
     private void ShowEditModal(PlantillaTareaDto p)
     {
+        if (!UiAuth.CanManageWorkflow())
+            return;
+
         isEditing       = true;
         editingId       = p.Id;
         fEntityType     = p.EntityType;
@@ -400,11 +425,20 @@
         modalError = null;
     }
 
-    private void ConfirmDelete(PlantillaTareaDto p) => plantillaAEliminar = p;
+    private void ConfirmDelete(PlantillaTareaDto p)
+    {
+        if (!UiAuth.CanManageWorkflow())
+            return;
+
+        plantillaAEliminar = p;
+    }
 
     // ?? Acciones ??????????????????????????????????????????????????????????????
     private async Task SavePlantilla()
     {
+        if (!UiAuth.CanManageWorkflow())
+            return;
+
         modalError = null;
         if (string.IsNullOrWhiteSpace(fEntityType))  { modalError = "Seleccione el tipo de documento."; return; }
         if (string.IsNullOrWhiteSpace(fCodigo))      { modalError = "El código es obligatorio.";        return; }
@@ -465,6 +499,9 @@
 
     private async Task ExecuteDelete()
     {
+        if (!UiAuth.CanManageWorkflow())
+            return;
+
         if (plantillaAEliminar is null) return;
         saving = true;
         await WfService.DeletePlantillaAsync(plantillaAEliminar.Id);

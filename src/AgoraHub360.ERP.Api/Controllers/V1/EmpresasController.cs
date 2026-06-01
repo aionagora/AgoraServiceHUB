@@ -35,9 +35,12 @@ public class EmpresasController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Roles = Roles.Admin)]
+    [Authorize(Policy = PolicyNames.RequirePlatformAdmin)]
     public async Task<IActionResult> GetAll(CancellationToken ct)
     {
+        if (!IsPlatformAdmin())
+            return Forbid();
+
         var result = await _empresaService.GetAllAsync(ct);
         return Ok(ApiResponse<IReadOnlyList<EmpresaDto>>.Ok(result.Value!));
     }
@@ -47,21 +50,31 @@ public class EmpresasController : ControllerBase
     /// Solo requiere autenticación, sin roles específicos.
     /// </summary>
     [HttpGet("mis-empresas")]
+    [Authorize(Policy = PolicyNames.RequireAuthenticated)]
     public async Task<IActionResult> GetMisEmpresas(CancellationToken ct)
     {
         var userId = _currentUserService.UserIdInt;
         if (!userId.HasValue)
             return Unauthorized(ApiResponse<IReadOnlyList<EmpresaDto>>.Fail("Usuario no autenticado"));
 
-        // Obtener empresas asignadas al usuario
-        var empresasResult = await _usuarioService.GetEmpresasAsignadasAsync(userId.Value, ct);
-        if (!empresasResult.IsSuccess)
-            return BadRequest(ApiResponse<IReadOnlyList<EmpresaDto>>.Fail(empresasResult.Error!));
-
-        // Obtener detalles completos de las empresas
         var allEmpresas = await _empresaService.GetAllAsync(ct);
-        var empresaIds = empresasResult.Value!.Select(e => e.EmpresaId).ToHashSet();
-        var misEmpresas = allEmpresas.Value!.Where(e => empresaIds.Contains(e.Id) && e.Activo).ToList();
+        if (!allEmpresas.IsSuccess)
+            return BadRequest(ApiResponse<IReadOnlyList<EmpresaDto>>.Fail(allEmpresas.Error!));
+
+        // Contrato actual: PlatformAdmin puede ver todas las activas en este endpoint.
+        if (IsPlatformAdmin())
+        {
+            var activasGlobal = allEmpresas.Value!
+                .Where(e => e.Activo)
+                .ToList()
+                .AsReadOnly();
+            return Ok(ApiResponse<IReadOnlyList<EmpresaDto>>.Ok(activasGlobal));
+        }
+
+        var empresaIds = await GetAssignedActiveCompanyIdsAsync(userId.Value, ct);
+        var misEmpresas = allEmpresas.Value!
+            .Where(e => e.Activo && empresaIds.Contains(e.Id))
+            .ToList();
 
         return Ok(ApiResponse<IReadOnlyList<EmpresaDto>>.Ok(misEmpresas.AsReadOnly()));
     }
@@ -69,6 +82,17 @@ public class EmpresasController : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id, CancellationToken ct)
     {
+        if (!IsPlatformAdmin())
+        {
+            var userId = _currentUserService.UserIdInt;
+            if (!userId.HasValue)
+                return Unauthorized(ApiResponse<EmpresaDto>.Fail("Usuario no autenticado"));
+
+            var empresaIds = await GetAssignedActiveCompanyIdsAsync(userId.Value, ct);
+            if (!empresaIds.Contains(id))
+                return Forbid();
+        }
+
         var result = await _empresaService.GetByIdAsync(id, ct);
         if (!result.IsSuccess)
             return NotFound(ApiResponse<EmpresaDto>.Fail(result.Error!));
@@ -77,8 +101,12 @@ public class EmpresasController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = PolicyNames.RequirePlatformSuperAdmin)]
     public async Task<IActionResult> Create([FromBody] CreateEmpresaDto dto, CancellationToken ct)
     {
+        if (!IsPlatformSuperAdmin())
+            return Forbid();
+
         var result = await _empresaService.CreateAsync(dto, ct);
         if (!result.IsSuccess)
             return BadRequest(ApiResponse<EmpresaDto>.Fail(result.Error!));
@@ -90,8 +118,12 @@ public class EmpresasController : ControllerBase
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Policy = PolicyNames.RequirePlatformAdmin)]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateEmpresaDto dto, CancellationToken ct)
     {
+        if (!IsPlatformAdmin())
+            return Forbid();
+
         var result = await _empresaService.UpdateAsync(id, dto, ct);
         if (!result.IsSuccess)
         {
@@ -104,8 +136,12 @@ public class EmpresasController : ControllerBase
     }
 
     [HttpDelete("{id:int}")]
+    [Authorize(Policy = PolicyNames.RequirePlatformSuperAdmin)]
     public async Task<IActionResult> Delete(int id, CancellationToken ct)
     {
+        if (!IsPlatformSuperAdmin())
+            return Forbid();
+
         var result = await _empresaService.DeleteAsync(id, ct);
         if (!result.IsSuccess)
             return NotFound(ApiResponse<bool>.Fail(result.Error!));
@@ -149,9 +185,12 @@ public class EmpresasController : ControllerBase
     }
 
     [HttpPost("{empresaId:long}/generar-configuracion-basica")]
-    [Authorize(Roles = Roles.Admin)]
+    [Authorize(Policy = PolicyNames.RequirePlatformAdmin)]
     public async Task<IActionResult> GenerarConfiguracionBasica(long empresaId, CancellationToken ct)
     {
+        if (!IsPlatformAdmin())
+            return Forbid();
+
         var result = await _configuracionInicialEmpresaService.GenerarConfiguracionBasicaAsync(empresaId, ct);
         if (!result.IsSuccess)
             return BadRequest(ApiResponse<ConfiguracionInicialEmpresaResultadoDto>.Fail(result.Error!));
@@ -159,5 +198,33 @@ public class EmpresasController : ControllerBase
         return Ok(ApiResponse<ConfiguracionInicialEmpresaResultadoDto>.Ok(
             result.Value!,
             "Configuración básica generada exitosamente."));
+    }
+
+    private bool IsPlatformSuperAdmin()
+        => string.Equals(_currentUserService.PlatformRole, Roles.SuperAdmin, StringComparison.OrdinalIgnoreCase);
+
+    private bool IsPlatformAdmin()
+        => string.Equals(_currentUserService.PlatformRole, Roles.SuperAdmin, StringComparison.OrdinalIgnoreCase)
+           || string.Equals(_currentUserService.PlatformRole, Roles.SystemAdmin, StringComparison.OrdinalIgnoreCase);
+
+    private async Task<HashSet<int>> GetAssignedActiveCompanyIdsAsync(int userId, CancellationToken ct)
+    {
+        var asignadasResult = await _usuarioService.GetEmpresasAsignadasAsync(userId, ct);
+        if (!asignadasResult.IsSuccess || asignadasResult.Value is null)
+            return new HashSet<int>();
+
+        var allEmpresasResult = await _empresaService.GetAllAsync(ct);
+        if (!allEmpresasResult.IsSuccess || allEmpresasResult.Value is null)
+            return new HashSet<int>();
+
+        var activas = allEmpresasResult.Value
+            .Where(e => e.Activo)
+            .Select(e => e.Id)
+            .ToHashSet();
+
+        return asignadasResult.Value
+            .Select(x => x.EmpresaId)
+            .Where(activas.Contains)
+            .ToHashSet();
     }
 }

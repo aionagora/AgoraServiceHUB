@@ -1,5 +1,6 @@
 namespace AgoraHub360.ERP.Web.Services;
 
+using AgoraHub360.ERP.Shared.Constants;
 using AgoraHub360.ERP.Shared.DTOs.Empresa;
 using AgoraHub360.ERP.Shared.DTOs.Auth;
 using AgoraHub360.ERP.Shared.DTOs;
@@ -82,6 +83,26 @@ public class EmpresaStateService
 
     public async Task LoadFromStorageAsync()
     {
+        var session = await _authState.GetSessionContextAsync();
+        if (!session.HasTenantSelected)
+        {
+            _empresaActiva = null;
+            OnChange?.Invoke();
+            return;
+        }
+
+        if (session.TenantId.HasValue)
+        {
+            _empresaActiva = _empresas.FirstOrDefault(e => e.Id == session.TenantId.Value);
+        }
+
+        if (_empresaActiva is not null)
+        {
+            await _js.InvokeVoidAsync("localStorage.setItem", StorageKey, _empresaActiva.Id.ToString());
+            OnChange?.Invoke();
+            return;
+        }
+
         try
         {
             var stored = await _js.InvokeAsync<string?>("localStorage.getItem", StorageKey);
@@ -105,6 +126,7 @@ public class EmpresaStateService
     public async Task ClearAsync()
     {
         _empresaActiva = null;
+        _empresas = new List<EmpresaDto>();
         await _js.InvokeVoidAsync("localStorage.removeItem", StorageKey);
         OnChange?.Invoke();
     }
