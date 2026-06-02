@@ -20,6 +20,8 @@ public class TenantRequiredMiddleware
         "/api/v1/auth/me",
         "/api/v1/auth/refresh",
         "/api/v1/empresas/mis-empresas",
+        "/api/v1/empresas/demo/crear-completa",
+        "/api/v1/empresas",
         "/api/v1/health",
         "/api/health",
         "/api/v1/health",

@@ -11,7 +11,12 @@ public class UiAuthorizationService
         _sesionState = sesionState;
     }
 
-    public bool IsPlatformAdmin => _sesionState.IsPlatformAdmin;
+    public bool IsSuperAdmin =>
+        string.Equals(_sesionState.PlatformRole, Roles.SuperAdmin, StringComparison.OrdinalIgnoreCase);
+
+    public bool IsPlatformAdmin =>
+        IsSuperAdmin || string.Equals(_sesionState.PlatformRole, Roles.SystemAdmin, StringComparison.OrdinalIgnoreCase);
+
     public bool IsTenantAdmin => _sesionState.IsTenantAdmin;
     public bool HasTenantSelected => _sesionState.HasTenantSelected;
     public bool IsOperator => string.Equals(_sesionState.TenantRole, Roles.Operador, StringComparison.OrdinalIgnoreCase);
@@ -23,10 +28,15 @@ public class UiAuthorizationService
 
     public bool CanSeeOperationalMenu() => HasTenantSelected;
 
-    public bool CanManageEmpresas() => IsPlatformAdmin;
+    public bool CanManageCompanies() => IsPlatformAdmin;
 
-    public bool CanCreateEmpresa() =>
-        string.Equals(_sesionState.PlatformRole, Roles.SuperAdmin, StringComparison.OrdinalIgnoreCase);
+    public bool CanCreateCompany() => IsSuperAdmin;
+
+    public bool CanCreateDemoCompany() => IsPlatformAdmin;
+
+    public bool CanManageEmpresas() => CanManageCompanies();
+
+    public bool CanCreateEmpresa() => CanCreateCompany();
 
     public bool CanManageUsuarios() => IsPlatformAdmin || IsTenantAdmin;
 

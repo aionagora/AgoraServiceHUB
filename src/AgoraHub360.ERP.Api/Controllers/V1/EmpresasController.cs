@@ -19,19 +19,22 @@ public class EmpresasController : ControllerBase
     private readonly ICurrentUserService _currentUserService;
     private readonly IUsuarioService _usuarioService;
     private readonly IEmpresaSeedService _seedService;
+    private readonly IEmpresaDemoService _empresaDemoService;
 
     public EmpresasController(
         IEmpresaService empresaService,
         IConfiguracionInicialEmpresaService configuracionInicialEmpresaService,
         ICurrentUserService currentUserService,
         IUsuarioService usuarioService,
-        IEmpresaSeedService seedService)
+        IEmpresaSeedService seedService,
+        IEmpresaDemoService empresaDemoService)
     {
         _empresaService = empresaService;
         _configuracionInicialEmpresaService = configuracionInicialEmpresaService;
         _currentUserService = currentUserService;
         _usuarioService = usuarioService;
         _seedService = seedService;
+        _empresaDemoService = empresaDemoService;
     }
 
     [HttpGet]
@@ -198,6 +201,24 @@ public class EmpresasController : ControllerBase
         return Ok(ApiResponse<ConfiguracionInicialEmpresaResultadoDto>.Ok(
             result.Value!,
             "Configuración básica generada exitosamente."));
+    }
+
+    [HttpPost("demo/crear-completa")]
+    [Authorize(Policy = PolicyNames.RequirePlatformAdmin)]
+    public async Task<IActionResult> CrearEmpresaDemoCompleta(
+        [FromBody] CrearEmpresaDemoCompletaRequestDto request,
+        CancellationToken ct)
+    {
+        if (!IsPlatformAdmin())
+            return Forbid();
+
+        var result = await _empresaDemoService.CrearCompletaAsync(request, ct);
+        if (!result.IsSuccess)
+            return BadRequest(ApiResponse<CrearEmpresaDemoCompletaResponseDto>.Fail(result.Error!));
+
+        return Ok(ApiResponse<CrearEmpresaDemoCompletaResponseDto>.Ok(
+            result.Value!,
+            result.Value!.Mensaje));
     }
 
     private bool IsPlatformSuperAdmin()

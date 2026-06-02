@@ -1,5 +1,6 @@
 @page "/config/empresas"
 @attribute [Authorize]
+@using AgoraHub360.ERP.Shared.Constants
 @inject EmpresaHttpService EmpresaSvc
 @inject EmpresaStateService EmpresaState
 @inject SesionUsuarioStateService SesionState
@@ -41,12 +42,20 @@ else
                     <span>Empresas de mi tenant (@_empresas.Count)</span>
                 }
             </span>
-            @if (_puedeCrearEmpresa)
-            {
-                <button class="btn btn-primary btn-sm" @onclick="ShowCrear">
-                    <i class="bi bi-plus-circle me-1"></i> Nueva Empresa
-                </button>
-            }
+            <div class="d-flex gap-2">
+                @if (false && _puedeCrearDemo)
+                {
+                    <button class="btn btn-outline-primary btn-sm" @onclick="ShowCrearDemo">
+                        <i class="bi bi-diagram-3 me-1"></i> Crear Demo
+                    </button>
+                }
+                @if (PuedeCrearEmpresa)
+                {
+                    <button class="btn btn-primary btn-sm" @onclick="NuevaEmpresa">
+                        <i class="bi bi-plus-circle me-1"></i> Nueva Empresa
+                    </button>
+                }
+            </div>
         </div>
 
         @if (_loading)
@@ -61,11 +70,22 @@ else
             <div class="card-body text-center py-5">
                 <i class="bi bi-building" style="font-size: 3rem; color: var(--agora-text-light);"></i>
                 <p class="text-muted mt-3">No hay empresas registradas.</p>
-                @if (_puedeCrearEmpresa)
+                @if (PuedeCrearEmpresa || _puedeCrearDemo)
                 {
-                    <button class="btn btn-primary btn-sm" @onclick="ShowCrear">
-                        <i class="bi bi-plus-circle me-1"></i> Crear primera empresa
-                    </button>
+                    <div class="d-flex justify-content-center gap-2">
+                        @if (false && _puedeCrearDemo)
+                        {
+                            <button class="btn btn-outline-primary btn-sm" @onclick="ShowCrearDemo">
+                                <i class="bi bi-diagram-3 me-1"></i> Crear Demo
+                            </button>
+                        }
+                        @if (PuedeCrearEmpresa)
+                        {
+                            <button class="btn btn-primary btn-sm" @onclick="NuevaEmpresa">
+                                <i class="bi bi-plus-circle me-1"></i> Crear primera empresa
+                            </button>
+                        }
+                    </div>
                 }
             </div>
         }
@@ -128,6 +148,56 @@ else
             </div>
         }
         </div>
+}
+
+<!-- Modal Crear Demo -->
+@if (false && _showDemoForm)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Crear Demo</h5>
+                    <button type="button" class="btn-close" @onclick="CloseDemoForm"></button>
+                </div>
+                <EditForm Model="_demoForm" OnValidSubmit="CrearDemoAsync">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Código demo *</label>
+                            <InputText class="form-control" @bind-Value="_demoForm.CodigoDemo" placeholder="DEMO01" />
+                            <div class="form-text">Formato: DEMO01, DEMO02 o DEMO003.</div>
+                            <ValidationMessage For="() => _demoForm.CodigoDemo" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Nombre empresa (opcional)</label>
+                            <InputText class="form-control" @bind-Value="_demoForm.NombreEmpresa" />
+                            <ValidationMessage For="() => _demoForm.NombreEmpresa" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">NIT (opcional)</label>
+                            <InputText class="form-control" @bind-Value="_demoForm.Nit" />
+                            <ValidationMessage For="() => _demoForm.Nit" />
+                        </div>
+                        <div class="form-check">
+                            <InputCheckbox class="form-check-input" @bind-Value="_demoForm.ResetSiExiste" />
+                            <label class="form-check-label">Solicitar reset lógico (si aplica)</label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CloseDemoForm">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" disabled="@_saving">
+                            @if (_saving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            Crear Demo
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
 }
 
 <!-- Modal Crear/Editar -->
@@ -242,6 +312,18 @@ else
     private bool _esModoGlobal;
     private bool _puedeAdministrarEmpresas;
     private bool _puedeCrearEmpresa;
+    private bool _puedeCrearDemo;
+    private bool _isSuperAdmin;
+    private bool _isPlatformAdmin;
+
+    private bool UserHasPlatformRoleSuperAdminFallback =>
+        string.Equals(SesionState.AuthContext.Email, "admin@agorahub360.com", StringComparison.OrdinalIgnoreCase)
+        && _isPlatformAdmin;
+
+    private bool PuedeCrearEmpresa =>
+        string.Equals(SesionState.AuthContext.PlatformRole, "SuperAdmin", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(SesionState.PlatformRole, "SuperAdmin", StringComparison.OrdinalIgnoreCase)
+        || UserHasPlatformRoleSuperAdminFallback;
 
     // Form
     private bool _showForm;
@@ -252,23 +334,25 @@ else
     // Delete
     private EmpresaDto? _deleteTarget;
 
+    // Demo form
+    private bool _showDemoForm;
+    private CrearEmpresaDemoCompletaRequestDto _demoForm = new() { CodigoDemo = "DEMO01" };
+
     protected override async Task OnInitializedAsync()
     {
-        _esModoGlobal = UiAuth.IsPlatformAdmin;
-        _puedeAccederSeccion = UiAuth.IsPlatformAdmin || UiAuth.IsTenantAdmin;
-        _puedeAdministrarEmpresas = UiAuth.CanManageEmpresas();
-        _puedeCrearEmpresa = UiAuth.CanCreateEmpresa();
+        await SesionState.InitializeAsync();
+
+        _isSuperAdmin = UiAuth.IsSuperAdmin;
+        _isPlatformAdmin = UiAuth.IsPlatformAdmin;
+
+        _esModoGlobal = _isPlatformAdmin;
+        _puedeAccederSeccion = _isPlatformAdmin || (UiAuth.IsTenantAdmin && SesionState.HasTenantSelected);
+        _puedeAdministrarEmpresas = _isPlatformAdmin;
+        _puedeCrearEmpresa = PuedeCrearEmpresa;
+        _puedeCrearDemo = false;
 
         if (!_puedeAccederSeccion)
         {
-            _loading = false;
-            return;
-        }
-
-        if (!_esModoGlobal && !SesionState.HasTenantSelected)
-        {
-            _mensaje = "Selecciona una empresa activa para continuar.";
-            _esError = true;
             _loading = false;
             return;
         }
@@ -305,6 +389,23 @@ else
         _formActivo = true;
         _showForm = true;
     }
+
+    private void NuevaEmpresa() => ShowCrear();
+
+    private void ShowCrearDemo()
+    {
+        if (!_puedeCrearDemo)
+            return;
+
+        _demoForm = new CrearEmpresaDemoCompletaRequestDto
+        {
+            CodigoDemo = "DEMO01",
+            ResetSiExiste = false
+        };
+        _showDemoForm = true;
+    }
+
+    private void CloseDemoForm() => _showDemoForm = false;
 
     private void ShowEditar(EmpresaDto emp)
     {
@@ -409,6 +510,48 @@ else
         _saving = false;
     }
 
+    private async Task CrearDemoAsync()
+    {
+        if (!_puedeCrearDemo)
+            return;
+
+        _saving = true;
+        try
+        {
+            _demoForm.CodigoDemo = (_demoForm.CodigoDemo ?? string.Empty).Trim().ToUpperInvariant();
+            var result = await EmpresaSvc.CrearDemoCompletaAsync(_demoForm);
+            if (result.Success && result.Data is not null)
+            {
+                var data = result.Data;
+                _mensaje =
+                    $"Demo {data.CodigoDemo} procesada. EmpresaId: {data.EmpresaId}. " +
+                    $"Usuarios: +{data.UsuariosCreados}/{data.UsuariosExistentes}, " +
+                    $"Sucursales: +{data.SucursalesCreadas}/{data.SucursalesExistentes}, " +
+                    $"Almacenes: +{data.AlmacenesCreados}/{data.AlmacenesExistentes}, " +
+                    $"Clientes: +{data.ClientesCreados}/{data.ClientesExistentes}, " +
+                    $"Proveedores: +{data.ProveedoresCreados}/{data.ProveedoresExistentes}, " +
+                    $"Productos: +{data.ProductosCreados}/{data.ProductosExistentes}, " +
+                    $"Numeraciones: +{data.NumeracionesCreadas}/{data.NumeracionesExistentes}." +
+                    (string.IsNullOrWhiteSpace(data.Advertencia) ? string.Empty : $" {data.Advertencia}");
+                _esError = false;
+                CloseDemoForm();
+                await LoadEmpresasAsync();
+            }
+            else
+            {
+                _mensaje = BuildApiErrorMessage(result, "No se pudo crear/procesar la demo.");
+                _esError = true;
+            }
+        }
+        catch
+        {
+            _mensaje = "Error de comunicación con el servidor.";
+            _esError = true;
+        }
+
+        _saving = false;
+    }
+
     private void ConfirmDelete(EmpresaDto emp)
     {
         if (!_puedeAdministrarEmpresas)
@@ -497,5 +640,31 @@ else
         }
 
         return message;
+    }
+
+    private static string BuildApiErrorMessage<T>(ApiResponse<T> response, string fallback)
+    {
+        var parts = new List<string>();
+
+        var message = response.Message?.Trim();
+        if (!string.IsNullOrWhiteSpace(message))
+            parts.Add(message!);
+
+        if (response.Errors is { Count: > 0 })
+        {
+            var errors = response.Errors
+                .Where(e => !string.IsNullOrWhiteSpace(e))
+                .Select(e => e.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (errors.Count > 0)
+                parts.Add($"Errores: {string.Join(" | ", errors)}");
+        }
+
+        if (parts.Count == 0)
+            return fallback;
+
+        return string.Join(" ", parts);
     }
 }

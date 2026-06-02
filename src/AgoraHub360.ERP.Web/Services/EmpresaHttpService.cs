@@ -38,37 +38,19 @@ public class EmpresaHttpService
     public async Task<ApiResponse<EmpresaDto>> CreateAsync(CreateEmpresaDto dto)
     {
         var response = await _http.PostAsJsonAsync(BaseUrl, dto);
-        if (!response.IsSuccessStatusCode)
-        {
-            var body = await response.Content.ReadAsStringAsync();
-            return ApiResponse<EmpresaDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
-        }
-        return await response.Content.ReadFromJsonAsync<ApiResponse<EmpresaDto>>()
-            ?? ApiResponse<EmpresaDto>.Fail("Error de comunicacion con el servidor.");
+        return await ReadApiResponseAsync<EmpresaDto>(response, "Error de comunicación con el servidor.");
     }
 
     public async Task<ApiResponse<EmpresaDto>> UpdateAsync(int id, UpdateEmpresaDto dto)
     {
         var response = await _http.PutAsJsonAsync($"{BaseUrl}/{id}", dto);
-        if (!response.IsSuccessStatusCode)
-        {
-            var body = await response.Content.ReadAsStringAsync();
-            return ApiResponse<EmpresaDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
-        }
-        return await response.Content.ReadFromJsonAsync<ApiResponse<EmpresaDto>>()
-            ?? ApiResponse<EmpresaDto>.Fail("Error de comunicacion con el servidor.");
+        return await ReadApiResponseAsync<EmpresaDto>(response, "Error de comunicación con el servidor.");
     }
 
     public async Task<ApiResponse<bool>> DeleteAsync(int id)
     {
         var response = await _http.DeleteAsync($"{BaseUrl}/{id}");
-        if (!response.IsSuccessStatusCode)
-        {
-            var body = await response.Content.ReadAsStringAsync();
-            return ApiResponse<bool>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
-        }
-        return await response.Content.ReadFromJsonAsync<ApiResponse<bool>>()
-            ?? ApiResponse<bool>.Fail("Error de comunicacion con el servidor.");
+        return await ReadApiResponseAsync<bool>(response, "Error de comunicación con el servidor.");
     }
 
     /// <summary>
@@ -78,25 +60,55 @@ public class EmpresaHttpService
     public async Task<ApiResponse<bool>> SeedMyCompanyAsync()
     {
         var response = await _http.PostAsync($"{BaseUrl}/mi-empresa/seed", null);
-        if (!response.IsSuccessStatusCode)
-        {
-            var body = await response.Content.ReadAsStringAsync();
-            return ApiResponse<bool>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
-        }
-        return await response.Content.ReadFromJsonAsync<ApiResponse<bool>>()
-            ?? ApiResponse<bool>.Fail("Error de comunicación con el servidor.");
+        return await ReadApiResponseAsync<bool>(response, "Error de comunicación con el servidor.");
     }
 
     public async Task<ApiResponse<ConfiguracionInicialEmpresaResultadoDto>> GenerarConfiguracionBasicaAsync(long empresaId)
     {
         var response = await _http.PostAsync($"{BaseUrl}/{empresaId}/generar-configuracion-basica", null);
-        if (!response.IsSuccessStatusCode)
+        return await ReadApiResponseAsync<ConfiguracionInicialEmpresaResultadoDto>(response, "Error de comunicación con el servidor.");
+    }
+
+    public async Task<ApiResponse<CrearEmpresaDemoCompletaResponseDto>> CrearDemoCompletaAsync(CrearEmpresaDemoCompletaRequestDto dto)
+    {
+        var response = await _http.PostAsJsonAsync($"{BaseUrl}/demo/crear-completa", dto);
+        return await ReadApiResponseAsync<CrearEmpresaDemoCompletaResponseDto>(response, "Error de comunicación con el servidor.");
+    }
+
+    private static async Task<ApiResponse<T>> ReadApiResponseAsync<T>(HttpResponseMessage response, string fallback)
+    {
+        var body = await response.Content.ReadAsStringAsync();
+
+        try
         {
-            var body = await response.Content.ReadAsStringAsync();
-            return ApiResponse<ConfiguracionInicialEmpresaResultadoDto>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
+            var parsed = string.IsNullOrWhiteSpace(body)
+                ? null
+                : System.Text.Json.JsonSerializer.Deserialize<ApiResponse<T>>(body, new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+            if (parsed is not null)
+            {
+                if (!response.IsSuccessStatusCode && string.IsNullOrWhiteSpace(parsed.Message))
+                {
+                    parsed.Message = $"HTTP {(int)response.StatusCode} {response.ReasonPhrase}";
+                }
+
+                return parsed;
+            }
+        }
+        catch
+        {
+            // Ignorar parseo y devolver diagnóstico bruto.
         }
 
-        return await response.Content.ReadFromJsonAsync<ApiResponse<ConfiguracionInicialEmpresaResultadoDto>>()
-            ?? ApiResponse<ConfiguracionInicialEmpresaResultadoDto>.Fail("Error de comunicación con el servidor.");
+        var detail = string.IsNullOrWhiteSpace(body)
+            ? fallback
+            : body;
+
+        return ApiResponse<T>.Fail(
+            $"HTTP {(int)response.StatusCode} {response.ReasonPhrase}. Detalle: {detail}",
+            new List<string> { detail });
     }
 }

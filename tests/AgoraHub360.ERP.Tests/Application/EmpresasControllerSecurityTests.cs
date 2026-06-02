@@ -40,6 +40,108 @@ public class EmpresasControllerSecurityTests
     }
 
     [Fact]
+    public async Task CrearEmpresaDemoCompleta_SystemAdmin_SiPuede()
+    {
+        var sut = BuildController(
+            currentUser: new FakeCurrentUserService
+            {
+                UserIdInt = 1,
+                PlatformRole = Roles.SystemAdmin,
+                TenantRole = Roles.NoAccess,
+                TenantStatus = TenantStatus.NotSelected
+            },
+            empresaService: new FakeEmpresaService(),
+            usuarioService: new FakeUsuarioService());
+
+        var result = await sut.CrearEmpresaDemoCompleta(new CrearEmpresaDemoCompletaRequestDto
+        {
+            CodigoDemo = "DEMO01"
+        }, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<ApiResponse<CrearEmpresaDemoCompletaResponseDto>>(ok.Value);
+        Assert.True(response.Success);
+    }
+
+    [Fact]
+    public async Task CrearEmpresaDemoCompleta_SuperAdmin_SinTenantSeleccionado_SiPuede()
+    {
+        var sut = BuildController(
+            currentUser: new FakeCurrentUserService
+            {
+                UserIdInt = 1,
+                PlatformRole = Roles.SuperAdmin,
+                TenantRole = Roles.NoAccess,
+                TenantStatus = TenantStatus.NotSelected,
+                TenantId = null,
+                EmpresaId = null
+            },
+            empresaService: new FakeEmpresaService(),
+            usuarioService: new FakeUsuarioService());
+
+        var result = await sut.CrearEmpresaDemoCompleta(new CrearEmpresaDemoCompletaRequestDto
+        {
+            CodigoDemo = "DEMO01"
+        }, CancellationToken.None);
+
+        var ok = Assert.IsType<OkObjectResult>(result);
+        var response = Assert.IsType<ApiResponse<CrearEmpresaDemoCompletaResponseDto>>(ok.Value);
+        Assert.True(response.Success);
+    }
+
+    [Fact]
+    public async Task CreateEmpresa_SuperAdmin_SinTenantSeleccionado_SiPuede()
+    {
+        var sut = BuildController(
+            currentUser: new FakeCurrentUserService
+            {
+                UserIdInt = 1,
+                PlatformRole = Roles.SuperAdmin,
+                TenantRole = Roles.NoAccess,
+                TenantStatus = TenantStatus.NotSelected,
+                TenantId = null,
+                EmpresaId = null
+            },
+            empresaService: new FakeEmpresaService(),
+            usuarioService: new FakeUsuarioService());
+
+        var result = await sut.Create(new CreateEmpresaDto
+        {
+            Nombre = "Empresa Global",
+            NIT = "123"
+        }, CancellationToken.None);
+
+        var created = Assert.IsType<CreatedAtActionResult>(result);
+        var response = Assert.IsType<ApiResponse<EmpresaDto>>(created.Value);
+        Assert.True(response.Success);
+        Assert.Equal("Empresa Global", response.Data!.Nombre);
+    }
+
+    [Fact]
+    public async Task CrearEmpresaDemoCompleta_AdminEmpresa_NoPuede()
+    {
+        var sut = BuildController(
+            currentUser: new FakeCurrentUserService
+            {
+                UserIdInt = 20,
+                PlatformRole = Roles.None,
+                TenantRole = Roles.AdminEmpresa,
+                TenantStatus = TenantStatus.Selected,
+                TenantId = 1,
+                EmpresaId = 1
+            },
+            empresaService: new FakeEmpresaService(),
+            usuarioService: new FakeUsuarioService());
+
+        var result = await sut.CrearEmpresaDemoCompleta(new CrearEmpresaDemoCompletaRequestDto
+        {
+            CodigoDemo = "DEMO01"
+        }, CancellationToken.None);
+
+        Assert.IsType<ForbidResult>(result);
+    }
+
+    [Fact]
     public async Task GetAll_PlatformAdmin_SiPuedeGlobal()
     {
         var sut = BuildController(
@@ -152,7 +254,8 @@ public class EmpresasControllerSecurityTests
             new FakeConfiguracionInicialEmpresaService(),
             currentUser,
             usuarioService,
-            new FakeEmpresaSeedService());
+            new FakeEmpresaSeedService(),
+            new FakeEmpresaDemoService());
     }
 
     private sealed class FakeCurrentUserService : ICurrentUserService
@@ -171,6 +274,7 @@ public class EmpresasControllerSecurityTests
     private sealed class FakeEmpresaService : IEmpresaService
     {
         public IReadOnlyList<EmpresaDto> Empresas { get; set; } = Array.Empty<EmpresaDto>();
+        private int _nextId = 100;
 
         public Task<Result<IReadOnlyList<EmpresaDto>>> GetAllAsync(CancellationToken ct = default)
             => Task.FromResult(Result<IReadOnlyList<EmpresaDto>>.Success(Empresas));
@@ -183,7 +287,23 @@ public class EmpresasControllerSecurityTests
                 : Task.FromResult(Result<EmpresaDto>.Success(found));
         }
 
-        public Task<Result<EmpresaDto>> CreateAsync(CreateEmpresaDto dto, CancellationToken ct = default) => throw new NotImplementedException();
+        public Task<Result<EmpresaDto>> CreateAsync(CreateEmpresaDto dto, CancellationToken ct = default)
+        {
+            var created = new EmpresaDto
+            {
+                Id = _nextId++,
+                Nombre = dto.Nombre,
+                NIT = dto.NIT,
+                Direccion = dto.Direccion,
+                Telefono = dto.Telefono,
+                Email = dto.Email,
+                MonedaBaseId = dto.MonedaBaseId,
+                Activo = true
+            };
+
+            Empresas = Empresas.Concat([created]).ToArray();
+            return Task.FromResult(Result<EmpresaDto>.Success(created));
+        }
         public Task<Result<EmpresaDto>> UpdateAsync(int id, UpdateEmpresaDto dto, CancellationToken ct = default) => throw new NotImplementedException();
         public Task<Result<bool>> DeleteAsync(int id, CancellationToken ct = default) => throw new NotImplementedException();
     }
@@ -215,5 +335,20 @@ public class EmpresasControllerSecurityTests
     {
         public Task<Result<ConfiguracionInicialEmpresaResultadoDto>> GenerarConfiguracionBasicaAsync(long empresaId, CancellationToken ct = default)
             => Task.FromResult(Result<ConfiguracionInicialEmpresaResultadoDto>.Success(new ConfiguracionInicialEmpresaResultadoDto()));
+    }
+
+    private sealed class FakeEmpresaDemoService : IEmpresaDemoService
+    {
+        public Task<Result<CrearEmpresaDemoCompletaResponseDto>> CrearCompletaAsync(
+            CrearEmpresaDemoCompletaRequestDto request,
+            CancellationToken ct = default)
+            => Task.FromResult(Result<CrearEmpresaDemoCompletaResponseDto>.Success(new CrearEmpresaDemoCompletaResponseDto
+            {
+                CodigoDemo = request.CodigoDemo,
+                EmpresaId = 1,
+                NombreEmpresa = "Demo",
+                Nit = "990001001",
+                Mensaje = "ok"
+            }));
     }
 }
