@@ -76,15 +76,21 @@ builder.Services.AddAuthorization(options =>
 
     options.AddPolicy(PolicyNames.RequirePlatformSuperAdmin, policy =>
         policy.RequireAssertion(context =>
-            string.Equals(
-                context.User.FindFirst(ClaimTypesCustom.PlatformRole)?.Value,
-                Roles.SuperAdmin,
-                StringComparison.OrdinalIgnoreCase)));
+        {
+            var role = context.User.FindFirst(ClaimTypesCustom.PlatformRole)?.Value
+                       ?? context.User.FindFirst("PlatformRole")?.Value
+                       ?? context.User.FindFirst("platformRole")?.Value
+                       ?? context.User.FindFirst("platform_role")?.Value;
+            return string.Equals(role, Roles.SuperAdmin, StringComparison.OrdinalIgnoreCase);
+        }));
 
     options.AddPolicy(PolicyNames.RequirePlatformAdmin, policy =>
         policy.RequireAssertion(context =>
         {
-            var role = context.User.FindFirst(ClaimTypesCustom.PlatformRole)?.Value;
+            var role = context.User.FindFirst(ClaimTypesCustom.PlatformRole)?.Value
+                       ?? context.User.FindFirst("PlatformRole")?.Value
+                       ?? context.User.FindFirst("platformRole")?.Value
+                       ?? context.User.FindFirst("platform_role")?.Value;
             return string.Equals(role, Roles.SuperAdmin, StringComparison.OrdinalIgnoreCase)
                    || string.Equals(role, Roles.SystemAdmin, StringComparison.OrdinalIgnoreCase);
         }));

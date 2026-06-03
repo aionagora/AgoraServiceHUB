@@ -36,7 +36,11 @@ public class AuthHttpService
     {
         try
         {
-            var response = await _http.GetFromJsonAsync<ApiResponse<JsonElement>>($"{BaseUrl}/me");
+            using var httpResponse = await _http.GetAsync($"{BaseUrl}/me");
+            if (!httpResponse.IsSuccessStatusCode)
+                return null;
+
+            var response = await httpResponse.Content.ReadFromJsonAsync<ApiResponse<JsonElement>>();
             if (response is null || !response.Success || response.Data.ValueKind == JsonValueKind.Undefined)
                 return null;
 

@@ -3,21 +3,52 @@ namespace AgoraHub360.ERP.Web.Services;
 using System.Net.Http.Json;
 using AgoraHub360.ERP.Shared.DTOs;
 using AgoraHub360.ERP.Shared.DTOs.Empresa;
+using Microsoft.JSInterop;
 
 public class EmpresaHttpService
 {
     private readonly HttpClient _http;
+    private readonly IJSRuntime _js;
     private const string BaseUrl = "api/v1/empresas";
 
-    public EmpresaHttpService(HttpClient http)
+    public EmpresaHttpService(HttpClient http, IJSRuntime js)
     {
         _http = http;
+        _js = js;
+    }
+
+    private async Task LogRequestDiagnostic(string endpoint)
+    {
+        try
+        {
+            var token = await _js.InvokeAsync<string?>("localStorage.getItem", "agorahub360_auth_token");
+            var hasToken = !string.IsNullOrWhiteSpace(token);
+            var authHeader = _http.DefaultRequestHeaders.Authorization;
+            var hasHeader = authHeader is not null;
+            var tokenLenOrStart = "N/A";
+            if (hasToken && token is not null)
+            {
+                tokenLenOrStart = token.Length > 20 ? token.Substring(0, 20) + "..." : $"length={token.Length}";
+            }
+            Console.WriteLine($"[DIAGNOSTIC-LOG] Endpoint: {endpoint} | localStorageToken: {hasToken} | AuthHeaderPresent: {hasHeader} | TokenStart: {tokenLenOrStart}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[DIAGNOSTIC-LOG] Error during diagnostic logging: {ex.Message}");
+        }
     }
 
     public async Task<List<EmpresaDto>> GetAllAsync()
     {
-        var response = await _http.GetFromJsonAsync<ApiResponse<List<EmpresaDto>>>(BaseUrl);
-        return response?.Data ?? new List<EmpresaDto>();
+        await LogRequestDiagnostic(BaseUrl);
+        using var response = await _http.GetAsync(BaseUrl);
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            throw new HttpRequestException($"Endpoint: GET {BaseUrl} | Status: {(int)response.StatusCode} {response.ReasonPhrase} | Response Body: {body}", null, response.StatusCode);
+        }
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<List<EmpresaDto>>>();
+        return result?.Data ?? new List<EmpresaDto>();
     }
 
     /// <summary>
@@ -25,8 +56,16 @@ public class EmpresaHttpService
     /// </summary>
     public async Task<List<EmpresaDto>> GetMisEmpresasAsync()
     {
-        var response = await _http.GetFromJsonAsync<ApiResponse<List<EmpresaDto>>>($"{BaseUrl}/mis-empresas");
-        return response?.Data ?? new List<EmpresaDto>();
+        var url = $"{BaseUrl}/mis-empresas";
+        await LogRequestDiagnostic(url);
+        using var response = await _http.GetAsync(url);
+        if (!response.IsSuccessStatusCode)
+        {
+            var body = await response.Content.ReadAsStringAsync();
+            throw new HttpRequestException($"Endpoint: GET {url} | Status: {(int)response.StatusCode} {response.ReasonPhrase} | Response Body: {body}", null, response.StatusCode);
+        }
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<List<EmpresaDto>>>();
+        return result?.Data ?? new List<EmpresaDto>();
     }
 
     public async Task<EmpresaDto?> GetByIdAsync(int id)

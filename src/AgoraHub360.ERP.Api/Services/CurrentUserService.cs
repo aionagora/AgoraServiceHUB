@@ -52,8 +52,19 @@ public class CurrentUserService : ICurrentUserService
     }
 
     public string PlatformRole
-        => _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypesCustom.PlatformRole)
-           ?? Roles.None;
+    {
+        get
+        {
+            var user = _httpContextAccessor.HttpContext?.User;
+            if (user is null) return Roles.None;
+
+            return user.FindFirstValue(ClaimTypesCustom.PlatformRole)
+                ?? user.FindFirstValue("PlatformRole")
+                ?? user.FindFirstValue("platformRole")
+                ?? user.FindFirstValue("platform_role")
+                ?? Roles.None;
+        }
+    }
 
     public string TenantRole
         => _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypesCustom.TenantRole)

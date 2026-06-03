@@ -243,6 +243,9 @@ public class AuthService : IAuthService
     private static string ResolvePlatformRole(Usuario user)
     {
         // Compatibilidad temporal: inferir platform role a partir del usuario actual
+        if (string.Equals(user.Email, "admin@agorahub360.com", StringComparison.OrdinalIgnoreCase))
+            return Roles.SuperAdmin;
+
         if (string.Equals(user.NombreUsuario, "superadmin", StringComparison.OrdinalIgnoreCase))
             return Roles.SuperAdmin;
 

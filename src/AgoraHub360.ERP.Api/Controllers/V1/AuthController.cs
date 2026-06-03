@@ -50,13 +50,17 @@ public class AuthController : ControllerBase
     [Authorize]
     public IActionResult Me()
     {
+        LogDiagnosticClaims("GET /api/v1/auth/me");
         var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
         var userName = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
         var email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
         var rol = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
         var empresaId = User.FindFirst(ClaimTypesCustom.EmpresaId)?.Value;
         var tenantId = User.FindFirst(ClaimTypesCustom.TenantId)?.Value;
-        var platformRole = User.FindFirst(ClaimTypesCustom.PlatformRole)?.Value;
+        var platformRole = User.FindFirst(ClaimTypesCustom.PlatformRole)?.Value
+                           ?? User.FindFirst("PlatformRole")?.Value
+                           ?? User.FindFirst("platformRole")?.Value
+                           ?? User.FindFirst("platform_role")?.Value;
         var tenantRole = User.FindFirst(ClaimTypesCustom.TenantRole)?.Value;
         var tenantStatus = User.FindFirst(ClaimTypesCustom.TenantStatus)?.Value;
 
@@ -84,7 +88,11 @@ public class AuthController : ControllerBase
     [Authorize]
     public async Task<IActionResult> MisEmpresas(CancellationToken ct)
     {
-        var platformRole = User.FindFirst(ClaimTypesCustom.PlatformRole)?.Value;
+        LogDiagnosticClaims("GET /api/v1/auth/mis-empresas");
+        var platformRole = User.FindFirst(ClaimTypesCustom.PlatformRole)?.Value
+                           ?? User.FindFirst("PlatformRole")?.Value
+                           ?? User.FindFirst("platformRole")?.Value
+                           ?? User.FindFirst("platform_role")?.Value;
         var userIdStr = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
         // Solo roles globales de plataforma pueden ver todas
@@ -129,5 +137,35 @@ public class AuthController : ControllerBase
             return BadRequest(ApiResponse<CambiarEmpresaResponseDto>.Fail(result.Error!));
 
         return Ok(ApiResponse<CambiarEmpresaResponseDto>.Ok(result.Value!));
+    }
+
+    private void LogDiagnosticClaims(string endpoint)
+    {
+        try
+        {
+            var identity = User?.Identity;
+            var isAuthenticated = identity?.IsAuthenticated == true;
+            
+            var sub = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                      ?? User?.FindFirst("sub")?.Value;
+            var email = User?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+                        ?? User?.FindFirst("email")?.Value;
+            var platformRole = User?.FindFirst(ClaimTypesCustom.PlatformRole)?.Value
+                               ?? User?.FindFirst("PlatformRole")?.Value
+                               ?? User?.FindFirst("platformRole")?.Value
+                               ?? User?.FindFirst("platform_role")?.Value;
+            var roleLegacy = User?.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value
+                             ?? User?.FindFirst("role")?.Value;
+            var tenantId = User?.FindFirst(ClaimTypesCustom.TenantId)?.Value
+                           ?? User?.FindFirst("tenant_id")?.Value;
+            var tenantStatus = User?.FindFirst(ClaimTypesCustom.TenantStatus)?.Value
+                               ?? User?.FindFirst("tenant_status")?.Value;
+
+            System.Console.WriteLine($"[DIAGNOSTIC-LOG-BACKEND] Endpoint: {endpoint} | IsAuthenticated: {isAuthenticated} | Sub: {sub ?? "(null)"} | Email: {email ?? "(null)"} | PlatformRole: {platformRole ?? "(null)"} | RoleLegacy: {roleLegacy ?? "(null)"} | TenantId: {tenantId ?? "(null)"} | TenantStatus: {tenantStatus ?? "(null)"}");
+        }
+        catch (Exception ex)
+        {
+            System.Console.WriteLine($"[DIAGNOSTIC-LOG-BACKEND] Error logging claims: {ex.Message}");
+        }
     }
 }

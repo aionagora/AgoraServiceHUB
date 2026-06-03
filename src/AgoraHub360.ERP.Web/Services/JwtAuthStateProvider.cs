@@ -85,7 +85,12 @@ public class JwtAuthStateProvider : AuthenticationStateProvider
     {
         var token = await GetTokenAsync();
         if (string.IsNullOrWhiteSpace(token))
+        {
+            _http.DefaultRequestHeaders.Authorization = null;
             return JwtSessionContext.Empty;
+        }
+
+        _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         var claims = ParseClaimsFromJwt(token).ToList();
 

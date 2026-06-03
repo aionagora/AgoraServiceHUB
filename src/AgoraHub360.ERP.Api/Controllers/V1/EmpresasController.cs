@@ -41,6 +41,7 @@ public class EmpresasController : ControllerBase
     [Authorize(Policy = PolicyNames.RequirePlatformAdmin)]
     public async Task<IActionResult> GetAll(CancellationToken ct)
     {
+        LogDiagnosticClaims("GET /api/v1/empresas");
         if (!IsPlatformAdmin())
             return Forbid();
 
@@ -56,6 +57,7 @@ public class EmpresasController : ControllerBase
     [Authorize(Policy = PolicyNames.RequireAuthenticated)]
     public async Task<IActionResult> GetMisEmpresas(CancellationToken ct)
     {
+        LogDiagnosticClaims("GET /api/v1/empresas/mis-empresas");
         var userId = _currentUserService.UserIdInt;
         if (!userId.HasValue)
             return Unauthorized(ApiResponse<IReadOnlyList<EmpresaDto>>.Fail("Usuario no autenticado"));
@@ -247,5 +249,35 @@ public class EmpresasController : ControllerBase
             .Select(x => x.EmpresaId)
             .Where(activas.Contains)
             .ToHashSet();
+    }
+
+    private void LogDiagnosticClaims(string endpoint)
+    {
+        try
+        {
+            var identity = User?.Identity;
+            var isAuthenticated = identity?.IsAuthenticated == true;
+            
+            var sub = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                      ?? User?.FindFirst("sub")?.Value;
+            var email = User?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+                        ?? User?.FindFirst("email")?.Value;
+            var platformRole = User?.FindFirst(ClaimTypesCustom.PlatformRole)?.Value
+                               ?? User?.FindFirst("PlatformRole")?.Value
+                               ?? User?.FindFirst("platformRole")?.Value
+                               ?? User?.FindFirst("platform_role")?.Value;
+            var roleLegacy = User?.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value
+                             ?? User?.FindFirst("role")?.Value;
+            var tenantId = User?.FindFirst(ClaimTypesCustom.TenantId)?.Value
+                           ?? User?.FindFirst("tenant_id")?.Value;
+            var tenantStatus = User?.FindFirst(ClaimTypesCustom.TenantStatus)?.Value
+                               ?? User?.FindFirst("tenant_status")?.Value;
+
+            System.Console.WriteLine($"[DIAGNOSTIC-LOG-BACKEND] Endpoint: {endpoint} | IsAuthenticated: {isAuthenticated} | Sub: {sub ?? "(null)"} | Email: {email ?? "(null)"} | PlatformRole: {platformRole ?? "(null)"} | RoleLegacy: {roleLegacy ?? "(null)"} | TenantId: {tenantId ?? "(null)"} | TenantStatus: {tenantStatus ?? "(null)"}");
+        }
+        catch (Exception ex)
+        {
+            System.Console.WriteLine($"[DIAGNOSTIC-LOG-BACKEND] Error logging claims: {ex.Message}");
+        }
     }
 }

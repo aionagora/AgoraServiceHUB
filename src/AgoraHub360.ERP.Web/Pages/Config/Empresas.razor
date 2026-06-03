@@ -371,9 +371,9 @@ else
 
             EmpresaState.SetEmpresas(_empresas);
         }
-        catch
+        catch (Exception ex)
         {
-            _mensaje = "Error al cargar empresas. Verifique la conexion con la API.";
+            _mensaje = $"Error al cargar empresas. Detalle: {ex.Message}";
             _esError = true;
         }
         _loading = false;
