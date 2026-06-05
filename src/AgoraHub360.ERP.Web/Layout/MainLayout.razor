@@ -3,6 +3,7 @@
 @inject EmpresaHttpService EmpresaSvc
 @inject EmpresaStateService EmpresaState
 @inject SesionUsuarioStateService SesionState
+@inject UiAuthorizationService UiAuth
 @inject JwtAuthStateProvider AuthState
 @inject NavigationManager Nav
 @implements IDisposable
@@ -105,10 +106,13 @@
                                         <i class="bi bi-person"></i>
                                         <span>Mi Perfil</span>
                                     </a>
-                                    <a href="/config/usuarios" class="user-dropdown-item" @onclick="CloseUserMenu">
-                                        <i class="bi bi-gear"></i>
-                                        <span>Configuración</span>
-                                    </a>
+                                    @if (UiAuth.CanAccessConfigSection())
+                                    {
+                                        <a href="/config/usuarios" class="user-dropdown-item" @onclick="CloseUserMenu">
+                                            <i class="bi bi-gear"></i>
+                                            <span>Configuración</span>
+                                        </a>
+                                    }
                                     <div class="user-dropdown-divider"></div>
                                     <button class="user-dropdown-item logout" @onclick="HandleLogout">
                                         <i class="bi bi-box-arrow-right"></i>

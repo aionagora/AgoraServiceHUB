@@ -185,6 +185,10 @@ public class NumeracionDocumentoServiceTests
         public int? UserIdInt { get; set; }
         public string? UserName { get; set; }
         public int? EmpresaId { get; set; }
+        public int? TenantId { get; set; }
+        public string PlatformRole { get; set; } = string.Empty;
+        public string TenantRole { get; set; } = string.Empty;
+        public string TenantStatus { get; set; } = string.Empty;
         public bool IsInRole(string role) => false;
     }
 }

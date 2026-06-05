@@ -95,10 +95,16 @@ public class AuditLogService : IAuditLogService
         };
     }
 
-    public async Task<List<string>> GetEntidadesDistintasAsync()
+    public async Task<List<string>> GetEntidadesDistintasAsync(int? empresaId = null)
     {
-        return await _context.AuditLogs
+        var query = _context.AuditLogs
             .AsNoTracking()
+            .AsQueryable();
+
+        if (empresaId.HasValue)
+            query = query.Where(a => a.EmpresaId == empresaId.Value);
+
+        return await query
             .Select(a => a.Entidad)
             .Distinct()
             .OrderBy(e => e)

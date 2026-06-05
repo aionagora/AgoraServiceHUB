@@ -3,6 +3,7 @@ namespace AgoraHub360.ERP.Web.Services;
 using System.Net.Http.Headers;
 using System.Security.Claims;
 using System.Text.Json;
+using AgoraHub360.ERP.Shared.Constants;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.JSInterop;
 
@@ -80,6 +81,46 @@ public class JwtAuthStateProvider : AuthenticationStateProvider
         NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(anonymous)));
     }
 
+    public async Task<JwtSessionContext> GetSessionContextAsync()
+    {
+        var token = await GetTokenAsync();
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            _http.DefaultRequestHeaders.Authorization = null;
+            return JwtSessionContext.Empty;
+        }
+
+        _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var claims = ParseClaimsFromJwt(token).ToList();
+
+        string? GetClaim(string type)
+            => claims.FirstOrDefault(c => c.Type == type)?.Value;
+
+        var tenantIdRaw = GetClaim(ClaimTypesCustom.TenantId) ?? GetClaim(ClaimTypesCustom.EmpresaId);
+        int? tenantId = int.TryParse(tenantIdRaw, out var parsedTenant) ? parsedTenant : null;
+
+        var platformRole = GetClaim(ClaimTypesCustom.PlatformRole) ?? Roles.None;
+        var tenantRole = GetClaim(ClaimTypesCustom.TenantRole)
+                         ?? GetClaim(ClaimTypes.Role)
+                         ?? Roles.NoAccess;
+
+        var tenantStatus = GetClaim(ClaimTypesCustom.TenantStatus)
+                           ?? (tenantId.HasValue
+                               ? TenantStatus.Selected
+                               : TenantStatus.NotSelected);
+
+        return new JwtSessionContext(
+            IsAuthenticated: true,
+            UserId: GetClaim(ClaimTypes.NameIdentifier),
+            UserName: GetClaim(ClaimTypes.Name),
+            Email: GetClaim(ClaimTypes.Email),
+            PlatformRole: platformRole,
+            TenantRole: tenantRole,
+            TenantId: tenantId,
+            TenantStatus: tenantStatus);
+    }
+
     public async Task<string?> GetTokenAsync()
     {
         try
@@ -148,4 +189,38 @@ public class JwtAuthStateProvider : AuthenticationStateProvider
         }
         return Convert.FromBase64String(base64);
     }
+}
+
+public sealed record JwtSessionContext(
+    bool IsAuthenticated,
+    string? UserId,
+    string? UserName,
+    string? Email,
+    string PlatformRole,
+    string TenantRole,
+    int? TenantId,
+    string TenantStatus)
+{
+    public static JwtSessionContext Empty { get; } = new(
+        IsAuthenticated: false,
+        UserId: null,
+        UserName: null,
+        Email: null,
+        PlatformRole: Roles.None,
+        TenantRole: Roles.NoAccess,
+        TenantId: null,
+        TenantStatus: AgoraHub360.ERP.Shared.Constants.TenantStatus.NotSelected);
+
+    public bool IsPlatformAdmin =>
+        string.Equals(PlatformRole, Roles.SuperAdmin, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(PlatformRole, Roles.SystemAdmin, StringComparison.OrdinalIgnoreCase);
+
+    public bool IsTenantAdmin =>
+        string.Equals(TenantRole, Roles.TenantOwner, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(TenantRole, Roles.AdminEmpresa, StringComparison.OrdinalIgnoreCase);
+
+    public bool HasTenantSelected =>
+        TenantId.HasValue
+        && TenantId.Value > 0
+        && string.Equals(TenantStatus, AgoraHub360.ERP.Shared.Constants.TenantStatus.Selected, StringComparison.OrdinalIgnoreCase);
 }

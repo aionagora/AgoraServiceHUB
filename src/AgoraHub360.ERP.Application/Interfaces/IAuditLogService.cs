@@ -6,5 +6,5 @@ public interface IAuditLogService
 {
     Task<PaginatedResultDto<AuditLogDto>> GetLogsAsync(AuditLogFilterDto filter);
     Task<AuditLogDto?> GetByIdAsync(long id);
-    Task<List<string>> GetEntidadesDistintasAsync();
+    Task<List<string>> GetEntidadesDistintasAsync(int? empresaId = null);
 }

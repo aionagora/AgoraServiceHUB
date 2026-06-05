@@ -76,10 +76,11 @@ public class ConfiguracionInicialEmpresaService : IConfiguracionInicialEmpresaSe
         if (!empresa.Activo)
             return Result<ConfiguracionInicialEmpresaResultadoDto>.Failure("La empresa está inactiva y no puede configurarse.");
 
-        var esAdmin = _currentUserService.IsInRole(Roles.Admin);
+        var esPlatformAdmin = string.Equals(_currentUserService.PlatformRole, Roles.SuperAdmin, StringComparison.OrdinalIgnoreCase)
+                              || string.Equals(_currentUserService.PlatformRole, Roles.SystemAdmin, StringComparison.OrdinalIgnoreCase);
         var empresaActivaUsuario = _currentUserService.EmpresaId;
 
-        if (!esAdmin)
+        if (!esPlatformAdmin)
         {
             if (!empresaActivaUsuario.HasValue)
                 return Result<ConfiguracionInicialEmpresaResultadoDto>.Failure("No se pudo determinar la empresa activa del usuario.");

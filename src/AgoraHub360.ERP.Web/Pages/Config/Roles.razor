@@ -1,6 +1,7 @@
 @page "/config/roles"
 @attribute [Authorize]
 @inject RolHttpService RolSvc
+@inject UiAuthorizationService UiAuth
 
 <PageTitle>Roles - AgoraHub360 ERP</PageTitle>
 
@@ -17,6 +18,14 @@
     </div>
 }
 
+@if (!_puedeAccederSeccion)
+{
+    <div class="alert alert-warning" role="alert">
+        No tienes permisos para acceder a esta sección.
+    </div>
+}
+else
+{
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center py-3">
         <span>Roles del sistema (@_roles.Count)</span>
@@ -79,6 +88,7 @@
         </div>
     }
 </div>
+}
 
 @if (_showForm)
 {
@@ -153,21 +163,47 @@
     private CreateRolDto _formModel = new();
     private bool _formActivo = true;
     private RolDto? _deleteTarget;
+    private bool _puedeAccederSeccion;
 
-    protected override async Task OnInitializedAsync() => await LoadAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        _puedeAccederSeccion = UiAuth.CanManageRoles();
+        if (!_puedeAccederSeccion)
+        {
+            _loading = false;
+            return;
+        }
+
+        await LoadAsync();
+    }
 
     private async Task LoadAsync()
     {
+        if (!_puedeAccederSeccion)
+            return;
+
         _loading = true;
         try { _roles = await RolSvc.GetAllAsync(); }
         catch { _mensaje = "Error al cargar roles."; _esError = true; }
         _loading = false;
     }
 
-    private void ShowCrear() { _editId = null; _formModel = new(); _formActivo = true; _showForm = true; }
+    private void ShowCrear()
+    {
+        if (!_puedeAccederSeccion)
+            return;
+
+        _editId = null;
+        _formModel = new();
+        _formActivo = true;
+        _showForm = true;
+    }
 
     private void ShowEditar(RolDto r)
     {
+        if (!_puedeAccederSeccion)
+            return;
+
         _editId = r.Id;
         _formModel = new() { Nombre = r.Nombre, Descripcion = r.Descripcion };
         _formActivo = r.Activo;
@@ -178,6 +214,9 @@
 
     private async Task SaveAsync()
     {
+        if (!_puedeAccederSeccion)
+            return;
+
         _saving = true;
         try
         {
@@ -185,13 +224,13 @@
             {
                 var dto = new UpdateRolDto { Nombre = _formModel.Nombre, Descripcion = _formModel.Descripcion, Activo = _formActivo };
                 var r = await RolSvc.UpdateAsync(_editId.Value, dto);
-                if (!r.Success) { _mensaje = r.Message; _esError = true; _saving = false; return; }
+                if (!r.Success) { _mensaje = SanitizeError(r.Message, "No se pudo actualizar el rol."); _esError = true; _saving = false; return; }
                 _mensaje = "Rol actualizado."; _esError = false;
             }
             else
             {
                 var r = await RolSvc.CreateAsync(_formModel);
-                if (!r.Success) { _mensaje = r.Message; _esError = true; _saving = false; return; }
+                if (!r.Success) { _mensaje = SanitizeError(r.Message, "No se pudo crear el rol."); _esError = true; _saving = false; return; }
                 _mensaje = "Rol creado."; _esError = false;
             }
             CloseForm();
@@ -201,21 +240,48 @@
         _saving = false;
     }
 
-    private void ConfirmDelete(RolDto r) => _deleteTarget = r;
+    private void ConfirmDelete(RolDto r)
+    {
+        if (!_puedeAccederSeccion)
+            return;
+
+        _deleteTarget = r;
+    }
 
     private async Task DeleteAsync()
     {
+        if (!_puedeAccederSeccion)
+            return;
+
         if (_deleteTarget is null) return;
         _saving = true;
         try
         {
             var r = await RolSvc.DeleteAsync(_deleteTarget.Id);
-            _mensaje = r.Success ? "Rol eliminado." : r.Message;
+            _mensaje = r.Success ? "Rol eliminado." : SanitizeError(r.Message, "No se pudo eliminar el rol.");
             _esError = !r.Success;
             _deleteTarget = null;
             await LoadAsync();
         }
         catch { _mensaje = "Error de comunicacion."; _esError = true; }
         _saving = false;
+    }
+
+    private static string SanitizeError(string? message, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+            return fallback;
+
+        if (message.Contains("Error HTTP", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("System.", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("stack", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("trace", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("Exception", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("{"))
+        {
+            return fallback;
+        }
+
+        return message;
     }
 }

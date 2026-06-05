@@ -12,9 +12,15 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 var apiBaseUrl = builder.Configuration.GetValue<string>("ApiBaseUrl")
     ?? builder.HostEnvironment.BaseAddress;
 
-builder.Services.AddScoped(sp => new HttpClient
+builder.Services.AddTransient<AuthMessageHandler>();
+builder.Services.AddScoped(sp =>
 {
-    BaseAddress = new Uri(apiBaseUrl)
+    var handler = sp.GetRequiredService<AuthMessageHandler>();
+    handler.InnerHandler = new HttpClientHandler();
+    return new HttpClient(handler)
+    {
+        BaseAddress = new Uri(apiBaseUrl)
+    };
 });
 
 // ──── Autenticación ────
@@ -94,6 +100,7 @@ builder.Services.AddScoped<IWorkflowClientService, WorkflowHttpService>();
 builder.Services.AddScoped<DashboardDataService>();
 builder.Services.AddScoped<SeguridadDinamicaHttpService>();
 builder.Services.AddScoped<SesionUsuarioStateService>();
+builder.Services.AddScoped<UiAuthorizationService>();
 
 // ──── Demo Seed ────
 builder.Services.AddScoped<EmpresaDemoService>();

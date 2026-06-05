@@ -1,6 +1,7 @@
 @page "/config/empresa-demo"
-@attribute [Authorize(Roles = "Admin")]
+@attribute [Authorize]
 @inject EmpresaDemoService DemoSvc
+@inject UiAuthorizationService UiAuth
 @inject NavigationManager Nav
 
 <PageTitle>Crear Empresa DEMO - AgoraHub360 ERP</PageTitle>
@@ -12,6 +13,14 @@
     </div>
 </div>
 
+@if (!UiAuth.CanAccessEmpresaDemo())
+{
+    <div class="alert alert-warning" role="alert">
+        No tienes permisos para acceder a esta sección.
+    </div>
+}
+else
+{
 @* ?? Banner informativo ?? *@
 @if (!_iniciado)
 {
@@ -60,7 +69,7 @@
                     </div>
 
                     <div class="d-flex gap-2">
-                        <button class="btn btn-primary px-4" @onclick="IniciarAsync">
+                        <button class="btn btn-primary px-4" @onclick="IniciarAsync" disabled="@(!UiAuth.CanExecuteEmpresaDemo())">
                             <i class="bi bi-play-circle-fill me-2"></i>Iniciar Creación DEMO
                         </button>
                         <button class="btn btn-outline-secondary" @onclick='() => Nav.NavigateTo("/config/empresas")'>
@@ -155,7 +164,7 @@
                         @RenderResumenParcial()
                     </div>
                     <div class="d-flex gap-2">
-                        <button class="btn btn-warning btn-sm" @onclick="ReiniciarAsync">
+                        <button class="btn btn-warning btn-sm" @onclick="ReiniciarAsync" disabled="@(!UiAuth.CanExecuteEmpresaDemo())">
                             <i class="bi bi-arrow-clockwise me-1"></i>Reintentar desde el inicio
                         </button>
                         <button class="btn btn-outline-secondary btn-sm" @onclick='() => Nav.NavigateTo("/config/empresas")'>
@@ -166,6 +175,7 @@
             </div>
         </div>
     </div>
+}
 }
 
 @* ?? Éxito ?? *@
@@ -301,6 +311,9 @@
 
     private async Task IniciarAsync()
     {
+        if (!UiAuth.CanExecuteEmpresaDemo())
+            return;
+
         _iniciado = true;
         DemoSvc.ConfigurarPasos();
         await DemoSvc.EjecutarAsync();
@@ -308,6 +321,9 @@
 
     private async Task ReiniciarAsync()
     {
+        if (!UiAuth.CanExecuteEmpresaDemo())
+            return;
+
         _iniciado = false;
         await Task.Delay(200);
         _iniciado = true;
