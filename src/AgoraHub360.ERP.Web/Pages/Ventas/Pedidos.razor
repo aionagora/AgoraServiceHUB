@@ -1,4 +1,5 @@
 @page "/ventas/pedidos"
+@using AgoraHub360.ERP.Shared.DTOs
 @using AgoraHub360.ERP.Shared.DTOs.Ventas
 @using AgoraHub360.ERP.Web.Services
 
@@ -19,9 +20,21 @@
     <div class="card-body">
         @if (!string.IsNullOrWhiteSpace(errorMessage))
         {
-            <div class="alert alert-danger" role="alert">@errorMessage</div>
+            <div class="alert alert-danger alert-dismissible" role="alert">
+                @errorMessage
+                <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+            </div>
         }
-        else if (isLoading)
+
+        @if (!string.IsNullOrWhiteSpace(successMessage))
+        {
+            <div class="alert alert-success alert-dismissible" role="alert">
+                @successMessage
+                <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+            </div>
+        }
+
+        @if (isLoading)
         {
             <div class="text-center py-4 text-muted">Cargando pedidos...</div>
         }
@@ -44,18 +57,59 @@
                             <th class="text-end">Subtotal</th>
                             <th class="text-end">Impuestos</th>
                             <th class="text-end">Total</th>
+                            <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var pedido in pedidos)
                         {
                             <tr>
-                                <td>@pedido.Numero</td>
+                                <td>
+                                    <a href="/ventas/pedidos/editar/@pedido.Id" class="fw-semibold text-decoration-none">
+                                        @pedido.Numero
+                                    </a>
+                                </td>
                                 <td>@pedido.FechaEmision.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</td>
-                                <td>@pedido.Estado</td>
+                                <td>
+                                    <span class="badge @GetEstadoBadge(pedido.Estado)">@pedido.Estado</span>
+                                </td>
                                 <td class="text-end">@pedido.Subtotal.ToString("N2")</td>
                                 <td class="text-end">@pedido.Impuestos.ToString("N2")</td>
                                 <td class="text-end fw-semibold">@pedido.Total.ToString("N2")</td>
+                                <td class="text-center">
+                                    <div class="d-flex justify-content-center gap-1">
+                                        <a href="/ventas/pedidos/editar/@pedido.Id"
+                                           class="btn btn-outline-secondary btn-sm"
+                                           title="Editar pedido">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        @if (string.Equals(pedido.Estado, "Borrador", StringComparison.OrdinalIgnoreCase))
+                                        {
+                                            <button class="btn btn-success btn-sm"
+                                                    @onclick="() => ConfirmarPedidoAsync(pedido)"
+                                                    disabled="@(confirmandoId == pedido.Id)"
+                                                    title="Confirmar pedido y reservar stock">
+                                                @if (confirmandoId == pedido.Id)
+                                                {
+                                                    <span class="spinner-border spinner-border-sm"></span>
+                                                }
+                                                else
+                                                {
+                                                    <i class="bi bi-check2-all"></i>
+                                                }
+                                            </button>
+                                        }
+                                        @if (CanGenerarVenta(pedido))
+                                        {
+                                            <button class="btn btn-primary btn-sm"
+                                                    @onclick="() => GenerarVentaDesdePedidoAsync(pedido)"
+                                                    disabled="@isGeneratingVenta"
+                                                    title="Generar venta desde este pedido">
+                                                <i class="bi bi-cart-check"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
                             </tr>
                         }
                     </tbody>
@@ -96,7 +150,9 @@
     private List<PedidoVentaDto> pedidos = new();
     private bool isLoading;
     private bool isGeneratingVenta;
+    private long? confirmandoId;          // Id del pedido que está siendo confirmado
     private string? errorMessage;
+    private string? successMessage;
 
     protected override async Task OnInitializedAsync()
     {
@@ -132,6 +188,39 @@
         var estado = pedido.Estado?.Trim();
         return string.Equals(estado, "Confirmado", StringComparison.OrdinalIgnoreCase)
                && !string.Equals(estado, "Anulado", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private async Task ConfirmarPedidoAsync(PedidoVentaDto pedido)
+    {
+        if (confirmandoId.HasValue)
+            return; // Ya hay una confirmación en proceso
+
+        confirmandoId = pedido.Id;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var res = await PedidoService.ConfirmarAsync(pedido.Id);
+
+            if (res.Success)
+            {
+                successMessage = $"Pedido {pedido.Numero} confirmado correctamente. Stock reservado.";
+                await LoadPedidosAsync();
+            }
+            else
+            {
+                errorMessage = res.Message ?? $"No se pudo confirmar el pedido {pedido.Numero}.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al confirmar el pedido {pedido.Numero}: {ex.Message}";
+        }
+        finally
+        {
+            confirmandoId = null;
+        }
     }
 
     private async Task GenerarVentaDesdePedidoAsync(PedidoVentaDto pedido)
@@ -171,4 +260,16 @@
 
         return response.Message ?? "No se pudo generar la venta desde el pedido seleccionado.";
     }
+
+    private static string GetEstadoBadge(string? estado) => estado?.Trim().ToLowerInvariant() switch
+    {
+        "borrador"     => "bg-secondary",
+        "confirmado"   => "bg-success",
+        "enpreparacion" => "bg-info text-dark",
+        "despachado"   => "bg-primary",
+        "entregado"    => "bg-success",
+        "anulado"      => "bg-danger",
+        _              => "bg-secondary"
+    };
 }
+
