@@ -3,6 +3,12 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using AgoraHub360.ERP.Web;
 using AgoraHub360.ERP.Web.Services;
+using System.Globalization;
+
+// ── Cultura global: punto decimal, coma miles (toda la app Blazor WASM) ──
+var fixedCulture = new CultureInfo("en-US");
+CultureInfo.DefaultThreadCurrentCulture = fixedCulture;
+CultureInfo.DefaultThreadCurrentUICulture = fixedCulture;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");

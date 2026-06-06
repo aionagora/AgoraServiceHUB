@@ -23,6 +23,7 @@ public class VentaService : IVentaService
     private readonly IRepository<PedidoVentaDetalle> _pedidoVentaDetalleRepo;
     private readonly IRepository<CompanyProduct> _companyProductRepo;
     private readonly IRepository<Product> _productRepo;
+    private readonly IRepository<Empresa> _empresaRepo;
     private readonly INumeracionDocumentoService _numeracionDocumentoService;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
@@ -40,6 +41,7 @@ public class VentaService : IVentaService
         IRepository<PedidoVentaDetalle> pedidoVentaDetalleRepo,
         IRepository<CompanyProduct> companyProductRepo,
         IRepository<Product> productRepo,
+        IRepository<Empresa> empresaRepo,
         INumeracionDocumentoService numeracionDocumentoService,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork)
@@ -56,6 +58,7 @@ public class VentaService : IVentaService
         _pedidoVentaDetalleRepo = pedidoVentaDetalleRepo;
         _companyProductRepo = companyProductRepo;
         _productRepo = productRepo;
+        _empresaRepo = empresaRepo;
         _numeracionDocumentoService = numeracionDocumentoService;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
@@ -386,13 +389,31 @@ public class VentaService : IVentaService
         if (pedido.EmpresaId != empresaId)
             return Result<VentaDto>.Failure("El pedido no pertenece a la empresa activa.");
 
-        var existingVenta = (await _ventaRepo.FindAsync(v => v.EmpresaId == empresaId && v.PedidoVentaId == dto.PedidoVentaId && v.Activo && v.EstadoVenta != EstadoVenta.Anulada, ct)).FirstOrDefault();
+        // --- Regla 1: Solo pedidos Confirmados pueden generar venta ---
+        if (!string.Equals(pedido.Estado, "Confirmado", StringComparison.OrdinalIgnoreCase))
+            return Result<VentaDto>.Failure(
+                $"Solo se puede generar venta desde un pedido en estado Confirmado. Estado actual: '{pedido.Estado}'.");
+
+        // --- Regla 3: No doble venta ---
+        var existingVenta = (await _ventaRepo.FindAsync(
+            v => v.EmpresaId == empresaId && v.PedidoVentaId == dto.PedidoVentaId && v.Activo && v.EstadoVenta != EstadoVenta.Anulada,
+            ct)).FirstOrDefault();
         if (existingVenta is not null)
             return Result<VentaDto>.Failure("El pedido ya tiene una venta activa asociada.");
 
-        var pedidoDetalles = await _pedidoVentaDetalleRepo.FindAsync(d => d.EmpresaId == empresaId && d.PedidoVentaId == dto.PedidoVentaId && d.Activo, ct);
+        var pedidoDetalles = await _pedidoVentaDetalleRepo.FindAsync(
+            d => d.EmpresaId == empresaId && d.PedidoVentaId == dto.PedidoVentaId && d.Activo, ct);
         if (pedidoDetalles.Count == 0)
             return Result<VentaDto>.Failure("El pedido no tiene detalles para generar la venta.");
+
+        // --- Regla 6: Moneda desde empresa activa (sin hardcode) ---
+        var empresa = await _empresaRepo.GetByIdAsync(empresaId, ct);
+        if (empresa is null)
+            return Result<VentaDto>.Failure("No se encontró la empresa activa en la base de datos.");
+
+        if (string.IsNullOrWhiteSpace(empresa.MonedaBaseId))
+            return Result<VentaDto>.Failure(
+                "La empresa activa no tiene moneda base configurada. Configure la moneda en Configuración → Parámetros antes de generar una venta.");
 
         var createDto = new CrearVentaRequestDto
         {
@@ -402,6 +423,10 @@ public class VentaService : IVentaService
             PedidoVentaId = pedido.Id,
             TipoVenta = TipoVenta.DesdePedido.ToString(),
             FechaVenta = DateTime.Now,
+            // Moneda resuelta desde empresa activa — sin hardcode
+            MonedaId = empresa.MonedaBaseId,
+            MonedaCodigo = empresa.MonedaBaseId,   // El código de moneda es el mismo que el Id ("BOL"/"USD" etc.)
+            TipoCambio = 1m,
             Observaciones = string.IsNullOrWhiteSpace(dto.Observaciones)
                 ? $"Generada desde pedido {pedido.Numero}"
                 : dto.Observaciones,
@@ -420,7 +445,8 @@ public class VentaService : IVentaService
                 ImpuestoMonto = d.Impuestos,
                 TotalLinea = d.Total,
                 CostoUnitario = null,
-                DescuentaInventario = true
+                // Regla 8: NO descontar inventario al generar venta — solo al despachar
+                DescuentaInventario = false
             }).ToList()
         };
 

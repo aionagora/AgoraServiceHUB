@@ -6,6 +6,7 @@
 @using AgoraHub360.ERP.Shared.DTOs.Ventas
 @using AgoraHub360.ERP.Shared.DTOs.MDM
 @using AgoraHub360.ERP.Shared.DTOs.Sucursal
+@using AgoraHub360.ERP.Web.Helpers
 @inject PedidoVentaHttpService PedidoService
 @inject ClienteHttpService ClienteService
 @inject ClienteSucursalHttpService ClienteSucursalHttpService
@@ -209,7 +210,7 @@
                                     </td>
                                     <td><InputNumber class="form-control form-control-sm text-end" @bind-Value="det.CantidadSolicitada" /></td>
                                     <td><InputNumber class="form-control form-control-sm text-end" @bind-Value="det.PrecioUnitario" /></td>
-                                    <td class="text-end align-middle">@((det.CantidadSolicitada * det.PrecioUnitario).ToString("C2"))</td>
+                                    <td class="text-end align-middle">@SimboloActivo @FormatHelper.Money(det.CantidadSolicitada * det.PrecioUnitario)</td>
                                     <td>
                                         <button type="button" class="btn btn-sm btn-outline-danger border-0" @onclick="() => CurrentModel.Detalles.Remove(det)"><i class="bi bi-trash"></i></button>
                                     </td>
@@ -220,7 +221,7 @@
                 </div>
                 <!-- Totales Footer -->
                 <div class="card-footer bg-white text-end">
-                    <strong class="fs-5">TOTAL: @(CurrentModel.Detalles.Sum(x => x.CantidadSolicitada * x.PrecioUnitario).ToString("C2"))</strong>
+                    <strong class="fs-5">TOTAL: @SimboloActivo @FormatHelper.Money(CurrentModel.Detalles.Sum(x => x.CantidadSolicitada * x.PrecioUnitario))</strong>
                 </div>
             </div>
 
@@ -229,12 +230,25 @@
                 <button type="button" class="btn btn-outline-secondary" @onclick="GoBack">
                     <i class="bi bi-x-circle"></i> Cancelar
                 </button>
-                <button type="submit" class="btn btn-primary" disabled="@(saving || !EsValido())">
+                @if (!IsNew && string.Equals(currentDto?.Estado, "Borrador", StringComparison.OrdinalIgnoreCase))
+                {
+                    <button type="button"
+                            class="btn btn-success"
+                            @onclick="ConfirmarPedidoAsync"
+                            disabled="@(confirming || saving)">
+                        @if (confirming)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        <i class="bi bi-check2-all me-1"></i> Confirmar Pedido
+                    </button>
+                }
+                <button type="submit" class="btn btn-primary" disabled="@(saving || !EsValido() || confirming)">
                     @if (saving)
                     {
                         <span class="spinner-border spinner-border-sm me-2"></span>
                     }
-                    <i class="bi bi-check2-circle me-1"></i> @(IsNew ? "Confirmar Pedido" : "Actualizar Pedido")
+                    <i class="bi bi-check2-circle me-1"></i> @(IsNew ? "Crear Pedido" : "Actualizar Pedido")
                 </button>
             </div>
         </EditForm>
@@ -247,8 +261,13 @@
 
     private bool loading = true;
     private bool saving = false;
+    private bool confirming = false;   // Bandera para el botón Confirmar
     private string? errorMessage;
     private string? successMessage;
+
+    // Símbolo de moneda activo (desde EmpresaState, sin hardcode)
+    private string SimboloActivo => EmpresaState.EmpresaActiva?.SimboloMoneda ?? "";
+    private int DecimalesActivos => EmpresaState.EmpresaActiva?.DecimalesMoneda ?? 2;
 
     // Usuario y Contexto
     private bool IsClientUser = false; // Define si quien navega es un B2B Client
@@ -591,6 +610,50 @@
         finally
         {
             saving = false;
+        }
+    }
+
+    private async Task ConfirmarPedidoAsync()
+    {
+        if (!Id.HasValue || Id.Value <= 0)
+        {
+            errorMessage = "No se puede confirmar: pedido sin identificador válido.";
+            return;
+        }
+
+        if (!string.Equals(currentDto?.Estado, "Borrador", StringComparison.OrdinalIgnoreCase))
+        {
+            errorMessage = $"No se puede confirmar un pedido en estado '{currentDto?.Estado}'. Solo se pueden confirmar pedidos en estado Borrador.";
+            return;
+        }
+
+        try
+        {
+            confirming = true;
+            errorMessage = null;
+            successMessage = null;
+
+            var res = await PedidoService.ConfirmarAsync(Id.Value);
+
+            if (res.Success)
+            {
+                successMessage = "Pedido confirmado correctamente. Stock reservado.";
+                // Recargar el pedido para mostrar el nuevo estado
+                await LoadPedidoAsync();
+                StateHasChanged();
+            }
+            else
+            {
+                errorMessage = res.Message ?? "No se pudo confirmar el pedido.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al confirmar el pedido: {ex.Message}";
+        }
+        finally
+        {
+            confirming = false;
         }
     }
 

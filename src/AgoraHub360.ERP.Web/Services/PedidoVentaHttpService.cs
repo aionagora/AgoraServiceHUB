@@ -71,4 +71,48 @@ public class PedidoVentaHttpService
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<bool>>() ?? ApiResponse<bool>.Fail("Error de comunicación.");
     }
+
+    /// <summary>
+    /// Llama a POST /api/v1/ventas/pedidos/{id}/confirmar.
+    /// Cambia el estado del pedido de Borrador a Confirmado y reserva stock.
+    /// </summary>
+    public async Task<ApiResponse<bool>> ConfirmarAsync(long id)
+    {
+        var response = await _http.PostAsync($"{BaseUrl}/{id}/confirmar", null);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            string body;
+            try { body = await response.Content.ReadAsStringAsync(); }
+            catch { body = string.Empty; }
+
+            // Intentar leer mensaje estructurado del API
+            try
+            {
+                var apiErr = System.Text.Json.JsonSerializer.Deserialize<ApiResponse<bool>>(
+                    body,
+                    new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                if (apiErr is not null)
+                    return apiErr;
+            }
+            catch { /* ignorar — retornar error crudo */ }
+
+            return ApiResponse<bool>.Fail($"Error HTTP {(int)response.StatusCode}: {body}");
+        }
+
+        // 200 OK: el controller devuelve DomainResult serializado directamente
+        // Intentamos leer ApiResponse<bool> o construirlo desde el body
+        try
+        {
+            var ok = await response.Content.ReadFromJsonAsync<ApiResponse<bool>>(
+                new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (ok is not null)
+                return ok;
+        }
+        catch { /* ignorar */ }
+
+        // Fallback: construir respuesta exitosa
+        return ApiResponse<bool>.Ok(true, "Pedido confirmado correctamente.");
+    }
 }
+
