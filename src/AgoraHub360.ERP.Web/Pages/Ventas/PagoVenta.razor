@@ -1,0 +1,528 @@
+@page "/ventas/pagos"
+@page "/ventas/pagos/{VentaId:long}"
+@attribute [Authorize]
+
+@using AgoraHub360.ERP.Shared.DTOs.Ventas
+@using AgoraHub360.ERP.Web.Helpers
+@using AgoraHub360.ERP.Web.Shared
+@inject VentaHttpService VentaService
+@inject NavigationManager Nav
+
+<PageTitle>Registrar Pago - AgoraHub360 ERP</PageTitle>
+
+<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1">
+                <li class="breadcrumb-item"><a href="/ventas/comercial">Ventas Comercial</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Registrar Pago</li>
+            </ol>
+        </nav>
+        <h1 class="mb-0"><i class="bi bi-cash-coin me-2"></i> Registrar Pago</h1>
+        <p class="text-muted mb-0">Seleccione una venta y registre el pago correspondiente.</p>
+    </div>
+</div>
+
+@* ── Mensajes ──────────────────────────────────────────────────────────────── *@
+@if (!string.IsNullOrWhiteSpace(_successMessage))
+{
+    <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
+        <i class="bi bi-check-circle-fill me-1"></i> @_successMessage
+        <button type="button" class="btn-close" @onclick="() => _successMessage = null"></button>
+    </div>
+}
+@if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i> @_errorMessage
+        <button type="button" class="btn-close" @onclick="() => _errorMessage = null"></button>
+    </div>
+}
+
+@* ── Selector de venta (cuando no se pasa VentaId) ─────────────────────────── *@
+@if (!_ventaSeleccionada.HasValue)
+{
+    <div class="card mt-3">
+        <div class="card-header d-flex justify-content-between align-items-center py-3">
+            <span><i class="bi bi-receipt me-1"></i> Seleccionar venta</span>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="LoadVentasAsync" disabled="@_isLoading">
+                <i class="bi bi-arrow-repeat me-1"></i> Recargar
+            </button>
+        </div>
+        <div class="card-body p-0">
+            @if (_isLoading)
+            {
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="text-muted mt-2 mb-0">Cargando ventas...</p>
+                </div>
+            }
+            else if (_ventas.Count == 0)
+            {
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-receipt-cutoff" style="font-size: 2rem;"></i>
+                    <p class="mt-2 mb-0">No hay ventas disponibles para pago.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Número</th>
+                                <th>Fecha</th>
+                                <th>Cliente</th>
+                                <th>Estado</th>
+                                <th class="text-end">Total</th>
+                                <th>Pago</th>
+                                <th class="text-end"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var venta in _ventas)
+                            {
+                                <tr>
+                                    <td class="fw-semibold">@venta.NumeroVenta</td>
+                                    <td>@venta.FechaVenta.ToString("dd/MM/yyyy")</td>
+                                    <td>@(venta.ClienteNombre ?? "-")</td>
+                                    <td>
+                                        <span class="badge @GetEstadoVentaBadge(venta.EstadoVenta)">@venta.EstadoVenta</span>
+                                        <span class="badge @GetEstadoPagoBadge(venta.EstadoPago) ms-1">@venta.EstadoPago</span>
+                                    </td>
+                                    <td class="text-end fw-semibold">@FormatMoney(venta.Total)</td>
+                                    <td>
+                                        @{
+                                            var saldo = CalcularSaldo(venta);
+                                        }
+                                        @if (saldo <= 0)
+                                        {
+                                            <span class="badge bg-success">Pagado</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-danger fw-semibold">@FormatMoney(saldo)</span>
+                                        }
+                                    </td>
+                                    <td class="text-end">
+                                        <button class="btn btn-sm btn-primary"
+                                                @onclick="() => SeleccionarVenta(venta.Id)"
+                                                disabled="@(saldo <= 0 || !EsVentaPagable(venta.EstadoVenta))">
+                                            <i class="bi bi-cash-coin me-1"></i> Pagar
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@* ── Detalle de venta seleccionada ─────────────────────────────────────────── *@
+@if (_ventaSeleccionada.HasValue && _ventaDetalle is not null)
+{
+    <div class="card mt-3">
+        <div class="card-header d-flex justify-content-between align-items-center py-3">
+            <span>
+                <i class="bi bi-receipt me-1"></i>
+                Venta <strong>@_ventaDetalle.NumeroVenta</strong>
+                <span class="badge @GetEstadoVentaBadge(_ventaDetalle.EstadoVenta) ms-2">@_ventaDetalle.EstadoVenta</span>
+                <span class="badge @GetEstadoPagoBadge(_ventaDetalle.EstadoPago) ms-1">@_ventaDetalle.EstadoPago</span>
+            </span>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="DeseleccionarVenta">
+                <i class="bi bi-arrow-left me-1"></i> Otra venta
+            </button>
+        </div>
+
+        <div class="card-body">
+            @* Resumen *@
+            <div class="card bg-light mb-3">
+                <div class="card-body py-2">
+                    <div class="row text-center g-2">
+                        <div class="col-4 border-end">
+                            <div class="text-muted small">Total venta</div>
+                            <strong>@FormatMoney(_ventaDetalle.Total)</strong>
+                        </div>
+                        <div class="col-4 border-end">
+                            <div class="text-muted small">Pagado</div>
+                            <strong>@FormatMoney(_totalPagado)</strong>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-muted small">Saldo pendiente</div>
+                            <strong class="@(_saldoPendienteCalculado > 0 ? "text-danger" : "text-success")">
+                                @FormatMoney(_saldoPendienteCalculado)
+                            </strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @* Pagos registrados *@
+            @if (_ventaDetalle.Pagos is { Count: > 0 })
+            {
+                <h6 class="fw-semibold mb-2"><i class="bi bi-list-check me-1"></i> Pagos registrados</h6>
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm table-bordered align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Tipo</th>
+                                <th>Modo</th>
+                                <th class="text-end">Monto</th>
+                                <th>Referencia</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var pago in _ventaDetalle.Pagos)
+                            {
+                                <tr>
+                                    <td>@pago.FechaPago.ToString("dd/MM/yyyy")</td>
+                                    <td>@pago.TipoPago</td>
+                                    <td>@pago.ModoPago</td>
+                                    <td class="text-end fw-semibold">@FormatMoney(pago.Monto)</td>
+                                    <td>@(pago.Referencia ?? "-")</td>
+                                    <td>
+                                        <span class="badge @GetEstadoPagoBadge(pago.EstadoPago)">@pago.EstadoPago</span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            @* Formulario de pago rápido *@
+            @if (_saldoPendienteCalculado > 0 && EsVentaPagable(_ventaDetalle.EstadoVenta))
+            {
+                <h6 class="fw-semibold mb-2"><i class="bi bi-plus-circle me-1"></i> Nuevo pago</h6>
+                <div class="card border-primary">
+                    <div class="card-body">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-2">
+                                <label class="form-label small fw-semibold">Fecha</label>
+                                <InputDate class="form-control form-control-sm" @bind-Value="_pagoModel.FechaPago" />
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small fw-semibold">Tipo pago</label>
+                                <InputSelect class="form-select form-select-sm" @bind-Value="_pagoModel.TipoPago">
+                                    <option value="">-</option>
+                                    @foreach (var opt in _tipoPagoOptions)
+                                    {
+                                        <option value="@opt">@opt</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small fw-semibold">Modo pago</label>
+                                <InputSelect class="form-select form-select-sm" @bind-Value="_pagoModel.ModoPago">
+                                    <option value="">-</option>
+                                    @foreach (var opt in _modoPagoOptions)
+                                    {
+                                        <option value="@opt">@opt</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small fw-semibold">Monto</label>
+                                <InputNumber class="form-control form-control-sm" @bind-Value="_pagoModel.Monto"
+                                             min="0.01" step="0.01" />
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small fw-semibold">Referencia</label>
+                                <InputText class="form-control form-control-sm" @bind-Value="_pagoModel.Referencia"
+                                           placeholder="Nro. doc" />
+                            </div>
+                            <div class="col-md-2 d-grid">
+                                <button class="btn btn-sm btn-primary"
+                                        @onclick="RegistrarPagoAsync"
+                                        disabled="@_isSubmitting">
+                                    @if (_isSubmitting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-check2-circle me-1"></i>
+                                    }
+                                    Registrar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (_saldoPendienteCalculado <= 0)
+            {
+                <div class="alert alert-success py-2 mb-0" role="alert">
+                    <i class="bi bi-check-circle-fill me-1"></i>
+                    Esta venta está completamente pagada.
+                </div>
+            }
+            else if (!EsVentaPagable(_ventaDetalle.EstadoVenta))
+            {
+                <div class="alert alert-warning py-2 mb-0" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                    No se pueden registrar pagos en una venta <strong>@_ventaDetalle.EstadoVenta</strong>.
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@* ── Modal reutilizable para registro avanzado ─────────────────────────────── *@
+<ModalRegistrarPago @ref="_modalPago"
+                   OnPagoRegistrado="OnPagoRegistradoAsync" />
+
+@code {
+    // ─── Parámetros de ruta ───────────────────────────────────────────────────
+    [Parameter] public long? VentaId { get; set; }
+
+    // ─── Estado ───────────────────────────────────────────────────────────────
+    private bool _isLoading;
+    private bool _isSubmitting;
+    private string? _errorMessage;
+    private string? _successMessage;
+
+    private readonly List<VentaResumenDto> _ventas = new();
+    private long? _ventaSeleccionada;
+    private VentaDto? _ventaDetalle;
+    private decimal _totalPagado;
+    private decimal _saldoPendienteCalculado;
+
+    private ModalRegistrarPago _modalPago = default!;
+
+    private readonly RegistrarPagoVentaRequestDto _pagoModel = new()
+    {
+        FechaPago = DateTime.Today,
+        TipoPago = "Contado",
+        ModoPago = "Efectivo",
+        Monto = 0,
+        TipoCambio = 1m,
+        EstadoPago = "Pagado"
+    };
+
+    private readonly string[] _tipoPagoOptions = ["Contado", "Credito", "Mixto"];
+    private readonly string[] _modoPagoOptions = ["Efectivo", "QR", "Transferencia", "Tarjeta", "Cheque", "Deposito", "Otro"];
+
+    // ─── Ciclo de vida ────────────────────────────────────────────────────────
+    protected override async Task OnInitializedAsync()
+    {
+        if (VentaId.HasValue && VentaId.Value > 0)
+        {
+            _ventaSeleccionada = VentaId.Value;
+            await CargarDetalleVentaAsync(VentaId.Value);
+        }
+        else
+        {
+            await LoadVentasAsync();
+        }
+    }
+
+    // ─── Carga de ventas ─────────────────────────────────────────────────────
+    private async Task LoadVentasAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var data = await VentaService.GetAllAsync();
+            _ventas.Clear();
+            _ventas.AddRange(data
+                .Where(v => !EsAnulada(v.EstadoVenta))
+                .OrderByDescending(v => v.FechaVenta));
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error al cargar ventas: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    // ─── Selección de venta ──────────────────────────────────────────────────
+    private async Task SeleccionarVenta(long id)
+    {
+        _ventaSeleccionada = id;
+        Nav.NavigateTo($"/ventas/pagos/{id}");
+        await CargarDetalleVentaAsync(id);
+    }
+
+    private void DeseleccionarVenta()
+    {
+        _ventaSeleccionada = null;
+        _ventaDetalle = null;
+        _errorMessage = null;
+        _successMessage = null;
+        Nav.NavigateTo("/ventas/pagos");
+    }
+
+    private async Task CargarDetalleVentaAsync(long id)
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            _ventaDetalle = await VentaService.GetByIdAsync(id);
+            if (_ventaDetalle is null)
+            {
+                _errorMessage = $"Venta #{id} no encontrada.";
+                _ventaSeleccionada = null;
+                return;
+            }
+
+            RecalcularSaldos();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error al cargar la venta: {ex.Message}";
+            _ventaSeleccionada = null;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void RecalcularSaldos()
+    {
+        if (_ventaDetalle is null) return;
+        _totalPagado = _ventaDetalle.Pagos?.Sum(p => p.Monto) ?? 0;
+        _saldoPendienteCalculado = _ventaDetalle.Total - _totalPagado;
+    }
+
+    // ─── Registro de pago ────────────────────────────────────────────────────
+    private async Task RegistrarPagoAsync()
+    {
+        _errorMessage = null;
+        _successMessage = null;
+
+        if (_ventaDetalle is null) return;
+
+        // Validaciones
+        if (_pagoModel.Monto <= 0)
+        {
+            _errorMessage = "El monto debe ser mayor a cero.";
+            return;
+        }
+
+        if (_pagoModel.Monto > _saldoPendienteCalculado)
+        {
+            _errorMessage = $"El monto ({FormatMoney(_pagoModel.Monto)}) excede el saldo pendiente ({FormatMoney(_saldoPendienteCalculado)}).";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_pagoModel.TipoPago))
+        {
+            _errorMessage = "Seleccione el tipo de pago.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_pagoModel.ModoPago))
+        {
+            _errorMessage = "Seleccione el modo de pago.";
+            return;
+        }
+
+        _isSubmitting = true;
+        StateHasChanged();
+
+        try
+        {
+            var response = await VentaService.RegistrarPagoAsync(_ventaDetalle.Id, _pagoModel);
+
+            if (!response.Success || response.Data is null)
+            {
+                _errorMessage = BuildErrorMessage(response);
+                _isSubmitting = false;
+                StateHasChanged();
+                return;
+            }
+
+            _successMessage = "Pago registrado exitosamente.";
+            _ventaDetalle = response.Data;
+            RecalcularSaldos();
+
+            // Resetear modelo
+            _pagoModel.FechaPago = DateTime.Today;
+            _pagoModel.Monto = _saldoPendienteCalculado > 0 ? _saldoPendienteCalculado : 0;
+            _pagoModel.TipoPago = "Contado";
+            _pagoModel.ModoPago = "Efectivo";
+            _pagoModel.Referencia = null;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error al registrar pago: {ex.Message}";
+        }
+        finally
+        {
+            _isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    // ─── Callback del modal ───────────────────────────────────────────────────
+    private async Task OnPagoRegistradoAsync(VentaDto ventaActualizada)
+    {
+        _ventaDetalle = ventaActualizada;
+        RecalcularSaldos();
+        _successMessage = "Pago registrado exitosamente.";
+        StateHasChanged();
+        await Task.CompletedTask;
+    }
+
+    // ─── Helpers ─────────────────────────────────────────────────────────────
+    private static bool EsAnulada(string? estado)
+        => string.Equals(estado, "Anulada", StringComparison.OrdinalIgnoreCase)
+           || string.Equals(estado, "Anulado", StringComparison.OrdinalIgnoreCase);
+
+    private static bool EsVentaPagable(string? estado)
+        => !EsAnulada(estado)
+           && !string.Equals(estado, "Borrador", StringComparison.OrdinalIgnoreCase);
+
+    private static decimal CalcularSaldo(VentaResumenDto venta)
+        => venta.EstadoPago?.Equals("Pagado", StringComparison.OrdinalIgnoreCase) == true ? 0 : venta.Total;
+
+    private static string FormatMoney(decimal value) => FormatHelper.Money(value);
+
+    private static string GetEstadoVentaBadge(string? estado)
+    {
+        if (string.IsNullOrWhiteSpace(estado)) return "bg-secondary";
+        return estado.ToLowerInvariant() switch
+        {
+            "borrador" => "bg-secondary",
+            "confirmada" => "bg-info text-dark",
+            "facturada" => "bg-primary",
+            "anulada" => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    private static string GetEstadoPagoBadge(string? estado)
+    {
+        if (string.IsNullOrWhiteSpace(estado)) return "bg-secondary";
+        return estado.ToLowerInvariant() switch
+        {
+            "pendiente" => "bg-warning text-dark",
+            "parcial" => "bg-info text-dark",
+            "pagado" => "bg-success",
+            _ => "bg-secondary"
+        };
+    }
+
+    private static string BuildErrorMessage<T>(ApiResponse<T> response)
+    {
+        if (response.Errors is { Count: > 0 })
+            return string.Join(" | ", response.Errors);
+        return !string.IsNullOrWhiteSpace(response.Message)
+            ? response.Message
+            : "Error desconocido al procesar la solicitud.";
+    }
+}

@@ -43,6 +43,13 @@ public class VentaPagoConfiguration : IEntityTypeConfiguration<VentaPago>
             .HasForeignKey(x => x.VentaId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        builder.HasOne(x => x.FacturaVenta)
+            .WithMany()
+            .HasForeignKey(x => x.FacturaVentaId)
+            .OnDelete(DeleteBehavior.SetNull);
+
         builder.HasIndex(x => x.VentaId);
+        builder.HasIndex(x => x.FacturaVentaId);
     }
 }
+

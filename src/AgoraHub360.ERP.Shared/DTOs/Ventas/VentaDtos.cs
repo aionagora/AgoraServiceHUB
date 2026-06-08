@@ -152,6 +152,12 @@ public class VentaFacturacionDatosDto
 
 public class VentaPagoDto
 {
+    public long Id { get; set; }
+
+    public long VentaId { get; set; }
+
+    public long? FacturaVentaId { get; set; }
+
     public DateTime FechaPago { get; set; }
 
     public string TipoPago { get; set; } = string.Empty;
@@ -172,6 +178,10 @@ public class VentaPagoDto
 
 public class RegistrarPagoVentaRequestDto
 {
+    public int? VentaId { get; set; }
+
+    public int? FacturaVentaId { get; set; }
+
     public DateTime FechaPago { get; set; } = DateTime.UtcNow;
 
     public string TipoPago { get; set; } = string.Empty;

@@ -21,6 +21,7 @@ using AgoraHub360.ERP.Domain.Entities.VTA;
 using AgoraHub360.ERP.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using System.Data;
 
 /// <summary>
 /// Main ERP DbContext with multi-tenant support and automatic auditing.
@@ -251,9 +252,11 @@ public class AgoraDbContext : DbContext, IUnitOfWork
         _currentTransaction = null;
     }
 
-    /// <summary>
+        /// <summary>
     /// Envuelve <paramref name="operation"/> en una transacción compatible con
-    /// <see cref="Microsoft.EntityFrameworkCore.Storage.IExecutionStrategy"/>.
+    /// <see cref="Microsoft.EntityFrameworkCore.Storage.IExecutionStrategy"/> y
+    /// nivel de aislamiento <see cref="IsolationLevel.Serializable"/> para
+    /// prevenir race conditions en operaciones financieras concurrentes.
     /// Requerido cuando SQL Server tiene SqlServerRetryingExecutionStrategy activa.
     /// </summary>
     public async Task ExecuteInTransactionAsync(
@@ -263,7 +266,7 @@ public class AgoraDbContext : DbContext, IUnitOfWork
         var strategy = Database.CreateExecutionStrategy();
         await strategy.ExecuteAsync(async () =>
         {
-            await using var tx = await Database.BeginTransactionAsync(cancellationToken);
+            await using var tx = await Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
             try
             {
                 await operation();
@@ -285,7 +288,7 @@ public class AgoraDbContext : DbContext, IUnitOfWork
         var strategy = Database.CreateExecutionStrategy();
         return await strategy.ExecuteAsync(async () =>
         {
-            await using var tx = await Database.BeginTransactionAsync(cancellationToken);
+            await using var tx = await Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
             try
             {
                 var result = await operation();

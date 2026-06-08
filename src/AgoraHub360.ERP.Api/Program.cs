@@ -219,12 +219,17 @@ builder.Services.AddSwaggerGen(options =>
 // ──── CORS (Blazor WASM) ────
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("BlazorWasm", policy =>
+    options.AddPolicy("AllowBlazorDev", policy =>
     {
-        policy.WithOrigins(
-                builder.Configuration.GetValue<string>("BlazorBaseUrl") ?? "https://localhost:5002")
+        policy
+            .WithOrigins(
+                "http://localhost:5001",
+                "https://localhost:5002",
+                builder.Configuration.GetValue<string>("BlazorBaseUrl") ?? ""
+            )
             .AllowAnyHeader()
-            .AllowAnyMethod();
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 
@@ -256,8 +261,10 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+// CORS debe ir ANTES que HttpsRedirection para que las preflight requests
+// (OPTIONS) reciban los headers CORS antes de cualquier redirect.
+app.UseCors("AllowBlazorDev");
 app.UseHttpsRedirection();
-app.UseCors("BlazorWasm");
 app.UseAuthentication();
 app.UseAuthorization();
 

@@ -453,25 +453,18 @@ public class VentaService : IVentaService
         return await CreateAsync(createDto, ct);
     }
 
-    public async Task<Result<VentaDto>> RegistrarPagoAsync(long id, RegistrarPagoVentaRequestDto dto, CancellationToken ct = default)
+            public async Task<Result<VentaDto>> RegistrarPagoAsync(long id, RegistrarPagoVentaRequestDto dto, CancellationToken ct = default)
     {
         if (!_currentUser.EmpresaId.HasValue)
             return Result<VentaDto>.Failure("No se pudo determinar la empresa activa.");
 
         var empresaId = _currentUser.EmpresaId.Value;
-        var venta = await _ventaRepo.GetByIdAsync(id, ct);
-        if (venta is null || !venta.Activo)
-            return Result<VentaDto>.Failure("Venta no encontrada.");
 
-        if (venta.EmpresaId != empresaId)
-            return Result<VentaDto>.Failure("La venta no pertenece a la empresa activa.");
-
-        if (venta.EstadoVenta == EstadoVenta.Anulada)
-            return Result<VentaDto>.Failure("No se pueden registrar pagos en una venta anulada.");
-
+        // ── Regla 1: Monto > 0 ──────────────────────────────────────────────────
         if (dto.Monto <= 0)
             return Result<VentaDto>.Failure("El monto del pago debe ser mayor a cero.");
 
+        // ── Validar enumeraciones rápidas (sin DB) ──────────────────────────────
         if (!TryParseEnum(dto.TipoPago, out TipoPago tipoPago))
             return Result<VentaDto>.Failure($"TipoPago inválido: '{dto.TipoPago}'.");
 
@@ -481,36 +474,69 @@ public class VentaService : IVentaService
         if (!TryParseEnum(dto.EstadoPago, out EstadoPagoVenta estadoPago))
             estadoPago = EstadoPagoVenta.Pendiente;
 
-        var pago = new VentaPago
+        // ── Ejecutar dentro de transacción atómica ──────────────────────────────
+        //     Se recalcula el saldo pendiente DENTRO de la transacción para
+        //     evitar que pagos simultáneos excedan el saldo (race condition).
+        //     El IsolationLevel.SERIALIZABLE garantiza que ninguna otra transacción
+        //     modifique filas de VentaPago/Venta concurrentemente.
+        // ────────────────────────────────────────────────────────────────────────
+        return await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
-            EmpresaId = empresaId,
-            VentaId = venta.Id,
-            FechaPago = dto.FechaPago,
-            TipoPago = tipoPago,
-            ModoPago = modoPago,
-            CuentaCajaBancoId = dto.CuentaCajaBancoId,
-            Monto = dto.Monto,
-            MonedaId = dto.MonedaId,
-            MonedaCodigo = dto.MonedaCodigo,
-            TipoCambio = dto.TipoCambio <= 0 ? 1m : dto.TipoCambio,
-            Referencia = dto.Referencia,
-            EstadoPago = estadoPago,
-            Activo = true
-        };
+            // ── Regla 2: Buscar venta (tenant-aware) DENTRO de la tx ────────────
+            var venta = await _ventaRepo.GetByIdAsync(id, ct);
+            if (venta is null || !venta.Activo)
+                return Result<VentaDto>.Failure("Venta no encontrada.");
 
-        await _pagoRepo.AddAsync(pago, ct);
+            if (venta.EmpresaId != empresaId)
+                return Result<VentaDto>.Failure("La venta no pertenece a la empresa activa.");
 
-        var pagos = await _pagoRepo.FindAsync(p => p.EmpresaId == empresaId && p.VentaId == venta.Id && p.Activo, ct);
-        var totalPagado = pagos.Sum(p => p.Monto) + pago.Monto;
-        venta.EstadoPago = CalculateEstadoPago(venta.Total, totalPagado);
+            if (venta.EstadoVenta == EstadoVenta.Anulada)
+                return Result<VentaDto>.Failure("No se pueden registrar pagos en una venta anulada.");
 
-        if (venta.EstadoPago == EstadoPagoVenta.Pagado && venta.EstadoVenta == EstadoVenta.Confirmada)
-            venta.EstadoVenta = EstadoVenta.Pagada;
+            // ── Regla 3: Recalcular saldo DENTRO de la transacción ──────────────
+            var pagosExistentes = await _pagoRepo.FindAsync(p => p.EmpresaId == empresaId && p.VentaId == venta.Id && p.Activo, ct);
+            var totalPagadoAcumulado = pagosExistentes.Sum(p => p.Monto);
+            var saldoPendiente = venta.Total - totalPagadoAcumulado;
 
-        await _ventaRepo.UpdateAsync(venta, ct);
-        await _unitOfWork.SaveChangesAsync(ct);
+            // ── Regla 4: Validar que no exceda saldo ────────────────────────────
+            if (dto.Monto > saldoPendiente)
+                return Result<VentaDto>.Failure(
+                    $"El monto del pago ({dto.Monto:C}) excede el saldo pendiente ({saldoPendiente:C}). " +
+                    $"Total venta: {venta.Total:C}, pagos acumulados: {totalPagadoAcumulado:C}.");
 
-        return await GetByIdAsync(venta.Id, ct);
+            // ── Crear el pago ────────────────────────────────────────────────────
+            var pago = new VentaPago
+            {
+                EmpresaId = empresaId,
+                VentaId = venta.Id,
+                FacturaVentaId = dto.FacturaVentaId,
+                FechaPago = dto.FechaPago,
+                TipoPago = tipoPago,
+                ModoPago = modoPago,
+                CuentaCajaBancoId = dto.CuentaCajaBancoId,
+                Monto = dto.Monto,
+                MonedaId = dto.MonedaId,
+                MonedaCodigo = dto.MonedaCodigo,
+                TipoCambio = dto.TipoCambio <= 0 ? 1m : dto.TipoCambio,
+                Referencia = dto.Referencia,
+                EstadoPago = estadoPago,
+                Activo = true
+            };
+
+            await _pagoRepo.AddAsync(pago, ct);
+
+            // ── Regla 5: Actualizar estado de pago ──────────────────────────────
+            var totalPagado = totalPagadoAcumulado + pago.Monto;
+            venta.EstadoPago = CalculateEstadoPago(venta.Total, totalPagado);
+
+            if (venta.EstadoPago == EstadoPagoVenta.Pagado && venta.EstadoVenta == EstadoVenta.Confirmada)
+                venta.EstadoVenta = EstadoVenta.Pagada;
+
+            await _ventaRepo.UpdateAsync(venta, ct);
+            await _unitOfWork.SaveChangesAsync(ct);
+
+            return await GetByIdAsync(venta.Id, ct);
+        }, ct);
     }
 
     public async Task<Result<VentaDto>> AnularAsync(long id, AnularVentaRequestDto dto, CancellationToken ct = default)
@@ -910,8 +936,11 @@ public class VentaService : IVentaService
                 CostoUnitario = d.CostoUnitario,
                 DescuentaInventario = d.DescuentaInventario
             }).ToList(),
-            Pagos = pagos.Select(p => new VentaPagoDto
+                        Pagos = pagos.Select(p => new VentaPagoDto
             {
+                Id = p.Id,
+                VentaId = p.VentaId,
+                FacturaVentaId = p.FacturaVentaId,
                 FechaPago = p.FechaPago,
                 TipoPago = p.TipoPago.ToString(),
                 ModoPago = p.ModoPago.ToString(),

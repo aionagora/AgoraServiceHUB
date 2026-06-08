@@ -4,6 +4,7 @@
 @using AgoraHub360.ERP.Shared.DTOs.Ventas
 @inject VentaHttpService VentaService
 @inject NavigationManager Nav
+@inject FacturaVentaHttpService FacturaVentaService
 
 <PageTitle>Ventas Comercial - AgoraHub360 ERP</PageTitle>
 
@@ -99,6 +100,15 @@
                                         <i class="bi bi-pencil-square"></i>
                                     </button>
 
+                                    @if (!IsAnulada(venta.EstadoVenta) && !IsBorrador(venta.EstadoVenta))
+                                    {
+                                        <button class="btn btn-sm btn-outline-success ms-1"
+                                                @onclick="() => GoToPago(venta.Id)"
+                                                title="Registrar pago">
+                                            <i class="bi bi-cash-coin"></i>
+                                        </button>
+                                    }
+
                                     @if (IsBorrador(venta.EstadoVenta))
                                     {
                                         <button class="btn btn-sm btn-outline-success ms-1"
@@ -162,7 +172,9 @@
 
     private void GoToNueva() => Nav.NavigateTo("/ventas/comercial/nueva");
 
-    private void GoToDetalle(long id) => Nav.NavigateTo($"/ventas/comercial/{id}");
+        private void GoToDetalle(long id) => Nav.NavigateTo($"/ventas/comercial/{id}");
+
+    private void GoToPago(long id) => Nav.NavigateTo($"/ventas/pagos/{id}");
 
     private async Task ConfirmarAsync(long id)
     {
