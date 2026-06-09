@@ -24,9 +24,10 @@ public class VentaService : IVentaService
     private readonly IRepository<CompanyProduct> _companyProductRepo;
     private readonly IRepository<Product> _productRepo;
     private readonly IRepository<Empresa> _empresaRepo;
-    private readonly INumeracionDocumentoService _numeracionDocumentoService;
+        private readonly INumeracionDocumentoService _numeracionDocumentoService;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ICuentasPorCobrarService _cuentasPorCobrarService;
 
     public VentaService(
         IRepository<Venta> ventaRepo,
@@ -44,7 +45,8 @@ public class VentaService : IVentaService
         IRepository<Empresa> empresaRepo,
         INumeracionDocumentoService numeracionDocumentoService,
         ICurrentUserService currentUser,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ICuentasPorCobrarService cuentasPorCobrarService)
     {
         _ventaRepo = ventaRepo;
         _detalleRepo = detalleRepo;
@@ -60,8 +62,9 @@ public class VentaService : IVentaService
         _productRepo = productRepo;
         _empresaRepo = empresaRepo;
         _numeracionDocumentoService = numeracionDocumentoService;
-        _currentUser = currentUser;
+                _currentUser = currentUser;
         _unitOfWork = unitOfWork;
+        _cuentasPorCobrarService = cuentasPorCobrarService;
     }
 
     public async Task<Result<IReadOnlyList<VentaResumenDto>>> GetAllAsync(CancellationToken ct = default)
@@ -532,11 +535,21 @@ public class VentaService : IVentaService
             if (venta.EstadoPago == EstadoPagoVenta.Pagado && venta.EstadoVenta == EstadoVenta.Confirmada)
                 venta.EstadoVenta = EstadoVenta.Pagada;
 
-            await _ventaRepo.UpdateAsync(venta, ct);
+                        await _ventaRepo.UpdateAsync(venta, ct);
             await _unitOfWork.SaveChangesAsync(ct);
 
             return await GetByIdAsync(venta.Id, ct);
         }, ct);
+
+        // // ── Actualizar Cuenta por Cobrar (después de la transacción) ─────
+        // // La factura asociada ya debería existir si la venta fue facturada.
+        // // Buscar factura(s) de esta venta para actualizar CxC.
+        // var facturas = await _facturaRepo.FindAsync(
+        //     f => f.EmpresaId == empresaId && f.VentaId == id && f.Activo, ct);
+        // foreach (var factura in facturas)
+        // {
+        //     await _cuentasPorCobrarService.ActualizarPorPagoAsync(factura.Id, dto.Monto, ct);
+        // }
     }
 
     public async Task<Result<VentaDto>> AnularAsync(long id, AnularVentaRequestDto dto, CancellationToken ct = default)

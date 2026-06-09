@@ -21,8 +21,9 @@ public class FacturaVentaService : IFacturaVentaService
     private readonly IRepository<ClientePerfilFiscal> _clientePerfilFiscalRepo;
     private readonly IRepository<CompanyProduct> _companyProductRepo;
     private readonly IRepository<Uom> _uomRepo;
-    private readonly ICurrentUserService _currentUser;
+        private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ICuentasPorCobrarService _cuentasPorCobrarService;
 
     public FacturaVentaService(
         IRepository<FacturaVenta> facturaRepo,
@@ -36,8 +37,9 @@ public class FacturaVentaService : IFacturaVentaService
         IRepository<ClientePerfilFiscal> clientePerfilFiscalRepo,
         IRepository<CompanyProduct> companyProductRepo,
         IRepository<Uom> uomRepo,
-        ICurrentUserService currentUser,
-        IUnitOfWork unitOfWork)
+                ICurrentUserService currentUser,
+        IUnitOfWork unitOfWork,
+        ICuentasPorCobrarService cuentasPorCobrarService)
     {
         _facturaRepo = facturaRepo;
         _facturaDetalleRepo = facturaDetalleRepo;
@@ -50,8 +52,9 @@ public class FacturaVentaService : IFacturaVentaService
         _clientePerfilFiscalRepo = clientePerfilFiscalRepo;
         _companyProductRepo = companyProductRepo;
         _uomRepo = uomRepo;
-        _currentUser = currentUser;
+                _currentUser = currentUser;
         _unitOfWork = unitOfWork;
+        _cuentasPorCobrarService = cuentasPorCobrarService;
     }
 
     public async Task<Result<IReadOnlyList<FacturaVentaResumenDto>>> GetAllAsync(CancellationToken ct = default)
@@ -258,7 +261,15 @@ public class FacturaVentaService : IFacturaVentaService
         venta.FacturaGenerada = true;
         await _ventaRepo.UpdateAsync(venta, ct);
 
-        await _unitOfWork.SaveChangesAsync(ct);
+                await _unitOfWork.SaveChangesAsync(ct);
+
+        // ── Generar Cuenta por Cobrar automáticamente ──────────────────────────
+        var cxcResult = await _cuentasPorCobrarService.GenerarDesdeFacturaAsync(factura.Id, ct);
+        if (!cxcResult.IsSuccess)
+        {
+            // No falla la factura si la CxC tiene problemas; solo se registra.
+            // En futura fase se podría loguear.
+        }
 
         var detallesFactura = await _facturaDetalleRepo.FindAsync(d => d.EmpresaId == empresaId && d.FacturaVentaId == factura.Id, ct);
         return Result<FacturaVentaDto>.Success(MapToDto(factura, detallesFactura));

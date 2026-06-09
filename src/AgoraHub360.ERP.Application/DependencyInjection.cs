@@ -106,8 +106,11 @@ public static class DependencyInjection
         // BNC: Conciliación Bancaria
         services.AddScoped<IConciliacionBancariaService, ConciliacionBancariaService>();
 
-        // WF: Workflow
+                // WF: Workflow
         services.AddScoped<IWorkflowService, WorkflowService>();
+
+        // CXC: Cuentas por Cobrar
+        services.AddScoped<ICuentasPorCobrarService, CuentasPorCobrarService>();
 
         return services;
     }
