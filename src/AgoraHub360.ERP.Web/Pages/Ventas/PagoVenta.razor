@@ -227,14 +227,18 @@
                 <h5 class="card-title mb-3 fs-6 fw-bold text-dark"><i class="bi bi-funnel-fill me-1 text-primary"></i> Filtros de Búsqueda (Historial)</h5>
                 <div class="row g-2 align-items-end">
                     <div class="col-12 col-sm-6 col-md-3">
+                        <label class="form-label small text-muted mb-1">Buscar</label>
+                        <input type="text" class="form-control form-control-sm" placeholder="Nro venta, factura o referencia..." @bind="histBusqueda" />
+                    </div>
+                    <div class="col-12 col-sm-6 col-md-3">
                         <label class="form-label small text-muted mb-1">Nro Venta</label>
                         <input type="text" class="form-control form-control-sm" placeholder="Buscar por número venta..." @bind="histNumeroVenta" />
                     </div>
-                    <div class="col-12 col-sm-6 col-md-3">
+                    <div class="col-12 col-sm-6 col-md-2">
                         <label class="form-label small text-muted mb-1">Nro Factura</label>
                         <input type="text" class="form-control form-control-sm" placeholder="Buscar por número factura..." @bind="histNumeroFactura" />
                     </div>
-                    <div class="col-12 col-sm-6 col-md-3">
+                    <div class="col-12 col-sm-6 col-md-2">
                         <label class="form-label small text-muted mb-1">Cliente</label>
                         <select class="form-select form-select-sm text-dark" @bind="histClienteId">
                             <option value="">-- Todos los Clientes --</option>
@@ -244,7 +248,7 @@
                             }
                         </select>
                     </div>
-                    <div class="col-12 col-sm-6 col-md-3">
+                    <div class="col-12 col-sm-6 col-md-2">
                         <label class="form-label small text-muted mb-1">Tipo Pago</label>
                         <select class="form-select form-select-sm text-dark" @bind="histTipoPago">
                             <option value="">-- Todos --</option>
@@ -254,7 +258,7 @@
                             }
                         </select>
                     </div>
-                    <div class="col-12 col-sm-6 col-md-3">
+                    <div class="col-12 col-sm-6 col-md-2">
                         <label class="form-label small text-muted mb-1">Estado Pago</label>
                         <select class="form-select form-select-sm text-dark" @bind="histEstadoPago">
                             <option value="">-- Todos --</option>
@@ -262,11 +266,11 @@
                             <option value="Anulado">Anulado</option>
                         </select>
                     </div>
-                    <div class="col-12 col-sm-6 col-md-3">
+                    <div class="col-12 col-sm-6 col-md-2">
                         <label class="form-label small text-muted mb-1">Fecha Desde</label>
                         <input type="date" class="form-control form-control-sm" @bind="histFechaDesde" />
                     </div>
-                    <div class="col-12 col-sm-6 col-md-3">
+                    <div class="col-12 col-sm-6 col-md-2">
                         <label class="form-label small text-muted mb-1">Fecha Hasta</label>
                         <input type="date" class="form-control form-control-sm" @bind="histFechaHasta" />
                     </div>
@@ -289,7 +293,7 @@
                             <option value="100">100</option>
                         </select>
                     </div>
-                    <div class="col-12 col-md-8 d-flex gap-2 justify-content-end">
+                    <div class="col-12 d-flex gap-2 justify-content-end">
                         <button type="submit" class="btn btn-primary btn-sm px-4" disabled="@histLoading">
                             @if (histLoading)
                             {
@@ -684,6 +688,7 @@
     private List<AgoraHub360.ERP.Shared.DTOs.MDM.ClienteDto> clientes = new();
 
     // Filtros historial
+    private string? histBusqueda;
     private string? histNumeroVenta;
     private string? histNumeroFactura;
     private int? histClienteId;
@@ -782,6 +787,7 @@
 
     private async Task LimpiarFiltrosHistorialAsync()
     {
+        histBusqueda = null;
         histNumeroVenta = null;
         histNumeroFactura = null;
         histClienteId = null;
@@ -822,6 +828,7 @@
         {
             var filter = new VentaPagoFilterDto
             {
+                Busqueda = histBusqueda,
                 NumeroVenta = histNumeroVenta,
                 NumeroFactura = histNumeroFactura,
                 ClienteId = histClienteId,

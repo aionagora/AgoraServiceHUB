@@ -187,18 +187,43 @@ public class VentaService : IVentaService
         var pagos = await _pagoRepo.FindAsync(p => p.EmpresaId == empresaId && p.Activo, ct);
         var filteredPagos = pagos.AsEnumerable();
 
-        if (!string.IsNullOrWhiteSpace(filter.NumeroVenta) || filter.ClienteId.HasValue)
+        // ── Búsqueda general (Buscar) ────────────────────────────────────────
+        if (!string.IsNullOrWhiteSpace(filter.Busqueda))
+        {
+            var term = filter.Busqueda.Trim().ToLower();
+            var ventasMatch = await _ventaRepo.FindAsync(v =>
+                v.EmpresaId == empresaId &&
+                v.Activo &&
+                (v.NumeroVenta.Contains(term, StringComparison.OrdinalIgnoreCase)),
+                ct);
+            var ventaIdsMatch = ventasMatch.Select(v => v.Id).ToHashSet();
+
+            var facturasMatch = await _facturaRepo.FindAsync(f =>
+                f.EmpresaId == empresaId &&
+                f.Activo &&
+                f.NumeroFactura.Contains(term, StringComparison.OrdinalIgnoreCase),
+                ct);
+            var facturaIdsMatch = facturasMatch.Select(f => f.Id).ToHashSet();
+
+            filteredPagos = filteredPagos.Where(p =>
+                ventaIdsMatch.Contains(p.VentaId) ||
+                (p.FacturaVentaId.HasValue && facturaIdsMatch.Contains(p.FacturaVentaId.Value)) ||
+                (p.Referencia != null && p.Referencia.Contains(term, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        // ── Filtro NroVenta ──────────────────────────────────────────────────
+        if (!string.IsNullOrWhiteSpace(filter.NumeroVenta))
         {
             var ventaIdsFiltradas = (await _ventaRepo.FindAsync(v =>
                 v.EmpresaId == empresaId &&
                 v.Activo &&
-                (string.IsNullOrWhiteSpace(filter.NumeroVenta) || v.NumeroVenta.Contains(filter.NumeroVenta)) &&
-                (!filter.ClienteId.HasValue || v.ClienteId == filter.ClienteId.Value),
+                v.NumeroVenta.Contains(filter.NumeroVenta),
                 ct)).Select(v => v.Id).ToHashSet();
 
             filteredPagos = filteredPagos.Where(p => ventaIdsFiltradas.Contains(p.VentaId));
         }
 
+        // ── Filtro NroFactura ────────────────────────────────────────────────
         if (!string.IsNullOrWhiteSpace(filter.NumeroFactura))
         {
             var facturaIdsFiltradas = (await _facturaRepo.FindAsync(f =>
@@ -210,21 +235,37 @@ public class VentaService : IVentaService
             filteredPagos = filteredPagos.Where(p => p.FacturaVentaId.HasValue && facturaIdsFiltradas.Contains(p.FacturaVentaId.Value));
         }
 
+        // ── Filtro Cliente ───────────────────────────────────────────────────
+        if (filter.ClienteId.HasValue)
+        {
+            var ventaIdsCliente = (await _ventaRepo.FindAsync(v =>
+                v.EmpresaId == empresaId &&
+                v.Activo &&
+                v.ClienteId == filter.ClienteId.Value,
+                ct)).Select(v => v.Id).ToHashSet();
+
+            filteredPagos = filteredPagos.Where(p => ventaIdsCliente.Contains(p.VentaId));
+        }
+
+        // ── Filtro TipoPago ──────────────────────────────────────────────────
         if (!string.IsNullOrWhiteSpace(filter.TipoPago) && !string.Equals(filter.TipoPago, "Todos", StringComparison.OrdinalIgnoreCase))
         {
             filteredPagos = filteredPagos.Where(p => string.Equals(p.TipoPago.ToString(), filter.TipoPago, StringComparison.OrdinalIgnoreCase));
         }
 
+        // ── Filtro EstadoPago ────────────────────────────────────────────────
         if (!string.IsNullOrWhiteSpace(filter.EstadoPago) && !string.Equals(filter.EstadoPago, "Todos", StringComparison.OrdinalIgnoreCase))
         {
             filteredPagos = filteredPagos.Where(p => string.Equals(p.EstadoPago.ToString(), filter.EstadoPago, StringComparison.OrdinalIgnoreCase));
         }
 
+        // ── Filtro FechaPagoDesde ────────────────────────────────────────────
         if (filter.FechaPagoDesde.HasValue)
         {
             filteredPagos = filteredPagos.Where(p => p.FechaPago.Date >= filter.FechaPagoDesde.Value.Date);
         }
 
+        // ── Filtro FechaPagoHasta ────────────────────────────────────────────
         if (filter.FechaPagoHasta.HasValue)
         {
             filteredPagos = filteredPagos.Where(p => p.FechaPago.Date <= filter.FechaPagoHasta.Value.Date);
@@ -261,8 +302,8 @@ public class VentaService : IVentaService
         var sortedList = sorted.ToList();
         var totalItems = sortedList.Count;
 
-        var pagina = filter.Pagina;
-        var tamanoPagina = filter.TamanoPagina;
+        var pagina = filter.Page ?? filter.Pagina;
+        var tamanoPagina = filter.PageSize ?? filter.TamanoPagina;
 
         var items = sortedList
             .Skip((pagina - 1) * tamanoPagina)

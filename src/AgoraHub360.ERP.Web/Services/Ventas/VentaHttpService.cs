@@ -44,6 +44,7 @@ public class VentaHttpService
         var url = $"{BaseUrl}/pagos?";
         if (filter != null)
         {
+            if (!string.IsNullOrEmpty(filter.Busqueda)) url += $"busqueda={Uri.EscapeDataString(filter.Busqueda)}&";
             if (!string.IsNullOrEmpty(filter.NumeroVenta)) url += $"numeroVenta={Uri.EscapeDataString(filter.NumeroVenta)}&";
             if (!string.IsNullOrEmpty(filter.NumeroFactura)) url += $"numeroFactura={Uri.EscapeDataString(filter.NumeroFactura)}&";
             if (filter.ClienteId.HasValue) url += $"clienteId={filter.ClienteId}&";
@@ -52,7 +53,9 @@ public class VentaHttpService
             if (filter.FechaPagoDesde.HasValue) url += $"fechaPagoDesde={filter.FechaPagoDesde.Value:yyyy-MM-dd}&";
             if (filter.FechaPagoHasta.HasValue) url += $"fechaPagoHasta={filter.FechaPagoHasta.Value:yyyy-MM-dd}&";
             url += $"top={filter.Top}&";
+            if (filter.Page.HasValue) url += $"page={filter.Page}&";
             url += $"pagina={filter.Pagina}&";
+            if (filter.PageSize.HasValue) url += $"pageSize={filter.PageSize}&";
             url += $"tamanoPagina={filter.TamanoPagina}&";
         }
         url = url.TrimEnd('&', '?');

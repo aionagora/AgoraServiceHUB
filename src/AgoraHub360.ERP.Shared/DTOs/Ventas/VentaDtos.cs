@@ -248,6 +248,7 @@ public class FacturaVentaFilterDto
 
 public class VentaPagoFilterDto
 {
+    public string? Busqueda { get; set; }
     public string? NumeroVenta { get; set; }
     public string? NumeroFactura { get; set; }
     public int? ClienteId { get; set; }
@@ -258,16 +259,22 @@ public class VentaPagoFilterDto
     public int Top { get; set; } = 100;
     public int Pagina { get; set; } = 1;
     public int TamanoPagina { get; set; } = 50;
+    public int? Page { get; set; }
+    public int? PageSize { get; set; }
 }
 
 public class PedidoVentaFilterDto
 {
+    public string? Busqueda { get; set; }
     public string? NumeroPedido { get; set; }
     public int? ClienteId { get; set; }
     public string? EstadoPedido { get; set; }
+    public string? Prioridad { get; set; }
     public DateTime? FechaDesde { get; set; }
     public DateTime? FechaHasta { get; set; }
     public int Top { get; set; } = 100;
     public int Pagina { get; set; } = 1;
     public int TamanoPagina { get; set; } = 50;
+    public int? Page { get; set; }
+    public int? PageSize { get; set; }
 }

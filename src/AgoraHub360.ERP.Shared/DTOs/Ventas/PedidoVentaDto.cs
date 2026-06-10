@@ -24,6 +24,7 @@ namespace AgoraHub360.ERP.Shared.DTOs.Ventas
         public int? ClienteSucursalId { get; set; }
         public ClienteSucursalDto? ClienteSucursal { get; set; }
 
+        public string Prioridad { get; set; } = "Normal";
         public string Estado { get; set; } = string.Empty;
         public decimal Subtotal { get; set; }
         public decimal Impuestos { get; set; }
@@ -54,6 +55,9 @@ namespace AgoraHub360.ERP.Shared.DTOs.Ventas
     public class CreatePedidoVentaDto
     {
         public DateTime? FechaEntregaEsperada { get; set; }
+
+        /// <summary>Baja, Normal, Alta, Urgente</summary>
+        public string Prioridad { get; set; } = "Normal";
 
         public int SucursalId { get; set; }
         public int AlmacenId { get; set; }

@@ -33,6 +33,34 @@ public class PedidoVentaHttpService
         return payload.Data ?? new List<PedidoVentaDto>();
     }
 
+    /// <summary>
+    /// Obtiene pedidos paginados con filtros.
+    /// </summary>
+    public async Task<ApiResponse<PaginatedResultDto<PedidoVentaDto>>> GetPagedAsync(PedidoVentaFilterDto filter)
+    {
+        var url = $"{BaseUrl}/paged?";
+        if (filter != null)
+        {
+            if (!string.IsNullOrEmpty(filter.Busqueda)) url += $"busqueda={Uri.EscapeDataString(filter.Busqueda)}&";
+            if (!string.IsNullOrEmpty(filter.NumeroPedido)) url += $"numeroPedido={Uri.EscapeDataString(filter.NumeroPedido)}&";
+            if (filter.ClienteId.HasValue) url += $"clienteId={filter.ClienteId}&";
+            if (!string.IsNullOrEmpty(filter.EstadoPedido)) url += $"estadoPedido={Uri.EscapeDataString(filter.EstadoPedido)}&";
+            if (!string.IsNullOrEmpty(filter.Prioridad)) url += $"prioridad={Uri.EscapeDataString(filter.Prioridad)}&";
+            if (filter.FechaDesde.HasValue) url += $"fechaDesde={filter.FechaDesde.Value:yyyy-MM-dd}&";
+            if (filter.FechaHasta.HasValue) url += $"fechaHasta={filter.FechaHasta.Value:yyyy-MM-dd}&";
+            url += $"top={filter.Top}&";
+            if (filter.Page.HasValue) url += $"page={filter.Page}&";
+            url += $"pagina={filter.Pagina}&";
+            if (filter.PageSize.HasValue) url += $"pageSize={filter.PageSize}&";
+            url += $"tamanoPagina={filter.TamanoPagina}&";
+        }
+        url = url.TrimEnd('&', '?');
+
+        var response = await _http.GetAsync(url);
+        return await response.Content.ReadFromJsonAsync<ApiResponse<PaginatedResultDto<PedidoVentaDto>>>()
+               ?? ApiResponse<PaginatedResultDto<PedidoVentaDto>>.Fail("Error de comunicación.");
+    }
+
     public async Task<PedidoVentaDto?> GetByIdAsync(long id)
     {
         var response = await _http.GetFromJsonAsync<ApiResponse<PedidoVentaDto>>($"{BaseUrl}/{id}");

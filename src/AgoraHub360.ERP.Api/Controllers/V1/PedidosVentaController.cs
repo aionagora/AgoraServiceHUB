@@ -30,6 +30,16 @@ public class PedidosVentaController : ControllerBase
         return Ok(ApiResponse<IReadOnlyList<PedidoVentaDto>>.Ok(result.Value!));
     }
 
+    [HttpGet("paged")]
+    public async Task<IActionResult> GetPaged([FromQuery] PedidoVentaFilterDto filter, CancellationToken ct)
+    {
+        var result = await _service.GetPagedAsync(filter, ct);
+        if (!result.IsSuccess)
+            return BadRequest(ApiResponse<PaginatedResultDto<PedidoVentaDto>>.Fail(result.Error!));
+
+        return Ok(ApiResponse<PaginatedResultDto<PedidoVentaDto>>.Ok(result.Value!));
+    }
+
     [HttpGet("{id:long}")]
     public async Task<IActionResult> GetById(long id, CancellationToken ct)
     {
