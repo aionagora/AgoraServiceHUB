@@ -213,3 +213,61 @@ public class AnularPagoVentaRequestDto
 {
     public string Motivo { get; set; } = string.Empty;
 }
+
+public class VentaFilterDto
+{
+    public string? NumeroVenta { get; set; }
+    public int? ClienteId { get; set; }
+    public string? EstadoVenta { get; set; }
+    public string? EstadoPago { get; set; }
+    public DateTime? FechaDesde { get; set; }
+    public DateTime? FechaHasta { get; set; }
+    public string? Busqueda { get; set; }
+    public int Top { get; set; } = 100;
+    public int Pagina { get; set; } = 1;
+    public int TamanoPagina { get; set; } = 50;
+    public int? Page { get; set; }
+    public int? PageSize { get; set; }
+}
+
+public class FacturaVentaFilterDto
+{
+    public string? NumeroFactura { get; set; }
+    public int? ClienteId { get; set; }
+    public string? EstadoFactura { get; set; }
+    public DateTime? FechaEmisionDesde { get; set; }
+    public DateTime? FechaEmisionHasta { get; set; }
+    public string? Busqueda { get; set; }
+    public string? Moneda { get; set; }
+    public int Top { get; set; } = 100;
+    public int Pagina { get; set; } = 1;
+    public int TamanoPagina { get; set; } = 50;
+    public int? Page { get; set; }
+    public int? PageSize { get; set; }
+}
+
+public class VentaPagoFilterDto
+{
+    public string? NumeroVenta { get; set; }
+    public string? NumeroFactura { get; set; }
+    public int? ClienteId { get; set; }
+    public string? TipoPago { get; set; }
+    public string? EstadoPago { get; set; }
+    public DateTime? FechaPagoDesde { get; set; }
+    public DateTime? FechaPagoHasta { get; set; }
+    public int Top { get; set; } = 100;
+    public int Pagina { get; set; } = 1;
+    public int TamanoPagina { get; set; } = 50;
+}
+
+public class PedidoVentaFilterDto
+{
+    public string? NumeroPedido { get; set; }
+    public int? ClienteId { get; set; }
+    public string? EstadoPedido { get; set; }
+    public DateTime? FechaDesde { get; set; }
+    public DateTime? FechaHasta { get; set; }
+    public int Top { get; set; } = 100;
+    public int Pagina { get; set; } = 1;
+    public int TamanoPagina { get; set; } = 50;
+}

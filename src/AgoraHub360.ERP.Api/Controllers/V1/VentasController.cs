@@ -21,13 +21,23 @@ public class VentasController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll(CancellationToken ct)
+    public async Task<IActionResult> GetAll([FromQuery] VentaFilterDto filter, CancellationToken ct)
     {
-        var result = await _service.GetAllAsync(ct);
+        var result = await _service.GetAllAsync(filter, ct);
         if (!result.IsSuccess)
-            return BadRequest(ApiResponse<IReadOnlyList<VentaResumenDto>>.Fail(result.Error!));
+            return BadRequest(ApiResponse<PaginatedResultDto<VentaResumenDto>>.Fail(result.Error!));
 
-        return Ok(ApiResponse<IReadOnlyList<VentaResumenDto>>.Ok(result.Value!));
+        return Ok(ApiResponse<PaginatedResultDto<VentaResumenDto>>.Ok(result.Value!));
+    }
+
+    [HttpGet("pagos")]
+    public async Task<IActionResult> GetPagos([FromQuery] VentaPagoFilterDto filter, CancellationToken ct)
+    {
+        var result = await _service.GetPagosPagedAsync(filter, ct);
+        if (!result.IsSuccess)
+            return BadRequest(ApiResponse<PaginatedResultDto<VentaPagoDto>>.Fail(result.Error!));
+
+        return Ok(ApiResponse<PaginatedResultDto<VentaPagoDto>>.Ok(result.Value!));
     }
 
     [HttpGet("{id:long}")]

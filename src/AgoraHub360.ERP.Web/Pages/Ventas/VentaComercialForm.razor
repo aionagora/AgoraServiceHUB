@@ -42,17 +42,17 @@
                         </div>
                         <div class="col-md-2">
                             <span class="text-muted me-1">Estado venta:</span>
-                            <span class="badge @GetEstadoVentaBadge(form.EstadoVenta)">@form.EstadoVenta</span>
+                            <span class="@BadgeCssHelper.GetEstadoVentaBadge(form.EstadoVenta)">@form.EstadoVenta</span>
                         </div>
                         <div class="col-md-2">
                             <span class="text-muted me-1">Estado pago:</span>
-                            <span class="badge @GetEstadoPagoBadge(form.EstadoPago)">@form.EstadoPago</span>
+                            <span class="@BadgeCssHelper.GetEstadoPagoBadge(form.EstadoPago)">@form.EstadoPago</span>
                         </div>
                         <div class="col-md-2">
                             <span class="text-muted me-1">Facturación:</span>
                             @if (facturaActual is not null)
                             {
-                                <span class="badge @GetEstadoFacturaBadge(facturaActual.EstadoFactura)">@facturaActual.EstadoFactura</span>
+                                <span class="@BadgeCssHelper.GetEstadoFacturaBadge(facturaActual.EstadoFactura)">@facturaActual.EstadoFactura</span>
                             }
                             else
                             {
@@ -569,7 +569,7 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label text-muted">Estado Factura</label>
-                                <div><span class="badge @GetEstadoFacturaBadge(facturaActual.EstadoFactura)">@facturaActual.EstadoFactura</span></div>
+                                <div><span class="@BadgeCssHelper.GetEstadoFacturaBadge(facturaActual.EstadoFactura)">@facturaActual.EstadoFactura</span></div>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label text-muted">Estado SIAT</label>
@@ -2339,47 +2339,7 @@
         resumen.Saldo = decimal.Round(total - totalPagado, 2);
     }
 
-    private static string GetEstadoFacturaBadge(string? estado)
-    {
-        if (string.IsNullOrWhiteSpace(estado)) return "bg-secondary";
 
-        return estado.ToLowerInvariant() switch
-        {
-            "generada" => "bg-success",
-            "anulada" => "bg-danger",
-            "borrador" => "bg-secondary",
-            _ => "bg-secondary"
-        };
-    }
-
-    private static string GetEstadoVentaBadge(string? estado)
-    {
-        if (string.IsNullOrWhiteSpace(estado)) return "bg-secondary";
-
-        return estado.ToLowerInvariant() switch
-        {
-            "borrador" => "bg-secondary",
-            "confirmada" => "bg-info text-dark",
-            "facturada" => "bg-primary",
-            "anulada" => "bg-danger",
-            "anulado" => "bg-danger",
-            _ => "bg-secondary"
-        };
-    }
-
-    private static string GetEstadoPagoBadge(string? estado)
-    {
-        if (string.IsNullOrWhiteSpace(estado)) return "bg-secondary";
-
-        return estado.ToLowerInvariant() switch
-        {
-            "pendiente" => "bg-warning text-dark",
-            "parcial" => "bg-info text-dark",
-            "pagado" => "bg-success",
-            "anulado" => "bg-danger",
-            _ => "bg-secondary"
-        };
-    }
 
     private static string GetEstadoSiatBadge(string? estado)
     {

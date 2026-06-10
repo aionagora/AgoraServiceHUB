@@ -15,7 +15,7 @@ public class CuentasPorCobrarHttpService
         _http = http;
     }
 
-    public async Task<ApiResponse<List<CuentaPorCobrarResumenDto>>> GetAllAsync(CuentaPorCobrarFilterDto? filter = null)
+    public async Task<ApiResponse<PaginatedResultDto<CuentaPorCobrarResumenDto>>> GetAllAsync(CuentaPorCobrarFilterDto? filter = null)
     {
         var url = $"{BaseUrl}?";
         if (filter != null)
@@ -24,11 +24,21 @@ public class CuentasPorCobrarHttpService
             if (!string.IsNullOrEmpty(filter.Estado)) url += $"estado={Uri.EscapeDataString(filter.Estado)}&";
             if (filter.FechaDesde.HasValue) url += $"fechaDesde={filter.FechaDesde.Value:yyyy-MM-dd}&";
             if (filter.FechaHasta.HasValue) url += $"fechaHasta={filter.FechaHasta.Value:yyyy-MM-dd}&";
+            if (filter.FechaVencimientoDesde.HasValue) url += $"fechaVencimientoDesde={filter.FechaVencimientoDesde.Value:yyyy-MM-dd}&";
+            if (filter.FechaVencimientoHasta.HasValue) url += $"fechaVencimientoHasta={filter.FechaVencimientoHasta.Value:yyyy-MM-dd}&";
+            if (!string.IsNullOrEmpty(filter.NumeroFactura)) url += $"numeroFactura={Uri.EscapeDataString(filter.NumeroFactura)}&";
+            if (!string.IsNullOrEmpty(filter.NumeroVenta)) url += $"numeroVenta={Uri.EscapeDataString(filter.NumeroVenta)}&";
+            if (!string.IsNullOrEmpty(filter.Busqueda)) url += $"busqueda={Uri.EscapeDataString(filter.Busqueda)}&";
+            url += $"top={filter.Top}&";
+            url += $"pagina={filter.Pagina}&";
+            url += $"tamanoPagina={filter.TamanoPagina}&";
+            if (filter.Page.HasValue) url += $"page={filter.Page.Value}&";
+            if (filter.PageSize.HasValue) url += $"pageSize={filter.PageSize.Value}&";
         }
         url = url.TrimEnd('&', '?');
 
         var response = await _http.GetAsync(url);
-        return await ParseResult<List<CuentaPorCobrarResumenDto>>(response);
+        return await ParseResult<PaginatedResultDto<CuentaPorCobrarResumenDto>>(response);
     }
 
     public async Task<ApiResponse<CuentaPorCobrarDetalleDto>> GetByIdAsync(long id)

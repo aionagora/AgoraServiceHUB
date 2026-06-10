@@ -5,7 +5,9 @@ using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Entities.VTA;
 using AgoraHub360.ERP.Domain.Enums;
+using AgoraHub360.ERP.Domain.Entities.CXC;
 using AgoraHub360.ERP.Domain.Interfaces;
+using AgoraHub360.ERP.Shared.DTOs;
 using AgoraHub360.ERP.Shared.DTOs.Ventas;
 
 public class FacturaVentaService : IFacturaVentaService
@@ -24,6 +26,7 @@ public class FacturaVentaService : IFacturaVentaService
         private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICuentasPorCobrarService _cuentasPorCobrarService;
+    private readonly IRepository<CuentaPorCobrar> _cxcRepo;
 
     public FacturaVentaService(
         IRepository<FacturaVenta> facturaRepo,
@@ -39,7 +42,8 @@ public class FacturaVentaService : IFacturaVentaService
         IRepository<Uom> uomRepo,
                 ICurrentUserService currentUser,
         IUnitOfWork unitOfWork,
-        ICuentasPorCobrarService cuentasPorCobrarService)
+        ICuentasPorCobrarService cuentasPorCobrarService,
+        IRepository<CuentaPorCobrar> cxcRepo)
     {
         _facturaRepo = facturaRepo;
         _facturaDetalleRepo = facturaDetalleRepo;
@@ -55,25 +59,128 @@ public class FacturaVentaService : IFacturaVentaService
                 _currentUser = currentUser;
         _unitOfWork = unitOfWork;
         _cuentasPorCobrarService = cuentasPorCobrarService;
+        _cxcRepo = cxcRepo;
     }
 
-    public async Task<Result<IReadOnlyList<FacturaVentaResumenDto>>> GetAllAsync(CancellationToken ct = default)
+    public async Task<Result<PaginatedResultDto<FacturaVentaResumenDto>>> GetAllAsync(
+        FacturaVentaFilterDto? filter = null,
+        CancellationToken ct = default)
     {
         if (!_currentUser.EmpresaId.HasValue)
-            return Result<IReadOnlyList<FacturaVentaResumenDto>>.Failure("No se pudo determinar la empresa activa.");
+            return Result<PaginatedResultDto<FacturaVentaResumenDto>>.Failure("No se pudo determinar la empresa activa.");
 
         var empresaId = _currentUser.EmpresaId.Value;
 
         var facturas = await _facturaRepo.FindAsync(f => f.EmpresaId == empresaId, ct);
 
-        var result = facturas
+        var filteredList = facturas.AsEnumerable();
+
+        if (filter != null)
+        {
+            if (!string.IsNullOrWhiteSpace(filter.NumeroFactura))
+            {
+                filteredList = filteredList.Where(f => f.NumeroFactura.Contains(filter.NumeroFactura, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (!string.IsNullOrWhiteSpace(filter.Busqueda))
+            {
+                var term = filter.Busqueda;
+                var ventasConNumeroVenta = await _ventaRepo.FindAsync(v => v.EmpresaId == empresaId && v.NumeroVenta.Contains(term), ct);
+                var ventaIdsConNumeroVenta = ventasConNumeroVenta.Select(v => v.Id).ToHashSet();
+
+                filteredList = filteredList.Where(f => 
+                    f.NumeroFactura.Contains(term, StringComparison.OrdinalIgnoreCase) || 
+                    f.NitFactura.Contains(term, StringComparison.OrdinalIgnoreCase) || 
+                    f.RazonSocialFactura.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                    ventaIdsConNumeroVenta.Contains(f.VentaId));
+            }
+
+            if (!string.IsNullOrWhiteSpace(filter.EstadoFactura) && !string.Equals(filter.EstadoFactura, "Todos", StringComparison.OrdinalIgnoreCase))
+            {
+                filteredList = filteredList.Where(f => string.Equals(f.EstadoFactura.ToString(), filter.EstadoFactura, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (filter.ClienteId.HasValue)
+            {
+                var ventas = await _ventaRepo.FindAsync(v => v.EmpresaId == empresaId && v.ClienteId == filter.ClienteId.Value, ct);
+                var ventaIds = ventas.Select(v => v.Id).ToHashSet();
+                filteredList = filteredList.Where(f => ventaIds.Contains(f.VentaId));
+            }
+
+            if (!string.IsNullOrWhiteSpace(filter.Moneda) && !string.Equals(filter.Moneda, "Todos", StringComparison.OrdinalIgnoreCase))
+            {
+                filteredList = filteredList.Where(f => string.Equals(f.MonedaCodigo, filter.Moneda, StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (filter.FechaEmisionDesde.HasValue)
+            {
+                filteredList = filteredList.Where(f => f.FechaEmision.Date >= filter.FechaEmisionDesde.Value.Date);
+            }
+
+            if (filter.FechaEmisionHasta.HasValue)
+            {
+                filteredList = filteredList.Where(f => f.FechaEmision.Date <= filter.FechaEmisionHasta.Value.Date);
+            }
+        }
+
+        var sorted = filteredList
             .OrderByDescending(f => f.FechaEmision)
             .ThenByDescending(f => f.Id)
-            .Select(MapToResumenDto)
-            .ToList()
-            .AsReadOnly();
+            .Select(MapToResumenDto);
 
-        return Result<IReadOnlyList<FacturaVentaResumenDto>>.Success(result);
+        var top = filter?.Top ?? 100;
+        if (top > 0)
+        {
+            sorted = sorted.Take(top);
+        }
+
+        var sortedList = sorted.ToList();
+        var totalItems = sortedList.Count;
+
+        var pagina = filter?.Page ?? filter?.Pagina ?? 1;
+        var tamanoPagina = filter?.PageSize ?? filter?.TamanoPagina ?? 50;
+
+        var items = sortedList
+            .Skip((pagina - 1) * tamanoPagina)
+            .Take(tamanoPagina)
+            .ToList();
+
+        if (items.Count > 0)
+        {
+            var facturaIds = items.Select(f => f.Id).ToList();
+            var cxcs = await _cxcRepo.FindAsync(c => c.EmpresaId == empresaId && facturaIds.Contains(c.FacturaVentaId), ct);
+            var cxcMap = cxcs.ToDictionary(c => c.FacturaVentaId, c => c);
+
+            foreach (var item in items)
+            {
+                if (cxcMap.TryGetValue(item.Id, out var cxc))
+                {
+                    item.TotalPagado = cxc.TotalPagado;
+                    item.SaldoPendiente = cxc.SaldoPendiente;
+                    item.FechaVencimiento = cxc.FechaVencimiento;
+                    item.EstadoCobro = cxc.Estado.ToString();
+                    item.DiasVencidos = CalculateDiasVencidos(cxc.FechaVencimiento);
+                }
+                else
+                {
+                    item.TotalPagado = 0;
+                    item.SaldoPendiente = item.Total;
+                    item.FechaVencimiento = null;
+                    item.EstadoCobro = item.EstadoFactura == "Anulada" || item.EstadoFactura == "Anulado" ? "Anulada" : "Pendiente";
+                    item.DiasVencidos = 0;
+                }
+            }
+        }
+
+        var paginatedResult = new PaginatedResultDto<FacturaVentaResumenDto>
+        {
+            Items = items,
+            TotalItems = totalItems,
+            Pagina = pagina,
+            TamanoPagina = tamanoPagina
+        };
+
+        return Result<PaginatedResultDto<FacturaVentaResumenDto>>.Success(paginatedResult);
     }
 
     public async Task<Result<FacturaVentaDto>> GetByIdAsync(long id, CancellationToken ct = default)
@@ -92,7 +199,9 @@ public class FacturaVentaService : IFacturaVentaService
 
         var detalles = await _facturaDetalleRepo.FindAsync(d => d.EmpresaId == empresaId && d.FacturaVentaId == factura.Id, ct);
 
-        return Result<FacturaVentaDto>.Success(MapToDto(factura, detalles));
+        var mappedDto = MapToDto(factura, detalles);
+        await PopulateCxCFieldsAsync(mappedDto, empresaId, ct);
+        return Result<FacturaVentaDto>.Success(mappedDto);
     }
 
     public async Task<Result<FacturaVentaDto>> GetByVentaIdAsync(long ventaId, CancellationToken ct = default)
@@ -111,7 +220,9 @@ public class FacturaVentaService : IFacturaVentaService
 
         var detalles = await _facturaDetalleRepo.FindAsync(d => d.EmpresaId == empresaId && d.FacturaVentaId == factura.Id, ct);
 
-        return Result<FacturaVentaDto>.Success(MapToDto(factura, detalles));
+        var mappedDto = MapToDto(factura, detalles);
+        await PopulateCxCFieldsAsync(mappedDto, empresaId, ct);
+        return Result<FacturaVentaDto>.Success(mappedDto);
     }
 
     public async Task<Result<FacturaVentaDto>> GenerarDesdeVentaAsync(GenerarFacturaVentaRequestDto dto, CancellationToken ct = default)
@@ -272,7 +383,9 @@ public class FacturaVentaService : IFacturaVentaService
         }
 
         var detallesFactura = await _facturaDetalleRepo.FindAsync(d => d.EmpresaId == empresaId && d.FacturaVentaId == factura.Id, ct);
-        return Result<FacturaVentaDto>.Success(MapToDto(factura, detallesFactura));
+        var mappedDto = MapToDto(factura, detallesFactura);
+        await PopulateCxCFieldsAsync(mappedDto, empresaId, ct);
+        return Result<FacturaVentaDto>.Success(mappedDto);
     }
 
     public async Task<Result<FacturaVentaDto>> AnularAsync(long id, AnularFacturaVentaRequestDto dto, CancellationToken ct = default)
@@ -311,7 +424,9 @@ public class FacturaVentaService : IFacturaVentaService
         await _unitOfWork.SaveChangesAsync(ct);
 
         var detalles = await _facturaDetalleRepo.FindAsync(d => d.EmpresaId == empresaId && d.FacturaVentaId == factura.Id, ct);
-        return Result<FacturaVentaDto>.Success(MapToDto(factura, detalles));
+        var mappedDto = MapToDto(factura, detalles);
+        await PopulateCxCFieldsAsync(mappedDto, empresaId, ct);
+        return Result<FacturaVentaDto>.Success(mappedDto);
     }
 
     private async Task<Result<FiscalData>> ResolveFiscalDataAsync(
@@ -484,6 +599,37 @@ public class FacturaVentaService : IFacturaVentaService
     {
         var t = value?.Trim();
         return string.IsNullOrWhiteSpace(t) ? null : t;
+    }
+
+    private static int CalculateDiasVencidos(DateTime? fechaVencimiento)
+    {
+        if (!fechaVencimiento.HasValue) return 0;
+        var today = DateTime.Today;
+        if (fechaVencimiento.Value.Date >= today) return 0;
+        return (today - fechaVencimiento.Value.Date).Days;
+    }
+
+    private async Task PopulateCxCFieldsAsync(FacturaVentaDto dto, int empresaId, CancellationToken ct)
+    {
+        var cxcList = await _cxcRepo.FindAsync(c => c.EmpresaId == empresaId && c.FacturaVentaId == dto.Id, ct);
+        var cxc = cxcList.FirstOrDefault();
+
+        if (cxc != null)
+        {
+            dto.TotalPagado = cxc.TotalPagado;
+            dto.SaldoPendiente = cxc.SaldoPendiente;
+            dto.FechaVencimiento = cxc.FechaVencimiento;
+            dto.EstadoCobro = cxc.Estado.ToString();
+            dto.DiasVencidos = CalculateDiasVencidos(cxc.FechaVencimiento);
+        }
+        else
+        {
+            dto.TotalPagado = 0;
+            dto.SaldoPendiente = dto.Total;
+            dto.FechaVencimiento = null;
+            dto.EstadoCobro = dto.EstadoFactura == "Anulada" || dto.EstadoFactura == "Anulado" ? "Anulada" : "Pendiente";
+            dto.DiasVencidos = 0;
+        }
     }
 
     private static FacturaVentaResumenDto MapToResumenDto(FacturaVenta f)

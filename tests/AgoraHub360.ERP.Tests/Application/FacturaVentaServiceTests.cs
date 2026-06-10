@@ -1,10 +1,14 @@
 namespace AgoraHub360.ERP.Tests.Application;
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
+using System.Threading;
+using System.Threading.Tasks;
 using AgoraHub360.ERP.Application.Common;
 using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Application.Services;
-using AgoraHub360.ERP.Domain.Entities.Core;
 using AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Entities.VTA;
 using AgoraHub360.ERP.Domain.Entities.CXC;
@@ -13,163 +17,134 @@ using AgoraHub360.ERP.Domain.Interfaces;
 using AgoraHub360.ERP.Shared.DTOs;
 using AgoraHub360.ERP.Shared.DTOs.Ventas;
 using AgoraHub360.ERP.Shared.DTOs.CxC;
-using AgoraHub360.ERP.Shared.DTOs.Numeracion;
+using Xunit;
 
-public class VentaServiceTests
+public class FacturaVentaServiceTests
 {
-    private readonly VentaService _sut;
+    private readonly FacturaVentaService _sut;
+    private readonly FakeRepo<FacturaVenta> _facturaRepo;
+    private readonly FakeRepo<FacturaVentaDetalle> _facturaDetalleRepo;
     private readonly FakeRepo<Venta> _ventaRepo;
-    private readonly FakeRepo<VentaDetalle> _detalleRepo;
-    private readonly FakeRepo<VentaFacturacionDatos> _facturacionRepo;
-    private readonly FakeRepo<VentaPago> _pagoRepo;
-    private readonly FakeRepo<Sucursal> _sucursalRepo;
-    private readonly FakeRepo<Almacen> _almacenRepo;
+    private readonly FakeRepo<VentaDetalle> _ventaDetalleRepo;
+    private readonly FakeRepo<VentaFacturacionDatos> _ventaFacturacionRepo;
+    private readonly FakeRepo<VentaPago> _ventaPagoRepo;
+    private readonly FakeRepo<SiatMetodoPago> _siatMetodoPagoRepo;
     private readonly FakeRepo<Cliente> _clienteRepo;
     private readonly FakeRepo<ClientePerfilFiscal> _clientePerfilFiscalRepo;
-    private readonly FakeRepo<PedidoVenta> _pedidoVentaRepo;
-    private readonly FakeRepo<PedidoVentaDetalle> _pedidoVentaDetalleRepo;
     private readonly FakeRepo<CompanyProduct> _companyProductRepo;
-    private readonly FakeRepo<Product> _productRepo;
-    private readonly FakeRepo<Empresa> _empresaRepo;
-    private readonly FakeNumeracionService _numeracionService;
+    private readonly FakeRepo<Uom> _uomRepo;
     private readonly FakeCurrentUserService _currentUserService;
     private readonly FakeUow _uow;
     private readonly FakeCxcService _cxcService;
-    private readonly FakeRepo<FacturaVenta> _facturaRepo;
+    private readonly FakeRepo<CuentaPorCobrar> _cxcRepo;
 
-    public VentaServiceTests()
+    public FacturaVentaServiceTests()
     {
+        _facturaRepo = new FakeRepo<FacturaVenta>();
+        _facturaDetalleRepo = new FakeRepo<FacturaVentaDetalle>();
         _ventaRepo = new FakeRepo<Venta>();
-        _detalleRepo = new FakeRepo<VentaDetalle>();
-        _facturacionRepo = new FakeRepo<VentaFacturacionDatos>();
-        _pagoRepo = new FakeRepo<VentaPago>();
-        _sucursalRepo = new FakeRepo<Sucursal>();
-        _almacenRepo = new FakeRepo<Almacen>();
+        _ventaDetalleRepo = new FakeRepo<VentaDetalle>();
+        _ventaFacturacionRepo = new FakeRepo<VentaFacturacionDatos>();
+        _ventaPagoRepo = new FakeRepo<VentaPago>();
+        _siatMetodoPagoRepo = new FakeRepo<SiatMetodoPago>();
         _clienteRepo = new FakeRepo<Cliente>();
         _clientePerfilFiscalRepo = new FakeRepo<ClientePerfilFiscal>();
-        _pedidoVentaRepo = new FakeRepo<PedidoVenta>();
-        _pedidoVentaDetalleRepo = new FakeRepo<PedidoVentaDetalle>();
         _companyProductRepo = new FakeRepo<CompanyProduct>();
-        _productRepo = new FakeRepo<Product>();
-        _empresaRepo = new FakeRepo<Empresa>();
-        _numeracionService = new FakeNumeracionService();
+        _uomRepo = new FakeRepo<Uom>();
         _currentUserService = new FakeCurrentUserService { EmpresaId = 1, UserName = "testuser" };
         _uow = new FakeUow();
         _cxcService = new FakeCxcService();
-        _facturaRepo = new FakeRepo<FacturaVenta>();
+        _cxcRepo = new FakeRepo<CuentaPorCobrar>();
 
-        _sut = new VentaService(
+        _sut = new FacturaVentaService(
+            _facturaRepo,
+            _facturaDetalleRepo,
             _ventaRepo,
-            _detalleRepo,
-            _facturacionRepo,
-            _pagoRepo,
-            _sucursalRepo,
-            _almacenRepo,
+            _ventaDetalleRepo,
+            _ventaFacturacionRepo,
+            _ventaPagoRepo,
+            _siatMetodoPagoRepo,
             _clienteRepo,
             _clientePerfilFiscalRepo,
-            _pedidoVentaRepo,
-            _pedidoVentaDetalleRepo,
             _companyProductRepo,
-            _productRepo,
-            _empresaRepo,
-            _numeracionService,
+            _uomRepo,
             _currentUserService,
             _uow,
             _cxcService,
-            _facturaRepo);
+            _cxcRepo
+        );
     }
 
     [Fact]
-    public async Task AnularAsync_SaleWithActivePayment_ReturnsFailure()
+    public async Task GetAllAsync_PopulatesCollectionFields_WhenAssociatedCxcExists()
     {
         // Arrange
-        _ventaRepo.Seed(new Venta
-        {
-            Id = 10,
-            EmpresaId = 1,
-            Total = 1000m,
-            EstadoVenta = EstadoVenta.Confirmada,
-            EstadoPago = EstadoPagoVenta.Parcial,
-            Activo = true
-        });
-
-        _pagoRepo.Seed(new VentaPago
-        {
-            Id = 1,
-            VentaId = 10,
-            EmpresaId = 1,
-            Monto = 500m,
-            Anulado = false,
-            Activo = true
-        });
-
-        // Act
-        var result = await _sut.AnularAsync(10, new AnularVentaRequestDto { MotivoAnulacion = "Cancelada por cliente" });
-
-        // Assert
-        Assert.False(result.IsSuccess);
-        Assert.Contains("tiene pagos registrados", result.Error);
-    }
-
-    [Fact]
-    public async Task AnularAsync_SaleWithNoActivePayments_Succeeds()
-    {
-        // Arrange
-        _ventaRepo.Seed(new Venta
-        {
-            Id = 10,
-            EmpresaId = 1,
-            Total = 1000m,
-            EstadoVenta = EstadoVenta.Confirmada,
-            EstadoPago = EstadoPagoVenta.Pendiente,
-            Activo = true
-        });
-
-        // Act
-        var result = await _sut.AnularAsync(10, new AnularVentaRequestDto { MotivoAnulacion = "Cancelada" });
-
-        // Assert
-        Assert.True(result.IsSuccess);
-        Assert.Equal(EstadoVenta.Anulada.ToString(), result.Value!.EstadoVenta);
-        Assert.Equal(EstadoPagoVenta.Anulado.ToString(), result.Value.EstadoPago);
-    }
-
-    [Fact]
-    public async Task AnularPagoAsync_ValidPayment_LogicallyCancelsPaymentAndUpdatesStates()
-    {
-        // Arrange
-        _ventaRepo.Seed(new Venta
-        {
-            Id = 10,
-            EmpresaId = 1,
-            Total = 1000m,
-            EstadoVenta = EstadoVenta.Pagada,
-            EstadoPago = EstadoPagoVenta.Pagado,
-            Activo = true
-        });
-
-        var pago = new VentaPago
+        var today = DateTime.Today;
+        _facturaRepo.Seed(new FacturaVenta
         {
             Id = 100,
-            VentaId = 10,
             EmpresaId = 1,
-            Monto = 1000m,
-            Anulado = false,
+            NumeroFactura = "FAC-001",
+            FechaEmision = today,
+            Total = 1000m,
+            EstadoFactura = EstadoFacturaVentaComercial.Generada,
             Activo = true
-        };
-        _pagoRepo.Seed(pago);
+        });
+
+        _cxcRepo.Seed(new CuentaPorCobrar
+        {
+            Id = 1,
+            EmpresaId = 1,
+            FacturaVentaId = 100,
+            TotalFactura = 1000m,
+            TotalPagado = 300m,
+            FechaVencimiento = today.AddDays(-10), // Overdue
+            Estado = EstadoCuentaPorCobrar.Parcial,
+            Activo = true
+        });
 
         // Act
-        var result = await _sut.AnularPagoAsync(100, new AnularPagoVentaRequestDto { Motivo = "Error en cobro" });
+        var result = await _sut.GetAllAsync(new FacturaVentaFilterDto { Top = 10 });
 
         // Assert
         Assert.True(result.IsSuccess);
-        Assert.True(pago.Anulado);
-        Assert.Equal("Error en cobro", pago.MotivoAnulacion);
-        Assert.Equal(EstadoVenta.Confirmada.ToString(), result.Value!.EstadoVenta);
-        Assert.Equal(EstadoPagoVenta.Pendiente.ToString(), result.Value.EstadoPago);
-        Assert.True(_cxcService.ActualizarPorPagoVentaCalled);
-        Assert.Equal(10, _cxcService.LastVentaId);
+        var items = result.Value.Items;
+        Assert.Single(items);
+        var item = items.First();
+        Assert.Equal("Parcial", item.EstadoCobro);
+        Assert.Equal(300m, item.TotalPagado);
+        Assert.Equal(700m, item.SaldoPendiente);
+        Assert.Equal(today.AddDays(-10), item.FechaVencimiento);
+        Assert.Equal(10, item.DiasVencidos);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_PopulatesCollectionFields_WhenCxcDoesNotExist()
+    {
+        // Arrange
+        var today = DateTime.Today;
+        _facturaRepo.Seed(new FacturaVenta
+        {
+            Id = 200,
+            EmpresaId = 1,
+            NumeroFactura = "FAC-002",
+            FechaEmision = today,
+            Total = 1500m,
+            EstadoFactura = EstadoFacturaVentaComercial.Generada,
+            Activo = true
+        });
+
+        // Act
+        var result = await _sut.GetByIdAsync(200);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+        var dto = result.Value;
+        Assert.Equal("Pendiente", dto.EstadoCobro);
+        Assert.Equal(0m, dto.TotalPagado);
+        Assert.Equal(1500m, dto.SaldoPendiente);
+        Assert.Null(dto.FechaVencimiento);
+        Assert.Equal(0, dto.DiasVencidos);
     }
 
     // ── Fakes ──
@@ -246,41 +221,10 @@ public class VentaServiceTests
         public bool IsInRole(string role) => false;
     }
 
-    private class FakeNumeracionService : INumeracionDocumentoService
-    {
-        public Task<Result<IReadOnlyList<NumeracionDocumentoDto>>> GetAllAsync(CancellationToken ct = default)
-            => Task.FromResult(Result<IReadOnlyList<NumeracionDocumentoDto>>.Success(new List<NumeracionDocumentoDto>().AsReadOnly()));
-
-        public Task<Result<NumeracionDocumentoDto>> GetByIdAsync(int id, CancellationToken ct = default)
-            => Task.FromResult(Result<NumeracionDocumentoDto>.Success(new NumeracionDocumentoDto()));
-
-        public Task<Result<NumeracionDocumentoDto>> CreateAsync(CrearNumeracionDocumentoRequestDto dto, CancellationToken ct = default)
-            => Task.FromResult(Result<NumeracionDocumentoDto>.Success(new NumeracionDocumentoDto()));
-
-        public Task<Result<NumeracionDocumentoDto>> UpdateAsync(int id, ActualizarNumeracionDocumentoRequestDto dto, CancellationToken ct = default)
-            => Task.FromResult(Result<NumeracionDocumentoDto>.Success(new NumeracionDocumentoDto()));
-
-        public Task<Result<bool>> ActivarAsync(int id, CancellationToken ct = default)
-            => Task.FromResult(Result<bool>.Success(true));
-
-        public Task<Result<bool>> DesactivarAsync(int id, CancellationToken ct = default)
-            => Task.FromResult(Result<bool>.Success(true));
-
-        public Task<Result<string>> GenerarSiguienteNumeroAsync(string tipoDocumento, long sucursalId, CancellationToken ct = default)
-            => Task.FromResult(Result<string>.Success("VTA-001"));
-    }
-
     private class FakeCxcService : ICuentasPorCobrarService
     {
-        public bool ActualizarPorPagoVentaCalled { get; private set; }
-        public long LastVentaId { get; private set; }
-
         public Task<Result<CuentaPorCobrarResumenDto>> ActualizarPorPagoVentaAsync(long ventaId, CancellationToken ct = default)
-        {
-            ActualizarPorPagoVentaCalled = true;
-            LastVentaId = ventaId;
-            return Task.FromResult(Result<CuentaPorCobrarResumenDto>.Success(new CuentaPorCobrarResumenDto()));
-        }
+            => Task.FromResult(Result<CuentaPorCobrarResumenDto>.Success(new CuentaPorCobrarResumenDto()));
 
         public Task<Result<CuentaPorCobrarResumenDto>> ActualizarPorPagoAsync(long facturaVentaId, decimal montoPagado, CancellationToken ct = default)
             => Task.FromResult(Result<CuentaPorCobrarResumenDto>.Success(new CuentaPorCobrarResumenDto()));

@@ -6,6 +6,7 @@ using AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Entities.VTA;
 using AgoraHub360.ERP.Domain.Interfaces;
 using AgoraHub360.ERP.Shared.DTOs.Ventas;
+using AgoraHub360.ERP.Shared.DTOs;
 using DomainResult = AgoraHub360.ERP.Domain.Common.Result;
 
 namespace AgoraHub360.ERP.Application.Services;

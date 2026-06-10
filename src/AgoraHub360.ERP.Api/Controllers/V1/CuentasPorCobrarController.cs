@@ -24,20 +24,9 @@ public class CuentasPorCobrarController : ControllerBase
     /// </summary>
     [HttpGet]
     public async Task<IActionResult> GetAll(
-        [FromQuery] int? clienteId,
-        [FromQuery] string? estado,
-        [FromQuery] DateTime? fechaDesde,
-        [FromQuery] DateTime? fechaHasta,
+        [FromQuery] CuentaPorCobrarFilterDto filter,
         CancellationToken ct)
     {
-        var filter = new CuentaPorCobrarFilterDto
-        {
-            ClienteId = clienteId,
-            Estado = estado,
-            FechaDesde = fechaDesde,
-            FechaHasta = fechaHasta
-        };
-
         var result = await _service.GetAllAsync(filter, ct);
         return result.IsSuccess
             ? Ok(result)

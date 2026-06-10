@@ -15,15 +15,28 @@ public class FacturaVentaHttpService
         _http = http;
     }
 
-    public async Task<List<FacturaVentaResumenDto>> GetAllAsync()
+    public async Task<ApiResponse<PaginatedResultDto<FacturaVentaResumenDto>>> GetAllAsync(FacturaVentaFilterDto? filter = null)
     {
-        var response = await _http.GetAsync(BaseUrl);
-        var parsed = await ParseResponse<IReadOnlyList<FacturaVentaResumenDto>>(response);
+        var url = $"{BaseUrl}?";
+        if (filter != null)
+        {
+            if (!string.IsNullOrEmpty(filter.NumeroFactura)) url += $"numeroFactura={Uri.EscapeDataString(filter.NumeroFactura)}&";
+            if (filter.ClienteId.HasValue) url += $"clienteId={filter.ClienteId}&";
+            if (!string.IsNullOrEmpty(filter.EstadoFactura)) url += $"estadoFactura={Uri.EscapeDataString(filter.EstadoFactura)}&";
+            if (filter.FechaEmisionDesde.HasValue) url += $"fechaEmisionDesde={filter.FechaEmisionDesde.Value:yyyy-MM-dd}&";
+            if (filter.FechaEmisionHasta.HasValue) url += $"fechaEmisionHasta={filter.FechaEmisionHasta.Value:yyyy-MM-dd}&";
+            if (!string.IsNullOrEmpty(filter.Busqueda)) url += $"busqueda={Uri.EscapeDataString(filter.Busqueda)}&";
+            if (!string.IsNullOrEmpty(filter.Moneda)) url += $"moneda={Uri.EscapeDataString(filter.Moneda)}&";
+            url += $"top={filter.Top}&";
+            url += $"pagina={filter.Pagina}&";
+            url += $"tamanoPagina={filter.TamanoPagina}&";
+            if (filter.Page.HasValue) url += $"page={filter.Page.Value}&";
+            if (filter.PageSize.HasValue) url += $"pageSize={filter.PageSize.Value}&";
+        }
+        url = url.TrimEnd('&', '?');
 
-        if (!parsed.Success)
-            throw new InvalidOperationException(parsed.Message ?? "Error al listar facturas de venta.");
-
-        return parsed.Data?.ToList() ?? new List<FacturaVentaResumenDto>();
+        var response = await _http.GetAsync(url);
+        return await ParseResponse<PaginatedResultDto<FacturaVentaResumenDto>>(response);
     }
 
     public async Task<FacturaVentaDto?> GetByIdAsync(long id)

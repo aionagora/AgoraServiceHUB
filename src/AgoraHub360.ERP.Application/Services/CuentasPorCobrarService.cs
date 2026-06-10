@@ -5,6 +5,7 @@ using AgoraHub360.ERP.Domain.Entities.VTA;
 using AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Enums;
 using AgoraHub360.ERP.Domain.Interfaces;
+using AgoraHub360.ERP.Shared.DTOs;
 using AgoraHub360.ERP.Shared.DTOs.CxC;
 
 namespace AgoraHub360.ERP.Application.Services;
@@ -37,23 +38,40 @@ public class CuentasPorCobrarService : ICuentasPorCobrarService
         _unitOfWork = unitOfWork;
     }
 
-    public async Task<Result<List<CuentaPorCobrarResumenDto>>> GetAllAsync(
+    public async Task<Result<PaginatedResultDto<CuentaPorCobrarResumenDto>>> GetAllAsync(
         CuentaPorCobrarFilterDto? filter = null,
         CancellationToken ct = default)
     {
         if (!_currentUser.EmpresaId.HasValue)
-            return Result<List<CuentaPorCobrarResumenDto>>.Failure("No se pudo determinar la empresa activa.");
+            return Result<PaginatedResultDto<CuentaPorCobrarResumenDto>>.Failure("No se pudo determinar la empresa activa.");
 
         var empresaId = _currentUser.EmpresaId.Value;
 
-        var cxcList = await _cxcRepo.FindAsync(
-            c => c.EmpresaId == empresaId && c.Activo, ct);
+        var cxcList = await _cxcRepo.FindAsync(c =>
+            c.EmpresaId == empresaId &&
+            c.Activo,
+            ct);
 
         // Aplicar filtros
         var filteredList = cxcList.AsEnumerable();
 
         if (filter is not null)
         {
+            if (!string.IsNullOrWhiteSpace(filter.NumeroFactura))
+                filteredList = filteredList.Where(c => c.NumeroFactura.Contains(filter.NumeroFactura, StringComparison.OrdinalIgnoreCase));
+
+            if (!string.IsNullOrWhiteSpace(filter.NumeroVenta))
+                filteredList = filteredList.Where(c => c.NumeroVenta != null && c.NumeroVenta.Contains(filter.NumeroVenta, StringComparison.OrdinalIgnoreCase));
+
+            if (!string.IsNullOrWhiteSpace(filter.Busqueda))
+            {
+                var term = filter.Busqueda;
+                filteredList = filteredList.Where(c => 
+                    c.NumeroFactura.Contains(term, StringComparison.OrdinalIgnoreCase) || 
+                    (c.NumeroVenta != null && c.NumeroVenta.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+                    (c.ClienteNombre != null && c.ClienteNombre.Contains(term, StringComparison.OrdinalIgnoreCase)));
+            }
+
             if (filter.ClienteId.HasValue)
                 filteredList = filteredList.Where(c => c.ClienteId == filter.ClienteId.Value);
 
@@ -83,13 +101,38 @@ public class CuentasPorCobrarService : ICuentasPorCobrarService
         var facturas = await _facturaRepo.FindAsync(f => facturaIds.Contains(f.Id) && f.EmpresaId == empresaId, ct);
         var facturaVentaMap = facturas.ToDictionary(f => f.Id, f => f.VentaId);
 
-        var result = listToDtd
-            .OrderByDescending(c => c.FechaEmision)
+        var sorted = listToDtd
+            .OrderByDescending(c => c.FechaVencimiento)
             .ThenByDescending(c => c.Id)
-            .Select(c => MapToResumen(c, facturaVentaMap.GetValueOrDefault(c.FacturaVentaId)))
+            .Select(c => MapToResumen(c, facturaVentaMap.GetValueOrDefault(c.FacturaVentaId)));
+
+        // Cargar Top
+        var top = filter?.Top ?? 100;
+        if (top > 0)
+        {
+            sorted = sorted.Take(top);
+        }
+
+        var sortedList = sorted.ToList();
+        var totalItems = sortedList.Count;
+
+        var pagina = filter?.Page ?? filter?.Pagina ?? 1;
+        var tamanoPagina = filter?.PageSize ?? filter?.TamanoPagina ?? 50;
+
+        var items = sortedList
+            .Skip((pagina - 1) * tamanoPagina)
+            .Take(tamanoPagina)
             .ToList();
 
-        return Result<List<CuentaPorCobrarResumenDto>>.Success(result);
+        var paginatedResult = new PaginatedResultDto<CuentaPorCobrarResumenDto>
+        {
+            Items = items,
+            TotalItems = totalItems,
+            Pagina = pagina,
+            TamanoPagina = tamanoPagina
+        };
+
+        return Result<PaginatedResultDto<CuentaPorCobrarResumenDto>>.Success(paginatedResult);
     }
 
     public async Task<Result<CuentaPorCobrarDetalleDto>> GetByIdAsync(

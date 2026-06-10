@@ -1,5 +1,3 @@
-namespace AgoraHub360.ERP.Application.Services;
-
 using AgoraHub360.ERP.Application.Common;
 using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Domain.Entities.Core;
@@ -7,7 +5,10 @@ using AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Entities.VTA;
 using AgoraHub360.ERP.Domain.Enums;
 using AgoraHub360.ERP.Domain.Interfaces;
+using AgoraHub360.ERP.Shared.DTOs;
 using AgoraHub360.ERP.Shared.DTOs.Ventas;
+
+namespace AgoraHub360.ERP.Application.Services;
 
 public class VentaService : IVentaService
 {
@@ -24,10 +25,11 @@ public class VentaService : IVentaService
     private readonly IRepository<CompanyProduct> _companyProductRepo;
     private readonly IRepository<Product> _productRepo;
     private readonly IRepository<Empresa> _empresaRepo;
-        private readonly INumeracionDocumentoService _numeracionDocumentoService;
+    private readonly INumeracionDocumentoService _numeracionDocumentoService;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICuentasPorCobrarService _cuentasPorCobrarService;
+    private readonly IRepository<FacturaVenta> _facturaRepo;
 
     public VentaService(
         IRepository<Venta> ventaRepo,
@@ -46,7 +48,8 @@ public class VentaService : IVentaService
         INumeracionDocumentoService numeracionDocumentoService,
         ICurrentUserService currentUser,
         IUnitOfWork unitOfWork,
-        ICuentasPorCobrarService cuentasPorCobrarService)
+        ICuentasPorCobrarService cuentasPorCobrarService,
+        IRepository<FacturaVenta> facturaRepo)
     {
         _ventaRepo = ventaRepo;
         _detalleRepo = detalleRepo;
@@ -62,26 +65,69 @@ public class VentaService : IVentaService
         _productRepo = productRepo;
         _empresaRepo = empresaRepo;
         _numeracionDocumentoService = numeracionDocumentoService;
-                _currentUser = currentUser;
+        _currentUser = currentUser;
         _unitOfWork = unitOfWork;
         _cuentasPorCobrarService = cuentasPorCobrarService;
+        _facturaRepo = facturaRepo;
     }
 
-    public async Task<Result<IReadOnlyList<VentaResumenDto>>> GetAllAsync(CancellationToken ct = default)
+    public async Task<Result<PaginatedResultDto<VentaResumenDto>>> GetAllAsync(
+        VentaFilterDto? filter = null,
+        CancellationToken ct = default)
     {
         if (!_currentUser.EmpresaId.HasValue)
-            return Result<IReadOnlyList<VentaResumenDto>>.Failure("No se pudo determinar la empresa activa.");
+            return Result<PaginatedResultDto<VentaResumenDto>>.Failure("No se pudo determinar la empresa activa.");
 
         var empresaId = _currentUser.EmpresaId.Value;
 
-        var ventas = await _ventaRepo.FindAsync(v => v.EmpresaId == empresaId && v.Activo, ct);
+        var ventas = await _ventaRepo.FindAsync(v =>
+            v.EmpresaId == empresaId &&
+            v.Activo,
+            ct);
+
         var clientes = await _clienteRepo.FindAsync(c => c.EmpresaId == empresaId && c.Activo, ct);
         var sucursales = await _sucursalRepo.FindAsync(s => s.EmpresaId == empresaId && s.Activo, ct);
 
         var clienteMap = clientes.ToDictionary(c => c.Id, c => c.RazonSocial);
         var sucursalMap = sucursales.ToDictionary(s => s.Id, s => s.Nombre);
 
-        var result = ventas
+        var filteredList = ventas.AsEnumerable();
+
+        if (filter != null)
+        {
+            if (!string.IsNullOrWhiteSpace(filter.NumeroVenta))
+                filteredList = filteredList.Where(v => v.NumeroVenta.Contains(filter.NumeroVenta, StringComparison.OrdinalIgnoreCase));
+
+            if (!string.IsNullOrWhiteSpace(filter.Busqueda))
+            {
+                var term = filter.Busqueda;
+                var matchingClientIds = clientes
+                    .Where(c => c.RazonSocial.Contains(term, StringComparison.OrdinalIgnoreCase))
+                    .Select(c => c.Id)
+                    .ToHashSet();
+
+                filteredList = filteredList.Where(v => 
+                    v.NumeroVenta.Contains(term, StringComparison.OrdinalIgnoreCase) || 
+                    (v.ClienteId.HasValue && matchingClientIds.Contains(v.ClienteId.Value)));
+            }
+
+            if (filter.ClienteId.HasValue)
+                filteredList = filteredList.Where(v => v.ClienteId == filter.ClienteId.Value);
+
+            if (!string.IsNullOrWhiteSpace(filter.EstadoVenta) && !string.Equals(filter.EstadoVenta, "Todos", StringComparison.OrdinalIgnoreCase))
+                filteredList = filteredList.Where(v => string.Equals(v.EstadoVenta.ToString(), filter.EstadoVenta, StringComparison.OrdinalIgnoreCase));
+
+            if (!string.IsNullOrWhiteSpace(filter.EstadoPago) && !string.Equals(filter.EstadoPago, "Todos", StringComparison.OrdinalIgnoreCase))
+                filteredList = filteredList.Where(v => string.Equals(v.EstadoPago.ToString(), filter.EstadoPago, StringComparison.OrdinalIgnoreCase));
+
+            if (filter.FechaDesde.HasValue)
+                filteredList = filteredList.Where(v => v.FechaVenta.Date >= filter.FechaDesde.Value.Date);
+
+            if (filter.FechaHasta.HasValue)
+                filteredList = filteredList.Where(v => v.FechaVenta.Date <= filter.FechaHasta.Value.Date);
+        }
+
+        var sorted = filteredList
             .OrderByDescending(v => v.FechaVenta)
             .ThenByDescending(v => v.Id)
             .Select(v => new VentaResumenDto
@@ -99,11 +145,139 @@ public class VentaService : IVentaService
                 Total = v.Total,
                 FacturaGenerada = v.FacturaGenerada,
                 PedidoVentaId = v.PedidoVentaId
-            })
-            .ToList()
-            .AsReadOnly();
+            });
 
-        return Result<IReadOnlyList<VentaResumenDto>>.Success(result);
+        var top = filter?.Top ?? 100;
+        if (top > 0)
+        {
+            sorted = sorted.Take(top);
+        }
+
+        var sortedList = sorted.ToList();
+        var totalItems = sortedList.Count;
+
+        var pagina = filter?.Page ?? filter?.Pagina ?? 1;
+        var tamanoPagina = filter?.PageSize ?? filter?.TamanoPagina ?? 50;
+
+        var items = sortedList
+            .Skip((pagina - 1) * tamanoPagina)
+            .Take(tamanoPagina)
+            .ToList();
+
+        var paginatedResult = new PaginatedResultDto<VentaResumenDto>
+        {
+            Items = items,
+            TotalItems = totalItems,
+            Pagina = pagina,
+            TamanoPagina = tamanoPagina
+        };
+
+        return Result<PaginatedResultDto<VentaResumenDto>>.Success(paginatedResult);
+    }
+
+    public async Task<Result<PaginatedResultDto<VentaPagoDto>>> GetPagosPagedAsync(
+        VentaPagoFilterDto filter,
+        CancellationToken ct = default)
+    {
+        if (!_currentUser.EmpresaId.HasValue)
+            return Result<PaginatedResultDto<VentaPagoDto>>.Failure("No se pudo determinar la empresa activa.");
+
+        var empresaId = _currentUser.EmpresaId.Value;
+
+        var pagos = await _pagoRepo.FindAsync(p => p.EmpresaId == empresaId && p.Activo, ct);
+        var filteredPagos = pagos.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(filter.NumeroVenta) || filter.ClienteId.HasValue)
+        {
+            var ventaIdsFiltradas = (await _ventaRepo.FindAsync(v =>
+                v.EmpresaId == empresaId &&
+                v.Activo &&
+                (string.IsNullOrWhiteSpace(filter.NumeroVenta) || v.NumeroVenta.Contains(filter.NumeroVenta)) &&
+                (!filter.ClienteId.HasValue || v.ClienteId == filter.ClienteId.Value),
+                ct)).Select(v => v.Id).ToHashSet();
+
+            filteredPagos = filteredPagos.Where(p => ventaIdsFiltradas.Contains(p.VentaId));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.NumeroFactura))
+        {
+            var facturaIdsFiltradas = (await _facturaRepo.FindAsync(f =>
+                f.EmpresaId == empresaId &&
+                f.Activo &&
+                f.NumeroFactura.Contains(filter.NumeroFactura),
+                ct)).Select(f => f.Id).ToHashSet();
+
+            filteredPagos = filteredPagos.Where(p => p.FacturaVentaId.HasValue && facturaIdsFiltradas.Contains(p.FacturaVentaId.Value));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.TipoPago) && !string.Equals(filter.TipoPago, "Todos", StringComparison.OrdinalIgnoreCase))
+        {
+            filteredPagos = filteredPagos.Where(p => string.Equals(p.TipoPago.ToString(), filter.TipoPago, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.EstadoPago) && !string.Equals(filter.EstadoPago, "Todos", StringComparison.OrdinalIgnoreCase))
+        {
+            filteredPagos = filteredPagos.Where(p => string.Equals(p.EstadoPago.ToString(), filter.EstadoPago, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (filter.FechaPagoDesde.HasValue)
+        {
+            filteredPagos = filteredPagos.Where(p => p.FechaPago.Date >= filter.FechaPagoDesde.Value.Date);
+        }
+
+        if (filter.FechaPagoHasta.HasValue)
+        {
+            filteredPagos = filteredPagos.Where(p => p.FechaPago.Date <= filter.FechaPagoHasta.Value.Date);
+        }
+
+        var sorted = filteredPagos
+            .OrderByDescending(p => p.FechaPago)
+            .ThenByDescending(p => p.Id)
+            .Select(p => new VentaPagoDto
+            {
+                Id = p.Id,
+                VentaId = p.VentaId,
+                FacturaVentaId = p.FacturaVentaId,
+                FechaPago = p.FechaPago,
+                TipoPago = p.TipoPago.ToString(),
+                ModoPago = p.ModoPago.ToString(),
+                CuentaCajaBancoId = p.CuentaCajaBancoId,
+                Monto = p.Monto,
+                MonedaId = p.MonedaId,
+                MonedaCodigo = p.MonedaCodigo,
+                TipoCambio = p.TipoCambio,
+                Referencia = p.Referencia,
+                EstadoPago = p.EstadoPago.ToString(),
+                Anulado = p.Anulado,
+                MotivoAnulacion = p.MotivoAnulacion
+            });
+
+        var top = filter.Top;
+        if (top > 0)
+        {
+            sorted = sorted.Take(top);
+        }
+
+        var sortedList = sorted.ToList();
+        var totalItems = sortedList.Count;
+
+        var pagina = filter.Pagina;
+        var tamanoPagina = filter.TamanoPagina;
+
+        var items = sortedList
+            .Skip((pagina - 1) * tamanoPagina)
+            .Take(tamanoPagina)
+            .ToList();
+
+        var paginatedResult = new PaginatedResultDto<VentaPagoDto>
+        {
+            Items = items,
+            TotalItems = totalItems,
+            Pagina = pagina,
+            TamanoPagina = tamanoPagina
+        };
+
+        return Result<PaginatedResultDto<VentaPagoDto>>.Success(paginatedResult);
     }
 
     public async Task<Result<VentaDto>> GetByIdAsync(long id, CancellationToken ct = default)

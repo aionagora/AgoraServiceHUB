@@ -1,8 +1,11 @@
 @page "/ventas/comercial"
 @attribute [Authorize]
 @using AgoraHub360.ERP.Web.Helpers
+@using AgoraHub360.ERP.Shared.DTOs
 @using AgoraHub360.ERP.Shared.DTOs.Ventas
+@using AgoraHub360.ERP.Shared.DTOs.MDM
 @inject VentaHttpService VentaService
+@inject ClienteHttpService ClienteService
 @inject NavigationManager Nav
 @inject FacturaVentaHttpService FacturaVentaService
 
@@ -33,6 +36,92 @@
         <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
     </div>
 }
+
+<!-- Panel de Filtros -->
+<form @onsubmit="BuscarAsync" @onsubmit:preventDefault class="card border-0 shadow-sm mb-4 bg-white text-dark">
+    <div class="card-body p-3">
+        <h5 class="card-title mb-3 fs-6 fw-bold text-dark"><i class="bi bi-funnel-fill me-1 text-primary"></i> Filtros de Búsqueda</h5>
+        <div class="row g-2 align-items-end">
+            <div class="col-12 col-sm-6 col-md-3">
+                <label class="form-label small text-muted mb-1">Buscar</label>
+                <input type="text" class="form-control form-control-sm text-dark bg-light" placeholder="Nro venta, cliente..." @bind="filterBusqueda" />
+            </div>
+            <div class="col-12 col-sm-6 col-md-3">
+                <label class="form-label small text-muted mb-1">Cliente</label>
+                <select class="form-select form-select-sm text-dark" @bind="filterClienteId">
+                    <option value="">-- Todos los Clientes --</option>
+                    @foreach (var c in clientes)
+                    {
+                        <option value="@c.Id">@c.RazonSocial (@c.Codigo)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-12 col-sm-6 col-md-2">
+                <label class="form-label small text-muted mb-1">Estado Venta</label>
+                <select class="form-select form-select-sm text-dark" @bind="filterEstadoVenta">
+                    <option value="">-- Todos --</option>
+                    <option value="Borrador">Borrador</option>
+                    <option value="Confirmada">Confirmada</option>
+                    <option value="Facturada">Facturada</option>
+                    <option value="Anulada">Anulada</option>
+                </select>
+            </div>
+            <div class="col-12 col-sm-6 col-md-2">
+                <label class="form-label small text-muted mb-1">Estado Pago</label>
+                <select class="form-select form-select-sm text-dark" @bind="filterEstadoPago">
+                    <option value="">-- Todos --</option>
+                    <option value="Pendiente">Pendiente</option>
+                    <option value="Parcial">Parcial</option>
+                    <option value="Pagado">Pagado</option>
+                    <option value="Anulado">Anulado</option>
+                </select>
+            </div>
+            <div class="col-12 col-sm-6 col-md-2">
+                <label class="form-label small text-muted mb-1">Fecha Desde</label>
+                <input type="date" class="form-control form-control-sm" @bind="filterFechaDesde" />
+            </div>
+            <div class="col-12 col-sm-6 col-md-2">
+                <label class="form-label small text-muted mb-1">Fecha Hasta</label>
+                <input type="date" class="form-control form-control-sm" @bind="filterFechaHasta" />
+            </div>
+            <div class="col-12 col-sm-6 col-md-2">
+                <label class="form-label small text-muted mb-1">Top</label>
+                <select class="form-select form-select-sm text-dark" @bind="topLimit">
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="200">200</option>
+                </select>
+            </div>
+            <div class="col-12 col-sm-6 col-md-2">
+                <label class="form-label small text-muted mb-1">Tam. Página</label>
+                <select class="form-select form-select-sm text-dark" @bind="tamanoPagina">
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-4 d-flex gap-2 justify-content-end">
+                <button type="submit" class="btn btn-primary btn-sm px-4" disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-search me-1"></i>
+                    }
+                    Buscar
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="LimpiarFiltrosAsync" disabled="@isLoading" title="Limpiar filtros">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Limpiar
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
 
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center py-3">
@@ -84,10 +173,10 @@
                                     <span class="badge bg-secondary">@venta.TipoVenta</span>
                                 </td>
                                 <td>
-                                    <span class="badge @GetEstadoVentaBadge(venta.EstadoVenta)">@venta.EstadoVenta</span>
+                                    <span class="@BadgeCssHelper.GetEstadoVentaBadge(venta.EstadoVenta)">@venta.EstadoVenta</span>
                                 </td>
                                 <td>
-                                    <span class="badge @GetEstadoPagoBadge(venta.EstadoPago)">@venta.EstadoPago</span>
+                                    <span class="@BadgeCssHelper.GetEstadoPagoBadge(venta.EstadoPago)">@venta.EstadoPago</span>
                                 </td>
                                 <td class="text-end fw-semibold">@FormatMoney(venta.Total)</td>
                                 <td>
@@ -132,6 +221,21 @@
                     </tbody>
                 </table>
             </div>
+            <!-- Paginación UI -->
+            <div class="card-footer bg-white border-top d-flex align-items-center justify-content-between p-3">
+                <div class="text-muted small">
+                    Mostrando de @(totalRegistros > 0 ? (paginaActual - 1) * tamanoPagina + 1 : 0) a @(Math.Min(paginaActual * tamanoPagina, totalRegistros)) de @totalRegistros registros
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="PaginaAnterior" disabled="@(paginaActual <= 1 || isLoading)">
+                        <i class="bi bi-chevron-left me-1"></i> Anterior
+                    </button>
+                    <span class="small fw-semibold text-dark">Página @paginaActual de @totalPaginas</span>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="PaginaSiguiente" disabled="@(paginaActual >= totalPaginas || isLoading)">
+                        Siguiente <i class="bi bi-chevron-right ms-1"></i>
+                    </button>
+                </div>
+            </div>
         }
     </div>
 </div>
@@ -143,9 +247,69 @@
     private string? errorMessage;
     private string? successMessage;
 
+    // Filtros
+    private int? filterClienteId;
+    private string? filterEstadoVenta;
+    private string? filterEstadoPago;
+    private DateTime? filterFechaDesde;
+    private DateTime? filterFechaHasta;
+    private string? filterBusqueda;
+    private int topLimit = 100;
+    private int paginaActual = 1;
+    private int tamanoPagina = 50;
+    private int totalRegistros = 0;
+    private int totalPaginas = 1;
+    private List<AgoraHub360.ERP.Shared.DTOs.MDM.ClienteDto> clientes = new();
+
     protected override async Task OnInitializedAsync()
     {
+        try
+        {
+            clientes = await ClienteService.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar clientes: {ex.Message}";
+        }
         await LoadAsync();
+    }
+
+    private async Task BuscarAsync()
+    {
+        paginaActual = 1;
+        await LoadAsync();
+    }
+
+    private async Task LimpiarFiltrosAsync()
+    {
+        filterClienteId = null;
+        filterEstadoVenta = null;
+        filterEstadoPago = null;
+        filterFechaDesde = null;
+        filterFechaHasta = null;
+        filterBusqueda = null;
+        topLimit = 100;
+        paginaActual = 1;
+
+        await LoadAsync();
+    }
+
+    private async Task PaginaAnterior()
+    {
+        if (paginaActual > 1)
+        {
+            paginaActual--;
+            await LoadAsync();
+        }
+    }
+
+    private async Task PaginaSiguiente()
+    {
+        if (paginaActual < totalPaginas)
+        {
+            paginaActual++;
+            await LoadAsync();
+        }
     }
 
     private async Task LoadAsync()
@@ -155,9 +319,31 @@
 
         try
         {
-            var data = await VentaService.GetAllAsync();
+            var filter = new VentaFilterDto
+            {
+                Busqueda = filterBusqueda,
+                ClienteId = filterClienteId,
+                EstadoVenta = filterEstadoVenta,
+                EstadoPago = filterEstadoPago,
+                FechaDesde = filterFechaDesde,
+                FechaHasta = filterFechaHasta,
+                Top = topLimit,
+                Pagina = paginaActual,
+                TamanoPagina = tamanoPagina
+            };
+
+            var response = await VentaService.GetAllAsync(filter);
             ventas.Clear();
-            ventas.AddRange(data.OrderByDescending(x => x.FechaVenta));
+            if (response.Success && response.Data != null)
+            {
+                ventas.AddRange(response.Data.Items);
+                totalRegistros = response.Data.TotalItems;
+                totalPaginas = response.Data.TotalPaginas;
+            }
+            else
+            {
+                errorMessage = response.Message ?? "Error al listar ventas.";
+            }
         }
         catch (Exception ex)
         {
@@ -226,35 +412,6 @@
     private static bool IsAnulada(string? estadoVenta)
         => string.Equals(estadoVenta, "Anulada", StringComparison.OrdinalIgnoreCase)
            || string.Equals(estadoVenta, "Anulado", StringComparison.OrdinalIgnoreCase);
-
-    private static string GetEstadoVentaBadge(string? estado)
-    {
-        if (string.IsNullOrWhiteSpace(estado)) return "bg-secondary";
-
-        return estado.ToLowerInvariant() switch
-        {
-            "borrador" => "bg-secondary",
-            "confirmada" => "bg-info text-dark",
-            "facturada" => "bg-primary",
-            "anulada" => "bg-danger",
-            "anulado" => "bg-danger",
-            _ => "bg-secondary"
-        };
-    }
-
-    private static string GetEstadoPagoBadge(string? estado)
-    {
-        if (string.IsNullOrWhiteSpace(estado)) return "bg-secondary";
-
-        return estado.ToLowerInvariant() switch
-        {
-            "pendiente" => "bg-warning text-dark",
-            "parcial" => "bg-info text-dark",
-            "pagado" => "bg-success",
-            "anulado" => "bg-danger",
-            _ => "bg-secondary"
-        };
-    }
 
     private static string FormatMoney(decimal value)
         => FormatHelper.Money(value);

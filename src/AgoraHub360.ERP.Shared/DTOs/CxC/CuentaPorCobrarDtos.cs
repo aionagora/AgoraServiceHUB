@@ -80,6 +80,14 @@ public class CuentaPorCobrarFilterDto
     public DateTime? FechaHasta { get; set; }
     public DateTime? FechaVencimientoDesde { get; set; }
     public DateTime? FechaVencimientoHasta { get; set; }
+    public string? NumeroFactura { get; set; }
+    public string? NumeroVenta { get; set; }
+    public string? Busqueda { get; set; }
+    public int Top { get; set; } = 100;
+    public int Pagina { get; set; } = 1;
+    public int TamanoPagina { get; set; } = 50;
+    public int? Page { get; set; }
+    public int? PageSize { get; set; }
 }
 
 public class AntiguedadSaldosClienteDto
