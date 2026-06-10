@@ -1,0 +1,1128 @@
+@page "/ventas/pagos"
+@page "/ventas/pagos/{VentaId:long}"
+@attribute [Authorize]
+
+@using AgoraHub360.ERP.Shared.DTOs
+@using AgoraHub360.ERP.Shared.DTOs.Ventas
+@using AgoraHub360.ERP.Shared.DTOs.MDM
+@using AgoraHub360.ERP.Web.Helpers
+@using AgoraHub360.ERP.Web.Shared
+@inject VentaHttpService VentaService
+@inject ClienteHttpService ClienteService
+@inject NavigationManager Nav
+
+<PageTitle>Registrar Pago - AgoraHub360 ERP</PageTitle>
+
+<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-1">
+                <li class="breadcrumb-item"><a href="/ventas/comercial">Ventas Comercial</a></li>
+                <li class="breadcrumb-item active" aria-current="page">Registrar Pago</li>
+            </ol>
+        </nav>
+        <h1 class="mb-0"><i class="bi bi-cash-coin me-2"></i> Registrar Pago</h1>
+        <p class="text-muted mb-0">Seleccione una venta y registre el pago correspondiente.</p>
+    </div>
+</div>
+
+@* ── Mensajes ──────────────────────────────────────────────────────────────── *@
+@if (!string.IsNullOrWhiteSpace(_successMessage))
+{
+    <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
+        <i class="bi bi-check-circle-fill me-1"></i> @_successMessage
+        <button type="button" class="btn-close" @onclick="() => _successMessage = null"></button>
+    </div>
+}
+@if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i> @_errorMessage
+        <button type="button" class="btn-close" @onclick="() => _errorMessage = null"></button>
+    </div>
+}
+
+@* ── Selector de venta (cuando no se pasa VentaId) ─────────────────────────── *@
+@if (!_ventaSeleccionada.HasValue)
+{
+    <ul class="nav nav-tabs mb-3 text-dark">
+        <li class="nav-item">
+            <button type="button" class="nav-link @(activeTab == "cobros" ? "active fw-bold text-primary" : "text-secondary")" @onclick='() => SetActiveTab("cobros")'>
+                <i class="bi bi-cash-coin me-1"></i> Registrar Cobro
+            </button>
+        </li>
+        <li class="nav-item">
+            <button type="button" class="nav-link @(activeTab == "historial" ? "active fw-bold text-primary" : "text-secondary")" @onclick='() => SetActiveTab("historial")'>
+                <i class="bi bi-clock-history me-1"></i> Historial de Cobros
+            </button>
+        </li>
+    </ul>
+
+    @if (activeTab == "cobros")
+    {
+        <!-- Panel de Filtros Cobros -->
+        <form @onsubmit="BuscarCobrosAsync" @onsubmit:preventDefault class="card border-0 shadow-sm mb-4 bg-white text-dark">
+            <div class="card-body p-3">
+                <h5 class="card-title mb-3 fs-6 fw-bold text-dark"><i class="bi bi-funnel-fill me-1 text-primary"></i> Filtros de Búsqueda (Cobros)</h5>
+                <div class="row g-2 align-items-end">
+                    <div class="col-12 col-sm-6 col-md-3">
+                        <label class="form-label small text-muted mb-1">Nro Venta</label>
+                        <input type="text" class="form-control form-control-sm" placeholder="Buscar por número..." @bind="filterNumeroVenta" />
+                    </div>
+                    <div class="col-12 col-sm-6 col-md-3">
+                        <label class="form-label small text-muted mb-1">Cliente</label>
+                        <select class="form-select form-select-sm text-dark" @bind="filterClienteId">
+                            <option value="">-- Todos los Clientes --</option>
+                            @foreach (var c in clientes)
+                            {
+                                <option value="@c.Id">@c.RazonSocial (@c.Codigo)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12 col-sm-6 col-md-2">
+                        <label class="form-label small text-muted mb-1">Fecha Desde</label>
+                        <input type="date" class="form-control form-control-sm" @bind="filterFechaDesde" />
+                    </div>
+                    <div class="col-12 col-sm-6 col-md-2">
+                        <label class="form-label small text-muted mb-1">Fecha Hasta</label>
+                        <input type="date" class="form-control form-control-sm" @bind="filterFechaHasta" />
+                    </div>
+                    <div class="col-12 col-sm-6 col-md-2">
+                        <label class="form-label small text-muted mb-1">Top</label>
+                        <select class="form-select form-select-sm text-dark" @bind="topLimit">
+                            <option value="10">10</option>
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                            <option value="200">200</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-sm-6 col-md-2">
+                        <label class="form-label small text-muted mb-1">Tam. Página</label>
+                        <select class="form-select form-select-sm text-dark" @bind="tamanoPagina">
+                            <option value="10">10</option>
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-4 d-flex gap-2 justify-content-end">
+                        <button type="submit" class="btn btn-primary btn-sm px-4" disabled="@_isLoading">
+                            @if (_isLoading)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-search me-1"></i>
+                            }
+                            Buscar
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="LimpiarFiltrosCobrosAsync" disabled="@_isLoading" title="Limpiar filtros">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i> Limpiar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center py-3 text-dark">
+                <span><i class="bi bi-receipt me-1"></i> Seleccionar venta para cobro</span>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="LoadVentasAsync" disabled="@_isLoading">
+                    <i class="bi bi-arrow-repeat me-1"></i> Recargar
+                </button>
+            </div>
+            <div class="card-body p-0">
+                @if (_isLoading)
+                {
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="text-muted mt-2 mb-0">Cargando ventas...</p>
+                    </div>
+                }
+                else if (_ventas.Count == 0)
+                {
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-receipt-cutoff" style="font-size: 2rem;"></i>
+                        <p class="mt-2 mb-0">No hay ventas disponibles para pago.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 text-dark">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Número</th>
+                                    <th>Fecha</th>
+                                    <th>Cliente</th>
+                                    <th>Estado</th>
+                                    <th class="text-end">Total</th>
+                                    <th>Pago</th>
+                                    <th class="text-end pe-3"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var venta in _ventas)
+                                {
+                                    <tr>
+                                        <td class="fw-semibold">@venta.NumeroVenta</td>
+                                        <td>@venta.FechaVenta.ToString("dd/MM/yyyy")</td>
+                                        <td>@(venta.ClienteNombre ?? "-")</td>
+                                        <td>
+                                            <span class="@BadgeCssHelper.GetEstadoVentaBadge(venta.EstadoVenta)">@venta.EstadoVenta</span>
+                                            <span class="@BadgeCssHelper.GetEstadoPagoBadge(venta.EstadoPago) ms-1">@venta.EstadoPago</span>
+                                        </td>
+                                        <td class="text-end fw-semibold">@FormatMoney(venta.Total)</td>
+                                        <td>
+                                            @{
+                                                var saldo = CalcularSaldo(venta);
+                                            }
+                                            @if (saldo <= 0)
+                                            {
+                                                <span class="badge bg-success">Pagado</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-danger fw-semibold">@FormatMoney(saldo)</span>
+                                            }
+                                        </td>
+                                        <td class="text-end pe-3">
+                                            <button class="btn btn-sm btn-primary"
+                                                    @onclick="() => SeleccionarVenta(venta.Id)"
+                                                    disabled="@(saldo <= 0 || !EsVentaPagable(venta.EstadoVenta))">
+                                                <i class="bi bi-cash-coin me-1"></i> Pagar
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Paginación UI -->
+                    <div class="card-footer bg-white border-top d-flex align-items-center justify-content-between p-3">
+                        <div class="text-muted small text-dark">
+                            Mostrando de @(totalRegistros > 0 ? (paginaActual - 1) * tamanoPagina + 1 : 0) a @(Math.Min(paginaActual * tamanoPagina, totalRegistros)) de @totalRegistros registros
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="PaginaAnteriorCobros" disabled="@(paginaActual <= 1 || _isLoading)">
+                                <i class="bi bi-chevron-left me-1"></i> Anterior
+                            </button>
+                            <span class="small fw-semibold text-dark">Página @paginaActual de @totalPaginas</span>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="PaginaSiguienteCobros" disabled="@(paginaActual >= totalPaginas || _isLoading)">
+                                Siguiente <i class="bi bi-chevron-right ms-1"></i>
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    else if (activeTab == "historial")
+    {
+        <!-- Panel de Filtros Historial -->
+        <form @onsubmit="BuscarHistorialAsync" @onsubmit:preventDefault class="card border-0 shadow-sm mb-4 bg-white text-dark">
+            <div class="card-body p-3">
+                <h5 class="card-title mb-3 fs-6 fw-bold text-dark"><i class="bi bi-funnel-fill me-1 text-primary"></i> Filtros de Búsqueda (Historial)</h5>
+                <div class="row g-2 align-items-end">
+                    <div class="col-12 col-sm-6 col-md-3">
+                        <label class="form-label small text-muted mb-1">Buscar</label>
+                        <input type="text" class="form-control form-control-sm" placeholder="Nro venta, factura o referencia..." @bind="histBusqueda" />
+                    </div>
+                    <div class="col-12 col-sm-6 col-md-3">
+                        <label class="form-label small text-muted mb-1">Nro Venta</label>
+                        <input type="text" class="form-control form-control-sm" placeholder="Buscar por número venta..." @bind="histNumeroVenta" />
+                    </div>
+                    <div class="col-12 col-sm-6 col-md-2">
+                        <label class="form-label small text-muted mb-1">Nro Factura</label>
+                        <input type="text" class="form-control form-control-sm" placeholder="Buscar por número factura..." @bind="histNumeroFactura" />
+                    </div>
+                    <div class="col-12 col-sm-6 col-md-2">
+                        <label class="form-label small text-muted mb-1">Cliente</label>
+                        <select class="form-select form-select-sm text-dark" @bind="histClienteId">
+                            <option value="">-- Todos los Clientes --</option>
+                            @foreach (var c in clientes)
+                            {
+                                <option value="@c.Id">@c.RazonSocial (@c.Codigo)</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12 col-sm-6 col-md-2">
+                        <label class="form-label small text-muted mb-1">Tipo Pago</label>
+                        <select class="form-select form-select-sm text-dark" @bind="histTipoPago">
+                            <option value="">-- Todos --</option>
+                            @foreach (var opt in _tipoPagoOptions)
+                            {
+                                <option value="@opt">@opt</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-12 col-sm-6 col-md-2">
+                        <label class="form-label small text-muted mb-1">Estado Pago</label>
+                        <select class="form-select form-select-sm text-dark" @bind="histEstadoPago">
+                            <option value="">-- Todos --</option>
+                            <option value="Pagado">Pagado</option>
+                            <option value="Anulado">Anulado</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-sm-6 col-md-2">
+                        <label class="form-label small text-muted mb-1">Fecha Desde</label>
+                        <input type="date" class="form-control form-control-sm" @bind="histFechaDesde" />
+                    </div>
+                    <div class="col-12 col-sm-6 col-md-2">
+                        <label class="form-label small text-muted mb-1">Fecha Hasta</label>
+                        <input type="date" class="form-control form-control-sm" @bind="histFechaHasta" />
+                    </div>
+                    <div class="col-12 col-sm-6 col-md-2">
+                        <label class="form-label small text-muted mb-1">Top</label>
+                        <select class="form-select form-select-sm text-dark" @bind="histTop">
+                            <option value="10">10</option>
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                            <option value="200">200</option>
+                        </select>
+                    </div>
+                    <div class="col-12 col-sm-6 col-md-2">
+                        <label class="form-label small text-muted mb-1">Tam. Página</label>
+                        <select class="form-select form-select-sm text-dark" @bind="histTamanoPagina">
+                            <option value="10">10</option>
+                            <option value="20">20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+                    <div class="col-12 d-flex gap-2 justify-content-end">
+                        <button type="submit" class="btn btn-primary btn-sm px-4" disabled="@histLoading">
+                            @if (histLoading)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            else
+                            {
+                                <i class="bi bi-search me-1"></i>
+                            }
+                            Buscar
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="LimpiarFiltrosHistorialAsync" disabled="@histLoading" title="Limpiar filtros">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i> Limpiar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center py-3 text-dark">
+                <span><i class="bi bi-clock-history me-1"></i> Historial de Cobros</span>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="LoadHistorialAsync" disabled="@histLoading">
+                    <i class="bi bi-arrow-repeat me-1"></i> Recargar
+                </button>
+            </div>
+            <div class="card-body p-0">
+                @if (histLoading)
+                {
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="text-muted mt-2 mb-0">Cargando historial...</p>
+                    </div>
+                }
+                else if (pagosHistorial.Count == 0)
+                {
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-clock-history" style="font-size: 2rem;"></i>
+                        <p class="mt-2 mb-0">No se encontraron cobros registrados.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 text-dark">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Venta ID</th>
+                                    <th>Tipo</th>
+                                    <th>Modo</th>
+                                    <th class="text-end">Monto</th>
+                                    <th>Referencia</th>
+                                    <th>Estado</th>
+                                    <th class="text-center pe-3">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var pago in pagosHistorial)
+                                {
+                                    <tr class="@(pago.Anulado ? "table-danger-subtle opacity-75" : "")">
+                                        <td>@pago.FechaPago.ToString("dd/MM/yyyy")</td>
+                                        <td class="fw-semibold">#@pago.VentaId</td>
+                                        <td>
+                                            <span class="@BadgeCssHelper.GetTipoPagoBadge(pago.TipoPago)">@pago.TipoPago</span>
+                                        </td>
+                                        <td>
+                                            <span class="@BadgeCssHelper.GetTipoPagoBadge(pago.ModoPago)">@pago.ModoPago</span>
+                                        </td>
+                                        <td class="text-end fw-semibold">@FormatMoney(pago.Monto)</td>
+                                        <td>@(pago.Referencia ?? "-")</td>
+                                        <td>
+                                            @if (pago.Anulado)
+                                            {
+                                                <span class="badge bg-danger">Anulado</span>
+                                                @if (!string.IsNullOrWhiteSpace(pago.MotivoAnulacion))
+                                                {
+                                                    <div class="text-muted small mt-1" style="font-size: 0.75rem;">
+                                                        @pago.MotivoAnulacion
+                                                    </div>
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-success">Registrado</span>
+                                            }
+                                        </td>
+                                        <td class="text-center pe-3">
+                                            @if (!pago.Anulado)
+                                            {
+                                                <button class="btn btn-sm btn-outline-danger" @onclick="() => AbrirModalAnularPago(pago)" title="Anular cobro">
+                                                    <i class="bi bi-trash"></i> Anular
+                                                </button>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Paginación UI -->
+                    <div class="card-footer bg-white border-top d-flex align-items-center justify-content-between p-3">
+                        <div class="text-muted small text-dark">
+                            Mostrando de @(histTotalRegistros > 0 ? (histPagina - 1) * histTamanoPagina + 1 : 0) a @(Math.Min(histPagina * histTamanoPagina, histTotalRegistros)) de @histTotalRegistros registros
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="PaginaAnteriorHistorial" disabled="@(histPagina <= 1 || histLoading)">
+                                <i class="bi bi-chevron-left me-1"></i> Anterior
+                            </button>
+                            <span class="small fw-semibold text-dark">Página @histPagina de @histTotalPaginas</span>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="PaginaSiguienteHistorial" disabled="@(histPagina >= histTotalPaginas || histLoading)">
+                                Siguiente <i class="bi bi-chevron-right ms-1"></i>
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+}
+
+@* ── Detalle de venta seleccionada ─────────────────────────────────────────── *@
+@if (_ventaSeleccionada.HasValue && _ventaDetalle is not null)
+{
+    <div class="card mt-3">
+        <div class="card-header d-flex justify-content-between align-items-center py-3">
+            <span>
+                <i class="bi bi-receipt me-1"></i>
+                Venta <strong>@_ventaDetalle.NumeroVenta</strong>
+                <span class="@BadgeCssHelper.GetEstadoVentaBadge(_ventaDetalle.EstadoVenta) ms-2">@_ventaDetalle.EstadoVenta</span>
+                <span class="@BadgeCssHelper.GetEstadoPagoBadge(_ventaDetalle.EstadoPago) ms-1">@_ventaDetalle.EstadoPago</span>
+            </span>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="DeseleccionarVenta">
+                <i class="bi bi-arrow-left me-1"></i> Otra venta
+            </button>
+        </div>
+
+        <div class="card-body">
+            @* Resumen *@
+            <div class="card bg-light mb-3">
+                <div class="card-body py-2">
+                    <div class="row text-center g-2">
+                        <div class="col-4 border-end">
+                            <div class="text-muted small">Total venta</div>
+                            <strong>@FormatMoney(_ventaDetalle.Total)</strong>
+                        </div>
+                        <div class="col-4 border-end">
+                            <div class="text-muted small">Pagado</div>
+                            <strong>@FormatMoney(_totalPagado)</strong>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-muted small">Saldo pendiente</div>
+                            <strong class="@(_saldoPendienteCalculado > 0 ? "text-danger" : "text-success")">
+                                @FormatMoney(_saldoPendienteCalculado)
+                            </strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @* Pagos registrados *@
+            @if (_ventaDetalle.Pagos is { Count: > 0 })
+            {
+                <h6 class="fw-semibold mb-2"><i class="bi bi-list-check me-1"></i> Pagos registrados</h6>
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm table-bordered align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Tipo</th>
+                                <th>Modo</th>
+                                <th class="text-end">Monto</th>
+                                <th>Referencia</th>
+                                <th>Estado</th>
+                                <th class="text-center">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var pago in _ventaDetalle.Pagos)
+                            {
+                                <tr class="@(pago.Anulado ? "table-danger-subtle opacity-75" : "")">
+                                    <td>@pago.FechaPago.ToString("dd/MM/yyyy")</td>
+                                    <td>@pago.TipoPago</td>
+                                    <td>@pago.ModoPago</td>
+                                    <td class="text-end fw-semibold">@FormatMoney(pago.Monto)</td>
+                                    <td>@(pago.Referencia ?? "-")</td>
+                                    <td>
+                                        @if (pago.Anulado)
+                                        {
+                                            <span class="badge bg-danger">Anulado</span>
+                                            @if (!string.IsNullOrWhiteSpace(pago.MotivoAnulacion))
+                                            {
+                                                <div class="text-muted small mt-1" style="font-size: 0.75rem;">
+                                                    @pago.MotivoAnulacion
+                                                </div>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="@BadgeCssHelper.GetEstadoPagoBadge(pago.EstadoPago)">@pago.EstadoPago</span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        @if (!pago.Anulado)
+                                        {
+                                            <button class="btn btn-xs btn-outline-danger py-0 px-2"
+                                                    @onclick="() => AbrirModalAnularPago(pago)">
+                                                <i class="bi bi-x-circle me-1"></i> Anular Pago
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">-</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            @* Formulario de pago rápido *@
+            @if (_saldoPendienteCalculado > 0 && EsVentaPagable(_ventaDetalle.EstadoVenta))
+            {
+                <h6 class="fw-semibold mb-2"><i class="bi bi-plus-circle me-1"></i> Nuevo pago</h6>
+                <div class="card border-primary">
+                    <div class="card-body">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-md-2">
+                                <label class="form-label small fw-semibold">Fecha</label>
+                                <InputDate class="form-control form-control-sm" @bind-Value="_pagoModel.FechaPago" />
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small fw-semibold">Tipo pago</label>
+                                <InputSelect class="form-select form-select-sm" @bind-Value="_pagoModel.TipoPago">
+                                    <option value="">-</option>
+                                    @foreach (var opt in _tipoPagoOptions)
+                                    {
+                                        <option value="@opt">@opt</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small fw-semibold">Modo pago</label>
+                                <InputSelect class="form-select form-select-sm" @bind-Value="_pagoModel.ModoPago">
+                                    <option value="">-</option>
+                                    @foreach (var opt in _modoPagoOptions)
+                                    {
+                                        <option value="@opt">@opt</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small fw-semibold">Monto</label>
+                                <InputNumber class="form-control form-control-sm" @bind-Value="_pagoModel.Monto"
+                                             min="0.01" step="0.01" />
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small fw-semibold">Referencia</label>
+                                <InputText class="form-control form-control-sm" @bind-Value="_pagoModel.Referencia"
+                                           placeholder="Nro. doc" />
+                            </div>
+                            <div class="col-md-2 d-grid">
+                                <button class="btn btn-sm btn-primary"
+                                        @onclick="RegistrarPagoAsync"
+                                        disabled="@_isSubmitting">
+                                    @if (_isSubmitting)
+                                    {
+                                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-check2-circle me-1"></i>
+                                    }
+                                    Registrar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+            else if (_saldoPendienteCalculado <= 0)
+            {
+                <div class="alert alert-success py-2 mb-0" role="alert">
+                    <i class="bi bi-check-circle-fill me-1"></i>
+                    Esta venta está completamente pagada.
+                </div>
+            }
+            else if (!EsVentaPagable(_ventaDetalle.EstadoVenta))
+            {
+                <div class="alert alert-warning py-2 mb-0" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                    No se pueden registrar pagos en una venta <strong>@_ventaDetalle.EstadoVenta</strong>.
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@* ── Modal reutilizable para registro avanzado ─────────────────────────────── *@
+<ModalRegistrarPago @ref="_modalPago"
+                   OnPagoRegistrado="OnPagoRegistradoAsync" />
+
+@* ── Modal de anulación de pago ── *@
+@if (_showAnulacionModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,.45)">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger"><i class="bi bi-exclamation-triangle-fill me-2"></i> Anular Pago</h5>
+                    <button type="button" class="btn-close" @onclick="CerrarModalAnularPago"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Está seguro de que desea anular este pago por <strong>@FormatMoney(_pagoAAnular?.Monto ?? 0)</strong>?</p>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Motivo de anulación (Obligatorio)</label>
+                        <textarea class="form-control" rows="3" @bind="_motivoAnulacion" placeholder="Escriba el motivo de la anulación aquí..."></textarea>
+                        @if (_motivoAnulacionError)
+                        {
+                            <span class="text-danger small d-block mt-1">El motivo de anulación es obligatorio.</span>
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModalAnularPago" disabled="@_isAnulando">Cancelar</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmarAnularPagoAsync" disabled="@_isAnulando">
+                        @if (_isAnulando)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        }
+                        Confirmar Anulación
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    // ─── Parámetros de ruta ───────────────────────────────────────────────────
+    [Parameter] public long? VentaId { get; set; }
+
+    // ─── Estado ───────────────────────────────────────────────────────────────
+    private bool _isLoading;
+    private bool _isSubmitting;
+    private string? _errorMessage;
+    private string? _successMessage;
+
+    private readonly List<VentaResumenDto> _ventas = new();
+    private long? _ventaSeleccionada;
+    private VentaDto? _ventaDetalle;
+    private decimal _totalPagado;
+    private decimal _saldoPendienteCalculado;
+
+    private ModalRegistrarPago _modalPago = default!;
+
+    // Estado para anulación de pago
+    private bool _showAnulacionModal;
+    private VentaPagoDto? _pagoAAnular;
+    private string _motivoAnulacion = string.Empty;
+    private bool _motivoAnulacionError;
+    private bool _isAnulando;
+
+    private readonly RegistrarPagoVentaRequestDto _pagoModel = new()
+    {
+        FechaPago = DateTime.Today,
+        TipoPago = "Contado",
+        ModoPago = "Efectivo",
+        Monto = 0,
+        TipoCambio = 1m,
+        EstadoPago = "Pagado"
+    };
+
+    private readonly string[] _tipoPagoOptions = ["Contado", "Credito", "Mixto"];
+    private readonly string[] _modoPagoOptions = ["Efectivo", "QR", "Transferencia", "Tarjeta", "Cheque", "Deposito", "Otro"];
+
+    // Pestañas (Tabs)
+    private string activeTab = "cobros";
+
+    // Filtros cobros (ventas)
+    private int? filterClienteId;
+    private DateTime? filterFechaDesde;
+    private DateTime? filterFechaHasta;
+    private string? filterNumeroVenta;
+    private int topLimit = 100;
+    private int paginaActual = 1;
+    private int tamanoPagina = 50;
+    private int totalRegistros = 0;
+    private int totalPaginas = 1;
+    private List<AgoraHub360.ERP.Shared.DTOs.MDM.ClienteDto> clientes = new();
+
+    // Filtros historial
+    private string? histBusqueda;
+    private string? histNumeroVenta;
+    private string? histNumeroFactura;
+    private int? histClienteId;
+    private string? histTipoPago;
+    private string? histEstadoPago;
+    private DateTime? histFechaDesde;
+    private DateTime? histFechaHasta;
+    private int histTop = 100;
+    private int histPagina = 1;
+    private int histTamanoPagina = 50;
+    private int histTotalRegistros = 0;
+    private int histTotalPaginas = 1;
+    private List<VentaPagoDto> pagosHistorial = new();
+    private bool histLoading = false;
+
+    // ─── Ciclo de vida ────────────────────────────────────────────────────────
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            clientes = await ClienteService.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error al cargar clientes: {ex.Message}";
+        }
+
+        if (VentaId.HasValue && VentaId.Value > 0)
+        {
+            _ventaSeleccionada = VentaId.Value;
+            await CargarDetalleVentaAsync(VentaId.Value);
+        }
+        else
+        {
+            await LoadVentasAsync();
+        }
+    }
+
+    private async Task SetActiveTab(string tab)
+    {
+        activeTab = tab;
+        _errorMessage = null;
+        _successMessage = null;
+
+        if (tab == "cobros")
+        {
+            await LoadVentasAsync();
+        }
+        else if (tab == "historial")
+        {
+            await LoadHistorialAsync();
+        }
+    }
+
+    private async Task BuscarCobrosAsync()
+    {
+        paginaActual = 1;
+        await LoadVentasAsync();
+    }
+
+    private async Task LimpiarFiltrosCobrosAsync()
+    {
+        filterClienteId = null;
+        filterFechaDesde = null;
+        filterFechaHasta = null;
+        filterNumeroVenta = null;
+        topLimit = 100;
+        paginaActual = 1;
+
+        await LoadVentasAsync();
+    }
+
+    private async Task PaginaAnteriorCobros()
+    {
+        if (paginaActual > 1)
+        {
+            paginaActual--;
+            await LoadVentasAsync();
+        }
+    }
+
+    private async Task PaginaSiguienteCobros()
+    {
+        if (paginaActual < totalPaginas)
+        {
+            paginaActual++;
+            await LoadVentasAsync();
+        }
+    }
+
+    private async Task BuscarHistorialAsync()
+    {
+        histPagina = 1;
+        await LoadHistorialAsync();
+    }
+
+    private async Task LimpiarFiltrosHistorialAsync()
+    {
+        histBusqueda = null;
+        histNumeroVenta = null;
+        histNumeroFactura = null;
+        histClienteId = null;
+        histTipoPago = null;
+        histEstadoPago = null;
+        histFechaDesde = null;
+        histFechaHasta = null;
+        histTop = 100;
+        histPagina = 1;
+
+        await LoadHistorialAsync();
+    }
+
+    private async Task PaginaAnteriorHistorial()
+    {
+        if (histPagina > 1)
+        {
+            histPagina--;
+            await LoadHistorialAsync();
+        }
+    }
+
+    private async Task PaginaSiguienteHistorial()
+    {
+        if (histPagina < histTotalPaginas)
+        {
+            histPagina++;
+            await LoadHistorialAsync();
+        }
+    }
+
+    private async Task LoadHistorialAsync()
+    {
+        histLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var filter = new VentaPagoFilterDto
+            {
+                Busqueda = histBusqueda,
+                NumeroVenta = histNumeroVenta,
+                NumeroFactura = histNumeroFactura,
+                ClienteId = histClienteId,
+                TipoPago = histTipoPago,
+                EstadoPago = histEstadoPago,
+                FechaPagoDesde = histFechaDesde,
+                FechaPagoHasta = histFechaHasta,
+                Top = histTop,
+                Pagina = histPagina,
+                TamanoPagina = histTamanoPagina
+            };
+
+            var response = await VentaService.GetPagosPagedAsync(filter);
+            pagosHistorial.Clear();
+            if (response.Success && response.Data != null)
+            {
+                pagosHistorial.AddRange(response.Data.Items);
+                histTotalRegistros = response.Data.TotalItems;
+                histTotalPaginas = response.Data.TotalPaginas;
+            }
+            else
+            {
+                _errorMessage = response.Message ?? "Error al obtener historial de cobros.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error al obtener historial de cobros: {ex.Message}";
+        }
+        finally
+        {
+            histLoading = false;
+        }
+    }
+
+    // ─── Carga de ventas ─────────────────────────────────────────────────────
+    private async Task LoadVentasAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var filter = new VentaFilterDto
+            {
+                NumeroVenta = filterNumeroVenta,
+                ClienteId = filterClienteId,
+                FechaDesde = filterFechaDesde,
+                FechaHasta = filterFechaHasta,
+                Top = topLimit,
+                Pagina = paginaActual,
+                TamanoPagina = tamanoPagina
+            };
+
+            var response = await VentaService.GetAllAsync(filter);
+            _ventas.Clear();
+            if (response.Success && response.Data != null)
+            {
+                _ventas.AddRange(response.Data.Items
+                    .Where(v => !EsAnulada(v.EstadoVenta))
+                    .OrderByDescending(v => v.FechaVenta));
+                totalRegistros = response.Data.TotalItems;
+                totalPaginas = response.Data.TotalPaginas;
+            }
+            else
+            {
+                _errorMessage = response.Message ?? "Error al cargar ventas.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error al cargar ventas: {ex.Message}";
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    // ─── Selección de venta ──────────────────────────────────────────────────
+    private async Task SeleccionarVenta(long id)
+    {
+        _ventaSeleccionada = id;
+        Nav.NavigateTo($"/ventas/pagos/{id}");
+        await CargarDetalleVentaAsync(id);
+    }
+
+    private void DeseleccionarVenta()
+    {
+        _ventaSeleccionada = null;
+        _ventaDetalle = null;
+        _errorMessage = null;
+        _successMessage = null;
+        Nav.NavigateTo("/ventas/pagos");
+    }
+
+    private async Task CargarDetalleVentaAsync(long id)
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            _ventaDetalle = await VentaService.GetByIdAsync(id);
+            if (_ventaDetalle is null)
+            {
+                _errorMessage = $"Venta #{id} no encontrada.";
+                _ventaSeleccionada = null;
+                return;
+            }
+
+            RecalcularSaldos();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error al cargar la venta: {ex.Message}";
+            _ventaSeleccionada = null;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void RecalcularSaldos()
+    {
+        if (_ventaDetalle is null) return;
+        _totalPagado = _ventaDetalle.Pagos?.Where(p => !p.Anulado).Sum(p => p.Monto) ?? 0;
+        _saldoPendienteCalculado = _ventaDetalle.Total - _totalPagado;
+    }
+
+    private void AbrirModalAnularPago(VentaPagoDto pago)
+    {
+        _pagoAAnular = pago;
+        _motivoAnulacion = string.Empty;
+        _motivoAnulacionError = false;
+        _showAnulacionModal = true;
+    }
+
+    private void CerrarModalAnularPago()
+    {
+        _showAnulacionModal = false;
+        _pagoAAnular = null;
+        _motivoAnulacion = string.Empty;
+        _motivoAnulacionError = false;
+    }
+
+    private async Task ConfirmarAnularPagoAsync()
+    {
+        if (_pagoAAnular == null) return;
+
+        if (string.IsNullOrWhiteSpace(_motivoAnulacion))
+        {
+            _motivoAnulacionError = true;
+            return;
+        }
+
+        _motivoAnulacionError = false;
+        _isAnulando = true;
+        _errorMessage = null;
+        _successMessage = null;
+
+        try
+        {
+            var request = new AnularPagoVentaRequestDto { Motivo = _motivoAnulacion };
+            var response = await VentaService.AnularPagoAsync(_pagoAAnular.Id, request);
+
+            if (!response.Success)
+            {
+                _errorMessage = BuildErrorMessage(response);
+            }
+            else
+            {
+                _successMessage = "El pago ha sido anulado exitosamente y los saldos se han recalculado.";
+                _showAnulacionModal = false;
+                if (_ventaSeleccionada.HasValue)
+                {
+                    await CargarDetalleVentaAsync(_ventaSeleccionada.Value);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error al anular el pago: {ex.Message}";
+        }
+        finally
+        {
+            _isAnulando = false;
+            StateHasChanged();
+        }
+    }
+
+    // ─── Registro de pago ────────────────────────────────────────────────────
+    private async Task RegistrarPagoAsync()
+    {
+        _errorMessage = null;
+        _successMessage = null;
+
+        if (_ventaDetalle is null) return;
+
+        // Validaciones
+        if (_pagoModel.Monto <= 0)
+        {
+            _errorMessage = "El monto debe ser mayor a cero.";
+            return;
+        }
+
+        if (_pagoModel.Monto > _saldoPendienteCalculado)
+        {
+            _errorMessage = $"El monto ({FormatMoney(_pagoModel.Monto)}) excede el saldo pendiente ({FormatMoney(_saldoPendienteCalculado)}).";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_pagoModel.TipoPago))
+        {
+            _errorMessage = "Seleccione el tipo de pago.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_pagoModel.ModoPago))
+        {
+            _errorMessage = "Seleccione el modo de pago.";
+            return;
+        }
+
+        _isSubmitting = true;
+        StateHasChanged();
+
+        try
+        {
+            var response = await VentaService.RegistrarPagoAsync(_ventaDetalle.Id, _pagoModel);
+
+            if (!response.Success || response.Data is null)
+            {
+                _errorMessage = BuildErrorMessage(response);
+                _isSubmitting = false;
+                StateHasChanged();
+                return;
+            }
+
+            _successMessage = "Pago registrado exitosamente.";
+            _ventaDetalle = response.Data;
+            RecalcularSaldos();
+
+            // Resetear modelo
+            _pagoModel.FechaPago = DateTime.Today;
+            _pagoModel.Monto = _saldoPendienteCalculado > 0 ? _saldoPendienteCalculado : 0;
+            _pagoModel.TipoPago = "Contado";
+            _pagoModel.ModoPago = "Efectivo";
+            _pagoModel.Referencia = null;
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error al registrar pago: {ex.Message}";
+        }
+        finally
+        {
+            _isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    // ─── Callback del modal ───────────────────────────────────────────────────
+    private async Task OnPagoRegistradoAsync(VentaDto ventaActualizada)
+    {
+        _ventaDetalle = ventaActualizada;
+        RecalcularSaldos();
+        _successMessage = "Pago registrado exitosamente.";
+        StateHasChanged();
+        await Task.CompletedTask;
+    }
+
+    // ─── Helpers ─────────────────────────────────────────────────────────────
+    private static bool EsAnulada(string? estado)
+        => string.Equals(estado, "Anulada", StringComparison.OrdinalIgnoreCase)
+           || string.Equals(estado, "Anulado", StringComparison.OrdinalIgnoreCase);
+
+    private static bool EsVentaPagable(string? estado)
+        => !EsAnulada(estado)
+           && !string.Equals(estado, "Borrador", StringComparison.OrdinalIgnoreCase);
+
+    private static decimal CalcularSaldo(VentaResumenDto venta)
+        => venta.EstadoPago?.Equals("Pagado", StringComparison.OrdinalIgnoreCase) == true ? 0 : venta.Total;
+
+    private static string FormatMoney(decimal value) => FormatHelper.Money(value);
+
+
+
+    private static string BuildErrorMessage<T>(ApiResponse<T> response)
+    {
+        if (response.Errors is { Count: > 0 })
+            return string.Join(" | ", response.Errors);
+        return !string.IsNullOrWhiteSpace(response.Message)
+            ? response.Message
+            : "Error desconocido al procesar la solicitud.";
+    }
+}

@@ -48,6 +48,11 @@ public class PedidoVenta : TenantEntity
     /// </summary>
     public string Estado { get; set; } = "Borrador";
 
+    /// <summary>
+    /// Prioridad comercial: Baja, Normal, Alta, Urgente
+    /// </summary>
+    public string Prioridad { get; set; } = "Normal";
+
     public bool ReservaAplicada { get; set; } = false;
     public bool InventarioDescontado { get; set; } = false;
 

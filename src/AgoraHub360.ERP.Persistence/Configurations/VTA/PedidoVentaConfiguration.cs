@@ -20,6 +20,11 @@ public class PedidoVentaConfiguration : IEntityTypeConfiguration<PedidoVenta>
             .IsRequired()
             .HasMaxLength(30);
 
+        builder.Property(x => x.Prioridad)
+            .IsRequired()
+            .HasMaxLength(20)
+            .HasDefaultValue("Normal");
+
         builder.Property(x => x.ReservaAplicada)
             .IsRequired()
             .HasDefaultValue(false);

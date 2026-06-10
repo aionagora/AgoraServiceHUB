@@ -60,6 +60,12 @@ public class FacturaVentaDto
 
     public bool Activo { get; set; }
 
+    public string? EstadoCobro { get; set; }
+    public decimal TotalPagado { get; set; }
+    public decimal SaldoPendiente { get; set; }
+    public DateTime? FechaVencimiento { get; set; }
+    public int DiasVencidos { get; set; }
+
     public List<FacturaVentaDetalleDto> Detalles { get; set; } = new();
 }
 
@@ -87,6 +93,12 @@ public class FacturaVentaResumenDto
     public decimal? AdditionalDiscount { get; set; }
     public bool Revertido { get; set; }
     public bool Activo { get; set; }
+
+    public string? EstadoCobro { get; set; }
+    public decimal TotalPagado { get; set; }
+    public decimal SaldoPendiente { get; set; }
+    public DateTime? FechaVencimiento { get; set; }
+    public int DiasVencidos { get; set; }
 }
 
 public class FacturaVentaDetalleDto

@@ -40,6 +40,7 @@ public class Venta : TenantEntity
     public decimal Total { get; set; }
 
     public string? Observaciones { get; set; }
+    public DateTime? FechaVencimientoPago { get; set; }
 
     public bool FacturaGenerada { get; set; } = false;
     public bool InventarioDescontado { get; set; } = false;

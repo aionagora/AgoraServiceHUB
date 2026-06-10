@@ -10,15 +10,16 @@ public class VentaPago : TenantEntity
     public long VentaId { get; set; }
     public Venta? Venta { get; set; }
 
-    public DateTime FechaPago { get; set; }
+    public long? FacturaVentaId { get; set; }
+    public FacturaVenta? FacturaVenta { get; set; }
 
+    public DateTime FechaPago { get; set; }
     public TipoPago TipoPago { get; set; }
     public ModoPago ModoPago { get; set; }
 
     public long? CuentaCajaBancoId { get; set; }
 
     public decimal Monto { get; set; }
-
     public string? MonedaId { get; set; }
     public string? MonedaCodigo { get; set; }
 
@@ -27,4 +28,11 @@ public class VentaPago : TenantEntity
     public string? Referencia { get; set; }
 
     public EstadoPagoVenta EstadoPago { get; set; } = EstadoPagoVenta.Pendiente;
+
+    // ── Datos de Anulación ──────────────────────────────────────────────────
+    public bool Anulado { get; set; }
+    public string? MotivoAnulacion { get; set; }
+    public DateTime? FechaAnulacion { get; set; }
+    public string? UsuarioAnulacionId { get; set; }
 }
+

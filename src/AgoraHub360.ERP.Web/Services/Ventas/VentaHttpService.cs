@@ -15,15 +15,53 @@ public class VentaHttpService
         _http = http;
     }
 
-    public async Task<List<VentaResumenDto>> GetAllAsync()
+    public async Task<ApiResponse<PaginatedResultDto<VentaResumenDto>>> GetAllAsync(VentaFilterDto? filter = null)
     {
-        var response = await _http.GetAsync(BaseUrl);
-        var parsed = await ParseResponse<IReadOnlyList<VentaResumenDto>>(response);
+        var url = $"{BaseUrl}?";
+        if (filter != null)
+        {
+            if (!string.IsNullOrEmpty(filter.NumeroVenta)) url += $"numeroVenta={Uri.EscapeDataString(filter.NumeroVenta)}&";
+            if (filter.ClienteId.HasValue) url += $"clienteId={filter.ClienteId}&";
+            if (!string.IsNullOrEmpty(filter.EstadoVenta)) url += $"estadoVenta={Uri.EscapeDataString(filter.EstadoVenta)}&";
+            if (!string.IsNullOrEmpty(filter.EstadoPago)) url += $"estadoPago={Uri.EscapeDataString(filter.EstadoPago)}&";
+            if (filter.FechaDesde.HasValue) url += $"fechaDesde={filter.FechaDesde.Value:yyyy-MM-dd}&";
+            if (filter.FechaHasta.HasValue) url += $"fechaHasta={filter.FechaHasta.Value:yyyy-MM-dd}&";
+            if (!string.IsNullOrEmpty(filter.Busqueda)) url += $"busqueda={Uri.EscapeDataString(filter.Busqueda)}&";
+            url += $"top={filter.Top}&";
+            url += $"pagina={filter.Pagina}&";
+            url += $"tamanoPagina={filter.TamanoPagina}&";
+            if (filter.Page.HasValue) url += $"page={filter.Page.Value}&";
+            if (filter.PageSize.HasValue) url += $"pageSize={filter.PageSize.Value}&";
+        }
+        url = url.TrimEnd('&', '?');
 
-        if (!parsed.Success)
-            throw new InvalidOperationException(parsed.Message ?? "Error al listar ventas.");
+        var response = await _http.GetAsync(url);
+        return await ParseResponse<PaginatedResultDto<VentaResumenDto>>(response);
+    }
 
-        return parsed.Data?.ToList() ?? new List<VentaResumenDto>();
+    public async Task<ApiResponse<PaginatedResultDto<VentaPagoDto>>> GetPagosPagedAsync(VentaPagoFilterDto filter)
+    {
+        var url = $"{BaseUrl}/pagos?";
+        if (filter != null)
+        {
+            if (!string.IsNullOrEmpty(filter.Busqueda)) url += $"busqueda={Uri.EscapeDataString(filter.Busqueda)}&";
+            if (!string.IsNullOrEmpty(filter.NumeroVenta)) url += $"numeroVenta={Uri.EscapeDataString(filter.NumeroVenta)}&";
+            if (!string.IsNullOrEmpty(filter.NumeroFactura)) url += $"numeroFactura={Uri.EscapeDataString(filter.NumeroFactura)}&";
+            if (filter.ClienteId.HasValue) url += $"clienteId={filter.ClienteId}&";
+            if (!string.IsNullOrEmpty(filter.TipoPago)) url += $"tipoPago={Uri.EscapeDataString(filter.TipoPago)}&";
+            if (!string.IsNullOrEmpty(filter.EstadoPago)) url += $"estadoPago={Uri.EscapeDataString(filter.EstadoPago)}&";
+            if (filter.FechaPagoDesde.HasValue) url += $"fechaPagoDesde={filter.FechaPagoDesde.Value:yyyy-MM-dd}&";
+            if (filter.FechaPagoHasta.HasValue) url += $"fechaPagoHasta={filter.FechaPagoHasta.Value:yyyy-MM-dd}&";
+            url += $"top={filter.Top}&";
+            if (filter.Page.HasValue) url += $"page={filter.Page}&";
+            url += $"pagina={filter.Pagina}&";
+            if (filter.PageSize.HasValue) url += $"pageSize={filter.PageSize}&";
+            url += $"tamanoPagina={filter.TamanoPagina}&";
+        }
+        url = url.TrimEnd('&', '?');
+
+        var response = await _http.GetAsync(url);
+        return await ParseResponse<PaginatedResultDto<VentaPagoDto>>(response);
     }
 
     public async Task<VentaDto?> GetByIdAsync(long id)
@@ -70,6 +108,12 @@ public class VentaHttpService
     public async Task<ApiResponse<VentaDto>> AnularAsync(long id, AnularVentaRequestDto dto)
     {
         var response = await _http.PostAsJsonAsync($"{BaseUrl}/{id}/anular", dto);
+        return await ParseResponse<VentaDto>(response);
+    }
+
+    public async Task<ApiResponse<VentaDto>> AnularPagoAsync(long id, AnularPagoVentaRequestDto dto)
+    {
+        var response = await _http.PostAsJsonAsync($"{BaseUrl}/pagos/{id}/anular", dto);
         return await ParseResponse<VentaDto>(response);
     }
 

@@ -1,0 +1,802 @@
+@page "/ventas/cuentas-por-cobrar"
+@attribute [Authorize]
+@using AgoraHub360.ERP.Shared.DTOs
+@using AgoraHub360.ERP.Shared.DTOs.CxC
+@using AgoraHub360.ERP.Shared.DTOs.MDM
+@using AgoraHub360.ERP.Web.Services
+@using AgoraHub360.ERP.Shared.DTOs.Ventas
+@inject CuentasPorCobrarHttpService CxcService
+@inject ClienteHttpService ClienteService
+@inject NavigationManager Nav
+
+<PageTitle>Cuentas por Cobrar - AgoraHub360 ERP</PageTitle>
+
+<div class="page-header mb-4">
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+        <div class="d-flex align-items-center gap-2">
+            <span class="hub-back-icon shadow-sm" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; padding: 10px 14px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center;">
+                <i class="bi bi-wallet2 fs-4"></i>
+            </span>
+            <div>
+                <h1 class="mb-0 fw-bold text-dark">Cuentas por Cobrar</h1>
+                <p class="text-muted mb-0 small">Ventas &rsaquo; Cuentas por Cobrar</p>
+            </div>
+        </div>
+        <div>
+            <a href="/ventas/cuentas-por-cobrar/antiguedad-saldos" class="btn btn-primary btn-sm">
+                <i class="bi bi-clock-history me-1"></i> Ver Antigüedad de Saldos
+            </a>
+        </div>
+    </div>
+</div>
+
+@if (globalLoading)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+        <p class="text-muted mt-3">Cargando información general...</p>
+    </div>
+}
+else
+{
+    <!-- Tarjetas de Resumen (Cards superiores) -->
+    <div class="row g-3 mb-4">
+        <!-- Saldo Pendiente Total -->
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100 position-relative overflow-hidden bg-gradient" style="background: linear-gradient(135deg, #4f46e5, #3b82f6); color: white;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-white-50 mb-1 small text-uppercase fw-bold">Saldo Pendiente Total</p>
+                            <h3 class="mb-0 fw-bold">@saldoPendienteTotal.ToString("N2") <small class="fs-6">Bs</small></h3>
+                        </div>
+                        <div class="bg-white bg-opacity-20 rounded p-3 text-white">
+                            <i class="bi bi-currency-dollar fs-3"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cuentas Pendientes -->
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100 bg-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-1 small text-uppercase fw-bold">Cuentas Pendientes</p>
+                            <h3 class="mb-0 fw-bold text-warning">@countPendientes</h3>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 text-warning rounded p-3">
+                            <i class="bi bi-clock-history fs-3"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cuentas Vencidas -->
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100 bg-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-1 small text-uppercase fw-bold">Cuentas Vencidas</p>
+                            <h3 class="mb-0 fw-bold text-danger">@countVencidas</h3>
+                        </div>
+                        <div class="bg-danger bg-opacity-10 text-danger rounded p-3">
+                            <i class="bi bi-exclamation-triangle-fill fs-3"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cuentas Pagadas -->
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100 bg-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-1 small text-uppercase fw-bold">Cuentas Pagadas</p>
+                            <h3 class="mb-0 fw-bold text-success">@countPagadas</h3>
+                        </div>
+                        <div class="bg-success bg-opacity-10 text-success rounded p-3">
+                            <i class="bi bi-check-circle-fill fs-3"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alertas de error/éxito -->
+    @if (!string.IsNullOrWhiteSpace(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-octagon-fill me-2"></i> @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+    @if (!string.IsNullOrWhiteSpace(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i> @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+
+    <!-- Panel de Filtros -->
+    <form @onsubmit="BuscarAsync" @onsubmit:preventDefault class="card border-0 shadow-sm mb-4 bg-white text-dark">
+        <div class="card-body p-3">
+            <h5 class="card-title mb-3 fs-6 fw-bold text-dark"><i class="bi bi-funnel-fill me-1 text-primary"></i> Filtros de Búsqueda</h5>
+            <div class="row g-2 align-items-end">
+                <div class="col-12 col-sm-6 col-md-3">
+                    <label class="form-label small text-muted mb-1">Buscar</label>
+                    <input type="text" class="form-control form-control-sm text-dark bg-light" placeholder="Nro factura, venta, cliente..." @bind="filterBusqueda" />
+                </div>
+                <div class="col-12 col-sm-6 col-md-3">
+                    <label class="form-label small text-muted mb-1">Cliente</label>
+                    <select class="form-select form-select-sm text-dark bg-light" @bind="filterClienteId">
+                        <option value="">-- Todos los Clientes --</option>
+                        @foreach (var c in clientes)
+                        {
+                            <option value="@c.Id">@c.RazonSocial (@c.Codigo)</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-12 col-sm-6 col-md-2">
+                    <label class="form-label small text-muted mb-1">Estado</label>
+                    <select class="form-select form-select-sm text-dark bg-light" @bind="filterEstado">
+                        <option value="">-- Todos los Estados --</option>
+                        <option value="Pendiente">Pendiente</option>
+                        <option value="Parcial">Parcial</option>
+                        <option value="Pagada">Pagada</option>
+                        <option value="Vencida">Vencida</option>
+                        <option value="Anulada">Anulada</option>
+                    </select>
+                </div>
+                <div class="col-12 col-sm-6 col-md-2">
+                    <label class="form-label small text-muted mb-1">Fecha Desde</label>
+                    <input type="date" class="form-control form-control-sm text-dark bg-light" @bind="filterFechaDesde" />
+                </div>
+                <div class="col-12 col-sm-6 col-md-2">
+                    <label class="form-label small text-muted mb-1">Fecha Hasta</label>
+                    <input type="date" class="form-control form-control-sm text-dark bg-light" @bind="filterFechaHasta" />
+                </div>
+                <div class="col-12 col-sm-6 col-md-1">
+                    <label class="form-label small text-muted mb-1">Top</label>
+                    <select class="form-select form-select-sm text-dark bg-light" @bind="topLimit">
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="200">200</option>
+                    </select>
+                </div>
+                <div class="col-12 col-sm-6 col-md-1">
+                    <label class="form-label small text-muted mb-1">Tam. Pág.</label>
+                    <select class="form-select form-select-sm text-dark bg-light" @bind="tamanoPagina">
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                </div>
+                <div class="col-12 col-md-4 d-flex gap-2 justify-content-end ms-auto">
+                    <button type="submit" class="btn btn-primary btn-sm px-4" disabled="@listLoading">
+                        @if (listLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-search me-1"></i>
+                        }
+                        Buscar
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="LimpiarFiltrosAsync" disabled="@listLoading" title="Limpiar filtros">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Limpiar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <!-- Tabla de Cuentas por Cobrar -->
+    <div class="card border-0 shadow-sm bg-white">
+        <div class="card-body p-0">
+            @if (listLoading)
+            {
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="text-muted mt-2">Filtrando cuentas...</p>
+                </div>
+            }
+            else if (cuentas.Count == 0)
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-folder-x text-muted" style="font-size: 3.5rem;"></i>
+                    <p class="text-muted mt-3 mb-0">No se encontraron cuentas por cobrar registradas para los filtros aplicados.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    @{
+                        decimal runningTotal = 0;
+                    }
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light text-secondary small text-uppercase">
+                            <tr>
+                                <th class="ps-3">Cliente</th>
+                                <th>Factura / Venta</th>
+                                <th>Emisión</th>
+                                <th>Vencimiento</th>
+                                <th class="text-end">Monto Original</th>
+                                <th class="text-end">Monto Pagado</th>
+                                <th class="text-end">Saldo Pendiente</th>
+                                <th class="text-end text-primary">Saldo Acumulado</th>
+                                <th class="text-center">Estado</th>
+                                <th class="text-center pe-3">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var cxc in cuentas)
+                            {
+                                runningTotal += cxc.SaldoPendiente;
+                                <tr>
+                                    <td class="ps-3">
+                                        <div class="fw-semibold text-dark">@cxc.ClienteNombre</div>
+                                        <div class="text-muted small">NIT: @(string.IsNullOrWhiteSpace(cxc.ClienteNit) ? "N/A" : cxc.ClienteNit)</div>
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold text-primary">Fac. #@cxc.NumeroFactura</div>
+                                        <div class="text-secondary small">Venta: @(string.IsNullOrWhiteSpace(cxc.NumeroVenta) ? "-" : cxc.NumeroVenta)</div>
+                                    </td>
+                                    <td>@cxc.FechaEmision.ToString("dd/MM/yyyy")</td>
+                                    <td>@cxc.FechaVencimiento?.ToString("dd/MM/yyyy")</td>
+                                    <td class="text-end fw-medium">@cxc.TotalFactura.ToString("N2") <span class="small text-muted">@cxc.MonedaCodigo</span></td>
+                                    <td class="text-end text-success fw-medium">@cxc.TotalPagado.ToString("N2") <span class="small text-muted">@cxc.MonedaCodigo</span></td>
+                                    <td class="text-end fw-bold text-danger">@cxc.SaldoPendiente.ToString("N2") <span class="small text-muted">@cxc.MonedaCodigo</span></td>
+                                    <td class="text-end fw-bold text-primary">@runningTotal.ToString("N2") <span class="small text-muted">@cxc.MonedaCodigo</span></td>
+                                    <td class="text-center">
+                                        <span class="@AgoraHub360.ERP.Web.Helpers.BadgeCssHelper.GetEstadoCxCBadge(cxc.Estado)">
+                                            @cxc.Estado
+                                        </span>
+                                    </td>
+                                    <td class="text-center pe-3">
+                                        <div class="d-flex justify-content-center gap-1">
+                                            <button class="btn btn-sm btn-outline-info" @onclick="() => CargarDetalleAsync(cxc.Id)" title="Ver Detalle" disabled="@accionLoading">
+                                                <i class="bi bi-eye"></i>
+                                            </button>
+                                            
+                                            @if (cxc.Estado != "Pagada" && cxc.Estado != "Anulada")
+                                            {
+                                                <button class="btn btn-sm btn-outline-success" @onclick="() => RegistrarPago(cxc)" title="Registrar Pago" disabled="@accionLoading">
+                                                    <i class="bi bi-cash-coin"></i>
+                                                </button>
+                                                
+                                                <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmarAnulacion(cxc)" title="Anular Cuenta" disabled="@accionLoading">
+                                                    <i class="bi bi-x-circle"></i>
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button class="btn btn-sm btn-outline-secondary" @onclick="() => RecalcularCxcAsync(cxc)" title="Recalcular Saldo" disabled="@accionLoading">
+                                                    <i class="bi bi-arrow-repeat"></i>
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot class="table-light fw-bold border-top-2">
+                            <tr>
+                                <td colspan="4" class="text-end ps-3">TOTAL</td>
+                                <td class="text-end">@cuentas.Sum(c => c.TotalFactura).ToString("N2")</td>
+                                <td class="text-end text-success">@cuentas.Sum(c => c.TotalPagado).ToString("N2")</td>
+                                <td class="text-end text-danger">@cuentas.Sum(c => c.SaldoPendiente).ToString("N2")</td>
+                                <td class="text-end text-primary">@runningTotal.ToString("N2")</td>
+                                <td></td>
+                                <td class="pe-3"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <!-- Paginación UI -->
+                <div class="card-footer bg-white border-top d-flex align-items-center justify-content-between p-3">
+                    <div class="text-muted small">
+                        Mostrando de @(totalRegistros > 0 ? (paginaActual - 1) * tamanoPagina + 1 : 0) a @(Math.Min(paginaActual * tamanoPagina, totalRegistros)) de @totalRegistros registros
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="PaginaAnterior" disabled="@(paginaActual <= 1 || listLoading)">
+                            <i class="bi bi-chevron-left me-1"></i> Anterior
+                        </button>
+                        <span class="small fw-semibold text-dark">Página @paginaActual de @totalPaginas</span>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="PaginaSiguiente" disabled="@(paginaActual >= totalPaginas || listLoading)">
+                            Siguiente <i class="bi bi-chevron-right ms-1"></i>
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+<!-- Modal de Detalle -->
+@if (mostrarDetalleModal && detalleSelected != null)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0, 0, 0, .5);">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-light border-bottom">
+                    <h5 class="modal-title fw-bold text-dark"><i class="bi bi-file-earmark-text me-2 text-primary"></i>Detalle de Cuenta por Cobrar</h5>
+                    <button type="button" class="btn-close" @onclick="CerrarDetalleModal"></button>
+                </div>
+                <div class="modal-body text-dark">
+                    <div class="row g-3 mb-4">
+                        <div class="col-12 col-md-6">
+                            <span class="text-muted small d-block">Cliente</span>
+                            <span class="fw-bold fs-5 text-dark">@detalleSelected.ClienteNombre</span>
+                            <span class="text-muted d-block small">NIT: @(string.IsNullOrWhiteSpace(detalleSelected.ClienteNit) ? "N/A" : detalleSelected.ClienteNit)</span>
+                        </div>
+                        <div class="col-12 col-md-6 text-md-end">
+                            <span class="text-muted small d-block mb-1">Estado de la Cuenta</span>
+                            <span class="fs-6 @AgoraHub360.ERP.Web.Helpers.BadgeCssHelper.GetEstadoCxCBadge(detalleSelected.Estado)">@detalleSelected.Estado</span>
+                        </div>
+                    </div>
+
+                    <div class="card bg-light border-0 mb-4 shadow-none">
+                        <div class="card-body p-3">
+                            <div class="row g-3 text-center">
+                                <div class="col-4">
+                                    <span class="text-muted small d-block">Monto Original</span>
+                                    <span class="fw-bold fs-5 text-dark">@detalleSelected.TotalFactura.ToString("N2") <small class="small text-muted">@detalleSelected.MonedaCodigo</small></span>
+                                </div>
+                                <div class="col-4 border-start border-end">
+                                    <span class="text-muted small d-block">Monto Pagado</span>
+                                    <span class="fw-bold fs-5 text-success">@detalleSelected.TotalPagado.ToString("N2") <small class="small text-muted">@detalleSelected.MonedaCodigo</small></span>
+                                </div>
+                                <div class="col-4">
+                                    <span class="text-muted small d-block">Saldo Pendiente</span>
+                                    <span class="fw-bold fs-5 text-danger">@detalleSelected.SaldoPendiente.ToString("N2") <small class="small text-muted">@detalleSelected.MonedaCodigo</small></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-6 col-sm-4">
+                            <span class="text-muted small d-block">Nº Factura</span>
+                            <div class="fw-semibold text-dark">@detalleSelected.NumeroFactura</div>
+                        </div>
+                        <div class="col-6 col-sm-4">
+                            <span class="text-muted small d-block">Nº Venta</span>
+                            <div class="fw-semibold text-dark">@(string.IsNullOrWhiteSpace(detalleSelected.NumeroVenta) ? "-" : detalleSelected.NumeroVenta)</div>
+                        </div>
+                        <div class="col-6 col-sm-4">
+                            <span class="text-muted small d-block">Factura Venta ID</span>
+                            <div class="fw-semibold text-dark">@detalleSelected.FacturaVentaId</div>
+                        </div>
+                        <div class="col-6 col-sm-4">
+                            <span class="text-muted small d-block">Fecha Emisión</span>
+                            <div class="fw-semibold text-dark">@detalleSelected.FechaEmision.ToString("dd/MM/yyyy")</div>
+                        </div>
+                        <div class="col-6 col-sm-4">
+                            <span class="text-muted small d-block">Fecha Vencimiento</span>
+                            <div class="fw-semibold text-dark">@detalleSelected.FechaVencimiento?.ToString("dd/MM/yyyy")</div>
+                        </div>
+                        <div class="col-6 col-sm-4">
+                            <span class="text-muted small d-block">Tipo de Cambio</span>
+                            <div class="fw-semibold text-dark">@detalleSelected.TipoCambio.ToString("N4")</div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4" />
+
+                    <h5 class="fw-bold fs-6 text-dark mb-3"><i class="bi bi-credit-card-2-back me-1 text-primary"></i> Pagos Aplicados</h5>
+                    @if (detalleSelected.Pagos == null || detalleSelected.Pagos.Count == 0)
+                    {
+                        <div class="text-center py-4 bg-light rounded text-muted">
+                            <i class="bi bi-info-circle me-1"></i> No se han registrado pagos para esta cuenta por cobrar.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle mb-0">
+                                <thead class="table-light text-secondary small text-uppercase">
+                                    <tr>
+                                        <th>Fecha Pago</th>
+                                        <th>Tipo Pago</th>
+                                        <th>Modo Pago</th>
+                                        <th>Referencia</th>
+                                        <th class="text-end">Monto</th>
+                                        <th class="text-center">Estado Pago</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var pago in detalleSelected.Pagos)
+                                    {
+                                        <tr>
+                                            <td>@pago.FechaPago.ToString("dd/MM/yyyy HH:mm")</td>
+                                            <td>@pago.TipoPago</td>
+                                            <td>@pago.ModoPago</td>
+                                            <td>@(string.IsNullOrWhiteSpace(pago.Referencia) ? "-" : pago.Referencia)</td>
+                                            <td class="text-end fw-semibold">@pago.Monto.ToString("N2")</td>
+                                            <td class="text-center">
+                                                <span class="badge @(pago.EstadoPago == "Aprobado" || pago.EstadoPago == "1" ? "bg-success" : "bg-warning")">
+                                                    @pago.EstadoPago
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer bg-light border-top">
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="CerrarDetalleModal">Cerrar</button>
+                    @if (detalleSelected.Estado != "Pagada" && detalleSelected.Estado != "Anulada")
+                    {
+                        <button class="btn btn-success btn-sm" @onclick="() => RegistrarPagoDesdeModal(detalleSelected)">
+                            <i class="bi bi-cash-coin me-1"></i> Registrar Pago
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal de Confirmación de Anulación -->
+@if (mostrarAnularModal && cuentaPorAnular != null)
+{
+    <div class="modal show d-block" tabindex="-1" style="background-color: rgba(0, 0, 0, .5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmar Anulación</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarAnularModal"></button>
+                </div>
+                <div class="modal-body text-dark">
+                    <p>¿Está seguro de que desea anular la cuenta por cobrar del cliente <strong>@cuentaPorAnular.ClienteNombre</strong> por un monto total de <strong>@cuentaPorAnular.TotalFactura.ToString("N2") @cuentaPorAnular.MonedaCodigo</strong>?</p>
+                    <p class="text-danger small mb-0"><i class="bi bi-info-circle-fill me-1"></i>Esta acción establecerá el estado de la cuenta como Anulada y no permitirá registrar ningún pago adicional.</p>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="CerrarAnularModal">Cancelar</button>
+                    <button type="button" class="btn btn-danger btn-sm" @onclick="AnularCxcAsync" disabled="@accionLoading">
+                        @if (accionLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-x-circle me-1"></i>
+                        }
+                        Confirmar Anulación
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool globalLoading = true;
+    private bool listLoading = false;
+    private bool accionLoading = false;
+
+    private decimal saldoPendienteTotal = 0m;
+    private int countPendientes = 0;
+    private int countVencidas = 0;
+    private int countPagadas = 0;
+
+    private string? errorMessage;
+    private string? successMessage;
+
+    // Filtros de búsqueda
+    private string? filterBusqueda;
+    private int? filterClienteId;
+    private string? filterEstado;
+    private DateTime? filterFechaDesde;
+    private DateTime? filterFechaHasta;
+
+    private int topLimit = 100;
+    private int paginaActual = 1;
+    private int tamanoPagina = 50;
+    private int totalRegistros = 0;
+    private int totalPaginas = 1;
+
+    private List<AgoraHub360.ERP.Shared.DTOs.MDM.ClienteDto> clientes = new();
+    private List<CuentaPorCobrarResumenDto> cuentas = new();
+    private List<CuentaPorCobrarResumenDto> unfilteredCuentas = new();
+
+    // Detalle seleccionado
+    private bool mostrarDetalleModal = false;
+    private CuentaPorCobrarDetalleDto? detalleSelected;
+
+    // Anulación seleccionada
+    private bool mostrarAnularModal = false;
+    private CuentaPorCobrarResumenDto? cuentaPorAnular;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadGlobalDataAsync();
+    }
+
+    private async Task LoadGlobalDataAsync()
+    {
+        globalLoading = true;
+        errorMessage = null;
+        try
+        {
+            // Cargar clientes
+            clientes = await ClienteService.GetAllAsync();
+
+            // Cargar saldo pendiente total
+            var saldoRes = await CxcService.GetSaldoPendienteAsync();
+            if (saldoRes.Success)
+            {
+                saldoPendienteTotal = saldoRes.Data;
+            }
+
+            // Cargar cuentas completas (unfiltered) para calcular métricas de tarjetas
+            var cuentasRes = await CxcService.GetAllAsync(new CuentaPorCobrarFilterDto { Top = 1000, Pagina = 1, TamanoPagina = 1000 });
+            if (cuentasRes.Success && cuentasRes.Data != null)
+            {
+                unfilteredCuentas = cuentasRes.Data.Items ?? new();
+                CalcularMetricas();
+            }
+            else
+            {
+                errorMessage = cuentasRes.Message ?? "Error al cargar el listado general de cuentas por cobrar.";
+            }
+
+            await AplicarFiltrosAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error de comunicación al inicializar la página: {ex.Message}";
+        }
+        finally
+        {
+            globalLoading = false;
+        }
+    }
+
+    private void CalcularMetricas()
+    {
+        countPendientes = unfilteredCuentas.Count(c => c.Estado == "Pendiente" || c.Estado == "Parcial");
+        countVencidas = unfilteredCuentas.Count(c => c.Estado == "Vencida");
+        countPagadas = unfilteredCuentas.Count(c => c.Estado == "Pagada");
+    }
+
+    private void OrderCuentas()
+    {
+        if (cuentas != null)
+        {
+            cuentas = cuentas
+                .OrderByDescending(c => c.FechaVencimiento ?? DateTime.MinValue)
+                .ThenByDescending(c => c.Id)
+                .ToList();
+        }
+    }
+
+    private async Task BuscarAsync()
+    {
+        paginaActual = 1;
+        await AplicarFiltrosAsync();
+    }
+
+    private async Task PaginaAnterior()
+    {
+        if (paginaActual > 1)
+        {
+            paginaActual--;
+            await AplicarFiltrosAsync();
+        }
+    }
+
+    private async Task PaginaSiguiente()
+    {
+        if (paginaActual < totalPaginas)
+        {
+            paginaActual++;
+            await AplicarFiltrosAsync();
+        }
+    }
+
+    private async Task AplicarFiltrosAsync()
+    {
+        listLoading = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var filter = new CuentaPorCobrarFilterDto
+            {
+                Busqueda = filterBusqueda,
+                ClienteId = filterClienteId,
+                Estado = filterEstado,
+                FechaDesde = filterFechaDesde,
+                FechaHasta = filterFechaHasta,
+                Top = topLimit,
+                Pagina = paginaActual,
+                TamanoPagina = tamanoPagina
+            };
+
+            var res = await CxcService.GetAllAsync(filter);
+            if (res.Success && res.Data != null)
+            {
+                cuentas = res.Data.Items ?? new();
+                totalRegistros = res.Data.TotalItems;
+                totalPaginas = res.Data.TotalPaginas;
+                OrderCuentas();
+            }
+            else
+            {
+                errorMessage = res.Message ?? "Error al filtrar los registros.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al ejecutar el filtrado: {ex.Message}";
+        }
+        finally
+        {
+            listLoading = false;
+        }
+    }
+
+    private async Task LimpiarFiltrosAsync()
+    {
+        filterBusqueda = null;
+        filterClienteId = null;
+        filterEstado = null;
+        filterFechaDesde = null;
+        filterFechaHasta = null;
+        topLimit = 100;
+        paginaActual = 1;
+        
+        await AplicarFiltrosAsync();
+    }
+
+    private async Task CargarDetalleAsync(long id)
+    {
+        accionLoading = true;
+        errorMessage = null;
+        try
+        {
+            var res = await CxcService.GetByIdAsync(id);
+            if (res.Success && res.Data != null)
+            {
+                detalleSelected = res.Data;
+                mostrarDetalleModal = true;
+            }
+            else
+            {
+                errorMessage = res.Message ?? "No se pudo recuperar el detalle de la cuenta por cobrar.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al recuperar detalle: {ex.Message}";
+        }
+        finally
+        {
+            accionLoading = false;
+        }
+    }
+
+    private void CerrarDetalleModal()
+    {
+        mostrarDetalleModal = false;
+        detalleSelected = null;
+    }
+
+    private void RegistrarPago(CuentaPorCobrarResumenDto cxc)
+    {
+        if (cxc.VentaId > 0)
+        {
+            Nav.NavigateTo($"/ventas/pagos/{cxc.VentaId}");
+        }
+        else
+        {
+            errorMessage = "No se pudo determinar el ID de Venta asociado a esta cuenta por cobrar.";
+        }
+    }
+
+    private void RegistrarPagoDesdeModal(CuentaPorCobrarDetalleDto cxcDetalle)
+    {
+        CerrarDetalleModal();
+        if (cxcDetalle.VentaId > 0)
+        {
+            Nav.NavigateTo($"/ventas/pagos/{cxcDetalle.VentaId}");
+        }
+        else
+        {
+            errorMessage = "No se pudo determinar el ID de Venta asociado a esta cuenta por cobrar.";
+        }
+    }
+
+    private void ConfirmarAnulacion(CuentaPorCobrarResumenDto cxc)
+    {
+        cuentaPorAnular = cxc;
+        mostrarAnularModal = true;
+    }
+
+    private void CerrarAnularModal()
+    {
+        mostrarAnularModal = false;
+        cuentaPorAnular = null;
+    }
+
+    private async Task AnularCxcAsync()
+    {
+        if (cuentaPorAnular == null) return;
+
+        accionLoading = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var res = await CxcService.AnularAsync(cuentaPorAnular.Id);
+            if (res.Success)
+            {
+                successMessage = $"La cuenta por cobrar del cliente '{cuentaPorAnular.ClienteNombre}' fue anulada exitosamente.";
+                mostrarAnularModal = false;
+                cuentaPorAnular = null;
+                
+                await LoadGlobalDataAsync();
+            }
+            else
+            {
+                errorMessage = res.Message ?? "La anulación de la cuenta por cobrar no fue aceptada.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error en el proceso de anulación: {ex.Message}";
+        }
+        finally
+        {
+            accionLoading = false;
+        }
+    }
+
+    private async Task RecalcularCxcAsync(CuentaPorCobrarResumenDto cxc)
+    {
+        accionLoading = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var res = await CxcService.ActualizarPorPagoAsync(cxc.FacturaVentaId, cxc.TotalPagado);
+            if (res.Success)
+            {
+                successMessage = $"Saldo recalculado exitosamente. Nuevo saldo pendiente: {res.Data?.SaldoPendiente.ToString("N2")} {cxc.MonedaCodigo}";
+                await LoadGlobalDataAsync();
+            }
+            else
+            {
+                errorMessage = res.Message ?? "No se pudo recalcular el saldo.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error en el proceso de recálculo: {ex.Message}";
+        }
+        finally
+        {
+            accionLoading = false;
+        }
+    }
+
+}

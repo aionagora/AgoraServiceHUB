@@ -21,13 +21,13 @@ public class FacturasVentaController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll(CancellationToken ct)
+    public async Task<IActionResult> GetAll([FromQuery] FacturaVentaFilterDto filter, CancellationToken ct)
     {
-        var result = await _service.GetAllAsync(ct);
+        var result = await _service.GetAllAsync(filter, ct);
         if (!result.IsSuccess)
-            return BadRequest(ApiResponse<IReadOnlyList<FacturaVentaResumenDto>>.Fail(result.Error!));
+            return BadRequest(ApiResponse<PaginatedResultDto<FacturaVentaResumenDto>>.Fail(result.Error!));
 
-        return Ok(ApiResponse<IReadOnlyList<FacturaVentaResumenDto>>.Ok(result.Value!));
+        return Ok(ApiResponse<PaginatedResultDto<FacturaVentaResumenDto>>.Ok(result.Value!));
     }
 
     [HttpGet("{id:long}")]

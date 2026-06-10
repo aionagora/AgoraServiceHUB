@@ -6,6 +6,7 @@ using AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Entities.VTA;
 using AgoraHub360.ERP.Domain.Interfaces;
 using AgoraHub360.ERP.Shared.DTOs.Ventas;
+using AgoraHub360.ERP.Shared.DTOs;
 using DomainResult = AgoraHub360.ERP.Domain.Common.Result;
 
 namespace AgoraHub360.ERP.Application.Services;
@@ -77,6 +78,7 @@ public class PedidoVentaService : IPedidoVentaService
                 VendedorId = x.VendedorId,
                 ClienteId = x.ClienteId,
                 ClienteSucursalId = x.ClienteSucursalId,
+                Prioridad = x.Prioridad,
                 Estado = x.Estado,
                 Subtotal = x.Subtotal,
                 Impuestos = x.Impuestos,
@@ -87,6 +89,122 @@ public class PedidoVentaService : IPedidoVentaService
             .AsReadOnly();
 
         return Result<IReadOnlyList<PedidoVentaDto>>.Success(data);
+    }
+
+    public async Task<Result<PaginatedResultDto<PedidoVentaDto>>> GetPagedAsync(
+        PedidoVentaFilterDto filter,
+        CancellationToken ct = default)
+    {
+        if (!_currentUser.EmpresaId.HasValue)
+            return Result<PaginatedResultDto<PedidoVentaDto>>.Failure("No se pudo determinar la empresa activa.");
+
+        var empresaId = _currentUser.EmpresaId.Value;
+
+        var pedidos = await _pedidoRepo.FindAsync(
+            x => x.EmpresaId == empresaId && x.Activo,
+            ct);
+
+        var filtered = pedidos.AsEnumerable();
+
+        // ── Búsqueda general ─────────────────────────────────────────────────
+        if (!string.IsNullOrWhiteSpace(filter.Busqueda))
+        {
+            var term = filter.Busqueda.Trim();
+            filtered = filtered.Where(x =>
+                x.Numero.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                (x.Observaciones != null && x.Observaciones.Contains(term, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        // ── Filtro Nro pedido ────────────────────────────────────────────────
+        if (!string.IsNullOrWhiteSpace(filter.NumeroPedido))
+        {
+            filtered = filtered.Where(x =>
+                x.Numero.Contains(filter.NumeroPedido, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // ── Filtro Cliente ───────────────────────────────────────────────────
+        if (filter.ClienteId.HasValue)
+        {
+            filtered = filtered.Where(x => x.ClienteId == filter.ClienteId.Value);
+        }
+
+        // ── Filtro Estado ────────────────────────────────────────────────────
+        if (!string.IsNullOrWhiteSpace(filter.EstadoPedido) &&
+            !string.Equals(filter.EstadoPedido, "Todos", StringComparison.OrdinalIgnoreCase))
+        {
+            filtered = filtered.Where(x =>
+                string.Equals(x.Estado, filter.EstadoPedido, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // ── Filtro Prioridad ─────────────────────────────────────────────────
+        if (!string.IsNullOrWhiteSpace(filter.Prioridad) &&
+            !string.Equals(filter.Prioridad, "Todos", StringComparison.OrdinalIgnoreCase))
+        {
+            filtered = filtered.Where(x =>
+                string.Equals(x.Prioridad, filter.Prioridad, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // ── Filtro FechaDesde ────────────────────────────────────────────────
+        if (filter.FechaDesde.HasValue)
+        {
+            filtered = filtered.Where(x => x.FechaEmision.Date >= filter.FechaDesde.Value.Date);
+        }
+
+        // ── Filtro FechaHasta ────────────────────────────────────────────────
+        if (filter.FechaHasta.HasValue)
+        {
+            filtered = filtered.Where(x => x.FechaEmision.Date <= filter.FechaHasta.Value.Date);
+        }
+
+        // ── Ordenar ──────────────────────────────────────────────────────────
+        var sorted = filtered
+            .OrderByDescending(x => x.FechaEmision)
+            .ThenByDescending(x => x.Id)
+            .Select(x => new PedidoVentaDto
+            {
+                Id = x.Id,
+                Numero = x.Numero,
+                FechaEmision = x.FechaEmision,
+                FechaEntregaEsperada = x.FechaEntregaEsperada,
+                SucursalId = x.SucursalId,
+                AlmacenId = x.AlmacenId,
+                VendedorId = x.VendedorId,
+                ClienteId = x.ClienteId,
+                ClienteSucursalId = x.ClienteSucursalId,
+                Prioridad = x.Prioridad,
+                Estado = x.Estado,
+                Subtotal = x.Subtotal,
+                Impuestos = x.Impuestos,
+                Total = x.Total,
+                Observaciones = x.Observaciones
+            });
+
+        var top = filter.Top;
+        if (top > 0)
+        {
+            sorted = sorted.Take(top);
+        }
+
+        var sortedList = sorted.ToList();
+        var totalItems = sortedList.Count;
+
+        var pagina = filter.Page ?? filter.Pagina;
+        var tamanoPagina = filter.PageSize ?? filter.TamanoPagina;
+
+        var items = sortedList
+            .Skip((pagina - 1) * tamanoPagina)
+            .Take(tamanoPagina)
+            .ToList();
+
+        var paginatedResult = new PaginatedResultDto<PedidoVentaDto>
+        {
+            Items = items,
+            TotalItems = totalItems,
+            Pagina = pagina,
+            TamanoPagina = tamanoPagina
+        };
+
+        return Result<PaginatedResultDto<PedidoVentaDto>>.Success(paginatedResult);
     }
 
     public async Task<Result<PedidoVentaDto>> GetByIdAsync(long id, CancellationToken ct = default)
@@ -201,6 +319,7 @@ public class PedidoVentaService : IPedidoVentaService
             VendedorId = vendedorId,
             ClienteId = dto.ClienteId,
             ClienteSucursalId = dto.ClienteSucursalId,
+            Prioridad = dto.Prioridad,
             Estado = "Borrador",
             Observaciones = dto.Observaciones,
             Detalles = dto.Detalles.Select(d => new PedidoVentaDetalle
@@ -262,6 +381,7 @@ public class PedidoVentaService : IPedidoVentaService
         entity.AlmacenId = dto.AlmacenId;
         entity.ClienteId = dto.ClienteId;
         entity.ClienteSucursalId = dto.ClienteSucursalId;
+        entity.Prioridad = dto.Prioridad;
         entity.Observaciones = dto.Observaciones;
         entity.Estado = dto.Estado ?? entity.Estado;
 

@@ -1,5 +1,3 @@
-namespace AgoraHub360.ERP.Application.Services;
-
 using AgoraHub360.ERP.Application.Common;
 using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Domain.Entities.Core;
@@ -7,7 +5,10 @@ using AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Entities.VTA;
 using AgoraHub360.ERP.Domain.Enums;
 using AgoraHub360.ERP.Domain.Interfaces;
+using AgoraHub360.ERP.Shared.DTOs;
 using AgoraHub360.ERP.Shared.DTOs.Ventas;
+
+namespace AgoraHub360.ERP.Application.Services;
 
 public class VentaService : IVentaService
 {
@@ -27,6 +28,8 @@ public class VentaService : IVentaService
     private readonly INumeracionDocumentoService _numeracionDocumentoService;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ICuentasPorCobrarService _cuentasPorCobrarService;
+    private readonly IRepository<FacturaVenta> _facturaRepo;
 
     public VentaService(
         IRepository<Venta> ventaRepo,
@@ -44,7 +47,9 @@ public class VentaService : IVentaService
         IRepository<Empresa> empresaRepo,
         INumeracionDocumentoService numeracionDocumentoService,
         ICurrentUserService currentUser,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ICuentasPorCobrarService cuentasPorCobrarService,
+        IRepository<FacturaVenta> facturaRepo)
     {
         _ventaRepo = ventaRepo;
         _detalleRepo = detalleRepo;
@@ -62,23 +67,67 @@ public class VentaService : IVentaService
         _numeracionDocumentoService = numeracionDocumentoService;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
+        _cuentasPorCobrarService = cuentasPorCobrarService;
+        _facturaRepo = facturaRepo;
     }
 
-    public async Task<Result<IReadOnlyList<VentaResumenDto>>> GetAllAsync(CancellationToken ct = default)
+    public async Task<Result<PaginatedResultDto<VentaResumenDto>>> GetAllAsync(
+        VentaFilterDto? filter = null,
+        CancellationToken ct = default)
     {
         if (!_currentUser.EmpresaId.HasValue)
-            return Result<IReadOnlyList<VentaResumenDto>>.Failure("No se pudo determinar la empresa activa.");
+            return Result<PaginatedResultDto<VentaResumenDto>>.Failure("No se pudo determinar la empresa activa.");
 
         var empresaId = _currentUser.EmpresaId.Value;
 
-        var ventas = await _ventaRepo.FindAsync(v => v.EmpresaId == empresaId && v.Activo, ct);
+        var ventas = await _ventaRepo.FindAsync(v =>
+            v.EmpresaId == empresaId &&
+            v.Activo,
+            ct);
+
         var clientes = await _clienteRepo.FindAsync(c => c.EmpresaId == empresaId && c.Activo, ct);
         var sucursales = await _sucursalRepo.FindAsync(s => s.EmpresaId == empresaId && s.Activo, ct);
 
         var clienteMap = clientes.ToDictionary(c => c.Id, c => c.RazonSocial);
         var sucursalMap = sucursales.ToDictionary(s => s.Id, s => s.Nombre);
 
-        var result = ventas
+        var filteredList = ventas.AsEnumerable();
+
+        if (filter != null)
+        {
+            if (!string.IsNullOrWhiteSpace(filter.NumeroVenta))
+                filteredList = filteredList.Where(v => v.NumeroVenta.Contains(filter.NumeroVenta, StringComparison.OrdinalIgnoreCase));
+
+            if (!string.IsNullOrWhiteSpace(filter.Busqueda))
+            {
+                var term = filter.Busqueda;
+                var matchingClientIds = clientes
+                    .Where(c => c.RazonSocial.Contains(term, StringComparison.OrdinalIgnoreCase))
+                    .Select(c => c.Id)
+                    .ToHashSet();
+
+                filteredList = filteredList.Where(v => 
+                    v.NumeroVenta.Contains(term, StringComparison.OrdinalIgnoreCase) || 
+                    (v.ClienteId.HasValue && matchingClientIds.Contains(v.ClienteId.Value)));
+            }
+
+            if (filter.ClienteId.HasValue)
+                filteredList = filteredList.Where(v => v.ClienteId == filter.ClienteId.Value);
+
+            if (!string.IsNullOrWhiteSpace(filter.EstadoVenta) && !string.Equals(filter.EstadoVenta, "Todos", StringComparison.OrdinalIgnoreCase))
+                filteredList = filteredList.Where(v => string.Equals(v.EstadoVenta.ToString(), filter.EstadoVenta, StringComparison.OrdinalIgnoreCase));
+
+            if (!string.IsNullOrWhiteSpace(filter.EstadoPago) && !string.Equals(filter.EstadoPago, "Todos", StringComparison.OrdinalIgnoreCase))
+                filteredList = filteredList.Where(v => string.Equals(v.EstadoPago.ToString(), filter.EstadoPago, StringComparison.OrdinalIgnoreCase));
+
+            if (filter.FechaDesde.HasValue)
+                filteredList = filteredList.Where(v => v.FechaVenta.Date >= filter.FechaDesde.Value.Date);
+
+            if (filter.FechaHasta.HasValue)
+                filteredList = filteredList.Where(v => v.FechaVenta.Date <= filter.FechaHasta.Value.Date);
+        }
+
+        var sorted = filteredList
             .OrderByDescending(v => v.FechaVenta)
             .ThenByDescending(v => v.Id)
             .Select(v => new VentaResumenDto
@@ -96,11 +145,180 @@ public class VentaService : IVentaService
                 Total = v.Total,
                 FacturaGenerada = v.FacturaGenerada,
                 PedidoVentaId = v.PedidoVentaId
-            })
-            .ToList()
-            .AsReadOnly();
+            });
 
-        return Result<IReadOnlyList<VentaResumenDto>>.Success(result);
+        var top = filter?.Top ?? 100;
+        if (top > 0)
+        {
+            sorted = sorted.Take(top);
+        }
+
+        var sortedList = sorted.ToList();
+        var totalItems = sortedList.Count;
+
+        var pagina = filter?.Page ?? filter?.Pagina ?? 1;
+        var tamanoPagina = filter?.PageSize ?? filter?.TamanoPagina ?? 50;
+
+        var items = sortedList
+            .Skip((pagina - 1) * tamanoPagina)
+            .Take(tamanoPagina)
+            .ToList();
+
+        var paginatedResult = new PaginatedResultDto<VentaResumenDto>
+        {
+            Items = items,
+            TotalItems = totalItems,
+            Pagina = pagina,
+            TamanoPagina = tamanoPagina
+        };
+
+        return Result<PaginatedResultDto<VentaResumenDto>>.Success(paginatedResult);
+    }
+
+    public async Task<Result<PaginatedResultDto<VentaPagoDto>>> GetPagosPagedAsync(
+        VentaPagoFilterDto filter,
+        CancellationToken ct = default)
+    {
+        if (!_currentUser.EmpresaId.HasValue)
+            return Result<PaginatedResultDto<VentaPagoDto>>.Failure("No se pudo determinar la empresa activa.");
+
+        var empresaId = _currentUser.EmpresaId.Value;
+
+        var pagos = await _pagoRepo.FindAsync(p => p.EmpresaId == empresaId && p.Activo, ct);
+        var filteredPagos = pagos.AsEnumerable();
+
+        // ── Búsqueda general (Buscar) ────────────────────────────────────────
+        if (!string.IsNullOrWhiteSpace(filter.Busqueda))
+        {
+            var term = filter.Busqueda.Trim().ToLower();
+            var ventasMatch = await _ventaRepo.FindAsync(v =>
+                v.EmpresaId == empresaId &&
+                v.Activo &&
+                (v.NumeroVenta.Contains(term, StringComparison.OrdinalIgnoreCase)),
+                ct);
+            var ventaIdsMatch = ventasMatch.Select(v => v.Id).ToHashSet();
+
+            var facturasMatch = await _facturaRepo.FindAsync(f =>
+                f.EmpresaId == empresaId &&
+                f.Activo &&
+                f.NumeroFactura.Contains(term, StringComparison.OrdinalIgnoreCase),
+                ct);
+            var facturaIdsMatch = facturasMatch.Select(f => f.Id).ToHashSet();
+
+            filteredPagos = filteredPagos.Where(p =>
+                ventaIdsMatch.Contains(p.VentaId) ||
+                (p.FacturaVentaId.HasValue && facturaIdsMatch.Contains(p.FacturaVentaId.Value)) ||
+                (p.Referencia != null && p.Referencia.Contains(term, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        // ── Filtro NroVenta ──────────────────────────────────────────────────
+        if (!string.IsNullOrWhiteSpace(filter.NumeroVenta))
+        {
+            var ventaIdsFiltradas = (await _ventaRepo.FindAsync(v =>
+                v.EmpresaId == empresaId &&
+                v.Activo &&
+                v.NumeroVenta.Contains(filter.NumeroVenta),
+                ct)).Select(v => v.Id).ToHashSet();
+
+            filteredPagos = filteredPagos.Where(p => ventaIdsFiltradas.Contains(p.VentaId));
+        }
+
+        // ── Filtro NroFactura ────────────────────────────────────────────────
+        if (!string.IsNullOrWhiteSpace(filter.NumeroFactura))
+        {
+            var facturaIdsFiltradas = (await _facturaRepo.FindAsync(f =>
+                f.EmpresaId == empresaId &&
+                f.Activo &&
+                f.NumeroFactura.Contains(filter.NumeroFactura),
+                ct)).Select(f => f.Id).ToHashSet();
+
+            filteredPagos = filteredPagos.Where(p => p.FacturaVentaId.HasValue && facturaIdsFiltradas.Contains(p.FacturaVentaId.Value));
+        }
+
+        // ── Filtro Cliente ───────────────────────────────────────────────────
+        if (filter.ClienteId.HasValue)
+        {
+            var ventaIdsCliente = (await _ventaRepo.FindAsync(v =>
+                v.EmpresaId == empresaId &&
+                v.Activo &&
+                v.ClienteId == filter.ClienteId.Value,
+                ct)).Select(v => v.Id).ToHashSet();
+
+            filteredPagos = filteredPagos.Where(p => ventaIdsCliente.Contains(p.VentaId));
+        }
+
+        // ── Filtro TipoPago ──────────────────────────────────────────────────
+        if (!string.IsNullOrWhiteSpace(filter.TipoPago) && !string.Equals(filter.TipoPago, "Todos", StringComparison.OrdinalIgnoreCase))
+        {
+            filteredPagos = filteredPagos.Where(p => string.Equals(p.TipoPago.ToString(), filter.TipoPago, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // ── Filtro EstadoPago ────────────────────────────────────────────────
+        if (!string.IsNullOrWhiteSpace(filter.EstadoPago) && !string.Equals(filter.EstadoPago, "Todos", StringComparison.OrdinalIgnoreCase))
+        {
+            filteredPagos = filteredPagos.Where(p => string.Equals(p.EstadoPago.ToString(), filter.EstadoPago, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // ── Filtro FechaPagoDesde ────────────────────────────────────────────
+        if (filter.FechaPagoDesde.HasValue)
+        {
+            filteredPagos = filteredPagos.Where(p => p.FechaPago.Date >= filter.FechaPagoDesde.Value.Date);
+        }
+
+        // ── Filtro FechaPagoHasta ────────────────────────────────────────────
+        if (filter.FechaPagoHasta.HasValue)
+        {
+            filteredPagos = filteredPagos.Where(p => p.FechaPago.Date <= filter.FechaPagoHasta.Value.Date);
+        }
+
+        var sorted = filteredPagos
+            .OrderByDescending(p => p.FechaPago)
+            .ThenByDescending(p => p.Id)
+            .Select(p => new VentaPagoDto
+            {
+                Id = p.Id,
+                VentaId = p.VentaId,
+                FacturaVentaId = p.FacturaVentaId,
+                FechaPago = p.FechaPago,
+                TipoPago = p.TipoPago.ToString(),
+                ModoPago = p.ModoPago.ToString(),
+                CuentaCajaBancoId = p.CuentaCajaBancoId,
+                Monto = p.Monto,
+                MonedaId = p.MonedaId,
+                MonedaCodigo = p.MonedaCodigo,
+                TipoCambio = p.TipoCambio,
+                Referencia = p.Referencia,
+                EstadoPago = p.EstadoPago.ToString(),
+                Anulado = p.Anulado,
+                MotivoAnulacion = p.MotivoAnulacion
+            });
+
+        var top = filter.Top;
+        if (top > 0)
+        {
+            sorted = sorted.Take(top);
+        }
+
+        var sortedList = sorted.ToList();
+        var totalItems = sortedList.Count;
+
+        var pagina = filter.Page ?? filter.Pagina;
+        var tamanoPagina = filter.PageSize ?? filter.TamanoPagina;
+
+        var items = sortedList
+            .Skip((pagina - 1) * tamanoPagina)
+            .Take(tamanoPagina)
+            .ToList();
+
+        var paginatedResult = new PaginatedResultDto<VentaPagoDto>
+        {
+            Items = items,
+            TotalItems = totalItems,
+            Pagina = pagina,
+            TamanoPagina = tamanoPagina
+        };
+
+        return Result<PaginatedResultDto<VentaPagoDto>>.Success(paginatedResult);
     }
 
     public async Task<Result<VentaDto>> GetByIdAsync(long id, CancellationToken ct = default)
@@ -181,6 +399,7 @@ public class VentaService : IVentaService
             MonedaCodigo = dto.MonedaCodigo,
             TipoCambio = dto.TipoCambio <= 0 ? 1m : dto.TipoCambio,
             Observaciones = dto.Observaciones,
+            FechaVencimientoPago = dto.FechaVencimientoPago ?? dto.FechaVenta,
             FacturaGenerada = false,
             InventarioDescontado = false,
             Activo = true
@@ -288,6 +507,7 @@ public class VentaService : IVentaService
         venta.MonedaCodigo = dto.MonedaCodigo;
         venta.TipoCambio = dto.TipoCambio <= 0 ? 1m : dto.TipoCambio;
         venta.Observaciones = dto.Observaciones;
+        venta.FechaVencimientoPago = dto.FechaVencimientoPago ?? dto.FechaVenta;
 
         var oldDetalles = await _detalleRepo.FindAsync(d => d.VentaId == venta.Id && d.EmpresaId == empresaId && d.Activo, ct);
         foreach (var old in oldDetalles)
@@ -453,25 +673,18 @@ public class VentaService : IVentaService
         return await CreateAsync(createDto, ct);
     }
 
-    public async Task<Result<VentaDto>> RegistrarPagoAsync(long id, RegistrarPagoVentaRequestDto dto, CancellationToken ct = default)
+            public async Task<Result<VentaDto>> RegistrarPagoAsync(long id, RegistrarPagoVentaRequestDto dto, CancellationToken ct = default)
     {
         if (!_currentUser.EmpresaId.HasValue)
             return Result<VentaDto>.Failure("No se pudo determinar la empresa activa.");
 
         var empresaId = _currentUser.EmpresaId.Value;
-        var venta = await _ventaRepo.GetByIdAsync(id, ct);
-        if (venta is null || !venta.Activo)
-            return Result<VentaDto>.Failure("Venta no encontrada.");
 
-        if (venta.EmpresaId != empresaId)
-            return Result<VentaDto>.Failure("La venta no pertenece a la empresa activa.");
-
-        if (venta.EstadoVenta == EstadoVenta.Anulada)
-            return Result<VentaDto>.Failure("No se pueden registrar pagos en una venta anulada.");
-
+        // ── Regla 1: Monto > 0 ──────────────────────────────────────────────────
         if (dto.Monto <= 0)
             return Result<VentaDto>.Failure("El monto del pago debe ser mayor a cero.");
 
+        // ── Validar enumeraciones rápidas (sin DB) ──────────────────────────────
         if (!TryParseEnum(dto.TipoPago, out TipoPago tipoPago))
             return Result<VentaDto>.Failure($"TipoPago inválido: '{dto.TipoPago}'.");
 
@@ -481,36 +694,72 @@ public class VentaService : IVentaService
         if (!TryParseEnum(dto.EstadoPago, out EstadoPagoVenta estadoPago))
             estadoPago = EstadoPagoVenta.Pendiente;
 
-        var pago = new VentaPago
+        // ── Ejecutar dentro de transacción atómica ──────────────────────────────
+        //     Se recalcula el saldo pendiente DENTRO de la transacción para
+        //     evitar que pagos simultáneos excedan el saldo (race condition).
+        //     El IsolationLevel.SERIALIZABLE garantiza que ninguna otra transacción
+        //     modifique filas de VentaPago/Venta concurrentemente.
+        // ────────────────────────────────────────────────────────────────────────
+        return await _unitOfWork.ExecuteInTransactionAsync(async () =>
         {
-            EmpresaId = empresaId,
-            VentaId = venta.Id,
-            FechaPago = dto.FechaPago,
-            TipoPago = tipoPago,
-            ModoPago = modoPago,
-            CuentaCajaBancoId = dto.CuentaCajaBancoId,
-            Monto = dto.Monto,
-            MonedaId = dto.MonedaId,
-            MonedaCodigo = dto.MonedaCodigo,
-            TipoCambio = dto.TipoCambio <= 0 ? 1m : dto.TipoCambio,
-            Referencia = dto.Referencia,
-            EstadoPago = estadoPago,
-            Activo = true
-        };
+            // ── Regla 2: Buscar venta (tenant-aware) DENTRO de la tx ────────────
+            var venta = await _ventaRepo.GetByIdAsync(id, ct);
+            if (venta is null || !venta.Activo)
+                return Result<VentaDto>.Failure("Venta no encontrada.");
 
-        await _pagoRepo.AddAsync(pago, ct);
+            if (venta.EmpresaId != empresaId)
+                return Result<VentaDto>.Failure("La venta no pertenece a la empresa activa.");
 
-        var pagos = await _pagoRepo.FindAsync(p => p.EmpresaId == empresaId && p.VentaId == venta.Id && p.Activo, ct);
-        var totalPagado = pagos.Sum(p => p.Monto) + pago.Monto;
-        venta.EstadoPago = CalculateEstadoPago(venta.Total, totalPagado);
+            if (venta.EstadoVenta == EstadoVenta.Anulada)
+                return Result<VentaDto>.Failure("No se pueden registrar pagos en una venta anulada.");
 
-        if (venta.EstadoPago == EstadoPagoVenta.Pagado && venta.EstadoVenta == EstadoVenta.Confirmada)
-            venta.EstadoVenta = EstadoVenta.Pagada;
+            // ── Regla 3: Recalcular saldo DENTRO de la transacción ──────────────
+            var pagosExistentes = await _pagoRepo.FindAsync(p => p.EmpresaId == empresaId && p.VentaId == venta.Id && p.Activo && !p.Anulado, ct);
+            var totalPagadoAcumulado = pagosExistentes.Sum(p => p.Monto);
+            var saldoPendiente = venta.Total - totalPagadoAcumulado;
 
-        await _ventaRepo.UpdateAsync(venta, ct);
-        await _unitOfWork.SaveChangesAsync(ct);
+            // ── Regla 4: Validar que no exceda saldo ────────────────────────────
+            if (dto.Monto > saldoPendiente)
+                return Result<VentaDto>.Failure(
+                    $"El monto del pago ({dto.Monto:C}) excede el saldo pendiente ({saldoPendiente:C}). " +
+                    $"Total venta: {venta.Total:C}, pagos acumulados: {totalPagadoAcumulado:C}.");
 
-        return await GetByIdAsync(venta.Id, ct);
+            // ── Crear el pago ────────────────────────────────────────────────────
+            var pago = new VentaPago
+            {
+                EmpresaId = empresaId,
+                VentaId = venta.Id,
+                FacturaVentaId = dto.FacturaVentaId,
+                FechaPago = dto.FechaPago,
+                TipoPago = tipoPago,
+                ModoPago = modoPago,
+                CuentaCajaBancoId = dto.CuentaCajaBancoId,
+                Monto = dto.Monto,
+                MonedaId = dto.MonedaId,
+                MonedaCodigo = dto.MonedaCodigo,
+                TipoCambio = dto.TipoCambio <= 0 ? 1m : dto.TipoCambio,
+                Referencia = dto.Referencia,
+                EstadoPago = estadoPago,
+                Activo = true
+            };
+
+            await _pagoRepo.AddAsync(pago, ct);
+
+            // ── Regla 5: Actualizar estado de pago ──────────────────────────────
+            var totalPagado = totalPagadoAcumulado + pago.Monto;
+            venta.EstadoPago = CalculateEstadoPago(venta.Total, totalPagado);
+
+            if (venta.EstadoPago == EstadoPagoVenta.Pagado && venta.EstadoVenta == EstadoVenta.Confirmada)
+                venta.EstadoVenta = EstadoVenta.Pagada;
+
+            await _ventaRepo.UpdateAsync(venta, ct);
+            await _unitOfWork.SaveChangesAsync(ct);
+
+            // ── Actualizar Cuenta por Cobrar ─────────────────────────────────────
+            await _cuentasPorCobrarService.ActualizarPorPagoVentaAsync(venta.Id, ct);
+
+            return await GetByIdAsync(venta.Id, ct);
+        }, ct);
     }
 
     public async Task<Result<VentaDto>> AnularAsync(long id, AnularVentaRequestDto dto, CancellationToken ct = default)
@@ -529,6 +778,13 @@ public class VentaService : IVentaService
         if (venta.EstadoVenta == EstadoVenta.Anulada)
             return Result<VentaDto>.Failure("La venta ya está anulada.");
 
+        // FIX 1: No permitir la anulación de la venta si existe al menos un pago activo.
+        var activePayments = await _pagoRepo.FindAsync(p => p.EmpresaId == empresaId && p.VentaId == venta.Id && p.Activo && !p.Anulado, ct);
+        if (activePayments.Any())
+        {
+            return Result<VentaDto>.Failure("No se puede anular la venta porque tiene pagos registrados. Primero anule los pagos asociados.");
+        }
+
         venta.EstadoVenta = EstadoVenta.Anulada;
         venta.EstadoPago = EstadoPagoVenta.Anulado;
         var motivo = dto.MotivoAnulacion?.Trim();
@@ -543,6 +799,63 @@ public class VentaService : IVentaService
         await _unitOfWork.SaveChangesAsync(ct);
 
         return await GetByIdAsync(venta.Id, ct);
+    }
+
+    public async Task<Result<VentaDto>> AnularPagoAsync(long id, AnularPagoVentaRequestDto dto, CancellationToken ct = default)
+    {
+        if (!_currentUser.EmpresaId.HasValue)
+            return Result<VentaDto>.Failure("No se pudo determinar la empresa activa.");
+
+        var empresaId = _currentUser.EmpresaId.Value;
+
+        if (string.IsNullOrWhiteSpace(dto.Motivo))
+            return Result<VentaDto>.Failure("El motivo de anulación es obligatorio.");
+
+        return await _unitOfWork.ExecuteInTransactionAsync(async () =>
+        {
+            var pago = await _pagoRepo.GetByIdAsync(id, ct);
+            if (pago is null || !pago.Activo)
+                return Result<VentaDto>.Failure("Pago no encontrado.");
+
+            if (pago.EmpresaId != empresaId)
+                return Result<VentaDto>.Failure("El pago no pertenece a la empresa activa.");
+
+            if (pago.Anulado)
+                return Result<VentaDto>.Failure("El pago ya está anulado.");
+
+            // Buscar venta asociada
+            var venta = await _ventaRepo.GetByIdAsync(pago.VentaId, ct);
+            if (venta is null || !venta.Activo)
+                return Result<VentaDto>.Failure("Venta asociada no encontrada.");
+
+            // Registrar datos de anulación
+            pago.Anulado = true;
+            pago.MotivoAnulacion = dto.Motivo;
+            pago.FechaAnulacion = DateTime.UtcNow;
+            pago.UsuarioAnulacionId = _currentUser.UserName ?? _currentUser.UserId;
+            pago.EstadoPago = EstadoPagoVenta.Anulado;
+
+            await _pagoRepo.UpdateAsync(pago, ct);
+            await _unitOfWork.SaveChangesAsync(ct);
+
+            // Recalcular TotalPagado y EstadoPago de la Venta
+            var pagosActivos = await _pagoRepo.FindAsync(p => p.VentaId == venta.Id && p.EmpresaId == empresaId && p.Activo && !p.Anulado, ct);
+            var totalPagado = pagosActivos.Sum(p => p.Monto);
+
+            venta.EstadoPago = CalculateEstadoPago(venta.Total, totalPagado);
+            if (venta.EstadoVenta == EstadoVenta.Pagada && venta.EstadoPago != EstadoPagoVenta.Pagado)
+            {
+                venta.EstadoVenta = EstadoVenta.Confirmada;
+            }
+
+            await _ventaRepo.UpdateAsync(venta, ct);
+            await _unitOfWork.SaveChangesAsync(ct);
+
+            // Recalcular Cuenta por Cobrar
+            await _cuentasPorCobrarService.ActualizarPorPagoVentaAsync(venta.Id, ct);
+
+            return await GetByIdAsync(venta.Id, ct);
+        }, ct);
     }
 
     private async Task<Result<List<VentaDetalle>>> BuildDetallesAsync(
@@ -874,6 +1187,7 @@ public class VentaService : IVentaService
             ImpuestoTotal = venta.ImpuestoTotal,
             Total = venta.Total,
             Observaciones = venta.Observaciones,
+            FechaVencimientoPago = venta.FechaVencimientoPago ?? venta.FechaVenta,
             FacturaGenerada = venta.FacturaGenerada,
             InventarioDescontado = venta.InventarioDescontado,
             FacturacionDatos = fact is null
@@ -910,8 +1224,11 @@ public class VentaService : IVentaService
                 CostoUnitario = d.CostoUnitario,
                 DescuentaInventario = d.DescuentaInventario
             }).ToList(),
-            Pagos = pagos.Select(p => new VentaPagoDto
+                        Pagos = pagos.Select(p => new VentaPagoDto
             {
+                Id = p.Id,
+                VentaId = p.VentaId,
+                FacturaVentaId = p.FacturaVentaId,
                 FechaPago = p.FechaPago,
                 TipoPago = p.TipoPago.ToString(),
                 ModoPago = p.ModoPago.ToString(),
@@ -921,7 +1238,9 @@ public class VentaService : IVentaService
                 MonedaCodigo = p.MonedaCodigo,
                 TipoCambio = p.TipoCambio,
                 Referencia = p.Referencia,
-                EstadoPago = p.EstadoPago.ToString()
+                EstadoPago = p.EstadoPago.ToString(),
+                Anulado = p.Anulado,
+                MotivoAnulacion = p.MotivoAnulacion
             }).ToList()
         };
     }

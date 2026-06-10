@@ -21,13 +21,23 @@ public class VentasController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAll(CancellationToken ct)
+    public async Task<IActionResult> GetAll([FromQuery] VentaFilterDto filter, CancellationToken ct)
     {
-        var result = await _service.GetAllAsync(ct);
+        var result = await _service.GetAllAsync(filter, ct);
         if (!result.IsSuccess)
-            return BadRequest(ApiResponse<IReadOnlyList<VentaResumenDto>>.Fail(result.Error!));
+            return BadRequest(ApiResponse<PaginatedResultDto<VentaResumenDto>>.Fail(result.Error!));
 
-        return Ok(ApiResponse<IReadOnlyList<VentaResumenDto>>.Ok(result.Value!));
+        return Ok(ApiResponse<PaginatedResultDto<VentaResumenDto>>.Ok(result.Value!));
+    }
+
+    [HttpGet("pagos")]
+    public async Task<IActionResult> GetPagos([FromQuery] VentaPagoFilterDto filter, CancellationToken ct)
+    {
+        var result = await _service.GetPagosPagedAsync(filter, ct);
+        if (!result.IsSuccess)
+            return BadRequest(ApiResponse<PaginatedResultDto<VentaPagoDto>>.Fail(result.Error!));
+
+        return Ok(ApiResponse<PaginatedResultDto<VentaPagoDto>>.Ok(result.Value!));
     }
 
     [HttpGet("{id:long}")]
@@ -141,5 +151,23 @@ public class VentasController : ControllerBase
         }
 
         return Ok(ApiResponse<VentaDto>.Ok(result.Value!, "Venta anulada."));
+    }
+
+    [HttpPost("pagos/{id:long}/anular")]
+    public async Task<IActionResult> AnularPago(long id, [FromBody] AnularPagoVentaRequestDto dto, CancellationToken ct)
+    {
+        var result = await _service.AnularPagoAsync(id, dto, ct);
+        if (!result.IsSuccess)
+        {
+            if (result.Error!.Contains("no encontrado", StringComparison.OrdinalIgnoreCase)
+                || result.Error.Contains("no encontrada", StringComparison.OrdinalIgnoreCase))
+            {
+                return NotFound(ApiResponse<VentaDto>.Fail(result.Error!));
+            }
+
+            return BadRequest(ApiResponse<VentaDto>.Fail(result.Error!));
+        }
+
+        return Ok(ApiResponse<VentaDto>.Ok(result.Value!, "Pago anulado exitosamente."));
     }
 }
