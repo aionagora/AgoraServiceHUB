@@ -33,7 +33,12 @@ public sealed class CuentaPorCobrar : TenantEntity
     // ── Montos ────────────────────────────────────────────────────────────────
     public decimal TotalFactura { get; set; }
     public decimal TotalPagado { get; set; }
-    public decimal SaldoPendiente { get; private set; }
+    private decimal? _saldoPendiente;
+    public decimal SaldoPendiente
+    {
+        get => _saldoPendiente ?? (TotalFactura - TotalPagado);
+        private set => _saldoPendiente = value;
+    }
 
     // ── Estado ────────────────────────────────────────────────────────────────
     public EstadoCuentaPorCobrar Estado { get; set; } = EstadoCuentaPorCobrar.Pendiente;

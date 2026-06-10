@@ -28,5 +28,11 @@ public class VentaPago : TenantEntity
     public string? Referencia { get; set; }
 
     public EstadoPagoVenta EstadoPago { get; set; } = EstadoPagoVenta.Pendiente;
+
+    // ── Datos de Anulación ──────────────────────────────────────────────────
+    public bool Anulado { get; set; }
+    public string? MotivoAnulacion { get; set; }
+    public DateTime? FechaAnulacion { get; set; }
+    public string? UsuarioAnulacionId { get; set; }
 }
 

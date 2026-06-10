@@ -73,6 +73,12 @@ public class VentaHttpService
         return await ParseResponse<VentaDto>(response);
     }
 
+    public async Task<ApiResponse<VentaDto>> AnularPagoAsync(long id, AnularPagoVentaRequestDto dto)
+    {
+        var response = await _http.PostAsJsonAsync($"{BaseUrl}/pagos/{id}/anular", dto);
+        return await ParseResponse<VentaDto>(response);
+    }
+
     private static async Task<ApiResponse<T>> ParseResponse<T>(HttpResponseMessage response)
     {
         if (!response.IsSuccessStatusCode)

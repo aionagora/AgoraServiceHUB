@@ -8,23 +8,19 @@ public class CuentaPorCobrarResumenDto
     public long Id { get; set; }
 
     public long FacturaVentaId { get; set; }
+    public long VentaId { get; set; }
     public string NumeroFactura { get; set; } = string.Empty;
     public string? NumeroVenta { get; set; }
-
     public int? ClienteId { get; set; }
     public string? ClienteNombre { get; set; }
     public string? ClienteNit { get; set; }
-
     public DateTime FechaEmision { get; set; }
     public DateTime? FechaVencimiento { get; set; }
-
     public string? MonedaCodigo { get; set; }
     public decimal TipoCambio { get; set; }
-
     public decimal TotalFactura { get; set; }
     public decimal TotalPagado { get; set; }
     public decimal SaldoPendiente { get; set; }
-
     public string Estado { get; set; } = string.Empty;
 }
 
@@ -36,6 +32,7 @@ public class CuentaPorCobrarDetalleDto
     public long Id { get; set; }
 
     public long FacturaVentaId { get; set; }
+    public long VentaId { get; set; }
     public string NumeroFactura { get; set; } = string.Empty;
     public string? NumeroVenta { get; set; }
 
@@ -83,4 +80,31 @@ public class CuentaPorCobrarFilterDto
     public DateTime? FechaHasta { get; set; }
     public DateTime? FechaVencimientoDesde { get; set; }
     public DateTime? FechaVencimientoHasta { get; set; }
+}
+
+public class AntiguedadSaldosClienteDto
+{
+    public int ClienteId { get; set; }
+    public string ClienteNombre { get; set; } = string.Empty;
+    public string ClienteNit { get; set; } = string.Empty;
+
+    public decimal NoVencido { get; set; }
+    public decimal Vencido1A30 { get; set; }
+    public decimal Vencido31A60 { get; set; }
+    public decimal Vencido61A90 { get; set; }
+    public decimal VencidoMas90 { get; set; }
+
+    public decimal Total => NoVencido + Vencido1A30 + Vencido31A60 + Vencido61A90 + VencidoMas90;
+}
+
+public class AntiguedadSaldosResumenDto
+{
+    public decimal TotalNoVencido { get; set; }
+    public decimal TotalVencido1A30 { get; set; }
+    public decimal TotalVencido31A60 { get; set; }
+    public decimal TotalVencido61A90 { get; set; }
+    public decimal TotalVencidoMas90 { get; set; }
+    public decimal TotalGeneral { get; set; }
+
+    public List<AntiguedadSaldosClienteDto> Clientes { get; set; } = new();
 }

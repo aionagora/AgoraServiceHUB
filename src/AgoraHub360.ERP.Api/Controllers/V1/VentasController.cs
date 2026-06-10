@@ -142,4 +142,22 @@ public class VentasController : ControllerBase
 
         return Ok(ApiResponse<VentaDto>.Ok(result.Value!, "Venta anulada."));
     }
+
+    [HttpPost("pagos/{id:long}/anular")]
+    public async Task<IActionResult> AnularPago(long id, [FromBody] AnularPagoVentaRequestDto dto, CancellationToken ct)
+    {
+        var result = await _service.AnularPagoAsync(id, dto, ct);
+        if (!result.IsSuccess)
+        {
+            if (result.Error!.Contains("no encontrado", StringComparison.OrdinalIgnoreCase)
+                || result.Error.Contains("no encontrada", StringComparison.OrdinalIgnoreCase))
+            {
+                return NotFound(ApiResponse<VentaDto>.Fail(result.Error!));
+            }
+
+            return BadRequest(ApiResponse<VentaDto>.Fail(result.Error!));
+        }
+
+        return Ok(ApiResponse<VentaDto>.Ok(result.Value!, "Pago anulado exitosamente."));
+    }
 }

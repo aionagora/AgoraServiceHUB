@@ -49,6 +49,9 @@ public class VentaConfiguration : IEntityTypeConfiguration<Venta>
         builder.Property(x => x.Observaciones)
             .HasMaxLength(1000);
 
+        builder.Property(x => x.FechaVencimientoPago)
+            .HasColumnType("datetime2");
+
         builder.Property(x => x.CreadoPor).HasMaxLength(100);
         builder.Property(x => x.ModificadoPor).HasMaxLength(100);
 

@@ -4,6 +4,7 @@ using AgoraHub360.ERP.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AgoraHub360.ERP.Persistence.Migrations
 {
     [DbContext(typeof(AgoraDbContext))]
-    partial class AgoraDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260609045828_AddClienteCreditoConfiguracion")]
+    partial class AddClienteCreditoConfiguracion
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -7164,11 +7167,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Property<bool>("Activo")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("Anulado")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
-
                     b.Property<string>("CreadoPor")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
@@ -7184,9 +7182,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
                     b.Property<long?>("FacturaVentaId")
                         .HasColumnType("bigint");
-
-                    b.Property<DateTime?>("FechaAnulacion")
-                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime2");
@@ -7216,10 +7211,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<string>("MotivoAnulacion")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
                     b.Property<string>("Referencia")
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
@@ -7230,10 +7221,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
                     b.Property<byte>("TipoPago")
                         .HasColumnType("tinyint");
-
-                    b.Property<string>("UsuarioAnulacionId")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
 
                     b.Property<long>("VentaId")
                         .HasColumnType("bigint");

@@ -111,6 +111,7 @@ public static class DependencyInjection
 
         // CXC: Cuentas por Cobrar
         services.AddScoped<ICuentasPorCobrarService, CuentasPorCobrarService>();
+        services.AddScoped<IClienteCreditoConfiguracionService, ClienteCreditoConfiguracionService>();
 
         return services;
     }

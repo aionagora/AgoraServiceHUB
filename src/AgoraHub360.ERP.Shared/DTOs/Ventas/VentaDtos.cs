@@ -26,6 +26,7 @@ public class VentaDto
     public decimal Total { get; set; }
 
     public string? Observaciones { get; set; }
+    public DateTime? FechaVencimientoPago { get; set; }
     public bool FacturaGenerada { get; set; }
     public bool InventarioDescontado { get; set; }
 
@@ -99,6 +100,7 @@ public class CrearVentaRequestDto
     public List<VentaPagoDto>? Pagos { get; set; }
 
     public string? Observaciones { get; set; }
+    public DateTime? FechaVencimientoPago { get; set; }
 }
 
 public class ActualizarVentaRequestDto
@@ -117,6 +119,7 @@ public class ActualizarVentaRequestDto
     public VentaFacturacionDatosDto? FacturacionDatos { get; set; }
 
     public string? Observaciones { get; set; }
+    public DateTime? FechaVencimientoPago { get; set; }
 }
 
 public class ConfirmarVentaRequestDto
@@ -174,6 +177,8 @@ public class VentaPagoDto
     public string? Referencia { get; set; }
 
     public string EstadoPago { get; set; } = string.Empty;
+    public bool Anulado { get; set; }
+    public string? MotivoAnulacion { get; set; }
 }
 
 public class RegistrarPagoVentaRequestDto
@@ -202,4 +207,9 @@ public class RegistrarPagoVentaRequestDto
 public class AnularVentaRequestDto
 {
     public string MotivoAnulacion { get; set; } = string.Empty;
+}
+
+public class AnularPagoVentaRequestDto
+{
+    public string Motivo { get; set; } = string.Empty;
 }

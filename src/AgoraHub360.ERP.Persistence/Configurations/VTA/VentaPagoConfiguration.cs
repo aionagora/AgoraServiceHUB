@@ -38,6 +38,11 @@ public class VentaPagoConfiguration : IEntityTypeConfiguration<VentaPago>
         builder.Property(x => x.CreadoPor).HasMaxLength(100);
         builder.Property(x => x.ModificadoPor).HasMaxLength(100);
 
+        builder.Property(x => x.Anulado).HasDefaultValue(false);
+        builder.Property(x => x.MotivoAnulacion).HasMaxLength(500);
+        builder.Property(x => x.FechaAnulacion);
+        builder.Property(x => x.UsuarioAnulacionId).HasMaxLength(100);
+
         builder.HasOne(x => x.Venta)
             .WithMany(x => x.Pagos)
             .HasForeignKey(x => x.VentaId)

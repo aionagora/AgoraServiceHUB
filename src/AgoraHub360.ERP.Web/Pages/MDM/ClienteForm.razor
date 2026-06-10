@@ -5,6 +5,7 @@
 @inject ClienteHttpService ClienteService
 @inject ClienteSucursalHttpService ClienteSucursalService
 @inject ClientePerfilFiscalHttpService ClientePerfilFiscalService
+@inject ClienteCreditoConfiguracionHttpService CreditoConfigService
 @inject IJSRuntime JS
 @using System.ComponentModel.DataAnnotations
 @using ClienteDto = AgoraHub360.ERP.Shared.DTOs.MDM.ClienteDto
@@ -17,6 +18,8 @@
 @using CreateClientePerfilFiscalDto = AgoraHub360.ERP.Shared.DTOs.MDM.CreateClientePerfilFiscalDto
 @using UpdateClientePerfilFiscalDto = AgoraHub360.ERP.Shared.DTOs.MDM.UpdateClientePerfilFiscalDto
 @using SetClientePerfilFiscalPredeterminadoDto = AgoraHub360.ERP.Shared.DTOs.MDM.SetClientePerfilFiscalPredeterminadoDto
+@using ClienteCreditoConfiguracionDto = AgoraHub360.ERP.Shared.DTOs.CxC.ClienteCreditoConfiguracionDto
+@using GuardarClienteCreditoConfiguracionRequestDto = AgoraHub360.ERP.Shared.DTOs.CxC.GuardarClienteCreditoConfiguracionRequestDto
 
 <PageTitle>@(IsNew ? "Nuevo Cliente" : "Editar Cliente") - AgoraHub360</PageTitle>
 
@@ -82,7 +85,8 @@
                             <button class="nav-link disabled" title="Próximamente">Contactos</button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link disabled" title="Próximamente">Config. Comercial</button>
+                            <button class="nav-link @(activeTab == TabCredito ? "active" : "")"
+                                    @onclick="LoadCreditoTab" type="button">Config. Comercial</button>
                         </li>
                     }
                 </ul>
@@ -603,6 +607,67 @@
                         </div>
                     }
                 }
+                else if (activeTab == TabCredito)
+                {
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0 text-primary">Configuración de Crédito</h5>
+                    </div>
+
+                    @if (cargandoCredito)
+                    {
+                        <div class="text-center py-4">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                            <span class="ms-2">Cargando configuración de crédito...</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <EditForm Model="creditoConfig" OnValidSubmit="GuardarCreditoAsync">
+                            <div class="card mb-3 border">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-12 mb-3">
+                                            <div class="form-check form-switch">
+                                                <InputCheckbox class="form-check-input" id="creditoHabilitado" @bind-Value="creditoConfig.CreditoHabilitado" />
+                                                <label class="form-check-label fw-bold" for="creditoHabilitado">Habilitar crédito comercial para este cliente</label>
+                                            </div>
+                                            <div class="form-text text-muted">Cuando el crédito está habilitado, las ventas sugerirán automáticamente una fecha de vencimiento basada en los días de crédito.</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label fw-semibold">Días de crédito *</label>
+                                            <InputNumber class="form-control" @bind-Value="creditoConfig.DiasCredito" min="0" />
+                                            <div class="form-text text-muted">Días de plazo sugeridos para el pago (debe ser mayor o igual a 0).</div>
+                                        </div>
+
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label fw-semibold">Límite de crédito ($) *</label>
+                                            <InputNumber class="form-control" @bind-Value="creditoConfig.LimiteCredito" min="0" step="0.01" />
+                                            <div class="form-text text-muted">Monto máximo de crédito autorizado para el cliente (debe ser mayor o igual a 0).</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Observaciones</label>
+                                        <InputTextArea class="form-control" rows="3" @bind-Value="creditoConfig.Observaciones" placeholder="Indique observaciones o condiciones especiales de crédito para este cliente..." />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-end gap-2 mt-3">
+                                <button type="submit" class="btn btn-primary" disabled="@saving">
+                                    @if (saving)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    }
+                                    <i class="bi bi-save me-1"></i> Guardar configuración crédito
+                                </button>
+                            </div>
+                        </EditForm>
+                    }
+                }
             </div>
         </div>
     }
@@ -616,6 +681,7 @@
     private const string TabDatos = "datos";
     private const string TabSucursales = "sucursales";
     private const string TabPerfilesFiscales = "perfiles-fiscales";
+    private const string TabCredito = "credito";
 
     // Tab Data
     private string activeTab = TabDatos;
@@ -645,6 +711,10 @@
     private CreateClientePerfilFiscalDto perfilFiscalForm = new();
     private bool perfilFiscalActivo = true;
     private string? perfilFiscalValidationMessage;
+
+    // Crédito state
+    private bool cargandoCredito = false;
+    private ClienteCreditoConfiguracionDto creditoConfig = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -1111,6 +1181,97 @@
         if (IsNew) return;
         SetTab(TabPerfilesFiscales);
         await SubLoadPerfilesFiscalesAsync();
+    }
+
+    private async Task LoadCreditoTab()
+    {
+        if (IsNew) return;
+        SetTab(TabCredito);
+        await SubLoadCreditoAsync();
+    }
+
+    private async Task SubLoadCreditoAsync()
+    {
+        try
+        {
+            cargandoCredito = true;
+            var config = await CreditoConfigService.GetByClienteAsync(Id!.Value);
+            if (config != null)
+            {
+                creditoConfig = config;
+            }
+            else
+            {
+                creditoConfig = new ClienteCreditoConfiguracionDto
+                {
+                    ClienteId = Id!.Value,
+                    CreditoHabilitado = false,
+                    DiasCredito = 0,
+                    LimiteCredito = 0,
+                    Observaciones = string.Empty
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar la configuración de crédito: {ex.Message}";
+        }
+        finally
+        {
+            cargandoCredito = false;
+        }
+    }
+
+    private async Task GuardarCreditoAsync()
+    {
+        try
+        {
+            saving = true;
+            errorMessage = null;
+            successMessage = null;
+
+            if (creditoConfig.DiasCredito < 0)
+            {
+                errorMessage = "Los días de crédito no pueden ser negativos.";
+                return;
+            }
+
+            if (creditoConfig.LimiteCredito < 0)
+            {
+                errorMessage = "El límite de crédito no puede ser negativo.";
+                return;
+            }
+
+            var req = new GuardarClienteCreditoConfiguracionRequestDto
+            {
+                CreditoHabilitado = creditoConfig.CreditoHabilitado,
+                DiasCredito = creditoConfig.DiasCredito,
+                LimiteCredito = creditoConfig.LimiteCredito,
+                Observaciones = creditoConfig.Observaciones ?? string.Empty
+            };
+
+            var res = await CreditoConfigService.GuardarAsync(Id!.Value, req);
+            if (res.Success)
+            {
+                successMessage = "Configuración de crédito guardada exitosamente.";
+                if (res.Data != null)
+                {
+                    creditoConfig = res.Data;
+                }
+            }
+            else
+            {
+                errorMessage = res.Message ?? "Error al guardar la configuración de crédito.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al guardar la configuración de crédito: {ex.Message}";
+        }
+        finally
+        {
+            saving = false;
+        }
     }
 
     private async Task SubLoadSucursalesAsync()

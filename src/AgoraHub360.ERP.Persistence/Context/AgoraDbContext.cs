@@ -183,6 +183,7 @@ public class AgoraDbContext : DbContext, IUnitOfWork
 
     // ── CXC: Cuentas por Cobrar ──────────────────────────────────────────────
     public DbSet<CuentaPorCobrar> CuentasPorCobrar => Set<CuentaPorCobrar>();
+    public DbSet<ClienteCreditoConfiguracion> ClienteCreditoConfiguraciones => Set<ClienteCreditoConfiguracion>();
 
     // ── VTA: Ventas comerciales ───────────────────────────────────────────────
     public DbSet<Venta> Ventas => Set<Venta>();

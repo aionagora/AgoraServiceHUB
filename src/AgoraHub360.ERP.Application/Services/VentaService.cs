@@ -184,6 +184,7 @@ public class VentaService : IVentaService
             MonedaCodigo = dto.MonedaCodigo,
             TipoCambio = dto.TipoCambio <= 0 ? 1m : dto.TipoCambio,
             Observaciones = dto.Observaciones,
+            FechaVencimientoPago = dto.FechaVencimientoPago ?? dto.FechaVenta,
             FacturaGenerada = false,
             InventarioDescontado = false,
             Activo = true
@@ -291,6 +292,7 @@ public class VentaService : IVentaService
         venta.MonedaCodigo = dto.MonedaCodigo;
         venta.TipoCambio = dto.TipoCambio <= 0 ? 1m : dto.TipoCambio;
         venta.Observaciones = dto.Observaciones;
+        venta.FechaVencimientoPago = dto.FechaVencimientoPago ?? dto.FechaVenta;
 
         var oldDetalles = await _detalleRepo.FindAsync(d => d.VentaId == venta.Id && d.EmpresaId == empresaId && d.Activo, ct);
         foreach (var old in oldDetalles)
@@ -497,7 +499,7 @@ public class VentaService : IVentaService
                 return Result<VentaDto>.Failure("No se pueden registrar pagos en una venta anulada.");
 
             // ── Regla 3: Recalcular saldo DENTRO de la transacción ──────────────
-            var pagosExistentes = await _pagoRepo.FindAsync(p => p.EmpresaId == empresaId && p.VentaId == venta.Id && p.Activo, ct);
+            var pagosExistentes = await _pagoRepo.FindAsync(p => p.EmpresaId == empresaId && p.VentaId == venta.Id && p.Activo && !p.Anulado, ct);
             var totalPagadoAcumulado = pagosExistentes.Sum(p => p.Monto);
             var saldoPendiente = venta.Total - totalPagadoAcumulado;
 
@@ -535,21 +537,14 @@ public class VentaService : IVentaService
             if (venta.EstadoPago == EstadoPagoVenta.Pagado && venta.EstadoVenta == EstadoVenta.Confirmada)
                 venta.EstadoVenta = EstadoVenta.Pagada;
 
-                        await _ventaRepo.UpdateAsync(venta, ct);
+            await _ventaRepo.UpdateAsync(venta, ct);
             await _unitOfWork.SaveChangesAsync(ct);
+
+            // ── Actualizar Cuenta por Cobrar ─────────────────────────────────────
+            await _cuentasPorCobrarService.ActualizarPorPagoVentaAsync(venta.Id, ct);
 
             return await GetByIdAsync(venta.Id, ct);
         }, ct);
-
-        // // ── Actualizar Cuenta por Cobrar (después de la transacción) ─────
-        // // La factura asociada ya debería existir si la venta fue facturada.
-        // // Buscar factura(s) de esta venta para actualizar CxC.
-        // var facturas = await _facturaRepo.FindAsync(
-        //     f => f.EmpresaId == empresaId && f.VentaId == id && f.Activo, ct);
-        // foreach (var factura in facturas)
-        // {
-        //     await _cuentasPorCobrarService.ActualizarPorPagoAsync(factura.Id, dto.Monto, ct);
-        // }
     }
 
     public async Task<Result<VentaDto>> AnularAsync(long id, AnularVentaRequestDto dto, CancellationToken ct = default)
@@ -568,6 +563,13 @@ public class VentaService : IVentaService
         if (venta.EstadoVenta == EstadoVenta.Anulada)
             return Result<VentaDto>.Failure("La venta ya está anulada.");
 
+        // FIX 1: No permitir la anulación de la venta si existe al menos un pago activo.
+        var activePayments = await _pagoRepo.FindAsync(p => p.EmpresaId == empresaId && p.VentaId == venta.Id && p.Activo && !p.Anulado, ct);
+        if (activePayments.Any())
+        {
+            return Result<VentaDto>.Failure("No se puede anular la venta porque tiene pagos registrados. Primero anule los pagos asociados.");
+        }
+
         venta.EstadoVenta = EstadoVenta.Anulada;
         venta.EstadoPago = EstadoPagoVenta.Anulado;
         var motivo = dto.MotivoAnulacion?.Trim();
@@ -582,6 +584,63 @@ public class VentaService : IVentaService
         await _unitOfWork.SaveChangesAsync(ct);
 
         return await GetByIdAsync(venta.Id, ct);
+    }
+
+    public async Task<Result<VentaDto>> AnularPagoAsync(long id, AnularPagoVentaRequestDto dto, CancellationToken ct = default)
+    {
+        if (!_currentUser.EmpresaId.HasValue)
+            return Result<VentaDto>.Failure("No se pudo determinar la empresa activa.");
+
+        var empresaId = _currentUser.EmpresaId.Value;
+
+        if (string.IsNullOrWhiteSpace(dto.Motivo))
+            return Result<VentaDto>.Failure("El motivo de anulación es obligatorio.");
+
+        return await _unitOfWork.ExecuteInTransactionAsync(async () =>
+        {
+            var pago = await _pagoRepo.GetByIdAsync(id, ct);
+            if (pago is null || !pago.Activo)
+                return Result<VentaDto>.Failure("Pago no encontrado.");
+
+            if (pago.EmpresaId != empresaId)
+                return Result<VentaDto>.Failure("El pago no pertenece a la empresa activa.");
+
+            if (pago.Anulado)
+                return Result<VentaDto>.Failure("El pago ya está anulado.");
+
+            // Buscar venta asociada
+            var venta = await _ventaRepo.GetByIdAsync(pago.VentaId, ct);
+            if (venta is null || !venta.Activo)
+                return Result<VentaDto>.Failure("Venta asociada no encontrada.");
+
+            // Registrar datos de anulación
+            pago.Anulado = true;
+            pago.MotivoAnulacion = dto.Motivo;
+            pago.FechaAnulacion = DateTime.UtcNow;
+            pago.UsuarioAnulacionId = _currentUser.UserName ?? _currentUser.UserId;
+            pago.EstadoPago = EstadoPagoVenta.Anulado;
+
+            await _pagoRepo.UpdateAsync(pago, ct);
+            await _unitOfWork.SaveChangesAsync(ct);
+
+            // Recalcular TotalPagado y EstadoPago de la Venta
+            var pagosActivos = await _pagoRepo.FindAsync(p => p.VentaId == venta.Id && p.EmpresaId == empresaId && p.Activo && !p.Anulado, ct);
+            var totalPagado = pagosActivos.Sum(p => p.Monto);
+
+            venta.EstadoPago = CalculateEstadoPago(venta.Total, totalPagado);
+            if (venta.EstadoVenta == EstadoVenta.Pagada && venta.EstadoPago != EstadoPagoVenta.Pagado)
+            {
+                venta.EstadoVenta = EstadoVenta.Confirmada;
+            }
+
+            await _ventaRepo.UpdateAsync(venta, ct);
+            await _unitOfWork.SaveChangesAsync(ct);
+
+            // Recalcular Cuenta por Cobrar
+            await _cuentasPorCobrarService.ActualizarPorPagoVentaAsync(venta.Id, ct);
+
+            return await GetByIdAsync(venta.Id, ct);
+        }, ct);
     }
 
     private async Task<Result<List<VentaDetalle>>> BuildDetallesAsync(
@@ -913,6 +972,7 @@ public class VentaService : IVentaService
             ImpuestoTotal = venta.ImpuestoTotal,
             Total = venta.Total,
             Observaciones = venta.Observaciones,
+            FechaVencimientoPago = venta.FechaVencimientoPago ?? venta.FechaVenta,
             FacturaGenerada = venta.FacturaGenerada,
             InventarioDescontado = venta.InventarioDescontado,
             FacturacionDatos = fact is null
@@ -963,7 +1023,9 @@ public class VentaService : IVentaService
                 MonedaCodigo = p.MonedaCodigo,
                 TipoCambio = p.TipoCambio,
                 Referencia = p.Referencia,
-                EstadoPago = p.EstadoPago.ToString()
+                EstadoPago = p.EstadoPago.ToString(),
+                Anulado = p.Anulado,
+                MotivoAnulacion = p.MotivoAnulacion
             }).ToList()
         };
     }

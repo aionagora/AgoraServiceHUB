@@ -106,6 +106,18 @@ public class CuentasPorCobrarController : ControllerBase
             ? Ok(result)
             : BadRequest(result);
     }
+
+    /// <summary>
+    /// Obtiene el reporte de antigüedad de saldos.
+    /// </summary>
+    [HttpGet("antiguedad-saldos")]
+    public async Task<IActionResult> GetAntiguedadSaldos(CancellationToken ct)
+    {
+        var result = await _service.GetAntiguedadSaldosAsync(ct);
+        return result.IsSuccess
+            ? Ok(result)
+            : BadRequest(result);
+    }
 }
 
 /// <summary>

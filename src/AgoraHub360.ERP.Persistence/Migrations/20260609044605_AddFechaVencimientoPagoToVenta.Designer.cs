@@ -4,6 +4,7 @@ using AgoraHub360.ERP.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AgoraHub360.ERP.Persistence.Migrations
 {
     [DbContext(typeof(AgoraDbContext))]
-    partial class AgoraDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260609044605_AddFechaVencimientoPagoToVenta")]
+    partial class AddFechaVencimientoPagoToVenta
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -2295,61 +2298,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.HasIndex("EmpresaId", "IsDefault");
 
                     b.ToTable("LandedCostProfiles", "cst");
-                });
-
-            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CXC.ClienteCreditoConfiguracion", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<bool>("Activo")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("ClienteId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("CreadoPor")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<bool>("CreditoHabilitado")
-                        .HasColumnType("bit");
-
-                    b.Property<int>("DiasCredito")
-                        .HasColumnType("int");
-
-                    b.Property<int>("EmpresaId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("FechaCreacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("FechaModificacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("LimiteCredito")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("ModificadoPor")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("Observaciones")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ClienteId");
-
-                    b.HasIndex("EmpresaId");
-
-                    b.HasIndex("EmpresaId", "ClienteId")
-                        .IsUnique();
-
-                    b.ToTable("ClienteCreditoConfiguraciones", "cxc");
                 });
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CXC.CuentaPorCobrar", b =>
@@ -7164,11 +7112,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Property<bool>("Activo")
                         .HasColumnType("bit");
 
-                    b.Property<bool>("Anulado")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(false);
-
                     b.Property<string>("CreadoPor")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
@@ -7184,9 +7127,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
                     b.Property<long?>("FacturaVentaId")
                         .HasColumnType("bigint");
-
-                    b.Property<DateTime?>("FechaAnulacion")
-                        .HasColumnType("datetime2");
 
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime2");
@@ -7216,10 +7156,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<string>("MotivoAnulacion")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
                     b.Property<string>("Referencia")
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
@@ -7230,10 +7166,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
 
                     b.Property<byte>("TipoPago")
                         .HasColumnType("tinyint");
-
-                    b.Property<string>("UsuarioAnulacionId")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
 
                     b.Property<long>("VentaId")
                         .HasColumnType("bigint");
@@ -8588,17 +8520,6 @@ namespace AgoraHub360.ERP.Persistence.Migrations
                     b.Navigation("Empresa");
 
                     b.Navigation("Parent");
-                });
-
-            modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CXC.ClienteCreditoConfiguracion", b =>
-                {
-                    b.HasOne("AgoraHub360.ERP.Domain.Entities.MDM.Cliente", "Cliente")
-                        .WithMany()
-                        .HasForeignKey("ClienteId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Cliente");
                 });
 
             modelBuilder.Entity("AgoraHub360.ERP.Domain.Entities.CXC.CuentaPorCobrar", b =>

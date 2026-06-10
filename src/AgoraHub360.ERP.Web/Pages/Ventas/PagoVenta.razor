@@ -174,19 +174,46 @@
                                 <th class="text-end">Monto</th>
                                 <th>Referencia</th>
                                 <th>Estado</th>
+                                <th class="text-center">Acción</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var pago in _ventaDetalle.Pagos)
                             {
-                                <tr>
+                                <tr class="@(pago.Anulado ? "table-danger-subtle opacity-75" : "")">
                                     <td>@pago.FechaPago.ToString("dd/MM/yyyy")</td>
                                     <td>@pago.TipoPago</td>
                                     <td>@pago.ModoPago</td>
                                     <td class="text-end fw-semibold">@FormatMoney(pago.Monto)</td>
                                     <td>@(pago.Referencia ?? "-")</td>
                                     <td>
-                                        <span class="badge @GetEstadoPagoBadge(pago.EstadoPago)">@pago.EstadoPago</span>
+                                        @if (pago.Anulado)
+                                        {
+                                            <span class="badge bg-danger">Anulado</span>
+                                            @if (!string.IsNullOrWhiteSpace(pago.MotivoAnulacion))
+                                            {
+                                                <div class="text-muted small mt-1" style="font-size: 0.75rem;">
+                                                    @pago.MotivoAnulacion
+                                                </div>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="badge @GetEstadoPagoBadge(pago.EstadoPago)">@pago.EstadoPago</span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        @if (!pago.Anulado)
+                                        {
+                                            <button class="btn btn-xs btn-outline-danger py-0 px-2"
+                                                    @onclick="() => AbrirModalAnularPago(pago)">
+                                                <i class="bi bi-x-circle me-1"></i> Anular Pago
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">-</span>
+                                        }
                                     </td>
                                 </tr>
                             }
@@ -277,6 +304,42 @@
 <ModalRegistrarPago @ref="_modalPago"
                    OnPagoRegistrado="OnPagoRegistradoAsync" />
 
+@* ── Modal de anulación de pago ── *@
+@if (_showAnulacionModal)
+{
+    <div class="modal show d-block" tabindex="-1" style="background: rgba(0,0,0,.45)">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger"><i class="bi bi-exclamation-triangle-fill me-2"></i> Anular Pago</h5>
+                    <button type="button" class="btn-close" @onclick="CerrarModalAnularPago"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Está seguro de que desea anular este pago por <strong>@FormatMoney(_pagoAAnular?.Monto ?? 0)</strong>?</p>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Motivo de anulación (Obligatorio)</label>
+                        <textarea class="form-control" rows="3" @bind="_motivoAnulacion" placeholder="Escriba el motivo de la anulación aquí..."></textarea>
+                        @if (_motivoAnulacionError)
+                        {
+                            <span class="text-danger small d-block mt-1">El motivo de anulación es obligatorio.</span>
+                        }
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModalAnularPago" disabled="@_isAnulando">Cancelar</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmarAnularPagoAsync" disabled="@_isAnulando">
+                        @if (_isAnulando)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        }
+                        Confirmar Anulación
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     // ─── Parámetros de ruta ───────────────────────────────────────────────────
     [Parameter] public long? VentaId { get; set; }
@@ -294,6 +357,13 @@
     private decimal _saldoPendienteCalculado;
 
     private ModalRegistrarPago _modalPago = default!;
+
+    // Estado para anulación de pago
+    private bool _showAnulacionModal;
+    private VentaPagoDto? _pagoAAnular;
+    private string _motivoAnulacion = string.Empty;
+    private bool _motivoAnulacionError;
+    private bool _isAnulando;
 
     private readonly RegistrarPagoVentaRequestDto _pagoModel = new()
     {
@@ -394,8 +464,69 @@
     private void RecalcularSaldos()
     {
         if (_ventaDetalle is null) return;
-        _totalPagado = _ventaDetalle.Pagos?.Sum(p => p.Monto) ?? 0;
+        _totalPagado = _ventaDetalle.Pagos?.Where(p => !p.Anulado).Sum(p => p.Monto) ?? 0;
         _saldoPendienteCalculado = _ventaDetalle.Total - _totalPagado;
+    }
+
+    private void AbrirModalAnularPago(VentaPagoDto pago)
+    {
+        _pagoAAnular = pago;
+        _motivoAnulacion = string.Empty;
+        _motivoAnulacionError = false;
+        _showAnulacionModal = true;
+    }
+
+    private void CerrarModalAnularPago()
+    {
+        _showAnulacionModal = false;
+        _pagoAAnular = null;
+        _motivoAnulacion = string.Empty;
+        _motivoAnulacionError = false;
+    }
+
+    private async Task ConfirmarAnularPagoAsync()
+    {
+        if (_pagoAAnular == null) return;
+
+        if (string.IsNullOrWhiteSpace(_motivoAnulacion))
+        {
+            _motivoAnulacionError = true;
+            return;
+        }
+
+        _motivoAnulacionError = false;
+        _isAnulando = true;
+        _errorMessage = null;
+        _successMessage = null;
+
+        try
+        {
+            var request = new AnularPagoVentaRequestDto { Motivo = _motivoAnulacion };
+            var response = await VentaService.AnularPagoAsync(_pagoAAnular.Id, request);
+
+            if (!response.Success)
+            {
+                _errorMessage = BuildErrorMessage(response);
+            }
+            else
+            {
+                _successMessage = "El pago ha sido anulado exitosamente y los saldos se han recalculado.";
+                _showAnulacionModal = false;
+                if (_ventaSeleccionada.HasValue)
+                {
+                    await CargarDetalleVentaAsync(_ventaSeleccionada.Value);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error al anular el pago: {ex.Message}";
+        }
+        finally
+        {
+            _isAnulando = false;
+            StateHasChanged();
+        }
     }
 
     // ─── Registro de pago ────────────────────────────────────────────────────
