@@ -13,6 +13,9 @@ public static class DependencyInjection
         services.AddScoped<IAsientoExportService, AsientoExportService>();
         services.AddScoped<IAsientoImportService, AsientoImportService>();
 
+        // FE: Facturación Electrónica — Cifrado de secretos
+        services.AddScoped<ICifradoService, AesCifradoService>();
+
         // FE: Facturación Electrónica — Providers
         services.AddHttpClient("CirrusFacturacion");
         services.AddScoped<IFacturacionElectronicaProvider, CirrusFacturacionProvider>();

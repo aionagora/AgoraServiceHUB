@@ -40,7 +40,8 @@ public class CirrusFacturacionProviderTests
         });
 
         var provider = CrearProviderConHandler(handler);
-        var config = CrearConfiguracion();
+        // Usar Id único para evitar colisión con el caché estático de tokens
+        var config = CrearConfiguracion(Id: 9998);
         var request = CrearRequest();
 
         var result = await provider.EmitirFacturaAsync(config, request);
@@ -182,11 +183,11 @@ public class CirrusFacturacionProviderTests
         return new CirrusFacturacionProvider(httpClientFactory, cifradoService, logger);
     }
 
-    private static ConfiguracionFacturacionElectronica CrearConfiguracion()
+    private static ConfiguracionFacturacionElectronica CrearConfiguracion(int Id = 1)
     {
         return new ConfiguracionFacturacionElectronica
         {
-            Id = 1,
+            Id = Id,
             EmpresaId = 1,
             NombreConfiguracion = "Test Config",
             ProveedorFacturacionElectronicaId = 1,
