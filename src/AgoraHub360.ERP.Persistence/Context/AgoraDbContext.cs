@@ -10,6 +10,7 @@ using AgoraHub360.ERP.Domain.Entities.ACC;
 using AgoraHub360.ERP.Domain.Entities.INV;
 using AgoraHub360.ERP.Domain.Entities.LOG;
 using AgoraHub360.ERP.Domain.Entities.Workflow;
+using AgoraHub360.ERP.Domain.Entities.FE;
 using AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Entities.PRC;
 using AgoraHub360.ERP.Domain.Entities.RUL;
@@ -184,6 +185,12 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     // ── CXC: Cuentas por Cobrar ──────────────────────────────────────────────
     public DbSet<CuentaPorCobrar> CuentasPorCobrar => Set<CuentaPorCobrar>();
     public DbSet<ClienteCreditoConfiguracion> ClienteCreditoConfiguraciones => Set<ClienteCreditoConfiguracion>();
+
+    // ── FE: Facturación Electrónica ──────────────────────────────────────────
+    public DbSet<ProveedorFacturacionElectronica> ProveedoresFacturacionElectronica => Set<ProveedorFacturacionElectronica>();
+    public DbSet<AmbienteFacturacionElectronica> AmbientesFacturacionElectronica => Set<AmbienteFacturacionElectronica>();
+    public DbSet<ConfiguracionFacturacionElectronica> ConfiguracionesFacturacionElectronica => Set<ConfiguracionFacturacionElectronica>();
+    public DbSet<AuditoriaFacturacion> AuditoriaFacturacion => Set<AuditoriaFacturacion>();
 
     // ── VTA: Ventas comerciales ───────────────────────────────────────────────
     public DbSet<Venta> Ventas => Set<Venta>();

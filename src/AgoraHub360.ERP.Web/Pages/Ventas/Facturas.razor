@@ -7,6 +7,7 @@
 @inject FacturaVentaHttpService FacturaService
 @inject ClienteHttpService ClienteService
 @inject NavigationManager Nav
+@inject FacturacionFEHttpService FacturacionFE
 
 <PageTitle>Facturas - AgoraHub360 ERP</PageTitle>
 
@@ -187,6 +188,23 @@
                                     <button class="btn btn-sm btn-outline-primary" @onclick="() => GoToVenta(fac.VentaId)" title="Ver Venta Asociada">
                                         <i class="bi bi-eye"></i> Venta
                                     </button>
+                                    @if (PuedeEmitirFE(fac))
+                                    {
+                                        <button class="btn btn-sm btn-success ms-1"
+                                                @onclick="() => EmitirFEAsync(fac.Id)"
+                                                disabled="@(isEmitiendoFE && emitiendoFacturaId == fac.Id)"
+                                                title="Emitir factura electrónica">
+                                            @if (isEmitiendoFE && emitiendoFacturaId == fac.Id)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-1"></span>
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-send me-1"></i>
+                                            }
+                                            Emitir FE
+                                        </button>
+                                    }
                                     @if (fac.EstadoFactura != "Anulada" && fac.EstadoFactura != "Anulado")
                                     {
                                         <button class="btn btn-sm btn-outline-danger ms-1" @onclick="() => MostrarModalAnular(fac)" title="Anular Factura">
@@ -428,6 +446,67 @@
 
 
 
+    private bool isEmitiendoFE;
+    private long? emitiendoFacturaId;
+
+    private bool PuedeEmitirFE(FacturaVentaResumenDto fac)
+    {
+        if (fac is null) return false;
+        if (fac.EstadoFactura == "Anulada" || fac.EstadoFactura == "Anulado") return false;
+        if (!string.IsNullOrWhiteSpace(fac.Cuf)) return false;
+        return true;
+    }
+
+    private async Task EmitirFEAsync(long facturaVentaId)
+    {
+        isEmitiendoFE = true;
+        emitiendoFacturaId = facturaVentaId;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var result = await FacturacionFE.EmitirAsync(facturaVentaId);
+
+            if (result is null)
+            {
+                errorMessage = "No se pudo emitir la factura electrónica.";
+                return;
+            }
+
+            if (result.Success && result.Data is not null)
+            {
+                if (result.Data.Exitoso)
+                {
+                    successMessage = result.Data.EsOffline
+                        ? "Factura registrada en modo pendiente/offline."
+                        : "Factura electrónica emitida correctamente.";
+                }
+                else
+                {
+                    errorMessage = result.Data.Mensaje
+                        ?? result.Message
+                        ?? "La factura electrónica fue rechazada.";
+                }
+            }
+            else
+            {
+                errorMessage = result.Message ?? "La factura electrónica no pudo emitirse.";
+            }
+
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al emitir FE: {ex.Message}";
+        }
+        finally
+        {
+            isEmitiendoFE = false;
+            emitiendoFacturaId = null;
+        }
+    }
+
     private static string GetEstadoSiatBadge(string? estado)
     {
         if (string.IsNullOrWhiteSpace(estado)) return "bg-secondary";
@@ -436,6 +515,7 @@
         {
             "noenviada" => "bg-warning text-dark",
             "no_enviada" => "bg-warning text-dark",
+            "pendiente" => "bg-warning text-dark",
             "validada" => "bg-success",
             "rechazada" => "bg-danger",
             "observada" => "bg-info text-dark",

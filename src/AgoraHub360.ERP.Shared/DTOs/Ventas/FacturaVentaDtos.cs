@@ -77,6 +77,7 @@ public class FacturaVentaResumenDto
 
     public string NumeroFactura { get; set; } = string.Empty;
     public string? BillUuid { get; set; }
+    public string? Cuf { get; set; }
     public DateTime FechaEmision { get; set; }
 
     public string? ActivityCode { get; set; }

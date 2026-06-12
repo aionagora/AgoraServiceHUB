@@ -652,6 +652,7 @@ public class FacturaVentaService : IFacturaVentaService
             Total = f.Total,
             AdditionalDiscount = f.AdditionalDiscount,
             Revertido = f.Revertido,
+            Cuf = f.Cuf,
             Activo = f.Activo
         };
 

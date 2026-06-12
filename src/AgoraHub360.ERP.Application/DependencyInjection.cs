@@ -113,6 +113,10 @@ public static class DependencyInjection
         services.AddScoped<ICuentasPorCobrarService, CuentasPorCobrarService>();
         services.AddScoped<IClienteCreditoConfiguracionService, ClienteCreditoConfiguracionService>();
 
+        // FE: Facturación Electrónica
+        services.AddScoped<IConfiguracionFEService, ConfiguracionFEService>();
+        services.AddScoped<IFacturacionElectronicaService, FacturacionElectronicaService>();
+
         return services;
     }
 }
