@@ -98,6 +98,9 @@ builder.Services.AddScoped<FacturaVentaHttpService>();
 builder.Services.AddScoped<CuentasPorCobrarHttpService>();
 builder.Services.AddScoped<ClienteCreditoConfiguracionHttpService>();
 
+// FE: Facturación Electrónica
+builder.Services.AddScoped<FacturacionFEHttpService>();
+
 // ──── Servicios HTTP Logística ────
 builder.Services.AddScoped<HojaRutaHttpService>();
 

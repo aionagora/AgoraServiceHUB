@@ -62,9 +62,17 @@ public class FacturacionElectronicaService : IFacturacionElectronicaService
             return Result<EmisionFacturaResultDto>.Failure("No tiene permisos sobre esta factura.");
 
         // 2. Validar estado emitible
-        if (factura.EstadoFactura != EstadoFacturaVentaComercial.Borrador)
+        // Permitir emisión si está en Borrador o Generada (sin CUF aún)
+        var esBorrador = factura.EstadoFactura == EstadoFacturaVentaComercial.Borrador;
+        var esGenerada = factura.EstadoFactura == EstadoFacturaVentaComercial.Generada;
+
+        if (!esBorrador && !esGenerada)
             return Result<EmisionFacturaResultDto>.Failure(
-                $"La factura está en estado '{factura.EstadoFactura}'. Solo se pueden emitir facturas en estado Borrador.");
+                $"La factura está en estado '{factura.EstadoFactura}'. Solo se pueden emitir facturas en estado Borrador o Generada.");
+
+        if (esGenerada && !string.IsNullOrWhiteSpace(factura.Cuf))
+            return Result<EmisionFacturaResultDto>.Failure(
+                "La factura ya tiene un CUF asignado. No es posible emitirla nuevamente.");
 
         if (factura.EstadoSiat != EstadoSiatFactura.NoEnviada && factura.EstadoSiat != EstadoSiatFactura.Pendiente)
             return Result<EmisionFacturaResultDto>.Failure(
