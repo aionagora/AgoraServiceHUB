@@ -48,6 +48,8 @@ public class FacturacionElectronicaController : ControllerBase
     public async Task<IActionResult> GetProveedores(CancellationToken ct)
     {
         var result = await _configService.ListarProveedoresAsync(ct);
+        if (!result.IsSuccess)
+            return Ok(ApiResponse<IReadOnlyList<ProveedorFEDto>>.Ok(new List<ProveedorFEDto>()));
         return Ok(ApiResponse<IReadOnlyList<ProveedorFEDto>>.Ok(result.Value!));
     }
 
@@ -60,6 +62,8 @@ public class FacturacionElectronicaController : ControllerBase
     public async Task<IActionResult> GetAmbientes(CancellationToken ct)
     {
         var result = await _configService.ListarAmbientesAsync(ct);
+        if (!result.IsSuccess)
+            return Ok(ApiResponse<IReadOnlyList<AmbienteFEDto>>.Ok(new List<AmbienteFEDto>()));
         return Ok(ApiResponse<IReadOnlyList<AmbienteFEDto>>.Ok(result.Value!));
     }
 
