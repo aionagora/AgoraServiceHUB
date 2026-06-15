@@ -47,4 +47,12 @@ public interface IFacturacionElectronicaProvider
     Task<string> ObtenerCufdAsync(
         ConfiguracionFacturacionElectronica configuracion,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Prueba la conexión con el proveedor externo autenticándose y devolviendo el resultado.
+    /// No debe hacer operaciones transaccionales.
+    /// </summary>
+    Task<TestConexionResultDto> TestConexionAsync(
+        ConfiguracionFacturacionElectronica configuracion,
+        CancellationToken cancellationToken = default);
 }

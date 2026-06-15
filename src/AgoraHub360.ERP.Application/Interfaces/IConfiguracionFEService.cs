@@ -65,4 +65,12 @@ public interface IConfiguracionFEService
     /// </summary>
     Task<Result<IReadOnlyList<AmbienteFEDto>>> ListarAmbientesAsync(
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Prueba la conexión contra el proveedor de una configuración FE activa.
+    /// No expone secretos.
+    /// </summary>
+    Task<Result<TestConexionResultDto>> TestConexionAsync(
+        int configuracionId,
+        CancellationToken cancellationToken = default);
 }

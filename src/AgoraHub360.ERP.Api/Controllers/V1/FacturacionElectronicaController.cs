@@ -191,6 +191,29 @@ public class FacturacionElectronicaController : ControllerBase
         return Ok(ApiResponse<bool>.Ok(true, "Configuración FE desactivada correctamente."));
     }
 
+    /// <summary>
+    /// Prueba la conexión contra el proveedor de una configuración FE.
+    /// No requiere token de usuario autenticado — solo validación de empresa.
+    /// </summary>
+    [HttpPost("configuraciones/{id:int}/test-conexion")]
+    [ProducesResponseType(typeof(ApiResponse<TestConexionResultDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> TestConexion(int id, CancellationToken ct)
+    {
+        var result = await _configService.TestConexionAsync(id, ct);
+        if (!result.IsSuccess)
+        {
+            if (result.Error!.Contains("no encontrada", StringComparison.OrdinalIgnoreCase))
+                return NotFound(ApiResponse<TestConexionResultDto>.Fail(result.Error!));
+
+            return BadRequest(ApiResponse<TestConexionResultDto>.Fail(result.Error!));
+        }
+
+        return Ok(ApiResponse<TestConexionResultDto>.Ok(result.Value!));
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     //  Operaciones FE
     // ─────────────────────────────────────────────────────────────────────────

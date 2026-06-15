@@ -101,6 +101,19 @@
                                                 title="Editar">
                                             <i class="bi bi-pencil"></i>
                                         </button>
+                                        <button class="btn btn-outline-info btn-sm"
+                                                @onclick="() => TestConexionAsync(cfg)"
+                                                disabled="@(_probandoConexionId == cfg.Id)"
+                                                title="Probar conexión con el proveedor">
+                                            @if (_probandoConexionId == cfg.Id)
+                                            {
+                                                <span class="spinner-border spinner-border-sm"></span>
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-plug"></i>
+                                            }
+                                        </button>
                                         @if (cfg.EsConfiguracionActiva)
                                         {
                                             <button class="btn btn-outline-warning btn-sm"
@@ -222,6 +235,7 @@
     private List<ConfiguracionFEDto> _configuraciones = new();
     private List<ProveedorFEDto> _proveedores = new();
     private List<AmbienteFEDto> _ambientes = new();
+    private int? _probandoConexionId;
 
     // Form fields
     private string _formNombre = "";
@@ -403,6 +417,36 @@
         finally
         {
             _guardando = false;
+        }
+    }
+
+    private async Task TestConexionAsync(ConfiguracionFEDto cfg)
+    {
+        _errorMessage = null;
+        _successMessage = null;
+        _probandoConexionId = cfg.Id;
+        try
+        {
+            var result = await FeService.TestConexionAsync(cfg.Id);
+            if (result.Success && result.Data != null)
+            {
+                if (result.Data.Exitoso)
+                    _successMessage = $"✅ {result.Data.Mensaje} ({(result.Data.TiempoRespuestaMs > 0 ? $"{result.Data.TiempoRespuestaMs}ms" : "")})";
+                else
+                    _errorMessage = $"❌ {result.Data.Mensaje}";
+            }
+            else
+            {
+                _errorMessage = result.Message ?? "Error al probar conexión.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error inesperado: {ex.Message}";
+        }
+        finally
+        {
+            _probandoConexionId = null;
         }
     }
 
