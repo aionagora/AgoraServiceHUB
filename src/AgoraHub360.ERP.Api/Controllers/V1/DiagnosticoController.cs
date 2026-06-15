@@ -104,6 +104,160 @@ public class DiagnosticoController : ControllerBase
         return Ok(info);
     }
 
+    [HttpGet("facturacion-electronica/preflight/{ventaId:long}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> PreflightEmitirFE(long ventaId)
+    {
+        var connStr = _config.GetConnectionString("DefaultConnection") ?? "";
+        var result = new Dictionary<string, object>();
+        result["ventaId"] = ventaId;
+
+        async Task<object?> Scalar(string sql)
+        {
+            try
+            {
+                await using var c = new SqlConnection(connStr);
+                await c.OpenAsync();
+                await using var cmd = c.CreateCommand();
+                cmd.CommandText = sql;
+                return await cmd.ExecuteScalarAsync();
+            }
+            catch (Exception ex) { return $"ERROR: {ex.Message}"; }
+        }
+
+        async Task<Dictionary<string, object>?> Row(string sql)
+        {
+            try
+            {
+                await using var c = new SqlConnection(connStr);
+                await c.OpenAsync();
+                await using var cmd = c.CreateCommand();
+                cmd.CommandText = sql;
+                await using var r = await cmd.ExecuteReaderAsync();
+                if (await r.ReadAsync())
+                {
+                    var row = new Dictionary<string, object>();
+                    for (int i = 0; i < r.FieldCount; i++)
+                        row[r.GetName(i)] = r.IsDBNull(i) ? null : r.GetValue(i);
+                    return row;
+                }
+                return null;
+            }
+            catch { return null; }
+        }
+
+        // 1. Venta
+        var venta = await Row($"SELECT Id, EmpresaId, FechaVenta FROM vta.Ventas WHERE Id = {ventaId}");
+        result["venta"] = venta;
+        if (venta == null) { result["PuedeEmitir"] = false; result["MotivoBloqueo"] = "La venta no existe."; return Ok(result); }
+
+        var ventaEmpresaId = venta.ContainsKey("EmpresaId") ? Convert.ToInt32(venta["EmpresaId"]) : 0;
+
+        // 2. User info from JWT
+        var user = _httpCtx.HttpContext?.User;
+        var jwtEmpresaIdStr = user?.FindFirst("EmpresaId")?.Value ?? user?.FindFirst("empresaId")?.Value ?? "0";
+        int.TryParse(jwtEmpresaIdStr, out var jwtEmpresaId);
+        result["jwtEmpresaId"] = jwtEmpresaId;
+        result["jwtUser"] = user?.Identity?.Name ?? "(anonymous)";
+        result["jwtIsAuthenticated"] = user?.Identity?.IsAuthenticated ?? false;
+        result["jwtClaims"] = user?.Claims.Select(c => $"{c.Type}={c.Value}").ToList() ?? new();
+
+        // 3. EmpresaId check
+        result["empresaIdMatch"] = ventaEmpresaId == jwtEmpresaId;
+        if (ventaEmpresaId != jwtEmpresaId)
+        {
+            result["PuedeEmitir"] = false;
+            result["MotivoBloqueo"] = $"La venta pertenece a EmpresaId={ventaEmpresaId} pero el JWT tiene EmpresaId={jwtEmpresaId}. El usuario solo puede emitir facturas de su propia empresa.";
+            return Ok(result);
+        }
+
+        // 4. VentaFacturacionDatos
+        var factDatos = await Row($"SELECT Id, EmpresaId, Facturar, NitFactura, RazonSocialFactura, EstadoFactura, FacturaId, ClientePerfilFiscalId FROM vta.VentaFacturacionDatos WHERE VentaId = {ventaId}");
+        result["ventaFacturacionDatos"] = factDatos;
+        if (factDatos == null)
+        {
+            result["PuedeEmitir"] = false;
+            result["MotivoBloqueo"] = "La venta no tiene datos de facturación (VentaFacturacionDatos). Complete los datos fiscales antes de emitir.";
+            return Ok(result);
+        }
+
+        var factDatosEmpresaId = factDatos.ContainsKey("EmpresaId") ? Convert.ToInt32(factDatos["EmpresaId"]) : 0;
+        result["factDatosEmpresaIdMatch"] = factDatosEmpresaId == jwtEmpresaId;
+        if (factDatosEmpresaId != jwtEmpresaId)
+        {
+            result["PuedeEmitir"] = false;
+            result["MotivoBloqueo"] = $"VentaFacturacionDatos pertenece a EmpresaId={factDatosEmpresaId} pero JWT tiene EmpresaId={jwtEmpresaId}.";
+            return Ok(result);
+        }
+
+        var nitFactura = factDatos.ContainsKey("NitFactura") ? factDatos["NitFactura"]?.ToString() : null;
+        var razonSocial = factDatos.ContainsKey("RazonSocialFactura") ? factDatos["RazonSocialFactura"]?.ToString() : null;
+        var facturar = factDatos.ContainsKey("Facturar") ? Convert.ToBoolean(factDatos["Facturar"]) : false;
+        var factDatosEstadoFactura = factDatos.ContainsKey("EstadoFactura") ? Convert.ToInt32(factDatos["EstadoFactura"]) : 0;
+        var facturaIdExistente = factDatos.ContainsKey("FacturaId") ? factDatos["FacturaId"] : null;
+        var clientePerfilFiscalId = factDatos.ContainsKey("ClientePerfilFiscalId") ? factDatos["ClientePerfilFiscalId"] : null;
+
+        // 5. Campos fiscales obligatorios
+        var missingFields = new List<string>();
+        if (facturar && string.IsNullOrWhiteSpace(nitFactura)) missingFields.Add("NitFactura");
+        if (facturar && string.IsNullOrWhiteSpace(razonSocial)) missingFields.Add("RazonSocialFactura");
+        result["missingFiscalFields"] = missingFields;
+
+        // 6. ClientePerfilFiscal
+        if (clientePerfilFiscalId != null && clientePerfilFiscalId != DBNull.Value)
+        {
+            var perfilFiscal = await Row($"SELECT Id, EmpresaId, ClienteId FROM mdm.ClientePerfilesFiscales WHERE Id = {clientePerfilFiscalId}");
+            result["clientePerfilFiscal"] = perfilFiscal;
+            if (perfilFiscal != null)
+            {
+                var perfilEmpresaId = perfilFiscal.ContainsKey("EmpresaId") ? Convert.ToInt32(perfilFiscal["EmpresaId"]) : 0;
+                result["perfilFiscalEmpresaIdMatch"] = perfilEmpresaId == jwtEmpresaId;
+            }
+        }
+        else
+        {
+            result["clientePerfilFiscal"] = null;
+        }
+
+        // 7. Configuración FE activa
+        var configFe = await Row($"SELECT TOP 1 c.Id, c.EmpresaId, c.EsConfiguracionActiva, c.NitEmisor, c.ActivityCode, p.Codigo AS ProveedorCodigo, p.Nombre AS ProveedorNombre, a.Codigo AS AmbienteCodigo FROM cfg.ConfiguracionFacturacionElectronica c LEFT JOIN cfg.ProveedoresFacturacionElectronica p ON p.Id = c.ProveedorFacturacionElectronicaId LEFT JOIN cfg.AmbientesFacturacionElectronica a ON a.Id = c.AmbienteFacturacionElectronicaId WHERE c.EmpresaId = {jwtEmpresaId} AND c.EsConfiguracionActiva = 1 AND c.Activo = 1");
+        result["configuracionFE"] = configFe;
+        if (configFe == null)
+        {
+            result["PuedeEmitir"] = false;
+            result["MotivoBloqueo"] = $"No existe configuración FE activa para EmpresaId={jwtEmpresaId}. Solo hay configuración para EmpresaId=27.";
+            return Ok(result);
+        }
+
+        var configEmpresaId = configFe.ContainsKey("EmpresaId") ? Convert.ToInt32(configFe["EmpresaId"]) : 0;
+        result["configEmpresaIdMatch"] = configEmpresaId == jwtEmpresaId;
+
+        // 8. Factura previa
+        var facturaPrevia = await Row($"SELECT Id, NumeroFactura, EstadoFactura, EstadoSiat, BillUuid, Cuf FROM vta.FacturasVenta WHERE VentaId = {ventaId} ORDER BY Id DESC");
+        result["facturaPrevia"] = facturaPrevia;
+
+        // 9. Detalles de venta
+        var detallesCount = await Scalar($"SELECT COUNT(*) FROM vta.VentaDetalles WHERE VentaId = {ventaId}");
+        result["detallesCount"] = detallesCount;
+        if (detallesCount is int dCount && dCount == 0)
+        {
+            result["PuedeEmitir"] = false;
+            result["MotivoBloqueo"] = "La venta no tiene detalles.";
+            return Ok(result);
+        }
+
+        // 10. Resultado final
+        var reasons = new List<string>();
+        if (factDatosEstadoFactura == 2) reasons.Add("La venta ya tiene factura generada (EstadoFactura=Generada).");
+        if (facturaIdExistente != null && facturaIdExistente != DBNull.Value) reasons.Add($"Ya existe FacturaVentaId={facturaIdExistente} vinculada a esta venta.");
+        if (missingFields.Count > 0) reasons.Add($"Faltan campos fiscales: {string.Join(", ", missingFields)}");
+        if (!facturar) reasons.Add("La venta no está marcada para facturar (Facturar=false).");
+
+        result["PuedeEmitir"] = reasons.Count == 0;
+        result["MotivoBloqueo"] = reasons.Count > 0 ? string.Join(" | ", reasons) : "Puede emitir. Todos los chequeos pasaron.";
+        return Ok(result);
+    }
+
     [HttpGet("facturacion-electronica")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetFacturacionDiagnostico()
