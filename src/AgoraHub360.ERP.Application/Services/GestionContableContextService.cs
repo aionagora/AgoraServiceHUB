@@ -87,15 +87,20 @@ public class GestionContableContextService : IGestionContableContextService
         return Result<GestionContableDto?>.Success(gestiones.FirstOrDefault());
     }
 
-    public async Task<Result> ValidarGestionAsync(int anio, CancellationToken ct = default)
+    public async Task<AgoraHub360.ERP.Domain.Common.Result> ValidarGestionAsync(int anio, CancellationToken ct = default)
     {
         var rGestiones = await GetGestionesDisponiblesAsync(ct);
-        if (!rGestiones.IsSuccess) return Result.Failure(rGestiones.Error);
+        if (!rGestiones.IsSuccess) return AgoraHub360.ERP.Domain.Common.Result.Failure(rGestiones.Error);
 
         var existe = rGestiones.Value!.Any(g => g.Anio == anio);
         if (!existe)
-            return Result.Failure($"La gestión {anio} no existe o no pertenece a la empresa activa.");
+            return AgoraHub360.ERP.Domain.Common.Result.Failure($"La gestión {anio} no existe o no pertenece a la empresa activa.");
 
-        return Result.Success();
+        var anioActual = DateTime.Today.Year;
+        var periodoContable = rGestiones.Value!.FirstOrDefault(g => g.Anio == anio);
+        if (periodoContable != null && periodoContable.Estado == "Cerrada")
+            return AgoraHub360.ERP.Domain.Common.Result.Failure($"La gestión {anio} ya está cerrada.");
+
+        return AgoraHub360.ERP.Domain.Common.Result.Success();
     }
 }
