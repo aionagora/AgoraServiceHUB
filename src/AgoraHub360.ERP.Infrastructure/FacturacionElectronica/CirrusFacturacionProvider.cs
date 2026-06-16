@@ -302,6 +302,73 @@ public class CirrusFacturacionProvider : IFacturacionElectronicaProvider
     }
 
     // ─────────────────────────────────────────────────────────────────────────
+    //  TestConexionAsync
+    // ─────────────────────────────────────────────────────────────────────────
+    public async Task<TestConexionResultDto> TestConexionAsync(
+        ConfiguracionFacturacionElectronica configuracion,
+        CancellationToken cancellationToken = default)
+    {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        try
+        {
+            var accessToken = await ObtenerTokenAsync(configuracion, cancellationToken);
+
+            if (string.IsNullOrWhiteSpace(accessToken))
+            {
+                sw.Stop();
+                return new TestConexionResultDto
+                {
+                    Exitoso = false,
+                    ProveedorCodigo = CodigoProveedor,
+                    AmbienteCodigo = configuracion.AmbienteFacturacionElectronica?.Codigo,
+                    Mensaje = "No se pudo obtener token de autenticación del proveedor.",
+                    TiempoRespuestaMs = sw.ElapsedMilliseconds,
+                    DetalleTecnico = "ObtenerTokenAsync devolvió null. Verifique ClientId, ClientSecret cifrado y TokenUrl."
+                };
+            }
+
+            // Intentar obtener CUFD como prueba adicional de conectividad
+            var cufd = await ObtenerCufdAsync(configuracion, cancellationToken);
+            sw.Stop();
+
+            if (string.IsNullOrWhiteSpace(cufd))
+            {
+                return new TestConexionResultDto
+                {
+                    Exitoso = true,
+                    ProveedorCodigo = CodigoProveedor,
+                    AmbienteCodigo = configuracion.AmbienteFacturacionElectronica?.Codigo,
+                    Mensaje = "Token obtenido correctamente, pero no se pudo obtener CUFD. La conexión básica funciona.",
+                    TiempoRespuestaMs = sw.ElapsedMilliseconds
+                };
+            }
+
+            return new TestConexionResultDto
+            {
+                Exitoso = true,
+                ProveedorCodigo = CodigoProveedor,
+                AmbienteCodigo = configuracion.AmbienteFacturacionElectronica?.Codigo,
+                Mensaje = $"Conexión exitosa. CUFD obtenido: {cufd[..Math.Min(cufd.Length, 20)]}...",
+                TiempoRespuestaMs = sw.ElapsedMilliseconds
+            };
+        }
+        catch (Exception ex)
+        {
+            sw.Stop();
+            _logger.LogError(ex, "Error en TestConexionAsync para proveedor {Codigo}", CodigoProveedor);
+            return new TestConexionResultDto
+            {
+                Exitoso = false,
+                ProveedorCodigo = CodigoProveedor,
+                AmbienteCodigo = configuracion.AmbienteFacturacionElectronica?.Codigo,
+                Mensaje = $"Error de conexión: {ex.Message}",
+                TiempoRespuestaMs = sw.ElapsedMilliseconds,
+                DetalleTecnico = $"{ex.GetType().Name}: {ex.Message}"
+            };
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
     //  ObtenerCufdAsync
     // ─────────────────────────────────────────────────────────────────────────
     public async Task<string> ObtenerCufdAsync(

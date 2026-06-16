@@ -19,6 +19,7 @@ public class ConfiguracionFEService : IConfiguracionFEService
     private readonly ICifradoService _cifradoService;
     private readonly ICurrentUserService _currentUser;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly IEnumerable<IFacturacionElectronicaProvider> _providers;
 
     public ConfiguracionFEService(
         IConfiguracionFERepository configRepo,
@@ -26,7 +27,8 @@ public class ConfiguracionFEService : IConfiguracionFEService
         IAmbienteFERepository ambienteRepo,
         ICifradoService cifradoService,
         ICurrentUserService currentUser,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        IEnumerable<IFacturacionElectronicaProvider> providers)
     {
         _configRepo = configRepo;
         _proveedorRepo = proveedorRepo;
@@ -34,6 +36,7 @@ public class ConfiguracionFEService : IConfiguracionFEService
         _cifradoService = cifradoService;
         _currentUser = currentUser;
         _unitOfWork = unitOfWork;
+        _providers = providers;
     }
 
     public async Task<Result<IReadOnlyList<ConfiguracionFEDto>>> ListarPorEmpresaAsync(
@@ -257,6 +260,53 @@ public class ConfiguracionFEService : IConfiguracionFEService
     }
 
     // ── Métodos privados ─────────────────────────────────────────────────────
+    
+    public async Task<Result<TestConexionResultDto>> TestConexionAsync(
+        int configuracionId,
+        CancellationToken cancellationToken = default)
+    {
+        var empresaId = ObtenerEmpresaId();
+        var config = await _configRepo.ObtenerPorIdAsync(configuracionId, cancellationToken);
+        if (config == null)
+            return Result<TestConexionResultDto>.Failure("Configuración FE no encontrada.");
+
+        if (config.EmpresaId != empresaId)
+            return Result<TestConexionResultDto>.Failure("No tiene permisos sobre esta configuración.");
+
+        if (config.ProveedorFacturacionElectronica == null)
+        {
+            // Recargar con include
+            config = await _configRepo.ObtenerPorIdAsync(config.Id, cancellationToken);
+            if (config?.ProveedorFacturacionElectronica == null)
+                return Result<TestConexionResultDto>.Failure("La configuración no tiene un proveedor asignado.");
+        }
+
+        var codigoProveedor = config.ProveedorFacturacionElectronica.Codigo.Trim().ToUpperInvariant();
+        var provider = _providers.FirstOrDefault(p =>
+            string.Equals(p.CodigoProveedor.Trim().ToUpperInvariant(), codigoProveedor, StringComparison.Ordinal));
+
+        if (provider == null)
+            return Result<TestConexionResultDto>.Failure($"No se encontró un provider registrado para '{codigoProveedor}'.");
+
+        TestConexionResultDto result;
+        try
+        {
+            result = await provider.TestConexionAsync(config, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            result = new TestConexionResultDto
+            {
+                Exitoso = false,
+                ProveedorCodigo = codigoProveedor,
+                AmbienteCodigo = config.AmbienteFacturacionElectronica?.Codigo,
+                Mensaje = $"Error inesperado: {ex.Message}",
+                DetalleTecnico = ex.GetType().Name
+            };
+        }
+
+        return Result<TestConexionResultDto>.Success(result);
+    }
 
     private int ObtenerEmpresaId()
     {

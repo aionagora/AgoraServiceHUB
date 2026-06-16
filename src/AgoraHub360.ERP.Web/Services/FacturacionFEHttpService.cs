@@ -161,6 +161,12 @@ public class FacturacionFEHttpService
         return await ParseResponseAsync<bool>(response);
     }
 
+    public async Task<ApiResponse<TestConexionResultDto>> TestConexionAsync(int id)
+    {
+        var response = await _http.PostAsync($"{BaseUrl}/configuraciones/{id}/test-conexion", null);
+        return await ParseResponseAsync<TestConexionResultDto>(response);
+    }
+
     // ── Operaciones FE ──
 
     public async Task<ApiResponse<EmisionFacturaResultDto>> EmitirAsync(long facturaVentaId)
