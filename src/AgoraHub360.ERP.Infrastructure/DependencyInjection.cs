@@ -2,6 +2,7 @@ namespace AgoraHub360.ERP.Infrastructure;
 
 using Microsoft.Extensions.DependencyInjection;
 using AgoraHub360.ERP.Application.Interfaces;
+using AgoraHub360.ERP.Application.Interfaces.Reports;
 using AgoraHub360.ERP.Infrastructure.FacturacionElectronica;
 using AgoraHub360.ERP.Infrastructure.Services;
 
@@ -19,6 +20,9 @@ public static class DependencyInjection
         // FE: Facturación Electrónica — Providers
         services.AddHttpClient("CirrusFacturacion");
         services.AddScoped<IFacturacionElectronicaProvider, CirrusFacturacionProvider>();
+
+        // PDF: Reportes
+        services.AddScoped<IPdfReporteService, PdfReporteService>();
 
         return services;
     }
