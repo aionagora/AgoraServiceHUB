@@ -8,6 +8,7 @@
 @inject CuentasPorCobrarHttpService CxcService
 @inject ClienteHttpService ClienteService
 @inject NavigationManager Nav
+@inject PdfDownloadService PdfService
 
 <PageTitle>Cuentas por Cobrar - AgoraHub360 ERP</PageTitle>
 
@@ -22,7 +23,29 @@
                 <p class="text-muted mb-0 small">Ventas &rsaquo; Cuentas por Cobrar</p>
             </div>
         </div>
-        <div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-danger btn-sm" @onclick="DescargarReporteVencidasPdf" disabled="@(globalLoading || accionLoading)" title="Descargar Reporte CxC Vencidas PDF">
+                @if (accionLoading)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                else
+                {
+                    <i class="bi bi-filetype-pdf me-1"></i>
+                }
+                Vencidas PDF
+            </button>
+            <button class="btn btn-outline-primary btn-sm" @onclick="DescargarReporteGeneralPdf" disabled="@(globalLoading || accionLoading)" title="Descargar Reporte General CxC PDF">
+                @if (accionLoading)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                else
+                {
+                    <i class="bi bi-filetype-pdf me-1"></i>
+                }
+                Reporte CxC PDF
+            </button>
             <a href="/ventas/cuentas-por-cobrar/antiguedad-saldos" class="btn btn-primary btn-sm">
                 <i class="bi bi-clock-history me-1"></i> Ver Antigüedad de Saldos
             </a>
@@ -280,6 +303,13 @@ else
                                                 <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmarAnulacion(cxc)" title="Anular Cuenta" disabled="@accionLoading">
                                                     <i class="bi bi-x-circle"></i>
                                                 </button>
+                                                
+                                                @if (cxc.TotalPagado > 0)
+                                                {
+                                                    <button class="btn btn-sm btn-outline-warning ms-1" @onclick="() => DescargarReciboPago(cxc)" title="Descargar Recibo PDF del último pago" disabled="@accionLoading">
+                                                        <i class="bi bi-filetype-pdf"></i>
+                                                    </button>
+                                                }
                                             }
                                             else
                                             {
@@ -396,7 +426,14 @@ else
 
                     <hr class="my-4" />
 
-                    <h5 class="fw-bold fs-6 text-dark mb-3"><i class="bi bi-credit-card-2-back me-1 text-primary"></i> Pagos Aplicados</h5>
+                    <h5 class="fw-bold fs-6 text-dark mb-3"><i class="bi bi-credit-card-2-back me-1 text-primary"></i> Pagos Aplicados
+                        @if (detalleSelected.Pagos != null && detalleSelected.Pagos.Count > 0 && detalleSelected.Estado != "Anulada")
+                        {
+                            <button class="btn btn-sm btn-outline-primary ms-3" @onclick="DescargarReciboUltimoPagoAsync" title="Descargar Recibo PDF (último pago)" disabled="@accionLoading">
+                                <i class="bi bi-filetype-pdf me-1"></i> Recibo PDF último pago
+                            </button>
+                        }
+                    </h5>
                     @if (detalleSelected.Pagos == null || detalleSelected.Pagos.Count == 0)
                     {
                         <div class="text-center py-4 bg-light rounded text-muted">
@@ -430,6 +467,11 @@ else
                                                 <span class="badge @(pago.EstadoPago == "Aprobado" || pago.EstadoPago == "1" ? "bg-success" : "bg-warning")">
                                                     @pago.EstadoPago
                                                 </span>
+                                            </td>
+                                            <td class="text-center">
+                                                <button class="btn btn-sm btn-outline-warning" @onclick="() => DescargarReciboPagoPorId(pago.PagoId)" title="Descargar Recibo PDF" disabled="@accionLoading">
+                                                    <i class="bi bi-filetype-pdf"></i>
+                                                </button>
                                             </td>
                                         </tr>
                                     }
@@ -799,4 +841,118 @@ else
         }
     }
 
+    private async Task DescargarReciboPago(CuentaPorCobrarResumenDto cxc)
+    {
+        if (cxc.TotalPagado <= 0 || cxc.VentaId <= 0)
+        {
+            errorMessage = "No se encontró un pago registrado para generar el recibo PDF.";
+            return;
+        }
+        accionLoading = true;
+        errorMessage = null;
+        try
+        {
+            await PdfService.DownloadReciboPagoPorCuentaAsync(cxc.Id);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("404"))
+        {
+            errorMessage = "No se encontró el pago registrado para generar el recibo PDF.";
+        }
+        catch (Exception)
+        {
+            errorMessage = "No se pudo descargar el recibo PDF. Intente nuevamente.";
+        }
+        finally
+        {
+            accionLoading = false;
+        }
+    }
+
+    private async Task DescargarReciboUltimoPagoAsync()
+    {
+        if (detalleSelected?.Pagos == null || detalleSelected.Pagos.Count == 0)
+        {
+            errorMessage = "Esta cuenta por cobrar aún no tiene pagos registrados.";
+            return;
+        }
+
+        var ultimoPago = detalleSelected.Pagos
+            .OrderByDescending(p => p.FechaPago)
+            .FirstOrDefault();
+
+        if (ultimoPago == null || ultimoPago.PagoId <= 0)
+        {
+            errorMessage = "No se encontró un pago válido para generar el recibo PDF.";
+            return;
+        }
+
+        await DescargarReciboPagoPorId(ultimoPago.PagoId);
+    }
+
+    private async Task DescargarReciboPagoPorId(long pagoId)
+    {
+        if (pagoId <= 0)
+        {
+            errorMessage = "No se encontró el pago para generar el recibo PDF.";
+            return;
+        }
+        accionLoading = true;
+        errorMessage = null;
+        try
+        {
+            await PdfService.DownloadReciboPagoAsync(pagoId);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("404"))
+        {
+            errorMessage = "No se encontró el pago registrado para generar el recibo PDF.";
+        }
+        catch (Exception)
+        {
+            errorMessage = "No se pudo descargar el recibo PDF. Intente nuevamente.";
+        }
+        finally
+        {
+            accionLoading = false;
+        }
+    }
+
+    private async Task DescargarReporteGeneralPdf()
+    {
+        accionLoading = true;
+        errorMessage = null;
+        try
+        {
+            await PdfService.DownloadReporteCxcGeneralAsync(
+                clienteId: filterClienteId,
+                estado: filterEstado,
+                fechaDesde: filterFechaDesde,
+                fechaHasta: filterFechaHasta);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al descargar reporte PDF: {ex.Message}";
+        }
+        finally
+        {
+            accionLoading = false;
+        }
+    }
+
+    private async Task DescargarReporteVencidasPdf()
+    {
+        accionLoading = true;
+        errorMessage = null;
+        try
+        {
+            await PdfService.DownloadReporteCxcVencidasAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al descargar reporte de vencidas PDF: {ex.Message}";
+        }
+        finally
+        {
+            accionLoading = false;
+        }
+    }
 }

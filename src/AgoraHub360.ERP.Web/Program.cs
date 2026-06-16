@@ -36,6 +36,7 @@ builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredServ
 
 // ──── Servicios HTTP ────
 builder.Services.AddScoped<FileDownloadService>();
+builder.Services.AddScoped<PdfDownloadService>();
 builder.Services.AddScoped<AuthHttpService>();
 builder.Services.AddScoped<EmpresaHttpService>();
 builder.Services.AddScoped<EmpresaStateService>();
