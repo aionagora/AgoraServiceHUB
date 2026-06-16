@@ -26,6 +26,18 @@ public class PdfDownloadService
     }
 
     /// <summary>
+    /// Descarga el recibo de pago PDF a partir del Id de una CuentaPorCobrar.
+    /// El backend busca el pago asociado a la CxC.
+    /// GET /api/v1/cuentas-por-cobrar/{cuentaPorCobrarId}/recibo-pdf
+    /// </summary>
+    public async Task DownloadReciboPagoPorCuentaAsync(long cuentaPorCobrarId)
+    {
+        await _fileDownload.DownloadFromApiAsync(
+            $"api/v1/cuentas-por-cobrar/{cuentaPorCobrarId}/recibo-pdf",
+            $"recibo-pago-cxc-{cuentaPorCobrarId:D6}.pdf");
+    }
+
+    /// <summary>
     /// Descarga el estado de cuenta PDF de un cliente.
     /// GET /api/v1/reportes/cxc/estado-cuenta-cliente/{clienteId}
     /// </summary>
