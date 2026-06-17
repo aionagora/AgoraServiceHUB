@@ -21,7 +21,11 @@ public class ManufacturerService : IManufacturerService
 
     public async Task<Result<IReadOnlyList<ManufacturerDto>>> GetAllAsync(CancellationToken ct = default)
     {
-        var items = await _repo.GetAllAsync(ct);
+        var empresaId = _currentUser.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<IReadOnlyList<ManufacturerDto>>.Failure("No existe empresa activa en la sesión.");
+
+        var items = await _repo.FindAsync(m => m.EmpresaId == empresaId.Value, ct);
         return Result<IReadOnlyList<ManufacturerDto>>.Success(
             items.Select(Map).ToList().AsReadOnly());
     }

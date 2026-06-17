@@ -30,8 +30,12 @@ public class AlmacenService : IAlmacenService
 
     public async Task<Result<IReadOnlyList<AlmacenDto>>> GetAllAsync(CancellationToken ct = default)
     {
-        var almacenes = await _repository.GetAllAsync(ct);
-        var sucursales = await _sucursalRepository.GetAllAsync(ct);
+        var empresaId = _currentUser.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<IReadOnlyList<AlmacenDto>>.Failure("No existe empresa activa en la sesión.");
+
+        var almacenes = await _repository.FindAsync(a => a.EmpresaId == empresaId.Value, ct);
+        var sucursales = await _sucursalRepository.FindAsync(s => s.EmpresaId == empresaId.Value, ct);
 
         var dtos = almacenes.Select(a => new AlmacenDto
         {
@@ -54,9 +58,14 @@ public class AlmacenService : IAlmacenService
 
     public async Task<Result<AlmacenDto>> GetByIdAsync(int id, CancellationToken ct = default)
     {
-        var entity = await _repository.GetByIdAsync(id, ct);
+        var empresaId = _currentUser.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<AlmacenDto>.Failure("No existe empresa activa en la sesión.");
+
+        var almacenes = await _repository.FindAsync(a => a.Id == id && a.EmpresaId == empresaId.Value, ct);
+        var entity = almacenes.FirstOrDefault();
         if (entity is null)
-            return Result<AlmacenDto>.Failure($"Almacén con Id {id} no encontrado.");
+            return Result<AlmacenDto>.Failure("Almacén no encontrado.");
         return Result<AlmacenDto>.Success(MapToDto(entity));
     }
 

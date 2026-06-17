@@ -21,7 +21,11 @@ public class BrandService : IBrandService
 
     public async Task<Result<IReadOnlyList<BrandDto>>> GetAllAsync(CancellationToken ct = default)
     {
-        var items = await _repo.GetAllAsync(ct);
+        var empresaId = _currentUser.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<IReadOnlyList<BrandDto>>.Failure("No existe empresa activa en la sesión.");
+
+        var items = await _repo.FindAsync(b => b.EmpresaId == empresaId.Value, ct);
         return Result<IReadOnlyList<BrandDto>>.Success(
             items.Select(Map).ToList().AsReadOnly());
     }
