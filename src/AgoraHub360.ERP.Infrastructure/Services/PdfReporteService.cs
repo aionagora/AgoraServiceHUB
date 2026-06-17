@@ -173,7 +173,7 @@ public class PdfReporteService : IPdfReporteService
         if (incluirPagos && lista.Count > 0)
         {
             var ventaIds = lista
-                .Select(c => facturaMap.GetValueOrDefault(c.FacturaVentaId))
+                .Select(c => c.FacturaVentaId.HasValue ? facturaMap.GetValueOrDefault(c.FacturaVentaId.Value) : 0)
                 .Where(id => id != 0)
                 .Distinct()
                 .ToList();
@@ -191,7 +191,7 @@ public class PdfReporteService : IPdfReporteService
                     MetodoPago = p.ModoPago.ToString(),
                     Referencia = p.Referencia,
                     NumeroFactura = lista
-                        .FirstOrDefault(c => facturaMap.GetValueOrDefault(c.FacturaVentaId) == p.VentaId)
+                        .FirstOrDefault(c => c.FacturaVentaId.HasValue && facturaMap.GetValueOrDefault(c.FacturaVentaId.Value) == p.VentaId)
                         ?.NumeroFactura ?? "N/A"
                 }).ToList();
             }

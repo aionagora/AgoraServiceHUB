@@ -590,6 +590,22 @@ public class VentaService : IVentaService
         await _ventaRepo.UpdateAsync(venta, ct);
         await _unitOfWork.SaveChangesAsync(ct);
 
+        // ── Generar Cuenta por Cobrar automáticamente ──────────────────────────
+        try
+        {
+            var cxcResult = await _cuentasPorCobrarService.GenerarDesdeVentaAsync(venta.Id, ct);
+            if (!cxcResult.IsSuccess)
+            {
+                // No se bloquea la confirmación si la CxC tiene problemas menores
+                // (ej. venta sin cliente, total cero, etc.)
+            }
+        }
+        catch
+        {
+            // Aislar completamente CxC del flujo de confirmación de venta.
+            // Errores no esperados en CxC no deben impedir confirmar la venta.
+        }
+
         return await GetByIdAsync(venta.Id, ct);
     }
 

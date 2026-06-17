@@ -820,7 +820,12 @@ else
 
         try
         {
-            var res = await CxcService.ActualizarPorPagoAsync(cxc.FacturaVentaId, cxc.TotalPagado);
+            if (!cxc.FacturaVentaId.HasValue)
+            {
+                errorMessage = "No se puede recalcular: la cuenta por cobrar no está asociada a una factura.";
+                return;
+            }
+            var res = await CxcService.ActualizarPorPagoAsync(cxc.FacturaVentaId.Value, cxc.TotalPagado);
             if (res.Success)
             {
                 successMessage = $"Saldo recalculado exitosamente. Nuevo saldo pendiente: {res.Data?.SaldoPendiente.ToString("N2")} {cxc.MonedaCodigo}";

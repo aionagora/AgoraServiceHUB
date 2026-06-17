@@ -27,6 +27,13 @@ public interface ICuentasPorCobrarService
     Task<Result<CuentaPorCobrarResumenDto>> GenerarDesdeFacturaAsync(long facturaVentaId, CancellationToken ct = default);
 
     /// <summary>
+    /// Genera una cuenta por cobrar a partir de una venta confirmada, sin requerir factura fiscal.
+    /// Se invoca automáticamente al confirmar una venta.
+    /// Si ya existe una CxC activa para la venta, retorna la existente sin duplicar.
+    /// </summary>
+    Task<Result<CuentaPorCobrarResumenDto>> GenerarDesdeVentaAsync(long ventaId, CancellationToken ct = default);
+
+    /// <summary>
     /// Actualiza el saldo pagado y estado de la cuenta por cobrar cuando se registra un pago.
     /// Se invoca automáticamente desde el registro de pago.
     /// </summary>

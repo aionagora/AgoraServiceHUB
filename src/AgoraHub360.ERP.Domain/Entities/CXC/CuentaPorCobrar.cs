@@ -5,24 +5,36 @@ using AgoraHub360.ERP.Domain.Enums;
 namespace AgoraHub360.ERP.Domain.Entities.CXC;
 
 /// <summary>
-/// Cuenta por Cobrar — representa el saldo pendiente de cobro de una factura de venta.
+/// Cuenta por Cobrar — representa el saldo pendiente de cobro.
+/// Puede originarse desde una venta confirmada (TipoDocumentoOrigen = "Venta")
+/// o desde una factura fiscal (TipoDocumentoOrigen = "Factura").
 /// Esquema: cxc.CuentasPorCobrar
 /// </summary>
 public sealed class CuentaPorCobrar : TenantEntity
 {
     public long Id { get; set; }
 
-    // ── Vínculo con factura de venta ──────────────────────────────────────────
-    public long FacturaVentaId { get; set; }
+    // ── Vínculo con documento origen ───────────────────────────────────────────
+    /// <summary>Id del documento que origina la CxC (FacturaVenta o Venta).</summary>
+    public long? FacturaVentaId { get; set; }
     public FacturaVenta? FacturaVenta { get; set; }
+
+    /// <summary>Id de la venta que origina la CxC (directa o vía factura).</summary>
+    public long? VentaId { get; set; }
+    public Venta? Venta { get; set; }
+
+    /// <summary>
+    /// Tipo de documento origen: "Factura" (vía factura fiscal) o "Venta" (vía venta directa).
+    /// </summary>
+    public string? TipoDocumentoOrigen { get; set; }
 
     // ── Cliente (denormalizado para consultas rápidas) ─────────────────────────
     public int? ClienteId { get; set; }
     public string? ClienteNombre { get; set; }
     public string? ClienteNit { get; set; }
 
-    // ── Datos de la factura (denormalizados) ────────────────────────────────────
-    public string NumeroFactura { get; set; } = string.Empty;
+    // ── Datos del documento (denormalizados) ────────────────────────────────────
+    public string? NumeroFactura { get; set; }
     public string? NumeroVenta { get; set; }
     public DateTime FechaEmision { get; set; }
     public DateTime? FechaVencimiento { get; set; }

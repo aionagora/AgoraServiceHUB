@@ -1,4 +1,5 @@
 ﻿using AgoraHub360.ERP.Application.Common;
+using AgoraHub360.ERP.Domain.Common;
 using AgoraHub360.ERP.Shared.DTOs.Contabilidad;
 using DomainResult = AgoraHub360.ERP.Domain.Common.Result;
 
