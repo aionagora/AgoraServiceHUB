@@ -104,7 +104,7 @@ public class CuentasPorCobrarService : ICuentasPorCobrarService
         var sorted = listToDtd
             .OrderByDescending(c => c.FechaVencimiento)
             .ThenByDescending(c => c.Id)
-            .Select(c => MapToResumen(c, facturaVentaMap.GetValueOrDefault(c.FacturaVentaId)));
+            .Select(c => MapToResumen(c, c.FacturaVentaId.HasValue ? facturaVentaMap.GetValueOrDefault(c.FacturaVentaId.Value) : 0));
 
         // Cargar Top
         var top = filter?.Top ?? 100;
@@ -152,12 +152,19 @@ public class CuentasPorCobrarService : ICuentasPorCobrarService
             return Result<CuentaPorCobrarDetalleDto>.Failure("Cuenta por cobrar no encontrada.");
 
         // Obtener pagos de la venta asociada a la factura
-        var factura = await _facturaRepo.GetByIdAsync(cxc.FacturaVentaId, ct);
-        if (factura is null)
-            return Result<CuentaPorCobrarDetalleDto>.Failure("Factura asociada no encontrada.");
+        var factura = cxc.FacturaVentaId.HasValue
+            ? await _facturaRepo.GetByIdAsync(cxc.FacturaVentaId.Value, ct)
+            : null;
+        if (cxc.FacturaVentaId.HasValue && factura is null)
+        {
+            // CxC sin factura (originada desde venta directa) — se puede consultar sin factura
+        }
+        else if (factura is null)
+            return Result<CuentaPorCobrarDetalleDto>.Failure("Cuenta por cobrar no encontrada.");
 
+        var ventaId = factura?.VentaId ?? cxc.VentaId ?? 0;
         var pagos = await _pagoRepo.FindAsync(
-            p => p.VentaId == factura.VentaId
+            p => p.VentaId == ventaId
                  && p.EmpresaId == empresaId
                  && p.Activo, ct);
 
@@ -318,12 +325,23 @@ public class CuentasPorCobrarService : ICuentasPorCobrarService
                 "No se puede actualizar una cuenta por cobrar anulada.");
 
         // Obtener total pagado real desde VentaPagos
-        var facturaPago = await _facturaRepo.GetByIdAsync(cxc.FacturaVentaId, ct);
-        if (facturaPago is null)
-            return Result<CuentaPorCobrarResumenDto>.Failure("Factura asociada no encontrada.");
+        var factura = cxc.FacturaVentaId.HasValue
+            ? await _facturaRepo.GetByIdAsync(cxc.FacturaVentaId.Value, ct)
+            : null;
+        if (cxc.FacturaVentaId.HasValue && factura is null)
+            return Result<CuentaPorCobrarResumenDto>.Failure("Documento origen no encontrado.");
+
+        if (cxc.Estado == EstadoCuentaPorCobrar.Anulada)
+            return Result<CuentaPorCobrarResumenDto>.Failure(
+                "No se puede actualizar una cuenta por cobrar anulada.");
+
+        // Obtener total pagado real desde VentaPagos
+        var ventaId = factura?.VentaId ?? cxc.VentaId;
+        if (!ventaId.HasValue)
+            return Result<CuentaPorCobrarResumenDto>.Failure("No se pudo determinar la venta asociada.");
 
         var pagos = await _pagoRepo.FindAsync(
-            p => p.VentaId == facturaPago.VentaId
+            p => p.VentaId == ventaId.Value
                  && p.EmpresaId == empresaId
                  && p.Activo
                  && !p.Anulado, ct);
@@ -335,7 +353,7 @@ public class CuentasPorCobrarService : ICuentasPorCobrarService
         await _cxcRepo.UpdateAsync(cxc, ct);
         await _unitOfWork.SaveChangesAsync(ct);
 
-        return Result<CuentaPorCobrarResumenDto>.Success(MapToResumen(cxc, facturaPago.VentaId));
+        return Result<CuentaPorCobrarResumenDto>.Success(MapToResumen(cxc, ventaId.Value));
     }
 
     public async Task<Result<bool>> AnularAsync(long id, CancellationToken ct = default)
@@ -507,6 +525,114 @@ public class CuentasPorCobrarService : ICuentasPorCobrarService
         return Result<CuentaPorCobrarResumenDto>.Success(ultimoResumen);
     }
 
+    public async Task<Result<CuentaPorCobrarResumenDto>> GenerarDesdeVentaAsync(
+        long ventaId,
+        CancellationToken ct = default)
+    {
+        if (!_currentUser.EmpresaId.HasValue)
+            return Result<CuentaPorCobrarResumenDto>.Failure("No existe empresa activa en la sesión.");
+
+        var empresaId = _currentUser.EmpresaId.Value;
+
+        // Buscar venta
+        var venta = await _ventaRepo.GetByIdAsync(ventaId, ct);
+        if (venta is null || !venta.Activo)
+            return Result<CuentaPorCobrarResumenDto>.Failure("Venta no encontrada.");
+
+        if (venta.EmpresaId != empresaId)
+            return Result<CuentaPorCobrarResumenDto>.Failure("La venta no pertenece a la empresa activa.");
+
+        // Validar estado: solo ventas confirmadas o superiores generan CxC
+        if (venta.EstadoVenta < EstadoVenta.Confirmada)
+            return Result<CuentaPorCobrarResumenDto>.Failure(
+                "La venta debe estar confirmada o en estado superior para generar cuenta por cobrar.");
+
+        // Validar total mayor a cero
+        if (venta.Total <= 0)
+            return Result<CuentaPorCobrarResumenDto>.Failure(
+                "La venta debe tener un total mayor a cero para generar cuenta por cobrar.");
+
+        // Validar cliente
+        if (!venta.ClienteId.HasValue)
+            return Result<CuentaPorCobrarResumenDto>.Failure(
+                "La venta debe tener un cliente asignado para generar cuenta por cobrar.");
+
+        // Verificar si ya existe CxC activa para esta venta
+        var existing = (await _cxcRepo.FindAsync(
+            c => c.VentaId == ventaId
+              && c.EmpresaId == empresaId
+              && c.Activo
+              && c.Estado != EstadoCuentaPorCobrar.Anulada, ct))
+            .FirstOrDefault();
+
+        if (existing is not null)
+        {
+            // Actualizar datos existentes
+            existing.TotalFactura = venta.Total;
+            existing.FechaEmision = venta.FechaVenta;
+            existing.NumeroVenta = venta.NumeroVenta;
+            existing.FechaVencimiento = venta.FechaVencimientoPago;
+            existing.ClienteId = venta.ClienteId;
+            existing.Estado = CalcularEstado(existing.TotalFactura, existing.TotalPagado, existing.FechaVencimiento);
+
+            // Obtener datos del cliente
+            if (venta.ClienteId.HasValue)
+            {
+                var cliente = await _clienteRepo.GetByIdAsync(venta.ClienteId.Value, ct);
+                if (cliente is not null)
+                {
+                    existing.ClienteNombre = cliente.RazonSocial;
+                    existing.ClienteNit = cliente.NIT;
+                }
+            }
+
+            await _cxcRepo.UpdateAsync(existing, ct);
+            await _unitOfWork.SaveChangesAsync(ct);
+
+            return Result<CuentaPorCobrarResumenDto>.Success(MapToResumen(existing, venta.Id));
+        }
+
+        // Obtener datos del cliente
+        string? clienteNombre = null;
+        string? clienteNit = null;
+        if (venta.ClienteId.HasValue)
+        {
+            var cliente = await _clienteRepo.GetByIdAsync(venta.ClienteId.Value, ct);
+            if (cliente is not null)
+            {
+                clienteNombre = cliente.RazonSocial;
+                clienteNit = cliente.NIT;
+            }
+        }
+
+        // Crear nueva CxC desde venta (sin factura)
+        var cxc = new CuentaPorCobrar
+        {
+            EmpresaId = empresaId,
+            VentaId = venta.Id,
+            FacturaVentaId = null,
+            TipoDocumentoOrigen = "Venta",
+            NumeroFactura = null,
+            NumeroVenta = venta.NumeroVenta,
+            FechaEmision = venta.FechaVenta,
+            FechaVencimiento = venta.FechaVencimientoPago,
+            ClienteId = venta.ClienteId,
+            ClienteNombre = clienteNombre,
+            ClienteNit = clienteNit,
+            MonedaCodigo = venta.MonedaCodigo,
+            TipoCambio = venta.TipoCambio,
+            TotalFactura = venta.Total,
+            TotalPagado = 0m,
+            Estado = EstadoCuentaPorCobrar.Pendiente,
+            Activo = true
+        };
+
+        await _cxcRepo.AddAsync(cxc, ct);
+        await _unitOfWork.SaveChangesAsync(ct);
+
+        return Result<CuentaPorCobrarResumenDto>.Success(MapToResumen(cxc, venta.Id));
+    }
+
     // ─── Helpers privados ────────────────────────────────────────────────────
 
     private static EstadoCuentaPorCobrar CalcularEstado(decimal totalFactura, decimal totalPagado, DateTime? fechaVencimiento)
@@ -537,7 +663,8 @@ public class CuentasPorCobrarService : ICuentasPorCobrarService
         {
             Id = cxc.Id,
             FacturaVentaId = cxc.FacturaVentaId,
-            VentaId = ventaId,
+            VentaId = cxc.VentaId ?? ventaId,
+            TipoDocumentoOrigen = cxc.TipoDocumentoOrigen,
             NumeroFactura = cxc.NumeroFactura,
             NumeroVenta = cxc.NumeroVenta,
             ClienteId = cxc.ClienteId,

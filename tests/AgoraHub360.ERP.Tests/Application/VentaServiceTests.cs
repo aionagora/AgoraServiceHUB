@@ -288,6 +288,9 @@ public class VentaServiceTests
         public Task<Result<CuentaPorCobrarResumenDto>> GenerarDesdeFacturaAsync(long facturaVentaId, CancellationToken ct = default)
             => Task.FromResult(Result<CuentaPorCobrarResumenDto>.Success(new CuentaPorCobrarResumenDto()));
 
+        public Task<Result<CuentaPorCobrarResumenDto>> GenerarDesdeVentaAsync(long ventaId, CancellationToken ct = default)
+            => Task.FromResult(Result<CuentaPorCobrarResumenDto>.Success(new CuentaPorCobrarResumenDto()));
+
         public Task<Result<PaginatedResultDto<CuentaPorCobrarResumenDto>>> GetAllAsync(CuentaPorCobrarFilterDto? filter = null, CancellationToken ct = default)
             => Task.FromResult(Result<PaginatedResultDto<CuentaPorCobrarResumenDto>>.Success(new PaginatedResultDto<CuentaPorCobrarResumenDto>()));
 

@@ -7,9 +7,10 @@ public class CuentaPorCobrarResumenDto
 {
     public long Id { get; set; }
 
-    public long FacturaVentaId { get; set; }
-    public long VentaId { get; set; }
-    public string NumeroFactura { get; set; } = string.Empty;
+    public long? FacturaVentaId { get; set; }
+    public long? VentaId { get; set; }
+    public string? TipoDocumentoOrigen { get; set; }
+    public string? NumeroFactura { get; set; }
     public string? NumeroVenta { get; set; }
     public int? ClienteId { get; set; }
     public string? ClienteNombre { get; set; }
@@ -31,9 +32,10 @@ public class CuentaPorCobrarDetalleDto
 {
     public long Id { get; set; }
 
-    public long FacturaVentaId { get; set; }
-    public long VentaId { get; set; }
-    public string NumeroFactura { get; set; } = string.Empty;
+    public long? FacturaVentaId { get; set; }
+    public long? VentaId { get; set; }
+    public string? TipoDocumentoOrigen { get; set; }
+    public string? NumeroFactura { get; set; }
     public string? NumeroVenta { get; set; }
 
     public int? ClienteId { get; set; }

@@ -148,7 +148,7 @@ public class FacturaVentaService : IFacturaVentaService
         if (items.Count > 0)
         {
             var facturaIds = items.Select(f => f.Id).ToList();
-            var cxcs = await _cxcRepo.FindAsync(c => c.EmpresaId == empresaId && facturaIds.Contains(c.FacturaVentaId), ct);
+            var cxcs = await _cxcRepo.FindAsync(c => c.EmpresaId == empresaId && c.FacturaVentaId != null && facturaIds.Contains(c.FacturaVentaId.Value), ct);
             var cxcMap = cxcs.ToDictionary(c => c.FacturaVentaId, c => c);
 
             foreach (var item in items)
