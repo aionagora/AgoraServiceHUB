@@ -226,8 +226,59 @@ else
         </div>
     </form>
 
+    <!-- Panel de Ordenamiento -->
+    <div class="card border-0 shadow-sm mb-3 bg-white">
+        <div class="card-body py-2 px-3">
+            <div class="row g-2 align-items-center">
+                <div class="col-auto">
+                    <label class="form-label small text-muted mb-0 fw-semibold">Ordenar por</label>
+                </div>
+                <div class="col-auto">
+                    <select class="form-select form-select-sm text-dark bg-light" @bind="ordenPor" @bind:after="OrderCuentas">
+                        <option value="FechaVencimiento">Fecha de Vencimiento</option>
+                        <option value="FechaEmision">Fecha de Emisión</option>
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <div class="d-flex gap-3 ms-2">
+                        <label class="form-check-label small text-muted mb-0 d-flex align-items-center gap-1 cursor-pointer" style="cursor:pointer">
+                            <input type="radio" name="ordenDir" class="form-check-input me-1"
+                                   checked="@ordenAscendente"
+                                   @onclick="() => CambiarDireccion(true)" />
+                            <i class="bi bi-sort-up"></i> Ascendente
+                        </label>
+                        <label class="form-check-label small text-muted mb-0 d-flex align-items-center gap-1 cursor-pointer" style="cursor:pointer">
+                            <input type="radio" name="ordenDir" class="form-check-input me-1"
+                                   checked="@(!ordenAscendente)"
+                                   @onclick="() => CambiarDireccion(false)" />
+                            <i class="bi bi-sort-down"></i> Descendente
+                        </label>
+                    </div>
+                </div>
+                <div class="col-auto ms-auto">
+                    <span class="text-muted small">@cuentas.Count registro(s)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pestañas Todas / Vencidos -->
+    <ul class="nav nav-tabs card-header-tabs mb-0" style="padding-left: 0.75rem;">
+        <li class="nav-item">
+            <a class="nav-link @(tabActiva == "Todas" ? "active fw-bold" : "text-muted")" href="javascript:void(0)" @onclick='() => CambiarTab("Todas")' style="cursor:pointer">
+                <i class="bi bi-list-ul me-1"></i> Todas
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link @(tabActiva == "Vencidos" ? "active fw-bold" : "text-muted") position-relative" href="javascript:void(0)" @onclick='() => CambiarTab("Vencidos")' style="cursor:pointer">
+                <i class="bi bi-exclamation-triangle-fill text-danger me-1"></i> Vencidos
+                <span class="badge bg-danger rounded-pill ms-1">@TotalVencidasTab</span>
+            </a>
+        </li>
+    </ul>
+
     <!-- Tabla de Cuentas por Cobrar -->
-    <div class="card border-0 shadow-sm bg-white">
+    <div class="card border-0 shadow-sm bg-white border-top-0 rounded-top-0">
         <div class="card-body p-0">
             @if (listLoading)
             {
@@ -236,120 +287,159 @@ else
                     <p class="text-muted mt-2">Filtrando cuentas...</p>
                 </div>
             }
-            else if (cuentas.Count == 0)
-            {
-                <div class="text-center py-5">
-                    <i class="bi bi-folder-x text-muted" style="font-size: 3.5rem;"></i>
-                    <p class="text-muted mt-3 mb-0">No se encontraron cuentas por cobrar registradas para los filtros aplicados.</p>
-                </div>
-            }
             else
             {
-                <div class="table-responsive">
-                    @{
-                        decimal runningTotal = 0;
-                    }
-                    <table class="table table-hover align-middle mb-0">
-                        <thead class="table-light text-secondary small text-uppercase">
-                            <tr>
-                                <th class="ps-3">Cliente</th>
-                                <th>Factura / Venta</th>
-                                <th>Emisión</th>
-                                <th>Vencimiento</th>
-                                <th class="text-end">Monto Original</th>
-                                <th class="text-end">Monto Pagado</th>
-                                <th class="text-end">Saldo Pendiente</th>
-                                <th class="text-end text-primary">Saldo Acumulado</th>
-                                <th class="text-center">Estado</th>
-                                <th class="text-center pe-3">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var cxc in cuentas)
-                            {
-                                runningTotal += cxc.SaldoPendiente;
+                var dataSource = tabActiva == "Vencidos" ? CuentasVencidas : cuentas;
+                if (dataSource.Count == 0)
+                {
+                    <div class="text-center py-5">
+                        <i class="bi bi-folder-x text-muted" style="font-size: 3.5rem;"></i>
+                        <p class="text-muted mt-3 mb-0">
+                            @(tabActiva == "Vencidos" ? "No existen cuentas vencidas." : "No se encontraron cuentas por cobrar registradas para los filtros aplicados.")
+                        </p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        @{
+                            decimal runningTotal = 0;
+                        }
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light text-secondary small text-uppercase">
                                 <tr>
-                                    <td class="ps-3">
-                                        <div class="fw-semibold text-dark">@cxc.ClienteNombre</div>
-                                        <div class="text-muted small">NIT: @(string.IsNullOrWhiteSpace(cxc.ClienteNit) ? "N/A" : cxc.ClienteNit)</div>
-                                    </td>
-                                    <td>
-                                        <div class="fw-bold text-primary">Fac. #@cxc.NumeroFactura</div>
-                                        <div class="text-secondary small">Venta: @(string.IsNullOrWhiteSpace(cxc.NumeroVenta) ? "-" : cxc.NumeroVenta)</div>
-                                    </td>
-                                    <td>@cxc.FechaEmision.ToString("dd/MM/yyyy")</td>
-                                    <td>@cxc.FechaVencimiento?.ToString("dd/MM/yyyy")</td>
-                                    <td class="text-end fw-medium">@cxc.TotalFactura.ToString("N2") <span class="small text-muted">@cxc.MonedaCodigo</span></td>
-                                    <td class="text-end text-success fw-medium">@cxc.TotalPagado.ToString("N2") <span class="small text-muted">@cxc.MonedaCodigo</span></td>
-                                    <td class="text-end fw-bold text-danger">@cxc.SaldoPendiente.ToString("N2") <span class="small text-muted">@cxc.MonedaCodigo</span></td>
-                                    <td class="text-end fw-bold text-primary">@runningTotal.ToString("N2") <span class="small text-muted">@cxc.MonedaCodigo</span></td>
-                                    <td class="text-center">
-                                        <span class="@AgoraHub360.ERP.Web.Helpers.BadgeCssHelper.GetEstadoCxCBadge(cxc.Estado)">
-                                            @cxc.Estado
-                                        </span>
-                                    </td>
-                                    <td class="text-center pe-3">
-                                        <div class="d-flex justify-content-center gap-1">
-                                            <button class="btn btn-sm btn-outline-info" @onclick="() => CargarDetalleAsync(cxc.Id)" title="Ver Detalle" disabled="@accionLoading">
-                                                <i class="bi bi-eye"></i>
-                                            </button>
-                                            
-                                            @if (cxc.Estado != "Pagada" && cxc.Estado != "Anulada")
+                                    <th class="ps-3">Cliente</th>
+                                    <th>Factura / Venta</th>
+                                    <th>Emisión</th>
+                                    <th>Vencimiento</th>
+                                    <th class="text-end">Monto Original</th>
+                                    <th class="text-end">Monto Pagado</th>
+                                    <th class="text-end">Saldo Pendiente</th>
+                                    <th class="text-end text-primary">Saldo Acumulado</th>
+                                    <th class="text-center">Estado</th>
+                                    <th class="text-center pe-3">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var cxc in dataSource)
+                                {
+                                    runningTotal += cxc.SaldoPendiente;
+                                    var isVencida = EstaVencida(cxc);
+                                    <tr class="@(isVencida ? "table-danger" : "")">
+                                        <td class="ps-3">
+                                            <div class="fw-semibold text-dark">@cxc.ClienteNombre</div>
+                                            <div class="text-muted small">NIT: @(string.IsNullOrWhiteSpace(cxc.ClienteNit) ? "N/A" : cxc.ClienteNit)</div>
+                                        </td>
+                                        <td>
+                                            @if (!string.IsNullOrWhiteSpace(cxc.NumeroFactura))
                                             {
-                                                <button class="btn btn-sm btn-outline-success" @onclick="() => RegistrarPago(cxc)" title="Registrar Pago" disabled="@accionLoading">
-                                                    <i class="bi bi-cash-coin"></i>
-                                                </button>
-                                                
-                                                <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmarAnulacion(cxc)" title="Anular Cuenta" disabled="@accionLoading">
-                                                    <i class="bi bi-x-circle"></i>
-                                                </button>
-                                                
-                                                @if (cxc.TotalPagado > 0)
+                                                <div class="fw-bold text-primary">Fac. #@cxc.NumeroFactura</div>
+                                            }
+                                            else
+                                            {
+                                                <div class="fw-bold text-muted"><em>Sin factura</em></div>
+                                            }
+                                            <div class="text-secondary small">
+                                                Venta: @(string.IsNullOrWhiteSpace(cxc.NumeroVenta) ? "-" : cxc.NumeroVenta)
+                                                @if (!string.IsNullOrWhiteSpace(cxc.TipoDocumentoOrigen))
                                                 {
-                                                    <button class="btn btn-sm btn-outline-warning ms-1" @onclick="() => DescargarReciboPago(cxc)" title="Descargar Recibo PDF del último pago" disabled="@accionLoading">
-                                                        <i class="bi bi-filetype-pdf"></i>
-                                                    </button>
+                                                    <span class="badge bg-info ms-1">@cxc.TipoDocumentoOrigen</span>
+                                                }
+                                            </div>
+                                        </td>
+                                        <td>@cxc.FechaEmision.ToString("dd/MM/yyyy")</td>
+                                        <td>
+                                            @if (cxc.FechaVencimiento.HasValue)
+                                            {
+                                                @if (isVencida)
+                                                {
+                                                    <span class="text-danger fw-bold">@cxc.FechaVencimiento.Value.ToString("dd/MM/yyyy") <i class="bi bi-exclamation-circle-fill ms-1"></i></span>
+                                                }
+                                                else
+                                                {
+                                                    @cxc.FechaVencimiento.Value.ToString("dd/MM/yyyy")
                                                 }
                                             }
                                             else
                                             {
-                                                <button class="btn btn-sm btn-outline-secondary" @onclick="() => RecalcularCxcAsync(cxc)" title="Recalcular Saldo" disabled="@accionLoading">
-                                                    <i class="bi bi-arrow-repeat"></i>
-                                                </button>
+                                                <span class="text-muted">-</span>
                                             }
-                                        </div>
-                                    </td>
+                                        </td>
+                                        <td class="text-end fw-medium">@cxc.TotalFactura.ToString("N2") <span class="small text-muted">@cxc.MonedaCodigo</span></td>
+                                        <td class="text-end text-success fw-medium">@cxc.TotalPagado.ToString("N2") <span class="small text-muted">@cxc.MonedaCodigo</span></td>
+                                        <td class="text-end fw-bold text-danger">@cxc.SaldoPendiente.ToString("N2") <span class="small text-muted">@cxc.MonedaCodigo</span></td>
+                                        <td class="text-end fw-bold text-primary">@runningTotal.ToString("N2") <span class="small text-muted">@cxc.MonedaCodigo</span></td>
+                                        <td class="text-center">
+                                            <span class="@AgoraHub360.ERP.Web.Helpers.BadgeCssHelper.GetEstadoCxCBadge(cxc.Estado) @(isVencida ? "border border-danger" : "")">
+                                                @cxc.Estado
+                                            </span>
+                                        </td>
+                                        <td class="text-center pe-3">
+                                            <div class="d-flex justify-content-center gap-1">
+                                                <button class="btn btn-sm btn-outline-info" @onclick="() => CargarDetalleAsync(cxc.Id)" title="Ver Detalle" disabled="@accionLoading">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+
+                                                @if (cxc.Estado != "Pagada" && cxc.Estado != "Anulada")
+                                                {
+                                                    <button class="btn btn-sm btn-outline-success" @onclick="() => RegistrarPago(cxc)" title="Registrar Pago" disabled="@accionLoading">
+                                                        <i class="bi bi-cash-coin"></i>
+                                                    </button>
+
+                                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmarAnulacion(cxc)" title="Anular Cuenta" disabled="@accionLoading">
+                                                        <i class="bi bi-x-circle"></i>
+                                                    </button>
+
+                                                    @if (cxc.TotalPagado > 0)
+                                                    {
+                                                        <button class="btn btn-sm btn-outline-warning ms-1" @onclick="() => DescargarReciboPago(cxc)" title="Descargar Recibo PDF del último pago" disabled="@accionLoading">
+                                                            <i class="bi bi-filetype-pdf"></i>
+                                                        </button>
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => RecalcularCxcAsync(cxc)" title="Recalcular Saldo" disabled="@accionLoading">
+                                                        <i class="bi bi-arrow-repeat"></i>
+                                                    </button>
+                                                }
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="table-light fw-bold border-top-2">
+                                <tr>
+                                    <td colspan="4" class="text-end ps-3">TOTAL</td>
+                                    <td class="text-end">@dataSource.Sum(c => c.TotalFactura).ToString("N2")</td>
+                                    <td class="text-end text-success">@dataSource.Sum(c => c.TotalPagado).ToString("N2")</td>
+                                    <td class="text-end text-danger">@dataSource.Sum(c => c.SaldoPendiente).ToString("N2")</td>
+                                    <td class="text-end text-primary">@runningTotal.ToString("N2")</td>
+                                    <td></td>
+                                    <td class="pe-3"></td>
                                 </tr>
-                            }
-                        </tbody>
-                        <tfoot class="table-light fw-bold border-top-2">
-                            <tr>
-                                <td colspan="4" class="text-end ps-3">TOTAL</td>
-                                <td class="text-end">@cuentas.Sum(c => c.TotalFactura).ToString("N2")</td>
-                                <td class="text-end text-success">@cuentas.Sum(c => c.TotalPagado).ToString("N2")</td>
-                                <td class="text-end text-danger">@cuentas.Sum(c => c.SaldoPendiente).ToString("N2")</td>
-                                <td class="text-end text-primary">@runningTotal.ToString("N2")</td>
-                                <td></td>
-                                <td class="pe-3"></td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-                <!-- Paginación UI -->
-                <div class="card-footer bg-white border-top d-flex align-items-center justify-content-between p-3">
-                    <div class="text-muted small">
-                        Mostrando de @(totalRegistros > 0 ? (paginaActual - 1) * tamanoPagina + 1 : 0) a @(Math.Min(paginaActual * tamanoPagina, totalRegistros)) de @totalRegistros registros
+                            </tfoot>
+                        </table>
                     </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="PaginaAnterior" disabled="@(paginaActual <= 1 || listLoading)">
-                            <i class="bi bi-chevron-left me-1"></i> Anterior
-                        </button>
-                        <span class="small fw-semibold text-dark">Página @paginaActual de @totalPaginas</span>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="PaginaSiguiente" disabled="@(paginaActual >= totalPaginas || listLoading)">
-                            Siguiente <i class="bi bi-chevron-right ms-1"></i>
-                        </button>
-                    </div>
-                </div>
+                    <!-- Paginación UI (solo en pestaña Todas) -->
+                    @if (tabActiva == "Todas")
+                    {
+                        <div class="card-footer bg-white border-top d-flex align-items-center justify-content-between p-3">
+                            <div class="text-muted small">
+                                Mostrando de @(totalRegistros > 0 ? (paginaActual - 1) * tamanoPagina + 1 : 0) a @(Math.Min(paginaActual * tamanoPagina, totalRegistros)) de @totalRegistros registros
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="PaginaAnterior" disabled="@(paginaActual <= 1 || listLoading)">
+                                    <i class="bi bi-chevron-left me-1"></i> Anterior
+                                </button>
+                                <span class="small fw-semibold text-dark">Página @paginaActual de @totalPaginas</span>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="PaginaSiguiente" disabled="@(paginaActual >= totalPaginas || listLoading)">
+                                    Siguiente <i class="bi bi-chevron-right ms-1"></i>
+                                </button>
+                            </div>
+                        </div>
+                    }
+                }
             }
         </div>
     </div>
@@ -400,15 +490,24 @@ else
                     <div class="row g-3">
                         <div class="col-6 col-sm-4">
                             <span class="text-muted small d-block">Nº Factura</span>
-                            <div class="fw-semibold text-dark">@detalleSelected.NumeroFactura</div>
+                            @if (!string.IsNullOrWhiteSpace(detalleSelected.NumeroFactura))
+                            {
+                                <div class="fw-semibold text-dark">@detalleSelected.NumeroFactura</div>
+                            }
+                            else
+                            {
+                                <div class="fw-semibold text-muted"><em>Sin factura</em></div>
+                            }
                         </div>
                         <div class="col-6 col-sm-4">
                             <span class="text-muted small d-block">Nº Venta</span>
                             <div class="fw-semibold text-dark">@(string.IsNullOrWhiteSpace(detalleSelected.NumeroVenta) ? "-" : detalleSelected.NumeroVenta)</div>
                         </div>
                         <div class="col-6 col-sm-4">
-                            <span class="text-muted small d-block">Factura Venta ID</span>
-                            <div class="fw-semibold text-dark">@detalleSelected.FacturaVentaId</div>
+                            <span class="text-muted small d-block">Origen</span>
+                            <div class="fw-semibold text-dark">
+                                @(string.IsNullOrWhiteSpace(detalleSelected.TipoDocumentoOrigen) ? "-" : detalleSelected.TipoDocumentoOrigen)
+                            </div>
                         </div>
                         <div class="col-6 col-sm-4">
                             <span class="text-muted small d-block">Fecha Emisión</span>
@@ -553,6 +652,13 @@ else
     private int totalRegistros = 0;
     private int totalPaginas = 1;
 
+    // Ordenamiento
+    private string ordenPor = "FechaVencimiento";
+    private bool ordenAscendente = true;
+
+    // Pestaña activa
+    private string tabActiva = "Todas";
+
     private List<AgoraHub360.ERP.Shared.DTOs.MDM.ClienteDto> clientes = new();
     private List<CuentaPorCobrarResumenDto> cuentas = new();
     private List<CuentaPorCobrarResumenDto> unfilteredCuentas = new();
@@ -613,19 +719,67 @@ else
     private void CalcularMetricas()
     {
         countPendientes = unfilteredCuentas.Count(c => c.Estado == "Pendiente" || c.Estado == "Parcial");
-        countVencidas = unfilteredCuentas.Count(c => c.Estado == "Vencida");
+        countVencidas = unfilteredCuentas.Count(EstaVencida);
         countPagadas = unfilteredCuentas.Count(c => c.Estado == "Pagada");
     }
 
+    private bool EstaVencida(CuentaPorCobrarResumenDto item)
+    {
+        if (item is null) return false;
+        if (item.SaldoPendiente <= 0) return false;
+        if (item.Estado == "Pagada" || item.Estado == "Anulada") return false;
+        if (!item.FechaVencimiento.HasValue) return false;
+        return item.FechaVencimiento.Value.Date < DateTime.Today;
+    }
+
+    private List<CuentaPorCobrarResumenDto> CuentasVencidas =>
+        cuentas.Where(EstaVencida).ToList();
+
+    private int TotalVencidasTab =>
+        cuentas.Count(EstaVencida);
+
     private void OrderCuentas()
     {
-        if (cuentas != null)
+        if (cuentas == null) return;
+
+        var query = cuentas.AsEnumerable();
+
+        query = ordenPor switch
         {
-            cuentas = cuentas
-                .OrderByDescending(c => c.FechaVencimiento ?? DateTime.MinValue)
-                .ThenByDescending(c => c.Id)
-                .ToList();
+            "FechaEmision" => ordenAscendente
+                ? query.OrderBy(c => c.FechaEmision).ThenBy(c => c.Id)
+                : query.OrderByDescending(c => c.FechaEmision).ThenByDescending(c => c.Id),
+            _ => ordenAscendente
+                ? query.OrderBy(c => c.FechaVencimiento ?? DateTime.MaxValue).ThenBy(c => c.Id)
+                : query.OrderByDescending(c => c.FechaVencimiento ?? DateTime.MinValue).ThenByDescending(c => c.Id),
+        };
+
+        cuentas = query.ToList();
+    }
+
+    private void CambiarOrden(string campo)
+    {
+        if (ordenPor == campo)
+        {
+            ordenAscendente = !ordenAscendente;
         }
+        else
+        {
+            ordenPor = campo;
+            ordenAscendente = campo == "FechaVencimiento";
+        }
+        OrderCuentas();
+    }
+
+    private void CambiarDireccion(bool ascendente)
+    {
+        ordenAscendente = ascendente;
+        OrderCuentas();
+    }
+
+    private void CambiarTab(string tab)
+    {
+        tabActiva = tab;
     }
 
     private async Task BuscarAsync()
