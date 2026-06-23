@@ -1,4 +1,4 @@
-# 📊 ESTADO DEL PROYECTO — AgoraHUB360 ERP
+s# 📊 ESTADO DEL PROYECTO — AgoraHUB360 ERP
 
 **Generado**: 23-Jun-2026
 
