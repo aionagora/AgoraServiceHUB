@@ -13,13 +13,21 @@ public class CuentaPorCobrarConfiguration : IEntityTypeConfiguration<CuentaPorCo
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id).UseIdentityColumn();
 
-        // ── Factura ──────────────────────────────────────────────────────────
+        // ── Venta (origen principal para CxC sin factura) ────────────────────
+        builder.HasOne(x => x.Venta)
+            .WithMany()
+            .HasForeignKey(x => x.VentaId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Property(x => x.TipoDocumentoOrigen).HasMaxLength(20);
+
+        // ── Factura (opcional — puede ser null cuando CxC viene de venta directa) ─
         builder.HasOne(x => x.FacturaVenta)
             .WithMany()
             .HasForeignKey(x => x.FacturaVentaId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.Property(x => x.NumeroFactura).IsRequired().HasMaxLength(250);
+        builder.Property(x => x.NumeroFactura).HasMaxLength(250);
         builder.Property(x => x.NumeroVenta).HasMaxLength(50);
 
         builder.Property(x => x.FechaEmision).IsRequired();
@@ -51,9 +59,11 @@ public class CuentaPorCobrarConfiguration : IEntityTypeConfiguration<CuentaPorCo
 
         // ── Índices ─────────────────────────────────────────────────────────
         builder.HasIndex(x => new { x.EmpresaId, x.FacturaVentaId }).IsUnique();
+        builder.HasIndex(x => new { x.EmpresaId, x.VentaId, x.TipoDocumentoOrigen });
         builder.HasIndex(x => new { x.EmpresaId, x.Estado });
         builder.HasIndex(x => new { x.EmpresaId, x.ClienteId });
         builder.HasIndex(x => new { x.EmpresaId, x.FechaVencimiento });
         builder.HasIndex(x => x.FacturaVentaId);
+        builder.HasIndex(x => x.VentaId);
     }
 }

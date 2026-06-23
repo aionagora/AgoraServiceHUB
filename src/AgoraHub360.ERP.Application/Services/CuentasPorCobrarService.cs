@@ -172,7 +172,8 @@ public class CuentasPorCobrarService : ICuentasPorCobrarService
         {
             Id = cxc.Id,
             FacturaVentaId = cxc.FacturaVentaId,
-            VentaId = factura.VentaId,
+            VentaId = cxc.VentaId ?? factura?.VentaId,
+            TipoDocumentoOrigen = cxc.TipoDocumentoOrigen,
             NumeroFactura = cxc.NumeroFactura,
             NumeroVenta = cxc.NumeroVenta,
             ClienteId = cxc.ClienteId,
@@ -482,22 +483,42 @@ public class CuentasPorCobrarService : ICuentasPorCobrarService
 
         var empresaId = _currentUser.EmpresaId.Value;
 
-        var facturas = await _facturaRepo.FindAsync(
-            f => f.VentaId == ventaId && f.EmpresaId == empresaId && f.Activo, ct);
-
-        if (!facturas.Any())
-            return Result<CuentaPorCobrarResumenDto>.Failure("No se encontraron facturas asociadas a esta venta.");
+        // Obtener todos los pagos activos de la venta
+        var pagos = await _pagoRepo.FindAsync(
+            p => p.VentaId == ventaId && p.EmpresaId == empresaId && p.Activo && !p.Anulado, ct);
+        var totalPagado = pagos.Sum(p => p.Monto);
 
         CuentaPorCobrarResumenDto? ultimoResumen = null;
 
+        // 1. Intentar actualizar CxC existente creada desde venta directa (sin factura)
+        var cxcVenta = (await _cxcRepo.FindAsync(
+            c => c.VentaId == ventaId
+              && c.EmpresaId == empresaId
+              && c.Activo
+              && c.TipoDocumentoOrigen == "Venta", ct))
+            .FirstOrDefault();
+
+        if (cxcVenta is not null)
+        {
+            cxcVenta.TotalPagado = totalPagado;
+            cxcVenta.Estado = CalcularEstado(cxcVenta.TotalFactura, totalPagado, cxcVenta.FechaVencimiento);
+            await _cxcRepo.UpdateAsync(cxcVenta, ct);
+            ultimoResumen = MapToResumen(cxcVenta, ventaId);
+        }
+
+        // 2. También actualizar CxC creadas desde factura (si existen)
+        var facturas = await _facturaRepo.FindAsync(
+            f => f.VentaId == ventaId && f.EmpresaId == empresaId && f.Activo, ct);
+
         foreach (var factura in facturas)
         {
-            var cxc = (await _cxcRepo.FindAsync(
+            var cxcFactura = (await _cxcRepo.FindAsync(
                 c => c.FacturaVentaId == factura.Id && c.EmpresaId == empresaId && c.Activo, ct))
                 .FirstOrDefault();
 
-            if (cxc is null)
+            if (cxcFactura is null)
             {
+                // Si no existe CxC para esta factura, crearla
                 var genRes = await GenerarDesdeFacturaAsync(factura.Id, ct);
                 if (genRes.IsSuccess)
                 {
@@ -506,15 +527,14 @@ public class CuentasPorCobrarService : ICuentasPorCobrarService
                 continue;
             }
 
-            var pagos = await _pagoRepo.FindAsync(
-                p => p.VentaId == ventaId && p.EmpresaId == empresaId && p.Activo && !p.Anulado, ct);
-            var totalPagado = pagos.Sum(p => p.Monto);
+            // Si la CxC de factura es la misma que la de venta (mismo registro), no duplicar
+            if (cxcVenta is not null && cxcFactura.Id == cxcVenta.Id)
+                continue;
 
-            cxc.TotalPagado = totalPagado;
-            cxc.Estado = CalcularEstado(cxc.TotalFactura, totalPagado, cxc.FechaVencimiento);
-
-            await _cxcRepo.UpdateAsync(cxc, ct);
-            ultimoResumen = MapToResumen(cxc, ventaId);
+            cxcFactura.TotalPagado = totalPagado;
+            cxcFactura.Estado = CalcularEstado(cxcFactura.TotalFactura, totalPagado, cxcFactura.FechaVencimiento);
+            await _cxcRepo.UpdateAsync(cxcFactura, ct);
+            ultimoResumen = MapToResumen(cxcFactura, ventaId);
         }
 
         await _unitOfWork.SaveChangesAsync(ct);
