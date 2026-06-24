@@ -3,7 +3,7 @@ using AgoraHub360.ERP.Shared.DTOs.Reportes;
 namespace AgoraHub360.ERP.Application.Interfaces.Reports;
 
 /// <summary>
-/// Servicio de generación de reportes PDF para Cuentas por Cobrar y facturación.
+/// Servicio de generación de reportes PDF para Cuentas por Cobrar, facturación y ventas.
 /// </summary>
 public interface IPdfReporteService
 {
@@ -44,4 +44,9 @@ public interface IPdfReporteService
     /// Genera el reporte de CxC vencidas PDF.
     /// </summary>
     Task<byte[]> GenerarReporteCxcVencidasAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Genera el PDF de una venta comercial (NOTA DE VENTA).
+    /// </summary>
+    Task<byte[]> GenerarVentaPdfAsync(long ventaId, CancellationToken ct = default);
 }

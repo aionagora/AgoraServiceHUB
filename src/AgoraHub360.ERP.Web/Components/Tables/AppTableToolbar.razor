@@ -1,0 +1,54 @@
+@namespace AgoraHub360.ERP.Web.Components.Tables
+
+<MudToolBar Dense="true" DisableGutters="true" Class="mb-4">
+    @if (SearchVisible)
+    {
+        <MudTextField @bind-Value="_searchText"
+                      Placeholder="@SearchPlaceholder"
+                      Dense="true"
+                      Variant="@Variant.Outlined"
+                      Immediate="true"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Class="flex-grow-1"
+                      Style="max-width:320px;" />
+    }
+    <MudSpacer />
+    @if (Actions is not null)
+    {
+        @Actions
+    }
+    @if (ShowAddButton)
+    {
+        <MudButton Variant="@Variant.Filled" Color="@Color.Primary" OnClick="@OnAdd" StartIcon="@Icons.Material.Filled.Add">
+            @AddButtonText
+        </MudButton>
+    }
+</MudToolBar>
+
+@code {
+    [Parameter] public bool SearchVisible { get; set; } = true;
+    [Parameter] public string SearchPlaceholder { get; set; } = "Buscar...";
+    [Parameter] public bool ShowAddButton { get; set; } = true;
+    [Parameter] public string AddButtonText { get; set; } = "Nuevo";
+    [Parameter] public EventCallback OnAdd { get; set; }
+    [Parameter] public RenderFragment? Actions { get; set; }
+
+    private string? _searchText;
+
+    [Parameter]
+    public string? SearchText
+    {
+        get => _searchText;
+        set => _searchText = value;
+    }
+
+    [Parameter]
+    public EventCallback<string?> SearchTextChanged { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && _searchText is not null)
+            await SearchTextChanged.InvokeAsync(_searchText);
+    }
+}

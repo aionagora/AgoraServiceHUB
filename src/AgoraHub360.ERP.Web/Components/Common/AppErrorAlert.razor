@@ -1,0 +1,33 @@
+@namespace AgoraHub360.ERP.Web.Components.Common
+
+@if (!string.IsNullOrEmpty(Message))
+{
+    <MudAlert Severity="@Severity" Variant="@Variant.Filled" Class="mb-4" Dense="@Dense">
+        <MudText Typo="@Typo.body2">
+            <MudIcon Icon="@Icon" Size="@Size.Small" Class="me-1" />
+            @Message
+        </MudText>
+        @if (Details is not null)
+        {
+            <MudText Typo="@Typo.caption" Class="mt-2">@Details</MudText>
+        }
+    </MudAlert>
+}
+
+@code {
+    [Parameter] public string? Message { get; set; }
+    [Parameter] public string? Details { get; set; }
+
+    [Parameter] public Severity Severity { get; set; } = Severity.Error;
+
+    private bool Dense => string.IsNullOrEmpty(Details);
+
+    private string Icon => Severity switch
+    {
+        Severity.Error => Icons.Material.Filled.Error,
+        Severity.Warning => Icons.Material.Filled.Warning,
+        Severity.Info => Icons.Material.Filled.Info,
+        Severity.Success => Icons.Material.Filled.CheckCircle,
+        _ => Icons.Material.Filled.Error
+    };
+}

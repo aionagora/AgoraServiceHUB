@@ -161,6 +161,12 @@ public class FacturacionFEHttpService
         return await ParseResponseAsync<bool>(response);
     }
 
+    public async Task<ApiResponse<bool>> EliminarConfiguracionAsync(int id)
+    {
+        var response = await _http.DeleteAsync($"{BaseUrl}/configuraciones/{id}");
+        return await ParseResponseAsync<bool>(response);
+    }
+
     public async Task<ApiResponse<TestConexionResultDto>> TestConexionAsync(int id)
     {
         var response = await _http.PostAsync($"{BaseUrl}/configuraciones/{id}/test-conexion", null);

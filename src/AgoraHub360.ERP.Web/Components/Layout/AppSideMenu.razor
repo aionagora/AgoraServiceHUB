@@ -1,0 +1,122 @@
+@namespace AgoraHub360.ERP.Web.Components.Layout
+@inject SesionUsuarioStateService SesionState
+@inject UiAuthorizationService UiAuth
+
+<MudNavMenu Class="agora-side-menu">
+    <MudText Typo="@Typo.caption" Class="mud-text-secondary px-4 mb-2 mt-2" Style="text-transform:uppercase;letter-spacing:.05em;font-weight:600;">
+        Navegación
+    </MudText>
+
+    <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Dashboard" IconColor="Color.Primary">
+        Dashboard
+    </MudNavLink>
+
+    @if (UiAuth.CanSeeOperationalMenu())
+    {
+        <MudDivider Class="my-2" />
+
+        <MudText Typo="@Typo.caption" Class="mud-text-secondary px-4 mb-2" Style="text-transform:uppercase;letter-spacing:.05em;font-weight:600;">
+            Módulos
+        </MudText>
+
+        <MudNavLink Href="accesos/mdm" Icon="@Icons.Material.Filled.Storage" IconColor="Color.Warning">
+            Datos Maestros
+        </MudNavLink>
+
+        <MudNavLink Href="accesos/gestion-prod" Icon="@Icons.Material.Filled.Inventory2" IconColor="Color.Success">
+            Gestión Productos
+        </MudNavLink>
+
+        <MudNavLink Href="accesos/inventario" Icon="@Icons.Material.Filled.Warehouse" IconColor="Color.Success">
+            Inventario
+        </MudNavLink>
+
+        <MudNavLink Href="accesos/compras" Icon="@Icons.Material.Filled.ShoppingCart" IconColor="Color.Info">
+            Compras
+        </MudNavLink>
+
+        <MudNavLink Href="dashboard/contabilidad" Icon="@Icons.Material.Filled.AccountBalance" IconColor="Color.Secondary">
+            Contabilidad
+        </MudNavLink>
+
+        <MudNavLink Href="accesos/ventas" Icon="@Icons.Material.Filled.PointOfSale" IconColor="Color.Error">
+            Ventas
+        </MudNavLink>
+
+        <MudNavLink Href="ventas/comercial" Icon="@Icons.Material.Filled.Receipt" IconColor="Color.Error">
+            Ventas Comercial
+        </MudNavLink>
+
+        <MudNavLink Href="ventas/cuentas-por-cobrar" Icon="@Icons.Material.Filled.AccountBalanceWallet" IconColor="Color.Error">
+            Cuentas por Cobrar
+        </MudNavLink>
+
+        <MudNavLink Href="ventas/cuentas-por-cobrar/antiguedad-saldos" Icon="@Icons.Material.Filled.Schedule" IconColor="Color.Error">
+            Antigüedad de Saldos
+        </MudNavLink>
+    }
+
+    @if (UiAuth.CanSeeGlobalAdminMenu())
+    {
+        <MudDivider Class="my-2" />
+
+        <MudText Typo="@Typo.caption" Class="mud-text-secondary px-4 mb-2" Style="text-transform:uppercase;letter-spacing:.05em;font-weight:600;">
+            Administración Global
+        </MudText>
+
+        <MudNavLink Href="config/empresas" Icon="@Icons.Material.Filled.Business" IconColor="Color.Tertiary">
+            Empresas globales
+        </MudNavLink>
+        <MudNavLink Href="config/usuarios" Icon="@Icons.Material.Filled.AdminPanelSettings" IconColor="Color.Tertiary">
+            Usuarios globales
+        </MudNavLink>
+        <MudNavLink Href="config/roles" Icon="@Icons.Material.Filled.Security" IconColor="Color.Tertiary">
+            Roles globales
+        </MudNavLink>
+        <MudNavLink Href="config/auditoria" Icon="@Icons.Material.Filled.History" IconColor="Color.Tertiary">
+            Auditoría global
+        </MudNavLink>
+        <MudNavLink Href="config/empresa-demo" Icon="@Icons.Material.Filled.AutoAwesome" IconColor="Color.Tertiary">
+            Crear Empresa Demo
+        </MudNavLink>
+    }
+
+    @if (UiAuth.CanSeeTenantAdminMenu())
+    {
+        <MudDivider Class="my-2" />
+
+        <MudText Typo="@Typo.caption" Class="mud-text-secondary px-4 mb-2" Style="text-transform:uppercase;letter-spacing:.05em;font-weight:600;">
+            Administración de Empresa
+        </MudText>
+
+        <MudNavLink Href="config/usuarios" Icon="@Icons.Material.Filled.PersonSearch" IconColor="Color.Default">
+            Usuarios de mi empresa
+        </MudNavLink>
+        <MudNavLink Href="config/sucursales" Icon="@Icons.Material.Filled.Store" IconColor="Color.Default">
+            Sucursales
+        </MudNavLink>
+        <MudNavLink Href="config/parametros-numeracion" Icon="@Icons.Material.Filled.Tune" IconColor="Color.Default">
+            Parámetros
+        </MudNavLink>
+        <MudNavLink Href="config/numeraciones-documento" Icon="@Icons.Material.Filled.Numbers" IconColor="Color.Default">
+            Numeración
+        </MudNavLink>
+        <MudNavLink Href="config/workflow" Icon="@Icons.Material.Filled.AccountTree" IconColor="Color.Default">
+            Seguridad dinámica
+        </MudNavLink>
+        <MudNavLink Href="config/facturacion-electronica" Icon="@Icons.Material.Filled.ReceiptLong" IconColor="Color.Default">
+            Facturación Electrónica
+        </MudNavLink>
+        <MudNavLink Href="config/facturacion-electronica/auditoria" Icon="@Icons.Material.Filled.HistoryToggleOff" IconColor="Color.Default">
+            Auditoría FE
+        </MudNavLink>
+    }
+
+    @if (!UiAuth.CanSeeOperationalMenu())
+    {
+        <MudDivider Class="my-2" />
+        <MudText Typo="@Typo.body2" Class="mud-text-disabled px-4 py-2">
+            @* Selecciona una empresa para habilitar los módulos operativos. *@
+        </MudText>
+    }
+</MudNavMenu>

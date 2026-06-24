@@ -1,0 +1,31 @@
+@namespace AgoraHub360.ERP.Web.Components.Forms
+
+<MudPaper Elevation="0" Class="d-flex align-items-center justify-content-end gap-2 pt-4" Style="border-top: 1px solid var(--mud-palette-lines-default);">
+    @if (ShowCancel)
+    {
+        <MudButton Variant="@Variant.Text" Color="@Color.Default" Disabled="@IsDisabled" OnClick="@OnCancel">
+            @CancelText
+        </MudButton>
+    }
+    <MudButton Variant="@Variant.Filled" Color="@Color.Primary" Disabled="@IsDisabled" OnClick="@OnSave" StartIcon="@SaveIcon">
+        @SaveText
+    </MudButton>
+    @if (AdditionalActions is not null)
+    {
+        @AdditionalActions
+    }
+</MudPaper>
+
+@code {
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    [Parameter] public bool ShowCancel { get; set; } = true;
+    [Parameter] public bool IsDisabled { get; set; }
+
+    [Parameter] public string SaveText { get; set; } = "Guardar";
+    [Parameter] public string CancelText { get; set; } = "Cancelar";
+    [Parameter] public string SaveIcon { get; set; } = Icons.Material.Filled.Save;
+
+    [Parameter] public RenderFragment? AdditionalActions { get; set; }
+}

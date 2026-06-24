@@ -1,0 +1,179 @@
+@namespace AgoraHub360.ERP.Web.Components.Layout
+@using System.Security.Claims
+@inject EmpresaStateService EmpresaState
+@inject SesionUsuarioStateService SesionState
+@inject JwtAuthStateProvider AuthState
+@inject NavigationManager Nav
+@inject IJSRuntime JsRuntime
+@implements IDisposable
+
+<MudAppBar Elevation="1" Class="agora-topbar">
+    <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" OnClick="@(() => DrawerToggle.InvokeAsync())" Class="mr-2" />
+    
+    <MudText Typo="@Typo.subtitle1" Class="ml-2 font-weight-bold agora-topbar-title">
+        AgoraHub360 ERP
+    </MudText>
+
+    <MudSpacer />
+
+    @* Selector de Empresa *@
+    @if (EmpresaState.Empresas.Count > 1)
+    {
+        <MudSelect T="int"
+                   Value="@(EmpresaState.EmpresaActivaId ?? 0)"
+                   ValueChanged="@OnEmpresaChangedAsync"
+                   Dense="true"
+                   Variant="@Variant.Outlined"
+                   Class="agora-tenant-selector"
+                   AnchorOrigin="@Origin.BottomCenter"
+                   Disabled="_changingEmpresa">
+            <PrependContent>
+                <MudIcon Icon="@Icons.Material.Filled.Business" Size="@Size.Small" Color="Color.Primary" />
+            </PrependContent>
+            @foreach (var emp in EmpresaState.Empresas.Where(e => e.Activo))
+            {
+                <MudSelectItem T="int" Value="@emp.Id">@emp.Nombre</MudSelectItem>
+            }
+        </MudSelect>
+    }
+    else if (EmpresaState.EmpresaActiva is not null)
+    {
+        <MudChip T="string" Size="@Size.Small" Color="@Color.Primary" Variant="@Variant.Outlined" Class="mr-2">
+            <MudIcon Icon="@Icons.Material.Filled.Business" Size="@Size.Small" Class="mr-1" />
+            @EmpresaState.EmpresaActiva.Nombre
+        </MudChip>
+    }
+    else
+    {
+        <MudChip T="string" Size="@Size.Small" Color="@Color.Default" Variant="@Variant.Outlined" Class="mr-2">
+            <MudIcon Icon="@Icons.Material.Filled.Business" Size="@Size.Small" Class="mr-1" />
+            Empresa no seleccionada
+        </MudChip>
+    }
+
+    @* Sucursal *@
+    @if (SesionState.Sucursales.Count > 1)
+    {
+        <MudSelect T="int?"
+                   Value="@SesionState.SucursalActivaId"
+                   ValueChanged="@OnSucursalChangedAsync"
+                   Dense="true"
+                   Variant="@Variant.Outlined"
+                   AnchorOrigin="@Origin.BottomCenter"
+                   Class="agora-tenant-selector">
+            <PrependContent>
+                <MudIcon Icon="@Icons.Material.Filled.Store" Size="@Size.Small" Color="Color.Primary" />
+            </PrependContent>
+            @foreach (var suc in SesionState.Sucursales.Where(x => x.Activo))
+            {
+                <MudSelectItem T="int?" Value="@suc.SucursalId">Sucursal #@suc.SucursalId</MudSelectItem>
+            }
+        </MudSelect>
+    }
+    else if (SesionState.SucursalActivaId.HasValue)
+    {
+        <MudChip T="string" Size="@Size.Small" Color="@Color.Tertiary" Variant="@Variant.Outlined" Class="mr-2">
+            <MudIcon Icon="@Icons.Material.Filled.Store" Size="@Size.Small" Class="mr-1" />
+            Sucursal #@SesionState.SucursalActivaId
+        </MudChip>
+    }
+
+    @* Menú de Usuario *@
+    <AuthorizeView>
+        <Authorized>
+            <MudMenu Direction="@Direction.Right" Class="agora-user-menu">
+                <ActivatorContent Context="menuContext">
+                    <MudIconButton Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Inherit" Size="@Size.Medium" Class="ml-2" />
+                </ActivatorContent>
+                <ChildContent>
+                    <MudMenuItem>
+                        <div class="d-flex flex-column px-2 py-1">
+                            <MudText Typo="@Typo.subtitle2">@context.User.Identity?.Name</MudText>
+                            <MudText Typo="@Typo.caption" Class="mud-text-secondary">@context.User.FindFirst(ClaimTypes.Email)?.Value</MudText>
+                        </div>
+                    </MudMenuItem>
+                    <MudDivider />
+                    <MudMenuItem OnClick="GoToProfile">
+                        <MudIcon Icon="@Icons.Material.Filled.Person" Size="@Size.Small" Class="mr-2" />
+                        Mi Perfil
+                    </MudMenuItem>
+                    <MudMenuItem OnClick="GoToConfig">
+                        <MudIcon Icon="@Icons.Material.Filled.Settings" Size="@Size.Small" Class="mr-2" />
+                        Configuración
+                    </MudMenuItem>
+                    <MudDivider />
+                    <MudMenuItem OnClick="HandleLogout">
+                        <MudIcon Icon="@Icons.Material.Filled.Logout" Size="@Size.Small" Class="mr-2" Color="Color.Error" />
+                        <MudText Color="Color.Error">Cerrar Sesión</MudText>
+                    </MudMenuItem>
+                </ChildContent>
+            </MudMenu>
+        </Authorized>
+        <NotAuthorized>
+            <MudButton Variant="@Variant.Filled" Color="@Color.Primary" Size="@Size.Small" Href="/login" Class="ml-2">
+                <MudIcon Icon="@Icons.Material.Filled.Login" Size="@Size.Small" Class="mr-1" />
+                Iniciar Sesión
+            </MudButton>
+        </NotAuthorized>
+    </AuthorizeView>
+</MudAppBar>
+
+@code {
+    [Parameter] public EventCallback DrawerToggle { get; set; }
+
+    private bool _changingEmpresa;
+
+    protected override void OnInitialized()
+    {
+        EmpresaState.OnChange += StateHasChanged;
+        SesionState.OnChange += StateHasChanged;
+    }
+
+    private async Task OnEmpresaChangedAsync(int empresaId)
+    {
+        if (empresaId <= 0 || empresaId == EmpresaState.EmpresaActivaId) return;
+
+        var empresa = EmpresaState.Empresas.FirstOrDefault(emp => emp.Id == empresaId);
+        if (empresa is null) return;
+
+        _changingEmpresa = true;
+        var result = await EmpresaState.CambiarEmpresaActivaAsync(empresa.Id);
+        _changingEmpresa = false;
+
+        if (result.Success)
+        {
+            await SesionState.InitializeAsync(forceReload: true);
+            Nav.NavigateTo(Nav.Uri, forceLoad: true);
+        }
+    }
+
+    private async Task OnSucursalChangedAsync(int? sucursalId)
+    {
+        if (sucursalId.HasValue)
+            await SesionState.SetSucursalActivaAsync(sucursalId.Value);
+    }
+
+    private void GoToProfile()
+    {
+        Nav.NavigateTo("/perfil");
+    }
+
+    private void GoToConfig()
+    {
+        Nav.NavigateTo("/config/usuarios");
+    }
+
+    private async Task HandleLogout()
+    {
+        await EmpresaState.ClearAsync();
+        await SesionState.ClearAsync();
+        await AuthState.LogoutAsync();
+        Nav.NavigateTo("/login", forceLoad: true);
+    }
+
+    public void Dispose()
+    {
+        EmpresaState.OnChange -= StateHasChanged;
+        SesionState.OnChange -= StateHasChanged;
+    }
+}

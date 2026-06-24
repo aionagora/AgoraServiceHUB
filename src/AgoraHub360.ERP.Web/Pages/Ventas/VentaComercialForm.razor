@@ -6,6 +6,8 @@
 @using AgoraHub360.ERP.Shared.DTOs.Sucursal
 @using AgoraHub360.ERP.Shared.DTOs.Ventas
 @using MdmClienteDto = AgoraHub360.ERP.Shared.DTOs.MDM.ClienteDto
+@inject IJSRuntime JSRuntime
+@inject PdfDownloadService PdfDownloadService
 @inject VentaHttpService VentaService
 @inject FacturaVentaHttpService FacturaVentaService
 @inject ClienteHttpService ClienteService
@@ -102,24 +104,29 @@
             <DataAnnotationsValidator />
 
             <div class="card shadow-sm mb-3">
-                <div class="card-header bg-light fw-bold">
-                    <i class="bi bi-journal-text me-1"></i> Datos de Venta
+                <div class="card-header bg-light fw-bold d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-journal-text me-1"></i> Datos de Venta</span>
+                    <span class="small text-muted">
+                        <span class="badge bg-light text-dark me-2"><i class="bi bi-currency-exchange me-1"></i>Moneda: @form.MonedaCodigo</span>
+                        <span class="badge bg-light text-dark"><i class="bi bi-graph-up-arrow me-1"></i>TC: @form.TipoCambio.ToString("N4")</span>
+                    </span>
                 </div>
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-3">
-                            <label class="form-label">Tipo Venta</label>
-                            <InputSelect class="form-select form-select-sm" @bind-Value="form.TipoVenta" disabled="@(!IsNew)">
-                                @foreach (var opt in tipoVentaOptions)
-                                {
-                                    <option value="@opt">@opt</option>
-                                }
-                            </InputSelect>
+                            <label class="form-label">Fecha Venta</label>
+                            <InputText class="form-control form-control-sm"
+                                       type="datetime-local"
+                                       @bind-Value="fechaVentaLocalTexto"
+                                       @bind-Value:event="oninput" />
                         </div>
 
                         <div class="col-md-3">
-                            <label class="form-label">Pedido Venta Id</label>
-                            <InputNumber class="form-control form-control-sm" @bind-Value="form.PedidoVentaId" disabled="@(form.TipoVenta != "DesdePedido")" />
+                            <label class="form-label">Fecha Vencimiento Pago</label>
+                            <InputDate TValue="DateTime?" class="form-control form-control-sm"
+                                       Value="form.FechaVencimientoPago"
+                                       ValueChanged="OnFechaVencimientoChanged"
+                                       ValueExpression="() => form.FechaVencimientoPago" />
                         </div>
 
                         <div class="col-md-3">
@@ -147,32 +154,6 @@
                             </InputSelect>
                         </div>
 
-                        <div class="col-md-3">
-                            <label class="form-label">Fecha Venta</label>
-                            <InputText class="form-control form-control-sm"
-                                       type="datetime-local"
-                                       @bind-Value="fechaVentaLocalTexto"
-                                       @bind-Value:event="oninput" />
-                        </div>
-
-                        <div class="col-md-3">
-                            <label class="form-label">Fecha Vencimiento Pago</label>
-                            <InputDate TValue="DateTime?" class="form-control form-control-sm"
-                                       Value="form.FechaVencimientoPago"
-                                       ValueChanged="OnFechaVencimientoChanged"
-                                       ValueExpression="() => form.FechaVencimientoPago" />
-                        </div>
-
-                        <div class="col-md-3">
-                            <label class="form-label">Moneda Código</label>
-                            <InputText class="form-control form-control-sm" @bind-Value="form.MonedaCodigo" />
-                        </div>
-
-                        <div class="col-md-3">
-                            <label class="form-label">Tipo Cambio</label>
-                            <InputNumber class="form-control form-control-sm text-end" @bind-Value="form.TipoCambio" />
-                        </div>
-
                         <div class="col-md-12">
                             <label class="form-label">Observaciones</label>
                             <InputText class="form-control form-control-sm" @bind-Value="form.Observaciones" />
@@ -180,6 +161,13 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Campos ocultos para TipoVenta y PedidoVentaId -->
+            <input type="hidden" @bind="form.TipoVenta" />
+            @if (form.PedidoVentaId.HasValue)
+            {
+                <input type="hidden" @bind="form.PedidoVentaId" />
+            }
 
             <div class="card shadow-sm mb-3">
                 <div class="card-header bg-light fw-bold d-flex justify-content-between align-items-center">
@@ -241,41 +229,67 @@
             </div>
 
             <div class="card shadow-sm mb-3">
-                <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                    <span class="fw-bold"><i class="bi bi-box-seam me-1"></i> Detalle Productos / Servicios</span>
-                    <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-sm btn-outline-primary" @onclick="AgregarProducto">
-                            <i class="bi bi-plus-circle me-1"></i> Agregar producto
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="AgregarServicio">
-                            <i class="bi bi-plus-circle me-1"></i> Agregar servicio
-                        </button>
+                <div class="card-header bg-light d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fw-bold"><i class="bi bi-box-seam me-1"></i> Detalle:</span>
+                        <InputSelect class="form-select form-select-sm" style="width:auto;min-width:130px;"
+                                     @bind-Value="form.TipoDetalleVenta"
+                                     @bind-Value:after="OnTipoDetalleVentaChanged">
+                            <option value="Producto">Producto</option>
+                            <option value="Servicio">Servicio</option>
+                        </InputSelect>
                     </div>
                 </div>
-                <div class="card-body p-0">
+                <div class="card-body">
+                    @* Buscador rápido *@
+                    <div class="input-group input-group-sm mb-3">
+                        <input type="text" class="form-control"
+                               placeholder="Buscar por código, SKU o nombre del producto..."
+                               @bind="busquedaRapidaTexto"
+                               @bind:event="oninput"
+                               @onfocus="OnBuscarProductoFocus"
+                               @onkeydown="OnBusquedaRapidaKeyDown" />
+                        <button type="button" class="btn btn-primary" @onclick="AgregarProductoPorBusquedaActual" disabled="@(string.IsNullOrWhiteSpace(busquedaRapidaTexto))">
+                            <i class="bi bi-plus-circle me-1"></i> Adicionar
+                        </button>
+                    </div>
+
+                    @if (sugerenciasBusqueda.Count > 0)
+                    {
+                        <div class="list-group shadow-sm mb-3" style="max-height: 200px; overflow-y: auto;">
+                            @foreach (var sug in sugerenciasBusqueda)
+                            {
+                                <button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+                                        @onclick="() => AgregarProductoPorBusqueda(sug)">
+                                    <div>
+                                        <span class="fw-semibold">@sug.NombreComercial</span>
+                                        <small class="text-muted d-block">@sug.Sku @(string.IsNullOrEmpty(sug.CodigoInterno) ? "" : $" | {sug.CodigoInterno}")</small>
+                                    </div>
+                                    <span class="badge bg-primary rounded-pill">Agregar</span>
+                                </button>
+                            }
+                        </div>
+                    }
+
                     @if (form.Detalles.Count == 0)
                     {
-                        <div class="text-center py-4 text-muted">Agregue líneas de producto o servicio.</div>
+                        <div class="text-center py-4 text-muted">Agregue líneas usando el buscador rápido.</div>
                     }
                     else
                     {
                         <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
+                            <table class="table table-sm table-bordered align-middle mb-0" style="font-size:0.85rem;">
                                 <thead class="table-light">
                                     <tr>
-                                        <th>Tipo</th>
-                                        <th>Ítem catálogo</th>
-                                        <th>Almacén</th>
-                                        <th>Descripción</th>
-                                        <th>Detalle adicional</th>
-                                        <th class="text-end">Cant.</th>
-                                        <th class="text-end">P.Unit</th>
-                                        <th class="text-end">Desc %</th>
-                                        <th class="text-end">Desc Monto</th>
-                                        <th class="text-end">Imp Monto</th>
-                                        <th class="text-end">Total Línea</th>
-                                        <th class="text-center">Desc. Inv.</th>
-                                        <th></th>
+                                        <th class="text-center" style="width:32px;">#</th>
+                                        <th style="width:80px;">SKU</th>
+                                        <th style="min-width:120px;">Producto / Servicio</th>
+                                        <th style="min-width:100px;">Detalle</th>
+                                        <th class="text-end" style="width:75px;">Cantidad</th>
+                                        <th class="text-end" style="width:90px;">Precio Unit.</th>
+                                        <th class="text-end" style="width:70px;">Descuento</th>
+                                        <th class="text-end" style="width:90px;">Total</th>
+                                        <th class="text-center" style="width:36px;"></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -283,92 +297,33 @@
                                     {
                                         var det = form.Detalles[i];
                                         var idx = i;
-                                        <tr>
+                                        var productoNombre = ObtenerNombreProducto(det);
+                                        var codigoSku = ObtenerCodigoSku(det);
+                                        var esLineaRecienAgregada = det.Cantidad == 0 && string.IsNullOrWhiteSpace(det.DetalleAdicional);
+                                        <tr style="@(esLineaRecienAgregada ? "background-color:#eef8ff;" : "")">
+                                            <td class="text-center text-muted small">@(idx + 1)</td>
+                                            <td><small class="text-muted">@codigoSku</small></td>
+                                            <td><span class="fw-semibold">@(string.IsNullOrWhiteSpace(det.Descripcion) ? (productoNombre ?? "(sin descripción)") : det.Descripcion)</span></td>
                                             <td>
-                                                <InputSelect TValue="string" class="form-select form-select-sm"
-                                                             Value="det.TipoItemVenta"
-                                                             ValueChanged="@((string v) => OnTipoItemChanged(idx, v))"
-                                                             ValueExpression="@(() => det.TipoItemVenta)">
-                                                    @foreach (var tipo in tipoItemOptions)
-                                                    {
-                                                        <option value="@tipo">@tipo</option>
-                                                    }
-                                                </InputSelect>
+                                                <InputText class="form-control form-control-sm" placeholder="Seriales / observaciones..."
+                                                           @bind-Value="det.DetalleAdicional" />
                                             </td>
                                             <td>
-                                                @if (EsProducto(det))
-                                                {
-                                                    <InputSelect TValue="long?" class="form-select form-select-sm"
-                                                                 Value="det.CompanyProductId"
-                                                                 ValueChanged="@((long? v) => OnCompanyProductSelected(idx, v))"
-                                                                 ValueExpression="@(() => det.CompanyProductId)">
-                                                        <option value="">-- Seleccione --</option>
-                                                        @foreach (var p in productosCatalogados)
-                                                        {
-                                                            <option value="@p.CompanyProductId">@p.Sku - @p.NombreComercial</option>
-                                                        }
-                                                    </InputSelect>
-                                                }
-                                                else
-                                                {
-                                                    <InputSelect TValue="long?" class="form-select form-select-sm"
-                                                                 Value="det.CompanyProductId"
-                                                                 ValueChanged="@((long? v) => OnCompanyProductSelected(idx, v))"
-                                                                 ValueExpression="@(() => det.CompanyProductId)">
-                                                        <option value="">-- Seleccione servicio --</option>
-                                                        @foreach (var p in serviciosCatalogados)
-                                                        {
-                                                            <option value="@p.CompanyProductId">@p.Sku - @p.NombreComercial</option>
-                                                        }
-                                                    </InputSelect>
-                                                }
+                                                <InputNumber class="form-control form-control-sm text-end" placeholder="Cant."
+                                                             @bind-Value="det.Cantidad"
+                                                             @bind-Value:after="RecalcularTotales" />
                                             </td>
                                             <td>
-                                                @if (EsProducto(det))
-                                                {
-                                                    <InputSelect class="form-select form-select-sm" @bind-Value="det.AlmacenId">
-                                                        <option value="">-- Opcional --</option>
-                                                        @foreach (var a in almacenesFiltrados)
-                                                        {
-                                                            <option value="@a.Id">@a.Nombre</option>
-                                                        }
-                                                    </InputSelect>
-                                                }
-                                                else
-                                                {
-                                                    <span class="text-muted small">No aplica</span>
-                                                }
+                                                <InputNumber class="form-control form-control-sm text-end" @bind-Value="det.PrecioUnitario"
+                                                             @bind-Value:after="RecalcularTotales" />
                                             </td>
                                             <td>
-                                                <InputText class="form-control form-control-sm" @bind-Value="det.Descripcion" />
-                                            </td>
-                                            <td>
-                                                <InputTextArea class="form-control form-control-sm"
-                                                               rows="2"
-                                                               placeholder="Detalle adicional del producto/servicio..."
-                                                               @bind-Value="det.DetalleAdicional" />
-                                            </td>
-                                            <td>
-                                                <InputNumber class="form-control form-control-sm text-end" @bind-Value="det.Cantidad" @bind-Value:after="RecalcularTotales" />
-                                            </td>
-                                            <td>
-                                                <InputNumber class="form-control form-control-sm text-end" @bind-Value="det.PrecioUnitario" @bind-Value:after="RecalcularTotales" />
-                                            </td>
-                                            <td>
-                                                <InputNumber class="form-control form-control-sm text-end" @bind-Value="det.DescuentoPorcentaje" @bind-Value:after="RecalcularTotales" />
-                                            </td>
-                                            <td>
-                                                <InputNumber class="form-control form-control-sm text-end" @bind-Value="det.DescuentoMonto" @bind-Value:after="RecalcularTotales" />
-                                            </td>
-                                            <td>
-                                                <InputNumber class="form-control form-control-sm text-end" @bind-Value="det.ImpuestoMonto" @bind-Value:after="RecalcularTotales" />
+                                                <InputNumber class="form-control form-control-sm text-end" @bind-Value="det.DescuentoPorcentaje"
+                                                             @bind-Value:after="RecalcularTotales" />
                                             </td>
                                             <td class="text-end fw-semibold">@FormatMoney(CalcularTotalLinea(det))</td>
                                             <td class="text-center">
-                                                <InputCheckbox @bind-Value="det.DescuentaInventario" disabled="true" />
-                                            </td>
-                                            <td>
-                                                <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => RequestRemoveDetalleAsync(idx)">
+                                                <button type="button" class="btn btn-sm btn-outline-danger py-0 px-1" @onclick="() => RequestRemoveDetalleAsync(idx)">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
                                             </td>
@@ -734,6 +689,10 @@
             </div>
 
             <div class="d-flex justify-content-end gap-2 mb-4">
+                <button type="button" class="btn btn-outline-info" @onclick="AbrirModalImprimir" disabled="@isSaving">
+                    <i class="bi bi-printer me-1"></i> @(IsNew ? "Vista previa" : "Imprimir Venta")
+                </button>
+
                 <button type="button" class="btn btn-outline-secondary" @onclick="VolverListado" disabled="@isSaving">
                     <i class="bi bi-arrow-left me-1"></i> Volver al listado
                 </button>
@@ -760,6 +719,121 @@
         </EditForm>
     }
 </div>
+
+@if (showModalImprimir)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0, 0, 0, .5);" @onclick:stopPropagation>
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+            <div class="modal-content" style="border:none; border-radius:0;">
+                <div class="modal-header no-print" style="background:#1a1a2e; color:white; border-radius:0; padding:10px 20px;">
+                    <h5 class="modal-title mb-0" style="font-size:1rem;"><i class="bi bi-printer me-2"></i>Vista previa de impresión</h5>
+                    <button type="button" class="btn-close btn-close-white no-print" @onclick="CerrarModalImprimir" style="font-size:0.8rem;"></button>
+                </div>
+
+                @* ═══════ COMPROBANTE IMPRIMIBLE ═══════ *@
+                <div class="modal-body p-4" id="venta-print-area">
+
+                    @* Encabezado corporativo *@
+                    <div class="text-center mb-4" style="border-bottom:2px solid #1a1a2e; padding-bottom:12px;">
+                        <h3 class="mb-0" style="font-weight:600; letter-spacing:1px; color:#1a1a2e;">NOTA DE VENTA</h3>
+                        <div style="font-size:0.85rem; color:#555; margin-top:4px;">@form.NumeroVentaVisual</div>
+                    </div>
+
+                    @* Datos generales *@
+                    <div style="display:flex; justify-content:space-between; margin-bottom:16px; font-size:0.8rem; line-height:1.7;">
+                        <div style="width:48%;">
+                            <div><strong>Cliente:</strong> @(clienteSeleccionadoActual?.RazonSocial ?? "-")</div>
+                            <div><strong>NIT:</strong> @(clienteSeleccionadoActual?.NIT ?? "-")</div>
+                            <div><strong>Dirección:</strong> @(clienteSeleccionadoActual?.Direccion ?? "-")</div>
+                        </div>
+                        <div style="width:48%; text-align:right;">
+                            <div><strong>Fecha:</strong> @form.FechaVenta.ToLocalTime().ToString("dd/MM/yyyy")</div>
+                            <div><strong>Vto. Pago:</strong> @(form.FechaVencimientoPago?.ToLocalTime().ToString("dd/MM/yyyy") ?? "-")</div>
+                            <div><strong>Moneda:</strong> @form.MonedaCodigo <span style="color:#888;">TC: @form.TipoCambio.ToString("N4")</span></div>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; justify-content:space-between; margin-bottom:16px; font-size:0.78rem; color:#555; line-height:1.6;">
+                        <div style="width:48%;"><strong>Sucursal:</strong> @ObtenerNombreSucursal()</div>
+                        <div style="width:48%; text-align:right;"><strong>Almacén:</strong> @ObtenerNombreAlmacen()</div>
+                    </div>
+
+                    @* Tabla detalle *@
+                    <table style="width:100%; border-collapse:collapse; font-size:0.78rem; margin-bottom:16px;">
+                        <thead>
+                            <tr style="background:#f0f0f0; border-bottom:1px solid #ccc;">
+                                <th style="padding:5px 4px; text-align:center; width:28px;">#</th>
+                                <th style="padding:5px 4px; text-align:left; width:60px;">SKU</th>
+                                <th style="padding:5px 4px; text-align:left;">Producto / Servicio</th>
+                                <th style="padding:5px 4px; text-align:left;">Detalle</th>
+                                <th style="padding:5px 4px; text-align:right; width:52px;">Cant.</th>
+                                <th style="padding:5px 4px; text-align:right; width:68px;">P.Unit</th>
+                                <th style="padding:5px 4px; text-align:right; width:55px;">Desc.</th>
+                                <th style="padding:5px 4px; text-align:right; width:72px;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (var i = 0; i < form.Detalles.Count; i++)
+                            {
+                                var d = form.Detalles[i];
+                                <tr style="border-bottom:1px solid #eee;">
+                                    <td style="padding:4px; text-align:center;">@(i + 1)</td>
+                                    <td style="padding:4px; text-align:left;">@ObtenerCodigoSku(d)</td>
+                                    <td style="padding:4px; text-align:left;">@d.Descripcion</td>
+                                    <td style="padding:4px; text-align:left;">@(d.DetalleAdicional ?? "")</td>
+                                    <td style="padding:4px; text-align:right;">@d.Cantidad.ToString("N2")</td>
+                                    <td style="padding:4px; text-align:right;">@FormatMoney(d.PrecioUnitario)</td>
+                                    <td style="padding:4px; text-align:right;">@FormatMoney(d.DescuentoPorcentaje > 0 ? (d.Cantidad * d.PrecioUnitario * d.DescuentoPorcentaje / 100m) + d.DescuentoMonto : d.DescuentoMonto)</td>
+                                    <td style="padding:4px; text-align:right; font-weight:600;">@FormatMoney(CalcularTotalLinea(d))</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr><td colspan="7" style="padding:4px; text-align:right; font-weight:600; border-top:2px solid #1a1a2e;">Subtotal</td><td style="padding:4px; text-align:right; border-top:2px solid #1a1a2e;">@FormatMoney(resumen.Subtotal)</td></tr>
+                            <tr><td colspan="7" style="padding:4px; text-align:right;">Descuento</td><td style="padding:4px; text-align:right;">@FormatMoney(resumen.DescuentoTotal)</td></tr>
+                            <tr style="background:#f8f8f8;"><td colspan="7" style="padding:6px 4px; text-align:right; font-weight:700; font-size:0.9rem;">TOTAL</td><td style="padding:6px 4px; text-align:right; font-weight:700; font-size:0.9rem;">@FormatMoney(resumen.Total)</td></tr>
+                        </tfoot>
+                    </table>
+
+                    @if (!string.IsNullOrWhiteSpace(form.Observaciones))
+                    {
+                        <div style="margin-top:8px; font-size:0.78rem; color:#555; border-top:1px dashed #ccc; padding-top:8px;">
+                            <strong>Observaciones:</strong> @form.Observaciones
+                        </div>
+                    }
+
+                    @* Pie corporativo *@
+                    <div style="margin-top:20px; text-align:center; font-size:0.7rem; color:#999; border-top:1px solid #ddd; padding-top:10px;">
+                        Documento generado por AgoraHUB360 ERP — @DateTime.Now.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                    </div>
+                </div>
+
+                <div class="modal-footer no-print" style="border-top:1px solid #eee; padding:10px 20px;">
+                    <button type="button" class="btn btn-outline-secondary btn-sm no-print" @onclick="CerrarModalImprimir" style="border-radius:0;">Cerrar</button>
+                    <button type="button" class="btn btn-sm no-print" style="background:#1a1a2e; color:white; border-radius:0;" @onclick="EjecutarImpresion">
+                        <i class="bi bi-printer me-1"></i> Imprimir
+                    </button>
+                    <button type="button" class="btn btn-sm no-print" style="background:#0d6efd; color:white; border-radius:0;" @onclick="DescargarVentaPdfAsync">
+                        <i class="bi bi-filetype-pdf me-1"></i> Descargar PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* ═══════ CSS IMPRESIÓN ═══════ *@
+<style>
+    @@media print {
+        @@page { size: letter; margin: 12mm; }
+        body * { visibility: hidden !important; }
+        #venta-print-area, #venta-print-area * { visibility: visible !important; }
+        #venta-print-area { position: absolute; left: 0; top: 0; width: 100%; }
+        .no-print, .modal-header, .modal-footer, .btn { display: none !important; }
+        #venta-print-area table { page-break-inside: auto; }
+        #venta-print-area tr { page-break-inside: avoid; }
+    }
+</style>
 
 @if (showModal)
 {
@@ -833,6 +907,242 @@
     private bool razonSocialFacturaEditadaManual;
     private bool suppressFiscalManualTracking;
     private bool fechaVencimientoModificadaManualmente;
+    private bool showModalImprimir;
+    private string busquedaRapidaTexto = string.Empty;
+    private List<CompanyProductDto> sugerenciasBusqueda = new();
+
+    private void MostrarMensajeImprimirBorrador()
+    {
+        errorMessage = "Debe guardar la venta antes de imprimir.";
+    }
+
+    private void AbrirModalImprimir()
+    {
+        if (IsNew || !form.Id.HasValue || form.Id.Value <= 0)
+        {
+            errorMessage = "Debe guardar la venta antes de imprimir.";
+            return;
+        }
+        showModalImprimir = true;
+    }
+
+    private void CerrarModalImprimir()
+    {
+        showModalImprimir = false;
+    }
+
+    private async Task EjecutarImpresion()
+    {
+        await Task.Delay(200);
+        await JSRuntime.InvokeVoidAsync("window.print");
+    }
+
+    private async Task DescargarVentaPdfAsync()
+    {
+        if (IsNew || !form.Id.HasValue || form.Id.Value <= 0)
+        {
+            errorMessage = "Debe guardar la venta antes de descargar PDF.";
+            return;
+        }
+        try
+        {
+            await PdfDownloadService.DownloadVentaPdfAsync(
+                form.Id.Value,
+                form.NumeroVentaVisual);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("404"))
+        {
+            errorMessage = "No se encontró el endpoint PDF de la venta.";
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("500"))
+        {
+            errorMessage = "Error interno al generar el PDF de la venta.";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"No se pudo descargar el PDF: {ex.Message}";
+        }
+    }
+
+    private string ObtenerNombreSucursal()
+    {
+        if (form.SucursalId <= 0) return "-";
+        var s = sucursales.FirstOrDefault(x => x.Id == form.SucursalId);
+        return s?.Nombre ?? "-";
+    }
+
+    private string ObtenerNombreAlmacen()
+    {
+        if (!form.AlmacenId.HasValue) return "-";
+        var a = almacenes.FirstOrDefault(x => x.Id == form.AlmacenId.Value);
+        return a?.Nombre ?? "-";
+    }
+
+    private void OnBuscarProductoFocus()
+    {
+        if (!form.AlmacenId.HasValue)
+            return;
+
+        MostrarSugerenciasTop20();
+    }
+
+    private void MostrarSugerenciasTop20()
+    {
+        var catalogo = string.Equals(form.TipoDetalleVenta, "Servicio", StringComparison.OrdinalIgnoreCase)
+            ? serviciosCatalogados
+            : productosCatalogados;
+
+        var termino = (busquedaRapidaTexto ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(termino))
+        {
+            sugerenciasBusqueda = catalogo.Take(20).ToList();
+            return;
+        }
+
+        sugerenciasBusqueda = catalogo
+            .Where(p =>
+                (p.Sku?.Contains(termino, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (p.CodigoInterno?.Contains(termino, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (p.NombreComercial?.Contains(termino, StringComparison.OrdinalIgnoreCase) ?? false))
+            .Take(20)
+            .ToList();
+    }
+
+    private async Task OnBusquedaRapidaKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await AgregarProductoPorBusquedaActual();
+        }
+        else if (e.Key == "Escape")
+        {
+            sugerenciasBusqueda = new();
+        }
+        else
+        {
+            MostrarSugerenciasTop20();
+        }
+        await Task.CompletedTask;
+    }
+
+    private async Task AgregarProductoPorBusquedaActual()
+    {
+        var termino = (busquedaRapidaTexto ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(termino))
+        {
+            ShowWarningModal("Ingrese un código, nombre o SKU para buscar.");
+            return;
+        }
+
+        if (!form.AlmacenId.HasValue)
+        {
+            ShowWarningModal("Seleccione un almacén en Datos de Venta para consultar disponibilidad.");
+            return;
+        }
+
+        // Buscar coincidencia exacta primero
+        var catalogo = string.Equals(form.TipoDetalleVenta, "Servicio", StringComparison.OrdinalIgnoreCase)
+            ? serviciosCatalogados
+            : productosCatalogados;
+
+        var exacta = catalogo.FirstOrDefault(p =>
+            string.Equals(p.Sku, termino, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(p.CodigoInterno, termino, StringComparison.OrdinalIgnoreCase));
+
+        if (exacta is not null)
+        {
+            await AgregarProductoPorBusqueda(exacta);
+            return;
+        }
+
+        // Coincidencia parcial — mostrar sugerencias
+        MostrarSugerenciasTop20();
+        if (sugerenciasBusqueda.Count == 1)
+        {
+            await AgregarProductoPorBusqueda(sugerenciasBusqueda[0]);
+        }
+        else if (sugerenciasBusqueda.Count == 0)
+        {
+            ShowWarningModal("No se encontraron productos con el criterio ingresado.");
+        }
+    }
+
+    private async Task AgregarProductoPorBusqueda(CompanyProductDto producto)
+    {
+        if (producto is null)
+            return;
+
+        var esServicio = serviciosCatalogados.Any(s => s.CompanyProductId == producto.CompanyProductId);
+        var tipoItem = esServicio ? "Servicio" : "Producto";
+
+        // Verificar tipo único
+        if (!string.Equals(tipoItem, form.TipoDetalleVenta, StringComparison.OrdinalIgnoreCase))
+        {
+            ShowWarningModal($"No puede agregar un {tipoItem} porque la venta está configurada para {form.TipoDetalleVenta}s.");
+            return;
+        }
+
+        // Si ya existe en la grilla, aumentar cantidad
+        var existente = form.Detalles.FirstOrDefault(d => d.CompanyProductId == producto.CompanyProductId);
+        if (existente is not null)
+        {
+            existente.Cantidad += 1;
+            RecalcularTotales();
+            busquedaRapidaTexto = string.Empty;
+            sugerenciasBusqueda = new();
+            return;
+        }
+
+        form.Detalles.Add(new VentaDetalleDto
+        {
+            TipoItemVenta = tipoItem,
+            CompanyProductId = producto.CompanyProductId,
+            AlmacenId = esServicio ? null : form.AlmacenId,
+            Descripcion = producto.NombreComercial ?? string.Empty,
+            DetalleAdicional = string.Empty,
+            Cantidad = 0,
+            PrecioUnitario = 0m,
+            DescuentoPorcentaje = 0,
+            DescuentoMonto = 0,
+            ImpuestoMonto = 0,
+            DescuentaInventario = !esServicio
+        });
+
+        RecalcularTotales();
+        busquedaRapidaTexto = string.Empty;
+        sugerenciasBusqueda = new();
+        await Task.CompletedTask;
+    }
+
+    private ProductDto2? ObtenerProductoBase(CompanyProductDto cp)
+    {
+        if (cp is null) return null;
+        return productosBasePorId.TryGetValue(cp.ProductId, out var p) ? p : null;
+    }
+
+    private string? ObtenerNombreProducto(VentaDetalleDto det)
+    {
+        if (!det.CompanyProductId.HasValue)
+            return null;
+        var cp = productos.FirstOrDefault(p => p.CompanyProductId == det.CompanyProductId.Value);
+        return cp?.NombreComercial;
+    }
+
+    private string ObtenerCodigoSku(VentaDetalleDto det)
+    {
+        if (!det.CompanyProductId.HasValue)
+            return "N/D";
+        var cp = productos.FirstOrDefault(p => p.CompanyProductId == det.CompanyProductId.Value);
+        return cp?.Sku ?? cp?.CodigoInterno ?? "N/D";
+    }
+
+    private string? ObtenerCodigoProducto(VentaDetalleDto det)
+    {
+        if (!det.CompanyProductId.HasValue)
+            return "-";
+        var cp = productos.FirstOrDefault(p => p.CompanyProductId == det.CompanyProductId.Value);
+        return cp?.Sku ?? "-";
+    }
 
     private void OnFechaVencimientoChanged(DateTime? val)
     {
@@ -842,8 +1152,6 @@
     private const string FechaVentaInputFormat = "yyyy-MM-ddTHH:mm";
     private string fechaVentaLocalTexto = string.Empty;
 
-    private readonly string[] tipoVentaOptions = ["Directa", "DesdePedido"];
-    private readonly string[] tipoItemOptions = ["Producto", "Servicio"];
     private readonly string[] tipoPagoOptions = ["Contado", "Credito", "Mixto"];
     private readonly string[] modoPagoOptions = ["Efectivo", "QR", "Transferencia", "Tarjeta", "Cheque", "Deposito", "Otro"];
 
@@ -1694,7 +2002,7 @@
         form.Detalles.Add(new VentaDetalleDto
         {
             TipoItemVenta = "Producto",
-            Cantidad = 1,
+            Cantidad = 0,
             PrecioUnitario = 0,
             DescuentoPorcentaje = 0,
             DescuentoMonto = 0,
@@ -1711,7 +2019,7 @@
         form.Detalles.Add(new VentaDetalleDto
         {
             TipoItemVenta = "Servicio",
-            Cantidad = 1,
+            Cantidad = 0,
             PrecioUnitario = 0,
             DescuentoPorcentaje = 0,
             DescuentoMonto = 0,
@@ -1722,6 +2030,16 @@
         });
 
         RecalcularTotales();
+    }
+
+    private void OnTipoDetalleVentaChanged()
+    {
+        // Al cambiar el tipo de detalle, limpiar líneas existentes para evitar mezcla
+        if (form.Detalles.Count > 0)
+        {
+            form.Detalles.Clear();
+            RecalcularTotales();
+        }
     }
 
     private void OnTipoItemChanged(int idx, string tipo)
@@ -2064,6 +2382,12 @@
             return;
         }
 
+        if (!form.ClienteId.HasValue || form.ClienteId.Value <= 0)
+        {
+            ShowWarningModal("Debe seleccionar o registrar un cliente antes de confirmar la venta.");
+            return;
+        }
+
         isSaving = true;
         errorMessage = null;
         successMessage = null;
@@ -2229,6 +2553,9 @@
 
     private string? ValidateForm()
     {
+        if (!form.ClienteId.HasValue || form.ClienteId.Value <= 0)
+            return "Debe seleccionar o registrar un cliente antes de guardar la venta.";
+
         if (form.SucursalId <= 0)
             return "Debe seleccionar una sucursal.";
 
@@ -2369,6 +2696,7 @@
         public int? AlmacenId { get; set; }
         public DateTime FechaVenta { get; set; } = DateTime.Now;
         public DateTime? FechaVencimientoPago { get; set; }
+        public string TipoDetalleVenta { get; set; } = "Producto";
         public string? MonedaCodigo { get; set; } = "BOB";
         public decimal TipoCambio { get; set; } = 1m;
         public string? Observaciones { get; set; }

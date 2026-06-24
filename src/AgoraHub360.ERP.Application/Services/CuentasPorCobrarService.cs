@@ -151,16 +151,16 @@ public class CuentasPorCobrarService : ICuentasPorCobrarService
         if (cxc is null)
             return Result<CuentaPorCobrarDetalleDto>.Failure("Cuenta por cobrar no encontrada.");
 
-        // Obtener pagos de la venta asociada a la factura
-        var factura = cxc.FacturaVentaId.HasValue
-            ? await _facturaRepo.GetByIdAsync(cxc.FacturaVentaId.Value, ct)
-            : null;
-        if (cxc.FacturaVentaId.HasValue && factura is null)
+        // Obtener pagos de la venta asociada
+        // Si la CxC se generó desde venta directa (sin factura), FacturaVentaId es null
+        // y se consulta sin factura — eso es válido.
+        FacturaVenta? factura = null;
+        if (cxc.FacturaVentaId.HasValue)
         {
-            // CxC sin factura (originada desde venta directa) — se puede consultar sin factura
+            factura = await _facturaRepo.GetByIdAsync(cxc.FacturaVentaId.Value, ct);
+            // Si la factura referenciada no existe, no bloqueamos — continuamos sin ella
         }
-        else if (factura is null)
-            return Result<CuentaPorCobrarDetalleDto>.Failure("Cuenta por cobrar no encontrada.");
+        // Si no tiene FacturaVentaId, es una CxC originada desde venta directa — válido
 
         var ventaId = factura?.VentaId ?? cxc.VentaId ?? 0;
         var pagos = await _pagoRepo.FindAsync(
@@ -455,6 +455,14 @@ public class CuentasPorCobrarService : ICuentasPorCobrarService
             .OrderBy(c => c.ClienteNombre)
             .ToList();
 
+        var totalPagado = cuentas
+            .Where(c => GetDynamicEstado(c) != EstadoCuentaPorCobrar.Anulada)
+            .Sum(c => c.TotalPagado);
+
+        var saldoPendiente = cuentas
+            .Where(c => GetDynamicEstado(c) != EstadoCuentaPorCobrar.Anulada)
+            .Sum(c => c.SaldoPendiente);
+
         var resumen = new AntiguedadSaldosResumenDto
         {
             Clientes = clientesAgrupados,
@@ -462,7 +470,9 @@ public class CuentasPorCobrarService : ICuentasPorCobrarService
             TotalVencido1A30 = clientesAgrupados.Sum(c => c.Vencido1A30),
             TotalVencido31A60 = clientesAgrupados.Sum(c => c.Vencido31A60),
             TotalVencido61A90 = clientesAgrupados.Sum(c => c.Vencido61A90),
-            TotalVencidoMas90 = clientesAgrupados.Sum(c => c.VencidoMas90)
+            TotalVencidoMas90 = clientesAgrupados.Sum(c => c.VencidoMas90),
+            TotalPagado = totalPagado,
+            SaldoPendiente = saldoPendiente
         };
 
         resumen.TotalGeneral = resumen.TotalNoVencido 

@@ -1,0 +1,21 @@
+@namespace AgoraHub360.ERP.Web.Components.Common
+
+<MudToolBar Class="mb-4" Dense="true" DisableGutters="true">
+    @if (Filters is not null)
+    {
+        <div class="d-flex align-items-center gap-3 flex-grow-1 flex-wrap">
+            @Filters
+        </div>
+    }
+    @if (Actions is not null)
+    {
+        <div class="d-flex align-items-center gap-2 ms-auto">
+            @Actions
+        </div>
+    }
+</MudToolBar>
+
+@code {
+    [Parameter] public RenderFragment? Filters { get; set; }
+    [Parameter] public RenderFragment? Actions { get; set; }
+}
