@@ -6,6 +6,7 @@
 @using AgoraHub360.ERP.Shared.DTOs.Sucursal
 @using AgoraHub360.ERP.Shared.DTOs.Ventas
 @using MdmClienteDto = AgoraHub360.ERP.Shared.DTOs.MDM.ClienteDto
+@inject IJSRuntime JSRuntime
 @inject VentaHttpService VentaService
 @inject FacturaVentaHttpService FacturaVentaService
 @inject ClienteHttpService ClienteService
@@ -687,6 +688,10 @@
             </div>
 
             <div class="d-flex justify-content-end gap-2 mb-4">
+                <button type="button" class="btn btn-outline-info" @onclick="AbrirModalImprimir" disabled="@isSaving">
+                    <i class="bi bi-printer me-1"></i> @(IsNew ? "Vista previa" : "Imprimir Venta")
+                </button>
+
                 <button type="button" class="btn btn-outline-secondary" @onclick="VolverListado" disabled="@isSaving">
                     <i class="bi bi-arrow-left me-1"></i> Volver al listado
                 </button>
@@ -713,6 +718,121 @@
         </EditForm>
     }
 </div>
+
+@if (showModalImprimir)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0, 0, 0, .5);" @onclick:stopPropagation>
+        <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+            <div class="modal-content" style="border:none; border-radius:0;">
+                <div class="modal-header d-print-none" style="background:#1a1a2e; color:white; border-radius:0; padding:10px 20px;">
+                    <h5 class="modal-title mb-0" style="font-size:1rem;"><i class="bi bi-printer me-2"></i>Vista previa de impresión</h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModalImprimir" style="font-size:0.8rem;"></button>
+                </div>
+
+                @* ═══════ COMPROBANTE IMPRIMIBLE ═══════ *@
+                <div class="modal-body p-4" id="venta-print-area">
+
+                    @* Encabezado corporativo *@
+                    <div class="text-center mb-4" style="border-bottom:2px solid #1a1a2e; padding-bottom:12px;">
+                        <h3 class="mb-0" style="font-weight:600; letter-spacing:1px; color:#1a1a2e;">NOTA DE VENTA</h3>
+                        <div style="font-size:0.85rem; color:#555; margin-top:4px;">@form.NumeroVentaVisual</div>
+                    </div>
+
+                    @* Datos generales *@
+                    <div style="display:flex; justify-content:space-between; margin-bottom:16px; font-size:0.8rem; line-height:1.7;">
+                        <div style="width:48%;">
+                            <div><strong>Cliente:</strong> @(clienteSeleccionadoActual?.RazonSocial ?? "-")</div>
+                            <div><strong>NIT:</strong> @(clienteSeleccionadoActual?.NIT ?? "-")</div>
+                            <div><strong>Dirección:</strong> @(clienteSeleccionadoActual?.Direccion ?? "-")</div>
+                        </div>
+                        <div style="width:48%; text-align:right;">
+                            <div><strong>Fecha:</strong> @form.FechaVenta.ToLocalTime().ToString("dd/MM/yyyy")</div>
+                            <div><strong>Vto. Pago:</strong> @(form.FechaVencimientoPago?.ToLocalTime().ToString("dd/MM/yyyy") ?? "-")</div>
+                            <div><strong>Moneda:</strong> @form.MonedaCodigo <span style="color:#888;">TC: @form.TipoCambio.ToString("N4")</span></div>
+                        </div>
+                    </div>
+
+                    <div style="display:flex; justify-content:space-between; margin-bottom:16px; font-size:0.78rem; color:#555; line-height:1.6;">
+                        <div style="width:48%;"><strong>Sucursal:</strong> @ObtenerNombreSucursal()</div>
+                        <div style="width:48%; text-align:right;"><strong>Almacén:</strong> @ObtenerNombreAlmacen()</div>
+                    </div>
+
+                    @* Tabla detalle *@
+                    <table style="width:100%; border-collapse:collapse; font-size:0.78rem; margin-bottom:16px;">
+                        <thead>
+                            <tr style="background:#f0f0f0; border-bottom:1px solid #ccc;">
+                                <th style="padding:5px 4px; text-align:center; width:28px;">#</th>
+                                <th style="padding:5px 4px; text-align:left; width:60px;">SKU</th>
+                                <th style="padding:5px 4px; text-align:left;">Producto / Servicio</th>
+                                <th style="padding:5px 4px; text-align:left;">Detalle</th>
+                                <th style="padding:5px 4px; text-align:right; width:52px;">Cant.</th>
+                                <th style="padding:5px 4px; text-align:right; width:68px;">P.Unit</th>
+                                <th style="padding:5px 4px; text-align:right; width:55px;">Desc.</th>
+                                <th style="padding:5px 4px; text-align:right; width:72px;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (var i = 0; i < form.Detalles.Count; i++)
+                            {
+                                var d = form.Detalles[i];
+                                <tr style="border-bottom:1px solid #eee;">
+                                    <td style="padding:4px; text-align:center;">@(i + 1)</td>
+                                    <td style="padding:4px; text-align:left;">@ObtenerCodigoSku(d)</td>
+                                    <td style="padding:4px; text-align:left;">@d.Descripcion</td>
+                                    <td style="padding:4px; text-align:left;">@(d.DetalleAdicional ?? "")</td>
+                                    <td style="padding:4px; text-align:right;">@d.Cantidad.ToString("N2")</td>
+                                    <td style="padding:4px; text-align:right;">@FormatMoney(d.PrecioUnitario)</td>
+                                    <td style="padding:4px; text-align:right;">@FormatMoney(d.DescuentoPorcentaje > 0 ? (d.Cantidad * d.PrecioUnitario * d.DescuentoPorcentaje / 100m) + d.DescuentoMonto : d.DescuentoMonto)</td>
+                                    <td style="padding:4px; text-align:right; font-weight:600;">@FormatMoney(CalcularTotalLinea(d))</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr><td colspan="7" style="padding:4px; text-align:right; font-weight:600; border-top:2px solid #1a1a2e;">Subtotal</td><td style="padding:4px; text-align:right; border-top:2px solid #1a1a2e;">@FormatMoney(resumen.Subtotal)</td></tr>
+                            <tr><td colspan="7" style="padding:4px; text-align:right;">Descuento</td><td style="padding:4px; text-align:right;">@FormatMoney(resumen.DescuentoTotal)</td></tr>
+                            <tr style="background:#f8f8f8;"><td colspan="7" style="padding:6px 4px; text-align:right; font-weight:700; font-size:0.9rem;">TOTAL</td><td style="padding:6px 4px; text-align:right; font-weight:700; font-size:0.9rem;">@FormatMoney(resumen.Total)</td></tr>
+                        </tfoot>
+                    </table>
+
+                    @if (!string.IsNullOrWhiteSpace(form.Observaciones))
+                    {
+                        <div style="margin-top:8px; font-size:0.78rem; color:#555; border-top:1px dashed #ccc; padding-top:8px;">
+                            <strong>Observaciones:</strong> @form.Observaciones
+                        </div>
+                    }
+
+                    @* Pie corporativo *@
+                    <div style="margin-top:20px; text-align:center; font-size:0.7rem; color:#999; border-top:1px solid #ddd; padding-top:10px;">
+                        Documento generado por AgoraHUB360 ERP — @DateTime.Now.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                    </div>
+                </div>
+
+                <div class="modal-footer d-print-none" style="border-top:1px solid #eee; padding:10px 20px;">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="CerrarModalImprimir" style="border-radius:0;">Cerrar</button>
+                    <button type="button" class="btn btn-sm" style="background:#1a1a2e; color:white; border-radius:0;" @onclick="EjecutarImpresion">
+                        <i class="bi bi-printer me-1"></i> Imprimir
+                    </button>
+                    <button type="button" class="btn btn-sm" style="background:#dc3545; color:white; border-radius:0;" @onclick="GenerarPdfAsync">
+                        <i class="bi bi-filetype-pdf me-1"></i> PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@* ═══════ CSS IMPRESIÓN ═══════ *@
+<style>
+    @@media print {
+        @@page { size: letter; margin: 12mm; }
+        body * { visibility: hidden; }
+        #venta-print-area, #venta-print-area * { visibility: visible; }
+        #venta-print-area { position: absolute; left:0; top:0; width:100%; padding:0 !important; margin:0 !important; }
+        .modal-header, .modal-footer, .btn, .btn-close { display:none !important; }
+        #venta-print-area table { page-break-inside: auto; }
+        #venta-print-area tr { page-break-inside: avoid; }
+    }
+</style>
 
 @if (showModal)
 {
@@ -786,8 +906,61 @@
     private bool razonSocialFacturaEditadaManual;
     private bool suppressFiscalManualTracking;
     private bool fechaVencimientoModificadaManualmente;
+    private bool showModalImprimir;
     private string busquedaRapidaTexto = string.Empty;
     private List<CompanyProductDto> sugerenciasBusqueda = new();
+
+    private void MostrarMensajeImprimirBorrador()
+    {
+        errorMessage = "Debe guardar la venta antes de imprimir.";
+    }
+
+    private void AbrirModalImprimir()
+    {
+        if (IsNew || !form.Id.HasValue || form.Id.Value <= 0)
+        {
+            errorMessage = "Debe guardar la venta antes de imprimir.";
+            return;
+        }
+        showModalImprimir = true;
+    }
+
+    private void CerrarModalImprimir()
+    {
+        showModalImprimir = false;
+    }
+
+    private async Task EjecutarImpresion()
+    {
+        await Task.Delay(200);
+        await JSRuntime.InvokeVoidAsync("window.print");
+    }
+
+    private async Task GenerarPdfAsync()
+    {
+        await Task.Delay(200);
+        await JSRuntime.InvokeVoidAsync("window.print");
+    }
+
+    private async Task CopiarAlPortapapelesYDescargar()
+    {
+        await Task.Delay(200);
+        await JSRuntime.InvokeVoidAsync("window.print");
+    }
+
+    private string ObtenerNombreSucursal()
+    {
+        if (form.SucursalId <= 0) return "-";
+        var s = sucursales.FirstOrDefault(x => x.Id == form.SucursalId);
+        return s?.Nombre ?? "-";
+    }
+
+    private string ObtenerNombreAlmacen()
+    {
+        if (!form.AlmacenId.HasValue) return "-";
+        var a = almacenes.FirstOrDefault(x => x.Id == form.AlmacenId.Value);
+        return a?.Nombre ?? "-";
+    }
 
     private void OnBuscarProductoFocus()
     {
@@ -904,14 +1077,13 @@
             return;
         }
 
-        var pbase = ObtenerProductoBase(producto);
         form.Detalles.Add(new VentaDetalleDto
         {
             TipoItemVenta = tipoItem,
             CompanyProductId = producto.CompanyProductId,
             AlmacenId = esServicio ? null : form.AlmacenId,
             Descripcion = producto.NombreComercial ?? string.Empty,
-            DetalleAdicional = pbase?.LongDescription ?? pbase?.ShortDescription,
+            DetalleAdicional = string.Empty,
             Cantidad = 0,
             PrecioUnitario = 0m,
             DescuentoPorcentaje = 0,
