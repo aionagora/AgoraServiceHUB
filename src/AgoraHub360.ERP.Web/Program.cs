@@ -3,6 +3,9 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using AgoraHub360.ERP.Web;
 using AgoraHub360.ERP.Web.Services;
+using AgoraHub360.ERP.Web.Theme;
+using MudBlazor;
+using MudBlazor.Services;
 using System.Globalization;
 
 // ── Cultura global: punto decimal, coma miles (toda la app Blazor WASM) ──
@@ -113,6 +116,18 @@ builder.Services.AddScoped<DashboardDataService>();
 builder.Services.AddScoped<SeguridadDinamicaHttpService>();
 builder.Services.AddScoped<SesionUsuarioStateService>();
 builder.Services.AddScoped<UiAuthorizationService>();
+
+// ──── MudBlazor ────
+builder.Services.AddMudServices(config =>
+{
+    config.SnackbarConfiguration.PositionClass = Defaults.Classes.Position.BottomRight;
+    config.SnackbarConfiguration.PreventDuplicates = true;
+    config.SnackbarConfiguration.NewestOnTop = true;
+    config.SnackbarConfiguration.ShowCloseIcon = true;
+    config.SnackbarConfiguration.VisibleStateDuration = 4000;
+    config.SnackbarConfiguration.HideTransitionDuration = 300;
+    config.SnackbarConfiguration.ShowTransitionDuration = 300;
+});
 
 // ──── Demo Seed ────
 builder.Services.AddScoped<EmpresaDemoService>();

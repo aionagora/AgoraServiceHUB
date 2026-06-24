@@ -1,0 +1,41 @@
+@namespace AgoraHub360.ERP.Web.Components.Common
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="@Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Help" Class="me-2" Color="@Color.Warning" />
+            @Title
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="@Typo.body1">@Message</MudText>
+        @if (!string.IsNullOrEmpty(ConfirmText))
+        {
+            <MudAlert Severity="@Severity.Warning" Variant="@Variant.Outlined" Class="mt-4">
+                <MudText Typo="@Typo.caption">@ConfirmText</MudText>
+            </MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="@Variant.Text" Color="@Color.Default" OnClick="Cancel">@CancelLabel</MudButton>
+        <MudButton Variant="@Variant.Filled" Color="@ConfirmColor" OnClick="Confirm">
+            <MudIcon Icon="@ConfirmIcon" Class="me-1" Size="@Size.Small" />
+            @ConfirmLabel
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter] public string Title { get; set; } = "Confirmar acción";
+    [Parameter] public string Message { get; set; } = "¿Estás seguro de continuar?";
+    [Parameter] public string? ConfirmText { get; set; }
+    [Parameter] public string ConfirmLabel { get; set; } = "Confirmar";
+    [Parameter] public string CancelLabel { get; set; } = "Cancelar";
+    [Parameter] public Color ConfirmColor { get; set; } = Color.Primary;
+    [Parameter] public string ConfirmIcon { get; set; } = Icons.Material.Filled.Check;
+
+    private void Cancel() => MudDialog?.Cancel();
+    private void Confirm() => MudDialog?.Close(DialogResult.Ok(true));
+}

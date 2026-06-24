@@ -261,6 +261,8 @@ public class VentaPagoFilterDto
     public int TamanoPagina { get; set; } = 50;
     public int? Page { get; set; }
     public int? PageSize { get; set; }
+    public string? OrdenarPor { get; set; }
+    public bool? OrdenDescendente { get; set; }
 }
 
 public class PedidoVentaFilterDto

@@ -1,0 +1,17 @@
+@namespace AgoraHub360.ERP.Web.Components.Layout
+
+@if (Items is not null && Items.Any())
+{
+    <MudBreadcrumbs Class="mb-4">
+        @foreach (var item in Items)
+        {
+            <MudBreadcrumbsItem Href="@item.Href" Title="@item.Title" />
+        }
+    </MudBreadcrumbs>
+}
+
+@code {
+    [Parameter] public List<BreadcrumbItem> Items { get; set; } = new();
+
+    public record BreadcrumbItem(string Title, string? Href = null);
+}

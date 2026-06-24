@@ -115,6 +115,8 @@ public class AntiguedadSaldosResumenDto
     public decimal TotalVencido61A90 { get; set; }
     public decimal TotalVencidoMas90 { get; set; }
     public decimal TotalGeneral { get; set; }
+    public decimal TotalPagado { get; set; }
+    public decimal SaldoPendiente { get; set; }
 
     public List<AntiguedadSaldosClienteDto> Clientes { get; set; } = new();
 }

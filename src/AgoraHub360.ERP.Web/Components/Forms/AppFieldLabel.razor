@@ -1,0 +1,14 @@
+@namespace AgoraHub360.ERP.Web.Components.Forms
+
+<MudText Typo="@Typo.body2" Class="mb-1 mud-text-primary font-weight-semibold">
+    @Text
+    @if (Required)
+    {
+        <span class="mud-text-error">*</span>
+    }
+</MudText>
+
+@code {
+    [Parameter] public string Text { get; set; } = string.Empty;
+    [Parameter] public bool Required { get; set; }
+}
