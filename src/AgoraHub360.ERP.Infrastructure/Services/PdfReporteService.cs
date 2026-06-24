@@ -415,8 +415,6 @@ public class PdfReporteService : IPdfReporteService
             }).ToList()
         };
 
-        // PDF generation pending template implementation
-        // Will use PdfGenerator.GenerarVentaPdf(dto) once the template is created
-        throw new NotImplementedException("GenerarVentaPdfAsync: Pendiente de implementación del template PDF.");
+        return Pdf.PdfGenerator.GenerarVentaPdf(dto);
     }
 }

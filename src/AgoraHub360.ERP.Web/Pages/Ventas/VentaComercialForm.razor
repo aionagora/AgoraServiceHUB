@@ -7,7 +7,7 @@
 @using AgoraHub360.ERP.Shared.DTOs.Ventas
 @using MdmClienteDto = AgoraHub360.ERP.Shared.DTOs.MDM.ClienteDto
 @inject IJSRuntime JSRuntime
-@inject FileDownloadService FileDownloadService
+@inject PdfDownloadService PdfDownloadService
 @inject VentaHttpService VentaService
 @inject FacturaVentaHttpService FacturaVentaService
 @inject ClienteHttpService ClienteService
@@ -824,25 +824,14 @@
 
 @* ═══════ CSS IMPRESIÓN ═══════ *@
 <style>
-    .no-print { display: none !important; }
     @@media print {
         @@page { size: letter; margin: 12mm; }
         body * { visibility: hidden !important; }
         #venta-print-area, #venta-print-area * { visibility: visible !important; }
         #venta-print-area { position: absolute; left: 0; top: 0; width: 100%; }
-        .no-print { display: none !important; }
+        .no-print, .modal-header, .modal-footer, .btn { display: none !important; }
         #venta-print-area table { page-break-inside: auto; }
         #venta-print-area tr { page-break-inside: avoid; }
-        .venta-print-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        .venta-print-table th, .venta-print-table td { padding: 4px 3px; font-size: 9pt; }
-        .venta-print-table .col-item { width:6%; text-align:center; }
-        .venta-print-table .col-sku { width:13%; text-align:left; }
-        .venta-print-table .col-prod { width:28%; text-align:left; }
-        .venta-print-table .col-det { width:22%; text-align:left; }
-        .venta-print-table .col-cant { width:8%; text-align:right; }
-        .venta-print-table .col-punit { width:9%; text-align:right; }
-        .venta-print-table .col-desc { width:7%; text-align:right; }
-        .venta-print-table .col-total { width:7%; text-align:right; }
     }
 </style>
 
@@ -957,13 +946,17 @@
         }
         try
         {
-            var ventaId = form.Id.Value;
-            var fileName = string.IsNullOrWhiteSpace(form.NumeroVentaVisual)
-                ? $"Venta-{ventaId:D6}.pdf"
-                : $"Venta-{form.NumeroVentaVisual}.pdf";
-            await FileDownloadService.DownloadFromApiAsync(
-                $"api/v1/reportes/ventas/{ventaId}/pdf",
-                fileName);
+            await PdfDownloadService.DownloadVentaPdfAsync(
+                form.Id.Value,
+                form.NumeroVentaVisual);
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("404"))
+        {
+            errorMessage = "No se encontró el endpoint PDF de la venta.";
+        }
+        catch (HttpRequestException ex) when (ex.Message.Contains("500"))
+        {
+            errorMessage = "Error interno al generar el PDF de la venta.";
         }
         catch (Exception ex)
         {

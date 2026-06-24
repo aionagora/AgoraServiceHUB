@@ -670,6 +670,131 @@ public static class PdfGenerator
         }).GeneratePdf();
     }
 
+    public static byte[] GenerarVentaPdf(ReporteVentaDto dto)
+    {
+        return Document.Create(container =>
+        {
+            container.Page(page =>
+            {
+                page.Size(PageSizes.Letter);
+                page.Margin(1.5f, Unit.Centimetre);
+                page.PageColor(Colors.White);
+                page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Arial"));
+
+                // Encabezado
+                page.Header().Column(c =>
+                {
+                    c.Item().PaddingBottom(2).Text("NOTA DE VENTA").FontSize(16).Bold().FontColor(PrimaryColor).AlignCenter();
+                    c.Item().PaddingBottom(8).Text(dto.NumeroVenta).FontSize(9).FontColor(Colors.Grey.Darken2).AlignCenter();
+                });
+
+                page.Content().Column(col =>
+                {
+                    // Datos del cliente
+                    col.Item().Background(HeaderBg).Padding(8).Row(row =>
+                    {
+                        row.RelativeItem().Column(c =>
+                        {
+                            c.Item().Text($"Cliente: {dto.ClienteNombre}").FontSize(11).Bold();
+                            c.Item().Text($"NIT: {dto.ClienteNit}").FontSize(9).FontColor(Colors.Grey.Darken2);
+                        });
+                        row.RelativeItem().AlignRight().Column(c =>
+                        {
+                            c.Item().Text($"Fecha: {dto.FechaVenta:dd/MM/yyyy}").FontSize(10);
+                            c.Item().Text($"Vto. Pago: {(dto.FechaVencimientoPago?.ToString("dd/MM/yyyy") ?? "-")}").FontSize(9).FontColor(Colors.Grey.Darken2);
+                            c.Item().Text($"Moneda: {dto.MonedaCodigo} TC: {dto.TipoCambio:N4}").FontSize(9).FontColor(Colors.Grey.Darken2);
+                        });
+                    });
+
+                    col.Item().PaddingVertical(6);
+
+                    // Detalle de productos
+                    col.Item().Table(table =>
+                    {
+                        table.ColumnsDefinition(c =>
+                        {
+                            c.ConstantColumn(18);   // #
+                            c.RelativeColumn(2);    // SKU
+                            c.RelativeColumn(4);    // Producto
+                            c.RelativeColumn(3);    // Detalle
+                            c.RelativeColumn();     // Cant
+                            c.RelativeColumn();     // P.Unit
+                            c.RelativeColumn();     // Desc
+                            c.RelativeColumn();     // Total
+                        });
+
+                        table.Header(h =>
+                        {
+                            h.Cell().Background(PrimaryColor).Padding(3).Text("#").FontSize(8).Bold().FontColor(Colors.White).AlignCenter();
+                            h.Cell().Background(PrimaryColor).Padding(3).Text("SKU").FontSize(8).Bold().FontColor(Colors.White);
+                            h.Cell().Background(PrimaryColor).Padding(3).Text("Producto / Servicio").FontSize(8).Bold().FontColor(Colors.White);
+                            h.Cell().Background(PrimaryColor).Padding(3).Text("Detalle").FontSize(8).Bold().FontColor(Colors.White);
+                            h.Cell().Background(PrimaryColor).Padding(3).AlignRight().Text("Cant.").FontSize(8).Bold().FontColor(Colors.White);
+                            h.Cell().Background(PrimaryColor).Padding(3).AlignRight().Text("P.Unit").FontSize(8).Bold().FontColor(Colors.White);
+                            h.Cell().Background(PrimaryColor).Padding(3).AlignRight().Text("Desc.").FontSize(8).Bold().FontColor(Colors.White);
+                            h.Cell().Background(PrimaryColor).Padding(3).AlignRight().Text("Total").FontSize(8).Bold().FontColor(Colors.White);
+                        });
+
+                        var i = 0;
+                        foreach (var item in dto.Items)
+                        {
+                            i++;
+                            var bgColor = i % 2 == 0 ? Colors.Grey.Lighten5 : Colors.White;
+                            var desc = item.DescuentoPorcentaje > 0
+                                ? (item.Cantidad * item.PrecioUnitario * item.DescuentoPorcentaje / 100m + item.DescuentoMonto)
+                                : item.DescuentoMonto;
+                            table.Cell().Background(bgColor).Padding(2).Text(i.ToString()).FontSize(8).AlignCenter();
+                            table.Cell().Background(bgColor).Padding(2).Text(item.Sku).FontSize(8);
+                            table.Cell().Background(bgColor).Padding(2).Text(item.Descripcion).FontSize(8);
+                            table.Cell().Background(bgColor).Padding(2).Text(item.DetalleAdicional ?? "").FontSize(8);
+                            table.Cell().Background(bgColor).Padding(2).AlignRight().Text(item.Cantidad.ToString("N2")).FontSize(8);
+                            table.Cell().Background(bgColor).Padding(2).AlignRight().Text(item.PrecioUnitario.ToString("N2")).FontSize(8);
+                            table.Cell().Background(bgColor).Padding(2).AlignRight().Text(desc.ToString("N2")).FontSize(8);
+                            table.Cell().Background(bgColor).Padding(2).AlignRight().Text(item.TotalLinea.ToString("N2")).FontSize(8).Bold();
+                        }
+                    });
+
+                    col.Item().PaddingVertical(6);
+
+                    // Resumen
+                    col.Item().Background(HeaderBg).Padding(8).Row(row =>
+                    {
+                        row.RelativeItem().Column(c =>
+                        {
+                            c.Item().Text("Subtotal:").FontSize(10).FontColor(Colors.Grey.Darken2);
+                            c.Item().Text($"{dto.Subtotal:N2}").FontSize(12).Bold();
+                        });
+                        row.RelativeItem().AlignCenter().Column(c =>
+                        {
+                            c.Item().Text("Descuento:").FontSize(10).FontColor(Colors.Grey.Darken2);
+                            c.Item().Text($"{dto.DescuentoTotal:N2}").FontSize(12).Bold();
+                        });
+                        row.RelativeItem().AlignRight().Column(c =>
+                        {
+                            c.Item().Text("TOTAL:").FontSize(10).FontColor(Colors.Grey.Darken2);
+                            c.Item().Text($"{dto.Total:N2}").FontSize(14).Bold().FontColor(PrimaryColor);
+                        });
+                    });
+
+                    if (!string.IsNullOrWhiteSpace(dto.Observaciones))
+                    {
+                        col.Item().PaddingTop(8).Column(c =>
+                        {
+                            c.Item().Text("Observaciones").FontSize(9).Bold().FontColor(Colors.Grey.Darken2);
+                            c.Item().Text(dto.Observaciones).FontSize(9).FontColor(Colors.Grey.Darken1);
+                        });
+                    }
+                });
+
+                // Pie de página
+                page.Footer().AlignCenter().Text(t =>
+                {
+                    t.Span($"Documento generado por AgoraHUB360 ERP — {DateTime.Now:dd/MM/yyyy HH:mm}").FontSize(7).FontColor(Colors.Grey.Darken1);
+                });
+            });
+        }).GeneratePdf();
+    }
+
     private struct LabelValueCellStyle
     {
         public int LabelFontSize { get; set; }
