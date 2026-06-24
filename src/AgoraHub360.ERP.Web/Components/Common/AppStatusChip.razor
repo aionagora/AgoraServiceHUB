@@ -1,0 +1,36 @@
+@namespace AgoraHub360.ERP.Web.Components.Common
+
+<MudChip T="string" Size="@Size.Small" Color="@GetColor()" Variant="@Variant.Outlined" Class="app-status-chip">
+    @Label
+</MudChip>
+
+@code {
+    [Parameter] public string Status { get; set; } = string.Empty;
+
+    private string Label => Status switch
+    {
+        "Activo" or "activo" or "Confirmado" or "confirmado" => "Activo",
+        "Inactivo" or "inactivo" or "Anulado" or "anulado" or "Cancelado" or "cancelado" => "Inactivo",
+        "Pendiente" or "pendiente" or "Borrador" or "borrador" or "EnRevision" or "En revisión" => "Pendiente",
+        "Pagado" or "pagado" or "Pagada" or "pagada" => "Pagado",
+        "Vencido" or "vencido" or "Vencida" or "vencida" => "Vencido",
+        "Aprobado" or "aprobado" or "Aprobada" or "aprobada" => "Aprobado",
+        "Rechazado" or "rechazado" or "Rechazada" or "rechazada" => "Rechazado",
+        "EnProceso" or "en proceso" or "EnProgreso" or "En progreso" => "En Progreso",
+        "Completado" or "completado" or "Completada" or "completada" => "Completado",
+        _ => Status
+    };
+
+    private Color GetColor()
+    {
+        var s = Status?.ToLowerInvariant() ?? "";
+        return s switch
+        {
+            "activo" or "confirmado" or "pagado" or "pagada" or "aprobado" or "aprobada" or "completado" or "completada" => Color.Success,
+            "inactivo" or "anulado" or "cancelado" or "cancelada" or "rechazado" or "rechazada" => Color.Error,
+            "pendiente" or "borrador" or "enrevision" or "en revisión" or "enproceso" or "en proceso" or "enprogreso" or "en progreso" => Color.Warning,
+            "vencido" or "vencida" => Color.Error,
+            _ => Color.Default
+        };
+    }
+}

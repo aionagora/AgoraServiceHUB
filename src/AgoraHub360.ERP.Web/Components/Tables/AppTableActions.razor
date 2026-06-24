@@ -1,0 +1,22 @@
+@namespace AgoraHub360.ERP.Web.Components.Tables
+
+<MudIconButton Icon="@Icons.Material.Filled.Edit" Size="@Size.Small" Color="@Color.Primary" OnClick="@OnEdit" Title="@EditTooltip" />
+@if (ShowDelete)
+{
+    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="@Size.Small" Color="@Color.Error" OnClick="@OnDelete" Title="@DeleteTooltip" />
+}
+@if (AdditionalActions is not null)
+{
+    @AdditionalActions
+}
+
+@code {
+    [Parameter] public EventCallback OnEdit { get; set; }
+    [Parameter] public EventCallback OnDelete { get; set; }
+
+    [Parameter] public bool ShowDelete { get; set; } = true;
+    [Parameter] public string EditTooltip { get; set; } = "Editar";
+    [Parameter] public string DeleteTooltip { get; set; } = "Eliminar";
+
+    [Parameter] public RenderFragment? AdditionalActions { get; set; }
+}

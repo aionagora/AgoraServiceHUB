@@ -455,6 +455,14 @@ public class CuentasPorCobrarService : ICuentasPorCobrarService
             .OrderBy(c => c.ClienteNombre)
             .ToList();
 
+        var totalPagado = cuentas
+            .Where(c => GetDynamicEstado(c) != EstadoCuentaPorCobrar.Anulada)
+            .Sum(c => c.TotalPagado);
+
+        var saldoPendiente = cuentas
+            .Where(c => GetDynamicEstado(c) != EstadoCuentaPorCobrar.Anulada)
+            .Sum(c => c.SaldoPendiente);
+
         var resumen = new AntiguedadSaldosResumenDto
         {
             Clientes = clientesAgrupados,
@@ -462,7 +470,9 @@ public class CuentasPorCobrarService : ICuentasPorCobrarService
             TotalVencido1A30 = clientesAgrupados.Sum(c => c.Vencido1A30),
             TotalVencido31A60 = clientesAgrupados.Sum(c => c.Vencido31A60),
             TotalVencido61A90 = clientesAgrupados.Sum(c => c.Vencido61A90),
-            TotalVencidoMas90 = clientesAgrupados.Sum(c => c.VencidoMas90)
+            TotalVencidoMas90 = clientesAgrupados.Sum(c => c.VencidoMas90),
+            TotalPagado = totalPagado,
+            SaldoPendiente = saldoPendiente
         };
 
         resumen.TotalGeneral = resumen.TotalNoVencido 

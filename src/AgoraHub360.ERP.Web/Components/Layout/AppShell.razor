@@ -1,0 +1,55 @@
+@namespace AgoraHub360.ERP.Web.Components.Layout
+@inherits LayoutComponentBase
+
+<MudThemeProvider Theme="AgoraMudTheme.Create()" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+<MudPopoverProvider />
+
+<MudLayout>
+    <AppTopBar DrawerToggle="@((_) => DrawerToggle())" />
+
+    <MudDrawer @bind-Open="_drawerOpen"
+               Variant="@GetDrawerVariant()"
+               Elevation="2">
+        <div class="agora-drawer-header d-flex align-items-center px-4 py-3">
+            <MudAvatar Color="@Color.Primary" Class="mr-3" Size="@Size.Small">
+                <MudText Typo="@Typo.button" Class="font-weight-bold">A</MudText>
+            </MudAvatar>
+            <div>
+                <MudText Typo="@Typo.subtitle2" Class="font-weight-bold">AgoraHub360</MudText>
+                <MudText Typo="@Typo.caption" Class="mud-text-secondary">ERP v1.0.2</MudText>
+            </div>
+        </div>
+        <MudDivider />
+        <AppSideMenu />
+    </MudDrawer>
+
+    <MudMainContent Class="agora-main-content">
+        <MudContainer MaxWidth="@MaxWidth.ExtraExtraLarge" Class="py-6 px-6">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private bool _drawerOpen = true;
+
+    protected override void OnInitialized()
+    {
+        // Detectar si es móvil por el ancho de la ventana
+        _drawerOpen = true;
+    }
+
+    private void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+    private DrawerVariant GetDrawerVariant()
+    {
+        return DrawerVariant.Responsive;
+    }
+
+
+}
