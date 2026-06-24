@@ -65,6 +65,20 @@ public class PdfDownloadService
     }
 
     /// <summary>
+    /// Descarga el PDF comercial de una venta (NOTA DE VENTA).
+    /// GET /api/v1/reportes/ventas/{ventaId}/pdf
+    /// </summary>
+    public async Task DownloadVentaPdfAsync(long ventaId, string numeroVenta)
+    {
+        var nombre = string.IsNullOrWhiteSpace(numeroVenta)
+            ? $"Venta-{ventaId:D6}.pdf"
+            : $"Venta-{numeroVenta}.pdf";
+        await _fileDownload.DownloadFromApiAsync(
+            $"api/v1/reportes/ventas/{ventaId}/pdf",
+            nombre);
+    }
+
+    /// <summary>
     /// Descarga la factura PDF.
     /// GET /api/v1/facturas-venta/{facturaId}/pdf
     /// </summary>

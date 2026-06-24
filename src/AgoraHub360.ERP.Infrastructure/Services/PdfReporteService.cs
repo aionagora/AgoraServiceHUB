@@ -18,6 +18,7 @@ public class PdfReporteService : IPdfReporteService
     private readonly IRepository<FacturaVenta> _facturaRepo;
     private readonly IRepository<FacturaVentaDetalle> _facturaDetalleRepo;
     private readonly IRepository<Venta> _ventaRepo;
+    private readonly IRepository<VentaDetalle> _detalleRepo;
     private readonly IRepository<VentaPago> _pagoRepo;
     private readonly IRepository<Cliente> _clienteRepo;
     private readonly IRepository<Empresa> _empresaRepo;
@@ -28,6 +29,7 @@ public class PdfReporteService : IPdfReporteService
         IRepository<FacturaVenta> facturaRepo,
         IRepository<FacturaVentaDetalle> facturaDetalleRepo,
         IRepository<Venta> ventaRepo,
+        IRepository<VentaDetalle> detalleRepo,
         IRepository<VentaPago> pagoRepo,
         IRepository<Cliente> clienteRepo,
         IRepository<Empresa> empresaRepo,
@@ -37,6 +39,7 @@ public class PdfReporteService : IPdfReporteService
         _facturaRepo = facturaRepo;
         _facturaDetalleRepo = facturaDetalleRepo;
         _ventaRepo = ventaRepo;
+        _detalleRepo = detalleRepo;
         _pagoRepo = pagoRepo;
         _clienteRepo = clienteRepo;
         _empresaRepo = empresaRepo;
@@ -370,5 +373,62 @@ public class PdfReporteService : IPdfReporteService
         };
 
         return PdfGenerator.GenerarReporteCxcVencidas(dto);
+    }
+
+    public async Task<byte[]> GenerarVentaPdfAsync(long ventaId, CancellationToken ct = default)
+    {
+        var empresaId = _currentUser.EmpresaId
+            ?? throw new InvalidOperationException("No se pudo determinar la empresa activa.");
+
+        var venta = await _ventaRepo.GetByIdAsync(ventaId, ct);
+        if (venta is null || venta.EmpresaId != empresaId)
+            throw new InvalidOperationException($"Venta {ventaId} no encontrada.");
+
+        var empresa = (await _empresaRepo.FindAsync(e => e.Id == empresaId, ct)).FirstOrDefault();
+        var cliente = venta.ClienteId.HasValue && venta.ClienteId.Value > 0
+            ? await _clienteRepo.GetByIdAsync(venta.ClienteId.Value, ct)
+            : null;
+
+        // Cargar detalles explícitamente — Repository.GetByIdAsync no hace Include
+        var detalles = (await _detalleRepo.FindAsync(d => d.VentaId == ventaId, ct))
+            .OrderBy(d => d.Id)
+            .ToList();
+
+        var dto = new ReporteVentaDto
+        {
+            EmpresaNombre = empresa?.Nombre ?? "AgoraHUB360 ERP",
+            EmpresaNit = empresa?.NIT,
+            EmpresaDireccion = empresa?.Direccion,
+            EmpresaTelefono = empresa?.Telefono,
+            EmpresaEmail = empresa?.Email,
+            NumeroVenta = venta.NumeroVenta,
+            FechaVenta = venta.FechaVenta,
+            FechaVencimientoPago = venta.FechaVencimientoPago,
+            MonedaCodigo = venta.MonedaCodigo ?? "BOB",
+            TipoCambio = venta.TipoCambio,
+            Origen = venta.TipoVenta.ToString(),
+            PedidoVentaId = venta.PedidoVentaId,
+            ClienteNombre = cliente?.RazonSocial ?? "-",
+            ClienteNit = cliente?.NIT ?? "-",
+            ClienteDireccion = cliente?.Direccion,
+            ClienteTelefono = cliente?.Telefono,
+            Observaciones = venta.Observaciones,
+            Subtotal = venta.Subtotal,
+            DescuentoTotal = venta.DescuentoTotal,
+            Total = venta.Total,
+            Items = detalles.Select(d => new ReporteVentaItemDto
+            {
+                Sku = d.CompanyProduct?.Sku ?? "N/D",
+                Descripcion = d.Descripcion,
+                DetalleAdicional = d.DetalleAdicional,
+                Cantidad = d.Cantidad,
+                PrecioUnitario = d.PrecioUnitario,
+                DescuentoPorcentaje = d.DescuentoPorcentaje,
+                DescuentoMonto = d.DescuentoMonto,
+                TotalLinea = d.TotalLinea
+            }).ToList()
+        };
+
+        return Pdf.PdfGenerator.GenerarVentaPdf(dto);
     }
 }

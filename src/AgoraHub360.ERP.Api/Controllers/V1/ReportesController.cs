@@ -149,4 +149,32 @@ public class ReportesController : ControllerBase
             return Unauthorized(new { Success = false, Message = ex.Message });
         }
     }
+
+    /// <summary>
+    /// GET /api/v1/reportes/ventas/{ventaId}/pdf
+    /// Genera el PDF comercial de una venta (NOTA DE VENTA).
+    /// </summary>
+    [HttpGet("api/v{version:apiVersion}/reportes/ventas/{ventaId:long}/pdf")]
+    [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetVentaPdf(long ventaId, CancellationToken ct)
+    {
+        try
+        {
+            var pdf = await _pdfReporteService.GenerarVentaPdfAsync(ventaId, ct);
+            return File(pdf, "application/pdf", $"venta-{ventaId:D6}.pdf");
+        }
+        catch (NotImplementedException)
+        {
+            return NotFound(new { Success = false, Message = "PDF de venta pendiente de implementación de template." });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { Success = false, Message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { Success = false, Message = ex.Message });
+        }
+    }
 }
