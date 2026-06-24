@@ -6,6 +6,8 @@
 @inject NumeracionHttpService NumSvc
 @inject EmpresaHttpService EmpresaSvc
 @inject EmpresaStateService EmpresaState
+@inject SesionUsuarioStateService SesionState
+@inject UiAuthorizationService UiAuth
 
 <PageTitle>Parámetros y Numeración - AgoraHub360 ERP</PageTitle>
 
@@ -22,7 +24,13 @@
     </div>
 }
 
-@if (_loading)
+@if (!_puedeAccederSeccion)
+{
+    <div class="alert alert-warning" role="alert">
+        No tienes permisos para acceder a esta sección.
+    </div>
+}
+else if (_loading)
 {
     <div class="card">
         <div class="card-body text-center py-5">
@@ -394,14 +402,14 @@ else
                                     <ValidationMessage For="() => _createNumModel.SiguienteNumero" />
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Dígitos</label>
-                                    <InputNumber class="form-control" @bind-Value="_createNumModel.Digitos" />
-                                    <ValidationMessage For="() => _createNumModel.Digitos" />
+                                    <label class="form-label">Longitud</label>
+                                    <InputNumber class="form-control" @bind-Value="_createNumModel.LongitudNumero" />
+                                    <ValidationMessage For="() => _createNumModel.LongitudNumero" />
                                 </div>
                             </div>
                             <div class="alert alert-info small mb-0">
                                 <i class="bi bi-eye me-1"></i>
-                                Preview: <code>@(_createNumModel.Prefijo)@(_createNumModel.SiguienteNumero.ToString().PadLeft(_createNumModel.Digitos, '0'))</code>
+                                Preview: <code>@(_createNumModel.Prefijo)@(_createNumModel.SiguienteNumero.ToString().PadLeft(_createNumModel.LongitudNumero, '0'))</code>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -439,9 +447,9 @@ else
                                     <ValidationMessage For="() => _updateNumModel.SiguienteNumero" />
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label">Dígitos</label>
-                                    <InputNumber class="form-control" @bind-Value="_updateNumModel.Digitos" />
-                                    <ValidationMessage For="() => _updateNumModel.Digitos" />
+                                    <label class="form-label">Longitud</label>
+                                    <InputNumber class="form-control" @bind-Value="_updateNumModel.LongitudNumero" />
+                                    <ValidationMessage For="() => _updateNumModel.LongitudNumero" />
                                 </div>
                             </div>
                             <div class="form-check mb-3">
@@ -450,7 +458,7 @@ else
                             </div>
                             <div class="alert alert-info small mb-0">
                                 <i class="bi bi-eye me-1"></i>
-                                Preview: <code>@(_updateNumModel.Prefijo)@(_updateNumModel.SiguienteNumero.ToString().PadLeft(_updateNumModel.Digitos, '0'))</code>
+                                Preview: <code>@(_updateNumModel.Prefijo)@(_updateNumModel.SiguienteNumero.ToString().PadLeft(_updateNumModel.LongitudNumero, '0'))</code>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -519,6 +527,7 @@ else
     private bool _savingMoneda;
     private string? _mensaje;
     private bool _esError;
+    private bool _puedeAccederSeccion;
     private string _tabActiva = "parametros";
 
     // ── Moneda Base ──
@@ -539,8 +548,8 @@ else
     private bool _showNumForm;
     private int? _editNumId;
     private string _editNumTipo = "";
-    private CreateNumeracionDto _createNumModel = new();
-    private UpdateNumeracionDto _updateNumModel = new();
+    private CrearNumeracionDocumentoRequestDto _createNumModel = new();
+    private ActualizarNumeracionDocumentoRequestDto _updateNumModel = new();
     private NumeracionDocumentoDto? _deleteNumTarget;
 
     // ══════════════════════════════════════════════════
@@ -549,18 +558,35 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        _puedeAccederSeccion = UiAuth.CanManageParametrosNumeracion();
+        if (!_puedeAccederSeccion)
+        {
+            _loading = false;
+            return;
+        }
+
         await LoadAllAsync();
     }
 
     private async Task LoadAllAsync()
     {
+        if (!_puedeAccederSeccion)
+            return;
+
         _loading = true;
         try
         {
-            // Cargar empresa activa (primera activa disponible)
-            var empresas = await EmpresaSvc.GetAllAsync();
-            EmpresaState.SetEmpresas(empresas);
-            _empresa = EmpresaState.EmpresaActiva ?? empresas.FirstOrDefault(e => e.Activo);
+            // Cargar empresa del contexto tenant (sin llamadas globales)
+            _empresa = EmpresaState.EmpresaActiva;
+            if (_empresa is null)
+            {
+                var empresas = await EmpresaSvc.GetMisEmpresasAsync();
+                EmpresaState.SetEmpresas(empresas);
+                _empresa = SesionState.TenantId.HasValue
+                    ? empresas.FirstOrDefault(e => e.Id == SesionState.TenantId.Value)
+                    : empresas.FirstOrDefault(e => e.Activo);
+            }
+
             _monedaSeleccionada = _empresa?.MonedaBaseId;
 
             // Cargar parámetros y numeraciones en paralelo
@@ -583,6 +609,9 @@ else
 
     private async Task GuardarMonedaAsync()
     {
+        if (!_puedeAccederSeccion)
+            return;
+
         if (_empresa is null || _monedaSeleccionada == _empresa.MonedaBaseId) return;
         _savingMoneda = true;
         try
@@ -616,6 +645,9 @@ else
 
     private void ShowCrearParametro()
     {
+        if (!_puedeAccederSeccion)
+            return;
+
         _editParamId = null;
         _paramModel = new UpsertParametroDto { Categoria = "General", TipoDato = "String" };
         _showParamForm = true;
@@ -623,6 +655,9 @@ else
 
     private void ShowEditarParametro(ParametroSistemaDto p)
     {
+        if (!_puedeAccederSeccion)
+            return;
+
         _editParamId = p.Id;
         _paramModel = new UpsertParametroDto
         {
@@ -639,39 +674,34 @@ else
 
     private async Task SaveParametroAsync()
     {
+        if (!_puedeAccederSeccion)
+            return;
+
         _saving = true;
         _mensaje = null; // Limpiar mensaje anterior
         _esError = false;
         
         try
         {
-            Console.WriteLine($"[DEBUG] Guardando parámetro: Clave={_paramModel.Clave}, Valor={_paramModel.Valor}");
-            
             var result = await ParamSvc.UpsertAsync(_paramModel);
-            
-            Console.WriteLine($"[DEBUG] Resultado: Success={result.Success}, Message={result.Message}");
-            
+
             if (result.Success)
             {
                 _mensaje = "Parámetro guardado exitosamente.";
                 _esError = false;
                 CloseParamForm();
                 _parametros = await ParamSvc.GetAllAsync();
-                
-                Console.WriteLine($"[DEBUG] Parámetros recargados: Count={_parametros.Count}");
             }
             else 
             { 
-                _mensaje = $"Error al guardar: {result.Message}";
+                _mensaje = SanitizeError(result.Message, "No se pudo guardar el parámetro.");
                 _esError = true;
-                Console.WriteLine($"[ERROR] {_mensaje}");
             }
         }
-        catch (Exception ex)
+        catch
         { 
-            _mensaje = $"Error de comunicación: {ex.Message}";
+            _mensaje = "No se pudo guardar el parámetro.";
             _esError = true;
-            Console.WriteLine($"[EXCEPTION] {ex}");
         }
         finally
         {
@@ -682,6 +712,9 @@ else
     // Inline edit
     private void StartInlineEdit(ParametroSistemaDto p)
     {
+        if (!_puedeAccederSeccion)
+            return;
+
         _editingInline = p.Id;
         _editingValue = p.Valor;
     }
@@ -690,6 +723,9 @@ else
 
     private async Task SaveInlineAsync(ParametroSistemaDto p)
     {
+        if (!_puedeAccederSeccion)
+            return;
+
         var dto = new UpsertParametroDto
         {
             Clave = p.Clave,
@@ -706,19 +742,22 @@ else
             _mensaje = $"Parámetro '{p.Clave}' actualizado.";
             _esError = false;
         }
-        else { _mensaje = result.Message; _esError = true; }
+        else { _mensaje = SanitizeError(result.Message, "No se pudo actualizar el parámetro."); _esError = true; }
     }
 
     private void ConfirmDeleteParametro(ParametroSistemaDto p) => _deleteParamTarget = p;
 
     private async Task DeleteParametroAsync()
     {
+        if (!_puedeAccederSeccion)
+            return;
+
         if (_deleteParamTarget is null) return;
         _saving = true;
         try
         {
             var result = await ParamSvc.DeleteAsync(_deleteParamTarget.Id);
-            _mensaje = result.Success ? "Parámetro eliminado." : result.Message;
+            _mensaje = result.Success ? "Parámetro eliminado." : SanitizeError(result.Message, "No se pudo eliminar el parámetro.");
             _esError = !result.Success;
             _deleteParamTarget = null;
             _parametros = await ParamSvc.GetAllAsync();
@@ -733,21 +772,28 @@ else
 
     private void ShowCrearNumeracion()
     {
+        if (!_puedeAccederSeccion)
+            return;
+
         _editNumId = null;
-        _createNumModel = new CreateNumeracionDto { SiguienteNumero = 1, Digitos = 6 };
+        _createNumModel = new CrearNumeracionDocumentoRequestDto { SiguienteNumero = 1, LongitudNumero = 6 };
         _showNumForm = true;
     }
 
     private void ShowEditarNumeracion(NumeracionDocumentoDto num)
     {
+        if (!_puedeAccederSeccion)
+            return;
+
         _editNumId = num.Id;
         _editNumTipo = num.TipoDocumento;
-        _updateNumModel = new UpdateNumeracionDto
+        _updateNumModel = new ActualizarNumeracionDocumentoRequestDto
         {
+            TipoDocumento = num.TipoDocumento,
             Descripcion = num.Descripcion,
             Prefijo = num.Prefijo,
             SiguienteNumero = num.SiguienteNumero,
-            Digitos = num.Digitos,
+            LongitudNumero = num.Digitos,
             Activo = num.Activo
         };
         _showNumForm = true;
@@ -757,6 +803,9 @@ else
 
     private async Task SaveCreateNumeracionAsync()
     {
+        if (!_puedeAccederSeccion)
+            return;
+
         _saving = true;
         try
         {
@@ -768,7 +817,7 @@ else
                 CloseNumForm();
                 _numeraciones = await NumSvc.GetAllAsync();
             }
-            else { _mensaje = result.Message; _esError = true; }
+            else { _mensaje = SanitizeError(result.Message, "No se pudo crear la serie."); _esError = true; }
         }
         catch { _mensaje = "Error de comunicación."; _esError = true; }
         _saving = false;
@@ -776,6 +825,9 @@ else
 
     private async Task SaveUpdateNumeracionAsync()
     {
+        if (!_puedeAccederSeccion)
+            return;
+
         if (!_editNumId.HasValue) return;
         _saving = true;
         try
@@ -788,7 +840,7 @@ else
                 CloseNumForm();
                 _numeraciones = await NumSvc.GetAllAsync();
             }
-            else { _mensaje = result.Message; _esError = true; }
+            else { _mensaje = SanitizeError(result.Message, "No se pudo actualizar la serie."); _esError = true; }
         }
         catch { _mensaje = "Error de comunicación."; _esError = true; }
         _saving = false;
@@ -797,16 +849,19 @@ else
     /// <summary>Inicializa las series base comunes de un ERP.</summary>
     private async Task InicializarSeriesBase()
     {
+        if (!_puedeAccederSeccion)
+            return;
+
         _saving = true;
         var series = new[]
         {
-            new CreateNumeracionDto { TipoDocumento = "OC",  Descripcion = "Orden de Compra",          Prefijo = "OC-",  SiguienteNumero = 1, Digitos = 6 },
-            new CreateNumeracionDto { TipoDocumento = "REC", Descripcion = "Recepción de Mercadería",  Prefijo = "REC-", SiguienteNumero = 1, Digitos = 6 },
-            new CreateNumeracionDto { TipoDocumento = "FAC", Descripcion = "Factura de Venta",         Prefijo = "FAC-", SiguienteNumero = 1, Digitos = 6 },
-            new CreateNumeracionDto { TipoDocumento = "PED", Descripcion = "Pedido de Venta",          Prefijo = "PED-", SiguienteNumero = 1, Digitos = 6 },
-            new CreateNumeracionDto { TipoDocumento = "NC",  Descripcion = "Nota de Crédito",          Prefijo = "NC-",  SiguienteNumero = 1, Digitos = 6 },
-            new CreateNumeracionDto { TipoDocumento = "ND",  Descripcion = "Nota de Débito",           Prefijo = "ND-",  SiguienteNumero = 1, Digitos = 6 },
-            new CreateNumeracionDto { TipoDocumento = "MOV", Descripcion = "Movimiento de Inventario", Prefijo = "MOV-", SiguienteNumero = 1, Digitos = 6 },
+            new CrearNumeracionDocumentoRequestDto { TipoDocumento = "OC",  Descripcion = "Orden de Compra",          Prefijo = "OC-",  SiguienteNumero = 1, LongitudNumero = 6 },
+            new CrearNumeracionDocumentoRequestDto { TipoDocumento = "REC", Descripcion = "Recepción de Mercadería",  Prefijo = "REC-", SiguienteNumero = 1, LongitudNumero = 6 },
+            new CrearNumeracionDocumentoRequestDto { TipoDocumento = "FAC", Descripcion = "Factura de Venta",         Prefijo = "FAC-", SiguienteNumero = 1, LongitudNumero = 6 },
+            new CrearNumeracionDocumentoRequestDto { TipoDocumento = "PED", Descripcion = "Pedido de Venta",          Prefijo = "PED-", SiguienteNumero = 1, LongitudNumero = 6 },
+            new CrearNumeracionDocumentoRequestDto { TipoDocumento = "NC",  Descripcion = "Nota de Crédito",          Prefijo = "NC-",  SiguienteNumero = 1, LongitudNumero = 6 },
+            new CrearNumeracionDocumentoRequestDto { TipoDocumento = "ND",  Descripcion = "Nota de Débito",           Prefijo = "ND-",  SiguienteNumero = 1, LongitudNumero = 6 },
+            new CrearNumeracionDocumentoRequestDto { TipoDocumento = "MOV", Descripcion = "Movimiento de Inventario", Prefijo = "MOV-", SiguienteNumero = 1, LongitudNumero = 6 },
         };
 
         var errores = 0;
@@ -833,17 +888,38 @@ else
 
     private async Task DeleteNumeracionAsync()
     {
+        if (!_puedeAccederSeccion)
+            return;
+
         if (_deleteNumTarget is null) return;
         _saving = true;
         try
         {
-            var result = await NumSvc.DeleteAsync(_deleteNumTarget.Id);
-            _mensaje = result.Success ? "Serie eliminada." : result.Message;
+            var result = await NumSvc.DesactivarAsync(_deleteNumTarget.Id);
+            _mensaje = result.Success ? "Serie desactivada." : SanitizeError(result.Message, "No se pudo desactivar la serie.");
             _esError = !result.Success;
             _deleteNumTarget = null;
             _numeraciones = await NumSvc.GetAllAsync();
         }
         catch { _mensaje = "Error de comunicación."; _esError = true; }
         _saving = false;
+    }
+
+    private static string SanitizeError(string? message, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+            return fallback;
+
+        if (message.Contains("Error HTTP", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("System.", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("stack", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("trace", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("Exception", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("{"))
+        {
+            return fallback;
+        }
+
+        return message;
     }
 }

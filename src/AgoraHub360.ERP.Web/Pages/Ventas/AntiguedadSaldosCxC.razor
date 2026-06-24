@@ -1,0 +1,236 @@
+@page "/ventas/cuentas-por-cobrar/antiguedad-saldos"
+@attribute [Authorize]
+@using AgoraHub360.ERP.Shared.DTOs
+@using AgoraHub360.ERP.Shared.DTOs.CxC
+@using AgoraHub360.ERP.Web.Services
+@inject CuentasPorCobrarHttpService CxcService
+@inject NavigationManager Nav
+
+<PageTitle>Antigüedad de Saldos - AgoraHub360 ERP</PageTitle>
+
+<div class="page-header mb-4">
+    <div class="d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-2">
+            <span class="hub-back-icon shadow-sm" style="background: rgba(79, 70, 229, 0.15); color: #4f46e5; padding: 10px 14px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center;">
+                <i class="bi bi-clock-history fs-4"></i>
+            </span>
+            <div>
+                <h1 class="mb-0 fw-bold text-dark">Antigüedad de Saldos CxC</h1>
+                <p class="text-muted mb-0 small">Ventas &rsaquo; Cuentas por Cobrar &rsaquo; Antigüedad de Saldos</p>
+            </div>
+        </div>
+        <div>
+            <button class="btn btn-outline-secondary btn-sm" @onclick="GoBack">
+                <i class="bi bi-arrow-left me-1"></i> Volver a Cuentas por Cobrar
+            </button>
+        </div>
+    </div>
+</div>
+
+@if (loading)
+{
+    <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+        <p class="text-muted mt-3">Generando reporte de antigüedad de saldos...</p>
+    </div>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i> @errorMessage
+    </div>
+}
+else
+{
+    <!-- Tarjetas de Resumen -->
+    <div class="row g-3 mb-4">
+        <!-- Total General -->
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100 bg-gradient" style="background: linear-gradient(135deg, #4f46e5, #3b82f6); color: white;">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-white-50 mb-1 small text-uppercase fw-bold">Total Cartera CxC</p>
+                            <h3 class="mb-0 fw-bold">@resumen.TotalGeneral.ToString("N2") <small class="fs-6">Bs</small></h3>
+                        </div>
+                        <div class="bg-white bg-opacity-20 rounded p-3 text-white">
+                            <i class="bi bi-wallet2 fs-3"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- No Vencido -->
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100 bg-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-1 small text-uppercase fw-bold">No Vencido</p>
+                            <h3 class="mb-0 fw-bold text-success">@resumen.TotalNoVencido.ToString("N2") <small class="fs-6 text-muted">Bs</small></h3>
+                        </div>
+                        <div class="bg-success bg-opacity-10 text-success rounded p-3">
+                            <i class="bi bi-check-circle fs-3"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Vencido -->
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100 bg-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-1 small text-uppercase fw-bold">Total Vencido</p>
+                            <h3 class="mb-0 fw-bold text-warning">@TotalVencido.ToString("N2") <small class="fs-6 text-muted">Bs</small></h3>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 text-warning rounded p-3">
+                            <i class="bi bi-exclamation-circle fs-3"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Más de 90 días -->
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100 bg-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="text-muted mb-1 small text-uppercase fw-bold">Mora +90 Días</p>
+                            <h3 class="mb-0 fw-bold text-danger">@resumen.TotalVencidoMas90.ToString("N2") <small class="fs-6 text-muted">Bs</small></h3>
+                        </div>
+                        <div class="bg-danger bg-opacity-10 text-danger rounded p-3">
+                            <i class="bi bi-calendar-x fs-3"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabla de Reporte -->
+    <div class="card border-0 shadow-sm bg-white">
+        <div class="card-header bg-white py-3 border-0">
+            <h5 class="mb-0 fw-bold text-dark"><i class="bi bi-table me-2 text-primary"></i> Detalle de Antigüedad por Cliente</h5>
+        </div>
+        <div class="card-body p-0">
+            @if (resumen.Clientes.Count == 0)
+            {
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                    <p class="text-muted mt-3 mb-0">No hay saldos pendientes en la cartera actual.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light text-secondary small text-uppercase">
+                            <tr>
+                                <th class="ps-3" style="min-width: 250px;">Cliente</th>
+                                <th>NIT</th>
+                                <th class="text-end">No Vencido</th>
+                                <th class="text-end">1–30 Días</th>
+                                <th class="text-end">31–60 Días</th>
+                                <th class="text-end">61–90 Días</th>
+                                <th class="text-end text-danger">+90 Días</th>
+                                <th class="text-end pe-3 fw-bold">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var c in resumen.Clientes)
+                            {
+                                var tieneMoraCritica = c.VencidoMas90 > 0;
+                                <tr class="@(tieneMoraCritica ? "table-danger bg-opacity-10" : "")">
+                                    <td class="ps-3">
+                                        <div class="fw-semibold text-dark">
+                                            @if (tieneMoraCritica)
+                                            {
+                                                <i class="bi bi-exclamation-triangle-fill text-danger me-1" title="Alerta: Saldo vencido mayor a 90 días"></i>
+                                            }
+                                            @c.ClienteNombre
+                                        </div>
+                                    </td>
+                                    <td><code>@(string.IsNullOrWhiteSpace(c.ClienteNit) ? "N/A" : c.ClienteNit)</code></td>
+                                    <td class="text-end text-success fw-medium">@(c.NoVencido > 0 ? c.NoVencido.ToString("N2") : "-")</td>
+                                    <td class="text-end text-muted">@(c.Vencido1A30 > 0 ? c.Vencido1A30.ToString("N2") : "-")</td>
+                                    <td class="text-end text-muted">@(c.Vencido31A60 > 0 ? c.Vencido31A60.ToString("N2") : "-")</td>
+                                    <td class="text-end text-muted">@(c.Vencido61A90 > 0 ? c.Vencido61A90.ToString("N2") : "-")</td>
+                                    <td class="text-end text-danger fw-bold">
+                                        @(c.VencidoMas90 > 0 ? c.VencidoMas90.ToString("N2") : "-")
+                                    </td>
+                                    <td class="text-end pe-3 fw-bold text-primary">@c.Total.ToString("N2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                        <!-- Fila de Totales Generales -->
+                        <tfoot class="table-light fw-bold border-top">
+                            <tr>
+                                <td class="ps-3">TOTAL GENERAL</td>
+                                <td></td>
+                                <td class="text-end text-success">@resumen.TotalNoVencido.ToString("N2")</td>
+                                <td class="text-end text-dark">@resumen.TotalVencido1A30.ToString("N2")</td>
+                                <td class="text-end text-dark">@resumen.TotalVencido31A60.ToString("N2")</td>
+                                <td class="text-end text-dark">@resumen.TotalVencido61A90.ToString("N2")</td>
+                                <td class="text-end text-danger">@resumen.TotalVencidoMas90.ToString("N2")</td>
+                                <td class="text-end pe-3 text-primary">@resumen.TotalGeneral.ToString("N2")</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private bool loading = true;
+    private string? errorMessage;
+    private AntiguedadSaldosResumenDto resumen = new();
+
+    private decimal TotalVencido => resumen.TotalVencido1A30 
+                                     + resumen.TotalVencido31A60 
+                                     + resumen.TotalVencido61A90 
+                                     + resumen.TotalVencidoMas90;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadReporteAsync();
+    }
+
+    private async Task LoadReporteAsync()
+    {
+        loading = true;
+        errorMessage = null;
+        try
+        {
+            var res = await CxcService.GetAntiguedadSaldosAsync();
+            if (res.Success)
+            {
+                resumen = res.Data ?? new();
+            }
+            else
+            {
+                errorMessage = res.Message ?? "Error al obtener el reporte de antigüedad de saldos.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error de red o comunicación: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private void GoBack()
+    {
+        Nav.NavigateTo("/ventas/cuentas-por-cobrar");
+    }
+}

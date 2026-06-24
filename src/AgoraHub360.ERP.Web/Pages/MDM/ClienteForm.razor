@@ -4,6 +4,8 @@
 @inject NavigationManager Nav
 @inject ClienteHttpService ClienteService
 @inject ClienteSucursalHttpService ClienteSucursalService
+@inject ClientePerfilFiscalHttpService ClientePerfilFiscalService
+@inject ClienteCreditoConfiguracionHttpService CreditoConfigService
 @inject IJSRuntime JS
 @using System.ComponentModel.DataAnnotations
 @using ClienteDto = AgoraHub360.ERP.Shared.DTOs.MDM.ClienteDto
@@ -12,6 +14,12 @@
 @using ClienteSucursalDto = AgoraHub360.ERP.Shared.DTOs.MDM.ClienteSucursalDto
 @using CreateClienteSucursalDto = AgoraHub360.ERP.Shared.DTOs.MDM.CreateClienteSucursalDto
 @using UpdateClienteSucursalDto = AgoraHub360.ERP.Shared.DTOs.MDM.UpdateClienteSucursalDto
+@using ClientePerfilFiscalDto = AgoraHub360.ERP.Shared.DTOs.MDM.ClientePerfilFiscalDto
+@using CreateClientePerfilFiscalDto = AgoraHub360.ERP.Shared.DTOs.MDM.CreateClientePerfilFiscalDto
+@using UpdateClientePerfilFiscalDto = AgoraHub360.ERP.Shared.DTOs.MDM.UpdateClientePerfilFiscalDto
+@using SetClientePerfilFiscalPredeterminadoDto = AgoraHub360.ERP.Shared.DTOs.MDM.SetClientePerfilFiscalPredeterminadoDto
+@using ClienteCreditoConfiguracionDto = AgoraHub360.ERP.Shared.DTOs.CxC.ClienteCreditoConfiguracionDto
+@using GuardarClienteCreditoConfiguracionRequestDto = AgoraHub360.ERP.Shared.DTOs.CxC.GuardarClienteCreditoConfiguracionRequestDto
 
 <PageTitle>@(IsNew ? "Nuevo Cliente" : "Editar Cliente") - AgoraHub360</PageTitle>
 
@@ -70,10 +78,15 @@
                                     @onclick="LoadSucursalesTab" type="button">Sucursales</button>
                         </li>
                         <li class="nav-item" role="presentation">
+                            <button class="nav-link @(activeTab == TabPerfilesFiscales ? "active" : "")"
+                                    @onclick="LoadPerfilesFiscalesTab" type="button">Datos de Facturación</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
                             <button class="nav-link disabled" title="Próximamente">Contactos</button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link disabled" title="Próximamente">Config. Comercial</button>
+                            <button class="nav-link @(activeTab == TabCredito ? "active" : "")"
+                                    @onclick="LoadCreditoTab" type="button">Config. Comercial</button>
                         </li>
                     }
                 </ul>
@@ -387,6 +400,274 @@
                         </div>
                     }
                 }
+                else if (activeTab == TabPerfilesFiscales)
+                {
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0 text-primary">Datos de Facturación</h5>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary" @onclick="CrearPerfilDesdeCliente">
+                                <i class="bi bi-magic me-1"></i> Crear desde datos del cliente
+                            </button>
+                            <button type="button" class="btn btn-sm btn-primary" @onclick="NuevoPerfilFiscal">
+                                <i class="bi bi-plus-lg"></i> Nuevo Perfil Fiscal
+                            </button>
+                        </div>
+                    </div>
+
+                    @if (cargandoPerfilesFiscales)
+                    {
+                        <div class="text-center py-4">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                            <span class="ms-2">Cargando perfiles fiscales...</span>
+                        </div>
+                    }
+                    else if (perfilesFiscalesCliente.Count == 0)
+                    {
+                        <div class="alert alert-info d-flex align-items-center">
+                            <i class="bi bi-info-circle-fill me-2 fs-5"></i>
+                            <div>No hay perfiles fiscales registrados para este cliente.</div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive rounded border mb-4">
+                            <table class="table table-hover table-striped mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Alias</th>
+                                        <th>Tipo Documento</th>
+                                        <th>Número Documento</th>
+                                        <th>Complemento</th>
+                                        <th>Razón Social</th>
+                                        <th>Email</th>
+                                        <th>Teléfono</th>
+                                        <th class="text-center">Predeterminado</th>
+                                        <th class="text-center">Estado</th>
+                                        <th class="text-end">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var perfil in perfilesFiscalesCliente)
+                                    {
+                                        <tr>
+                                            <td class="align-middle fw-medium">@perfil.Alias</td>
+                                            <td class="align-middle">@perfil.TipoDocumentoIdentidad</td>
+                                            <td class="align-middle"><code>@perfil.NumeroDocumento</code></td>
+                                            <td class="align-middle">@(perfil.Complemento ?? "-")</td>
+                                            <td class="align-middle">@perfil.RazonSocial</td>
+                                            <td class="align-middle">@(perfil.EmailFactura ?? "-")</td>
+                                            <td class="align-middle">@(perfil.TelefonoFactura ?? "-")</td>
+                                            <td class="align-middle text-center">
+                                                @if (EsPredeterminadoVisual(perfil))
+                                                {
+                                                    <span class="badge bg-warning text-dark">Predeterminado</span>
+                                                }
+                                            </td>
+                                            <td class="align-middle text-center">
+                                                @if (perfil.Activo)
+                                                {
+                                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 rounded-pill">Activo</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 rounded-pill">Inactivo</span>
+                                                }
+                                            </td>
+                                            <td class="text-end align-middle">
+                                                <div class="btn-group btn-group-sm">
+                                                    <button class="btn btn-outline-primary" @onclick="() => EditarPerfilFiscal(perfil)" title="Editar">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-warning" disabled="@EsPredeterminadoVisual(perfil)" @onclick="() => MarcarPerfilFiscalPredeterminado(perfil)" title="Marcar Predeterminado">
+                                                        <i class="bi bi-star"></i>
+                                                    </button>
+                                                    <button class="btn btn-outline-danger" @onclick="() => EliminarPerfilFiscal(perfil)" title="Desactivar">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+
+                    @if (mostrarFormularioPerfilFiscal)
+                    {
+                        <div class="card border-primary mb-3">
+                            <div class="card-header bg-primary bg-opacity-10 text-primary fw-bold d-flex justify-content-between align-items-center">
+                                <span><i class="bi @(editandoPerfilFiscalId.HasValue ? "bi-pencil-square" : "bi-plus-square") me-2"></i> @(editandoPerfilFiscalId.HasValue ? "Editar Perfil Fiscal" : "Nuevo Perfil Fiscal")</span>
+                                <button type="button" class="btn-close" @onclick="CancelarEdicionPerfilFiscal"></button>
+                            </div>
+                            <div class="card-body">
+                                <EditForm Model="perfilFiscalForm" OnValidSubmit="GuardarPerfilFiscalAsync">
+                                    <DataAnnotationsValidator />
+
+                                    <div class="row">
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label fw-semibold">Alias *</label>
+                                            <InputText class="form-control form-control-sm" @bind-Value="perfilFiscalForm.Alias" />
+                                            <ValidationMessage For="@(() => perfilFiscalForm.Alias)" />
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label fw-semibold">Tipo Documento *</label>
+                                            <InputText class="form-control form-control-sm" @bind-Value="perfilFiscalForm.TipoDocumentoIdentidad" />
+                                            <ValidationMessage For="@(() => perfilFiscalForm.TipoDocumentoIdentidad)" />
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label fw-semibold">Número Documento *</label>
+                                            <InputText class="form-control form-control-sm" @bind-Value="perfilFiscalForm.NumeroDocumento" />
+                                            <ValidationMessage For="@(() => perfilFiscalForm.NumeroDocumento)" />
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-3 mb-3">
+                                            <label class="form-label fw-semibold">Complemento</label>
+                                            <InputText class="form-control form-control-sm" @bind-Value="perfilFiscalForm.Complemento" />
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label fw-semibold">Razón Social *</label>
+                                            <InputText class="form-control form-control-sm" @bind-Value="perfilFiscalForm.RazonSocial" />
+                                            <ValidationMessage For="@(() => perfilFiscalForm.RazonSocial)" />
+                                        </div>
+                                        <div class="col-md-3 mb-3">
+                                            <label class="form-label fw-semibold">Tipo Persona</label>
+                                            <InputText class="form-control form-control-sm" @bind-Value="perfilFiscalForm.TipoPersona" />
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label fw-semibold">Tipo Perfil Fiscal</label>
+                                            <InputText class="form-control form-control-sm" @bind-Value="perfilFiscalForm.TipoPerfilFiscal" />
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label fw-semibold">Email Factura</label>
+                                            <InputText class="form-control form-control-sm" @bind-Value="perfilFiscalForm.EmailFactura" />
+                                            <ValidationMessage For="@(() => perfilFiscalForm.EmailFactura)" />
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label fw-semibold">Teléfono Factura</label>
+                                            <InputText class="form-control form-control-sm" @bind-Value="perfilFiscalForm.TelefonoFactura" />
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label fw-semibold">Código Cliente API</label>
+                                            <InputText class="form-control form-control-sm" @bind-Value="perfilFiscalForm.CodigoClienteApi" />
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label fw-semibold">Código Externo Facturación</label>
+                                            <InputText class="form-control form-control-sm" @bind-Value="perfilFiscalForm.CodigoExternoFacturacion" />
+                                        </div>
+                                    </div>
+
+                                    <div class="row bg-light rounded p-2 mx-0 mb-3 border">
+                                        <div class="col-md-3 form-check mb-2">
+                                            <InputCheckbox class="form-check-input" @bind-Value="perfilFiscalForm.RequiereEmail" id="pfRequiereEmail" />
+                                            <label class="form-check-label small" for="pfRequiereEmail">Requiere email</label>
+                                        </div>
+                                        <div class="col-md-3 form-check mb-2">
+                                            <InputCheckbox class="form-check-input" @bind-Value="perfilFiscalForm.EsPredeterminado" id="pfPredeterminado" />
+                                            <label class="form-check-label small" for="pfPredeterminado">Predeterminado</label>
+                                        </div>
+                                        @if (editandoPerfilFiscalId.HasValue)
+                                        {
+                                            <div class="col-md-3 form-check mb-2">
+                                                <InputCheckbox class="form-check-input" @bind-Value="perfilFiscalActivo" id="pfActivo" />
+                                                <label class="form-check-label small" for="pfActivo">Activo</label>
+                                            </div>
+                                        }
+                                    </div>
+
+                                    @if (!string.IsNullOrWhiteSpace(perfilFiscalValidationMessage))
+                                    {
+                                        <div class="alert alert-warning py-2" role="alert">
+                                            <i class="bi bi-exclamation-circle me-1"></i>@perfilFiscalValidationMessage
+                                        </div>
+                                    }
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Observaciones</label>
+                                        <InputTextArea class="form-control form-control-sm" rows="2" @bind-Value="perfilFiscalForm.Observaciones" />
+                                    </div>
+
+                                    <div class="d-flex justify-content-end gap-2 mt-3 pt-3 border-top">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="CancelarEdicionPerfilFiscal">Cancelar</button>
+                                        <button type="submit" class="btn btn-sm btn-primary" disabled="@saving">
+                                            @if(saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
+                                            <i class="bi bi-save me-1"></i> Guardar Perfil Fiscal
+                                        </button>
+                                    </div>
+                                </EditForm>
+                            </div>
+                        </div>
+                    }
+                }
+                else if (activeTab == TabCredito)
+                {
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="mb-0 text-primary">Configuración de Crédito</h5>
+                    </div>
+
+                    @if (cargandoCredito)
+                    {
+                        <div class="text-center py-4">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                            <span class="ms-2">Cargando configuración de crédito...</span>
+                        </div>
+                    }
+                    else
+                    {
+                        <EditForm Model="creditoConfig" OnValidSubmit="GuardarCreditoAsync">
+                            <div class="card mb-3 border">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-12 mb-3">
+                                            <div class="form-check form-switch">
+                                                <InputCheckbox class="form-check-input" id="creditoHabilitado" @bind-Value="creditoConfig.CreditoHabilitado" />
+                                                <label class="form-check-label fw-bold" for="creditoHabilitado">Habilitar crédito comercial para este cliente</label>
+                                            </div>
+                                            <div class="form-text text-muted">Cuando el crédito está habilitado, las ventas sugerirán automáticamente una fecha de vencimiento basada en los días de crédito.</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label fw-semibold">Días de crédito *</label>
+                                            <InputNumber class="form-control" @bind-Value="creditoConfig.DiasCredito" min="0" />
+                                            <div class="form-text text-muted">Días de plazo sugeridos para el pago (debe ser mayor o igual a 0).</div>
+                                        </div>
+
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label fw-semibold">Límite de crédito ($) *</label>
+                                            <InputNumber class="form-control" @bind-Value="creditoConfig.LimiteCredito" min="0" step="0.01" />
+                                            <div class="form-text text-muted">Monto máximo de crédito autorizado para el cliente (debe ser mayor o igual a 0).</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Observaciones</label>
+                                        <InputTextArea class="form-control" rows="3" @bind-Value="creditoConfig.Observaciones" placeholder="Indique observaciones o condiciones especiales de crédito para este cliente..." />
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-end gap-2 mt-3">
+                                <button type="submit" class="btn btn-primary" disabled="@saving">
+                                    @if (saving)
+                                    {
+                                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                    }
+                                    <i class="bi bi-save me-1"></i> Guardar configuración crédito
+                                </button>
+                            </div>
+                        </EditForm>
+                    }
+                }
             </div>
         </div>
     }
@@ -399,6 +680,8 @@
 
     private const string TabDatos = "datos";
     private const string TabSucursales = "sucursales";
+    private const string TabPerfilesFiscales = "perfiles-fiscales";
+    private const string TabCredito = "credito";
 
     // Tab Data
     private string activeTab = TabDatos;
@@ -420,11 +703,245 @@
     private int? editandoSucursalId = null;
     private CreateClienteSucursalDto sucursalForm = new();
 
+    // Perfiles fiscales state
+    private bool cargandoPerfilesFiscales = false;
+    private List<ClientePerfilFiscalDto> perfilesFiscalesCliente = new();
+    private bool mostrarFormularioPerfilFiscal = false;
+    private long? editandoPerfilFiscalId = null;
+    private CreateClientePerfilFiscalDto perfilFiscalForm = new();
+    private bool perfilFiscalActivo = true;
+    private string? perfilFiscalValidationMessage;
+
+    // Crédito state
+    private bool cargandoCredito = false;
+    private ClienteCreditoConfiguracionDto creditoConfig = new();
+
     protected override async Task OnInitializedAsync()
     {
         if (!IsNew)
         {
             await LoadClienteInfoAsync();
+        }
+    }
+
+    private CreateClientePerfilFiscalDto CrearPerfilFiscalFormDefault()
+        => new()
+        {
+            TipoDocumentoIdentidad = "NIT",
+            RequiereEmail = false,
+            EsPredeterminado = !perfilesFiscalesCliente.Any(x => x.Activo && x.EsPredeterminado)
+        };
+
+    private bool EsPredeterminadoVisual(ClientePerfilFiscalDto perfil)
+    {
+        var predeterminadoId = perfilesFiscalesCliente
+            .Where(x => x.Activo && x.EsPredeterminado)
+            .OrderBy(x => x.Id)
+            .Select(x => x.Id)
+            .FirstOrDefault();
+
+        return predeterminadoId > 0 && predeterminadoId == perfil.Id;
+    }
+
+    private void NuevoPerfilFiscal()
+    {
+        editandoPerfilFiscalId = null;
+        perfilFiscalForm = CrearPerfilFiscalFormDefault();
+        perfilFiscalActivo = true;
+        perfilFiscalValidationMessage = null;
+        mostrarFormularioPerfilFiscal = true;
+    }
+
+    private void CrearPerfilDesdeCliente()
+    {
+        if (clienteDto is null)
+            return;
+
+        editandoPerfilFiscalId = null;
+        perfilFiscalForm = CrearPerfilFiscalFormDefault();
+        perfilFiscalForm.Alias = string.IsNullOrWhiteSpace(clienteDto.RazonSocial) ? "Perfil fiscal" : clienteDto.RazonSocial;
+        perfilFiscalForm.NumeroDocumento = clienteDto.NIT ?? string.Empty;
+        perfilFiscalForm.RazonSocial = clienteDto.RazonSocial;
+        perfilFiscalForm.EmailFactura = clienteDto.Email;
+        perfilFiscalForm.TelefonoFactura = clienteDto.Telefono;
+        perfilFiscalForm.EsPredeterminado = !perfilesFiscalesCliente.Any(x => x.Activo && x.EsPredeterminado);
+        perfilFiscalActivo = true;
+        perfilFiscalValidationMessage = null;
+        mostrarFormularioPerfilFiscal = true;
+    }
+
+    private void CancelarEdicionPerfilFiscal()
+    {
+        mostrarFormularioPerfilFiscal = false;
+        editandoPerfilFiscalId = null;
+        perfilFiscalForm = CrearPerfilFiscalFormDefault();
+        perfilFiscalActivo = true;
+        perfilFiscalValidationMessage = null;
+    }
+
+    private void EditarPerfilFiscal(ClientePerfilFiscalDto dto)
+    {
+        editandoPerfilFiscalId = dto.Id;
+        perfilFiscalForm = new CreateClientePerfilFiscalDto
+        {
+            ClienteSucursalId = dto.ClienteSucursalId,
+            Alias = dto.Alias,
+            TipoDocumentoIdentidad = dto.TipoDocumentoIdentidad,
+            NumeroDocumento = dto.NumeroDocumento,
+            Complemento = dto.Complemento,
+            RazonSocial = dto.RazonSocial,
+            TipoPersona = dto.TipoPersona,
+            TipoPerfilFiscal = dto.TipoPerfilFiscal,
+            EmailFactura = dto.EmailFactura,
+            TelefonoFactura = dto.TelefonoFactura,
+            RequiereEmail = dto.RequiereEmail,
+            EsPredeterminado = dto.EsPredeterminado,
+            CodigoClienteApi = dto.CodigoClienteApi,
+            CodigoExternoFacturacion = dto.CodigoExternoFacturacion,
+            Observaciones = dto.Observaciones
+        };
+        perfilFiscalActivo = dto.Activo;
+        perfilFiscalValidationMessage = null;
+        mostrarFormularioPerfilFiscal = true;
+    }
+
+    private async Task GuardarPerfilFiscalAsync()
+    {
+        try
+        {
+            saving = true;
+            errorMessage = null;
+            successMessage = null;
+            perfilFiscalValidationMessage = ValidatePerfilFiscalForm();
+
+            if (!string.IsNullOrWhiteSpace(perfilFiscalValidationMessage))
+                return;
+
+            if (editandoPerfilFiscalId.HasValue)
+            {
+                var update = new UpdateClientePerfilFiscalDto
+                {
+                    ClienteSucursalId = perfilFiscalForm.ClienteSucursalId,
+                    Alias = perfilFiscalForm.Alias,
+                    TipoDocumentoIdentidad = perfilFiscalForm.TipoDocumentoIdentidad,
+                    NumeroDocumento = perfilFiscalForm.NumeroDocumento,
+                    Complemento = perfilFiscalForm.Complemento,
+                    RazonSocial = perfilFiscalForm.RazonSocial,
+                    TipoPersona = perfilFiscalForm.TipoPersona,
+                    TipoPerfilFiscal = perfilFiscalForm.TipoPerfilFiscal,
+                    EmailFactura = perfilFiscalForm.EmailFactura,
+                    TelefonoFactura = perfilFiscalForm.TelefonoFactura,
+                    RequiereEmail = perfilFiscalForm.RequiereEmail,
+                    EsPredeterminado = perfilFiscalForm.EsPredeterminado,
+                    CodigoClienteApi = perfilFiscalForm.CodigoClienteApi,
+                    CodigoExternoFacturacion = perfilFiscalForm.CodigoExternoFacturacion,
+                    Observaciones = perfilFiscalForm.Observaciones,
+                    Activo = perfilFiscalActivo
+                };
+
+                var res = await ClientePerfilFiscalService.UpdateAsync(editandoPerfilFiscalId.Value, update);
+                if (!res.Success)
+                {
+                    errorMessage = NormalizePerfilFiscalError(res.Message, "Error al actualizar el perfil fiscal.");
+                    return;
+                }
+
+                successMessage = "Perfil fiscal actualizado con éxito.";
+            }
+            else
+            {
+                var res = await ClientePerfilFiscalService.CreateAsync(Id!.Value, perfilFiscalForm);
+                if (!res.Success)
+                {
+                    errorMessage = NormalizePerfilFiscalError(res.Message, "Error al crear el perfil fiscal.");
+                    return;
+                }
+
+                successMessage = "Perfil fiscal creado con éxito.";
+            }
+
+            mostrarFormularioPerfilFiscal = false;
+            editandoPerfilFiscalId = null;
+            perfilFiscalForm = CrearPerfilFiscalFormDefault();
+            perfilFiscalValidationMessage = null;
+            await SubLoadPerfilesFiscalesAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Ocurrió un error al guardar el perfil fiscal: {ex.Message}";
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private async Task MarcarPerfilFiscalPredeterminado(ClientePerfilFiscalDto perfil)
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"¿Marcar '{perfil.Alias}' como perfil fiscal predeterminado?");
+        if (!confirmed)
+            return;
+
+        try
+        {
+            saving = true;
+            errorMessage = null;
+            successMessage = null;
+
+            var result = await ClientePerfilFiscalService.SetPredeterminadoAsync(
+                perfil.Id,
+                new SetClientePerfilFiscalPredeterminadoDto { ConfirmarCambio = true });
+
+            if (result.Success)
+            {
+                successMessage = $"El perfil fiscal '{perfil.Alias}' se marcó como predeterminado.";
+                await SubLoadPerfilesFiscalesAsync();
+            }
+            else
+            {
+                errorMessage = NormalizePerfilFiscalError(result.Message, "Error al marcar perfil fiscal predeterminado.");
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Error de red: " + ex.Message;
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private async Task EliminarPerfilFiscal(ClientePerfilFiscalDto perfil)
+    {
+        var confirmed = await JS.InvokeAsync<bool>("confirm", $"¿Desactivar el perfil fiscal '{perfil.Alias}'?");
+        if (!confirmed)
+            return;
+
+        try
+        {
+            saving = true;
+            errorMessage = null;
+            successMessage = null;
+
+            var result = await ClientePerfilFiscalService.DeleteAsync(perfil.Id);
+            if (result.Success)
+            {
+                successMessage = "Perfil fiscal desactivado con éxito.";
+                await SubLoadPerfilesFiscalesAsync();
+            }
+            else
+            {
+                errorMessage = NormalizePerfilFiscalError(result.Message, "No se pudo desactivar el perfil fiscal.");
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Error al comunicarse con el servidor: " + ex.Message;
+        }
+        finally
+        {
+            saving = false;
         }
     }
 
@@ -556,6 +1073,41 @@
         }
     }
 
+    private string? ValidatePerfilFiscalForm()
+    {
+        if (string.IsNullOrWhiteSpace(perfilFiscalForm.Alias))
+            return "El alias es obligatorio.";
+
+        if (string.IsNullOrWhiteSpace(perfilFiscalForm.TipoDocumentoIdentidad))
+            return "El tipo de documento de identidad es obligatorio.";
+
+        if (string.IsNullOrWhiteSpace(perfilFiscalForm.NumeroDocumento))
+            return "El número de documento es obligatorio.";
+
+        if (string.IsNullOrWhiteSpace(perfilFiscalForm.RazonSocial))
+            return "La razón social es obligatoria.";
+
+        if (perfilFiscalForm.RequiereEmail && string.IsNullOrWhiteSpace(perfilFiscalForm.EmailFactura))
+            return "El email de factura es obligatorio cuando el perfil requiere email.";
+
+        if (!string.IsNullOrWhiteSpace(perfilFiscalForm.EmailFactura)
+            && !new EmailAddressAttribute().IsValid(perfilFiscalForm.EmailFactura))
+            return "El formato del email de factura no es válido.";
+
+        return null;
+    }
+
+    private static string NormalizePerfilFiscalError(string? rawMessage, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(rawMessage))
+            return fallback;
+
+        if (rawMessage.Contains("único perfil fiscal predeterminado", StringComparison.OrdinalIgnoreCase))
+            return "No se puede desactivar el único perfil fiscal predeterminado activo. Marque otro perfil como predeterminado antes de desactivar.";
+
+        return rawMessage;
+    }
+
     private async Task HandleInvalidSubmit(EditContext editContext)
     {
         var messages = editContext.GetValidationMessages().ToList();
@@ -624,6 +1176,104 @@
         await SubLoadSucursalesAsync();
     }
 
+    private async Task LoadPerfilesFiscalesTab()
+    {
+        if (IsNew) return;
+        SetTab(TabPerfilesFiscales);
+        await SubLoadPerfilesFiscalesAsync();
+    }
+
+    private async Task LoadCreditoTab()
+    {
+        if (IsNew) return;
+        SetTab(TabCredito);
+        await SubLoadCreditoAsync();
+    }
+
+    private async Task SubLoadCreditoAsync()
+    {
+        try
+        {
+            cargandoCredito = true;
+            var config = await CreditoConfigService.GetByClienteAsync(Id!.Value);
+            if (config != null)
+            {
+                creditoConfig = config;
+            }
+            else
+            {
+                creditoConfig = new ClienteCreditoConfiguracionDto
+                {
+                    ClienteId = Id!.Value,
+                    CreditoHabilitado = false,
+                    DiasCredito = 0,
+                    LimiteCredito = 0,
+                    Observaciones = string.Empty
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar la configuración de crédito: {ex.Message}";
+        }
+        finally
+        {
+            cargandoCredito = false;
+        }
+    }
+
+    private async Task GuardarCreditoAsync()
+    {
+        try
+        {
+            saving = true;
+            errorMessage = null;
+            successMessage = null;
+
+            if (creditoConfig.DiasCredito < 0)
+            {
+                errorMessage = "Los días de crédito no pueden ser negativos.";
+                return;
+            }
+
+            if (creditoConfig.LimiteCredito < 0)
+            {
+                errorMessage = "El límite de crédito no puede ser negativo.";
+                return;
+            }
+
+            var req = new GuardarClienteCreditoConfiguracionRequestDto
+            {
+                CreditoHabilitado = creditoConfig.CreditoHabilitado,
+                DiasCredito = creditoConfig.DiasCredito,
+                LimiteCredito = creditoConfig.LimiteCredito,
+                Observaciones = creditoConfig.Observaciones ?? string.Empty
+            };
+
+            var res = await CreditoConfigService.GuardarAsync(Id!.Value, req);
+            if (res.Success)
+            {
+                successMessage = "Configuración de crédito guardada exitosamente.";
+                if (res.Data != null)
+                {
+                    creditoConfig = res.Data;
+                }
+            }
+            else
+            {
+                errorMessage = res.Message ?? "Error al guardar la configuración de crédito.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al guardar la configuración de crédito: {ex.Message}";
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
     private async Task SubLoadSucursalesAsync()
     {
         try
@@ -638,6 +1288,27 @@
         finally
         {
             cargandoSucursales = false;
+        }
+    }
+
+    private async Task SubLoadPerfilesFiscalesAsync()
+    {
+        try
+        {
+            cargandoPerfilesFiscales = true;
+            perfilesFiscalesCliente = await ClientePerfilFiscalService.GetByClienteAsync(Id!.Value);
+            perfilesFiscalesCliente = perfilesFiscalesCliente
+                .OrderByDescending(x => x.EsPredeterminado)
+                .ThenBy(x => x.Alias)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar perfiles fiscales: {ex.Message}";
+        }
+        finally
+        {
+            cargandoPerfilesFiscales = false;
         }
     }
 

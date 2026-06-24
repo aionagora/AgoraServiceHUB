@@ -1,0 +1,157 @@
+@namespace AgoraHub360.ERP.Web.Shared
+
+@using AgoraHub360.ERP.Shared.DTOs.Ventas
+@using AgoraHub360.ERP.Web.Services
+@using AgoraHub360.ERP.Web.Helpers
+
+@* ─────────────────────────────────────────────────────────────────────────────
+   ModalRegistrarPago — Modal reutilizable para registrar pagos de ventas.
+   ──────────────────────────────────────────────────────────────────────────── *@
+
+@if (_visible)
+{
+    <div class="modal show d-block"
+         tabindex="-1"
+         style="background: rgba(0,0,0,.45)"
+         @onclick="OnBackdropClick">
+
+        <div class="modal-dialog modal-dialog-centered"
+             @onclick:stopPropagation>
+
+            <div class="modal-content">
+
+                @* ── Header ──────────────────────────────────────────────────── *@
+                <div class="modal-header" style="background:#f8fafc;border-bottom:1px solid #e5e7eb">
+                    <div>
+                        <h5 class="modal-title mb-0">
+                            <i class="bi bi-cash-coin me-2" style="color:#7c3aed"></i>
+                            Registrar Pago
+                        </h5>
+                        <small class="text-muted">
+                            Venta: <strong>@_venta?.NumeroVenta</strong>
+                            &mdash; Total: <strong>@FormatMoney(_venta?.Total ?? 0)</strong>
+                        </small>
+                    </div>
+                    <button type="button" class="btn-close" @onclick="CloseAsync"></button>
+                </div>
+
+                @* ── Body ────────────────────────────────────────────────────── *@
+                <div class="modal-body p-3">
+
+                    @* Mensajes de feedback *@
+                    @if (!string.IsNullOrWhiteSpace(_errorMessage))
+                    {
+                        <div class="alert alert-danger py-2 small" role="alert">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i> @_errorMessage
+                        </div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(_successMessage))
+                    {
+                        <div class="alert alert-success py-2 small" role="alert">
+                            <i class="bi bi-check-circle-fill me-1"></i> @_successMessage
+                        </div>
+                    }
+
+                    @* Información de saldo *@
+                    <div class="card bg-light mb-3">
+                        <div class="card-body py-2 small">
+                            <div class="row text-center g-2">
+                                <div class="col-4 border-end">
+                                    <div class="text-muted">Total venta</div>
+                                    <strong>@FormatMoney(_venta?.Total ?? 0)</strong>
+                                </div>
+                                <div class="col-4 border-end">
+                                    <div class="text-muted">Pagado</div>
+                                    <strong>@FormatMoney(_totalPagado)</strong>
+                                </div>
+                                <div class="col-4">
+                                    <div class="text-muted">Saldo pendiente</div>
+                                    <strong class="@(_saldoPendiente > 0 ? "text-danger" : "text-success")">
+                                        @FormatMoney(_saldoPendiente)
+                                    </strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    @* Formulario de pago *@
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Fecha de pago</label>
+                            <InputDate class="form-control form-control-sm" @bind-Value="_model.FechaPago" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Monto</label>
+                            <InputNumber class="form-control form-control-sm" @bind-Value="_model.Monto"
+                                         min="0.01" step="0.01" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Tipo de pago</label>
+                            <InputSelect class="form-select form-select-sm" @bind-Value="_model.TipoPago">
+                                <option value="">Seleccionar...</option>
+                                @foreach (var opt in _tipoPagoOptions)
+                                {
+                                    <option value="@opt">@opt</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Modo de pago</label>
+                            <InputSelect class="form-select form-select-sm" @bind-Value="_model.ModoPago">
+                                <option value="">Seleccionar...</option>
+                                @foreach (var opt in _modoPagoOptions)
+                                {
+                                    <option value="@opt">@opt</option>
+                                }
+                            </InputSelect>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Referencia</label>
+                            <InputText class="form-control form-control-sm" @bind-Value="_model.Referencia"
+                                       placeholder="Nro. cheque, transferencia, etc." />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Moneda</label>
+                            <InputSelect class="form-select form-select-sm" @bind-Value="_model.MonedaCodigo">
+                                <option value="">Defecto (venta)</option>
+                                <option value="BOB">BOB</option>
+                                <option value="USD">USD</option>
+                            </InputSelect>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Tipo de cambio</label>
+                            <InputNumber class="form-control form-control-sm" @bind-Value="_model.TipoCambio"
+                                         min="0.01" step="0.01" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Cuenta caja/banco</label>
+                            <InputNumber class="form-control form-control-sm" @bind-Value="_model.CuentaCajaBancoId"
+                                         placeholder="ID cuenta (opcional)" />
+                        </div>
+                    </div>
+                </div>
+
+                @* ── Footer ──────────────────────────────────────────────────── *@
+                <div class="modal-footer justify-content-between" style="background:#f8fafc">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="CloseAsync"
+                            disabled="@_isSubmitting">
+                        <i class="bi bi-x-circle me-1"></i> Cancelar
+                    </button>
+                    <button type="button" class="btn btn-sm btn-primary" @onclick="SubmitAsync"
+                            disabled="@_isSubmitting">
+                        @if (_isSubmitting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        }
+                        else
+                        {
+                            <i class="bi bi-check2-circle me-1"></i>
+                        }
+                        Registrar pago
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+}

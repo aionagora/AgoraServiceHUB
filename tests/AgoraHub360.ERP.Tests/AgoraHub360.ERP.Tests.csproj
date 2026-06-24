@@ -23,9 +23,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\AgoraHub360.ERP.Api\AgoraHub360.ERP.Api.csproj" />
     <ProjectReference Include="..\..\src\AgoraHub360.ERP.Domain\AgoraHub360.ERP.Domain.csproj" />
     <ProjectReference Include="..\..\src\AgoraHub360.ERP.Application\AgoraHub360.ERP.Application.csproj" />
     <ProjectReference Include="..\..\src\AgoraHub360.ERP.Persistence\AgoraHub360.ERP.Persistence.csproj" />
+    <ProjectReference Include="..\..\src\AgoraHub360.ERP.Shared\AgoraHub360.ERP.Shared.csproj" />
   </ItemGroup>
 
 </Project>

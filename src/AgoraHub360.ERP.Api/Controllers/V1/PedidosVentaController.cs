@@ -30,6 +30,16 @@ public class PedidosVentaController : ControllerBase
         return Ok(ApiResponse<IReadOnlyList<PedidoVentaDto>>.Ok(result.Value!));
     }
 
+    [HttpGet("paged")]
+    public async Task<IActionResult> GetPaged([FromQuery] PedidoVentaFilterDto filter, CancellationToken ct)
+    {
+        var result = await _service.GetPagedAsync(filter, ct);
+        if (!result.IsSuccess)
+            return BadRequest(ApiResponse<PaginatedResultDto<PedidoVentaDto>>.Fail(result.Error!));
+
+        return Ok(ApiResponse<PaginatedResultDto<PedidoVentaDto>>.Ok(result.Value!));
+    }
+
     [HttpGet("{id:long}")]
     public async Task<IActionResult> GetById(long id, CancellationToken ct)
     {
@@ -94,9 +104,9 @@ public class PedidosVentaController : ControllerBase
     {
         var result = await _service.ConfirmAsync(id, ct);
         if (!result.IsSuccess)
-            return BadRequest(result);
+            return BadRequest(ApiResponse<bool>.Fail(result.Error ?? "No se pudo confirmar el pedido."));
 
-        return Ok(result);
+        return Ok(ApiResponse<bool>.Ok(true, "Pedido confirmado correctamente. Stock reservado."));
     }
 
     [HttpPost("{id:long}/despachar")]
@@ -104,9 +114,9 @@ public class PedidosVentaController : ControllerBase
     {
         var result = await _service.DispatchAsync(id, ct);
         if (!result.IsSuccess)
-            return BadRequest(result);
+            return BadRequest(ApiResponse<bool>.Fail(result.Error ?? "No se pudo despachar el pedido."));
 
-        return Ok(result);
+        return Ok(ApiResponse<bool>.Ok(true, "Pedido despachado correctamente."));
     }
 
     [HttpPost("{id:long}/anular")]
@@ -114,9 +124,9 @@ public class PedidosVentaController : ControllerBase
     {
         var result = await _service.CancelAsync(id, ct);
         if (!result.IsSuccess)
-            return BadRequest(result);
+            return BadRequest(ApiResponse<bool>.Fail(result.Error ?? "No se pudo anular el pedido."));
 
-        return Ok(result);
+        return Ok(ApiResponse<bool>.Ok(true, "Pedido anulado correctamente."));
     }
 
     [HttpPost("{id:long}/entregar")]
@@ -124,8 +134,8 @@ public class PedidosVentaController : ControllerBase
     {
         var result = await _service.MarkDeliveredAsync(id, ct);
         if (!result.IsSuccess)
-            return BadRequest(result);
+            return BadRequest(ApiResponse<bool>.Fail(result.Error ?? "No se pudo marcar como entregado el pedido."));
 
-        return Ok(result);
+        return Ok(ApiResponse<bool>.Ok(true, "Pedido marcado como entregado."));
     }
 }

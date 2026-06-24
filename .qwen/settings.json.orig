@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rg *)",
+      "Bash(dotnet *)",
+      "Bash(dir *)",
+      "Bash(findstr *)",
+      "Bash(sqlcmd *)",
+      "Bash(timeout *)",
+      "Bash(curl *)",
+      "Bash(del *)",
+      "Bash(git checkout *)",
+      "Bash(git branch *)",
+      "Bash(git add *)",
+      "Bash(rem *)",
+      "Bash(f *)",
+      "Bash('curl -sk -x post \"https://localhost:7001/api/v1/auth/login\" -h \"content-type: application/json\" -d \"{\\\"username\\\":\\\"ustemoral\\\",\\\"password\\\":\\\"none\\\",\\\"usestub\\\":true}\" 2^>nul ^| findstr \"token\"')"
+    ]
+  },
+  "$version": 4
+}

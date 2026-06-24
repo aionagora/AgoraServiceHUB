@@ -11,27 +11,35 @@ public class EmpresaService : IEmpresaService
     private readonly IRepository<Empresa> _repository;
     private readonly IRepository<Sucursal> _sucursalRepository;
     private readonly IRepository<AgoraHub360.ERP.Domain.Entities.MDM.Almacen> _almacenRepository;
+    private readonly IRepository<Moneda> _monedaRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IEmpresaSeedService _seedService;
+    private readonly IConfiguracionInicialEmpresaService _configuracionInicialEmpresaService;
 
     public EmpresaService(
         IRepository<Empresa> repository, 
         IRepository<Sucursal> sucursalRepository,
         IRepository<AgoraHub360.ERP.Domain.Entities.MDM.Almacen> almacenRepository,
+        IRepository<Moneda> monedaRepository,
         IUnitOfWork unitOfWork, 
-        IEmpresaSeedService seedService)
+        IEmpresaSeedService seedService,
+        IConfiguracionInicialEmpresaService configuracionInicialEmpresaService)
     {
         _repository = repository;
         _sucursalRepository = sucursalRepository;
         _almacenRepository = almacenRepository;
+        _monedaRepository = monedaRepository;
         _unitOfWork = unitOfWork;
         _seedService = seedService;
+        _configuracionInicialEmpresaService = configuracionInicialEmpresaService;
     }
 
     public async Task<Result<IReadOnlyList<EmpresaDto>>> GetAllAsync(CancellationToken ct = default)
     {
         var empresas = await _repository.GetAllAsync(ct);
-        var dtos = empresas.Select(MapToDto).ToList().AsReadOnly();
+        var monedas = await _monedaRepository.GetAllAsync(ct);
+        var monedaMap = monedas.ToDictionary(m => m.Codigo, m => m);
+        var dtos = empresas.Select(e => MapToDto(e, monedaMap)).ToList().AsReadOnly();
         return Result<IReadOnlyList<EmpresaDto>>.Success(dtos);
     }
 
@@ -41,7 +49,8 @@ public class EmpresaService : IEmpresaService
         if (empresa is null)
             return Result<EmpresaDto>.Failure($"Empresa con Id {id} no encontrada.");
 
-        return Result<EmpresaDto>.Success(MapToDto(empresa));
+        var monedaMap = await GetMonedaMapAsync(empresa.MonedaBaseId, ct);
+        return Result<EmpresaDto>.Success(MapToDto(empresa, monedaMap));
     }
 
     public async Task<Result<EmpresaDto>> CreateAsync(CreateEmpresaDto dto, CancellationToken ct = default)
@@ -102,7 +111,10 @@ public class EmpresaService : IEmpresaService
         // Seed default MDM data for the new company
         await _seedService.SeedDefaultDataAsync(empresa.Id, ct);
 
-        return Result<EmpresaDto>.Success(MapToDto(empresa));
+        // Generación idempotente de configuración básica (parámetros, numeraciones y catálogos SIAT)
+        await _configuracionInicialEmpresaService.GenerarConfiguracionBasicaAsync(empresa.Id, ct);
+
+        return Result<EmpresaDto>.Success(MapToDto(empresa, await GetMonedaMapAsync(empresa.MonedaBaseId, ct)));
     }
 
     public async Task<Result<EmpresaDto>> UpdateAsync(int id, UpdateEmpresaDto dto, CancellationToken ct = default)
@@ -129,7 +141,7 @@ public class EmpresaService : IEmpresaService
         await _repository.UpdateAsync(empresa, ct);
         await _unitOfWork.SaveChangesAsync(ct);
 
-        return Result<EmpresaDto>.Success(MapToDto(empresa));
+        return Result<EmpresaDto>.Success(MapToDto(empresa, await GetMonedaMapAsync(empresa.MonedaBaseId, ct)));
     }
 
     public async Task<Result<bool>> DeleteAsync(int id, CancellationToken ct = default)
@@ -144,16 +156,29 @@ public class EmpresaService : IEmpresaService
         return Result<bool>.Success(true);
     }
 
-    private static EmpresaDto MapToDto(Empresa e) => new()
+    private async Task<Dictionary<string, Moneda>> GetMonedaMapAsync(string? monedaId, CancellationToken ct)
     {
-        Id = e.Id,
-        Nombre = e.Nombre,
-        NIT = e.NIT,
-        Direccion = e.Direccion,
-        Telefono = e.Telefono,
-        Email = e.Email,
-        MonedaBaseId = e.MonedaBaseId,
-        Activo = e.Activo,
-        FechaCreacion = e.FechaCreacion
-    };
+        if (string.IsNullOrWhiteSpace(monedaId)) return new();
+        var monedas = await _monedaRepository.FindAsync(m => m.Codigo == monedaId, ct);
+        return monedas.ToDictionary(m => m.Codigo, m => m);
+    }
+
+    private static EmpresaDto MapToDto(Empresa e, Dictionary<string, Moneda>? monedaMap = null)
+    {
+        var moneda = (monedaMap is not null && !string.IsNullOrWhiteSpace(e.MonedaBaseId) && monedaMap.TryGetValue(e.MonedaBaseId, out var m)) ? m : null;
+        return new EmpresaDto
+        {
+            Id = e.Id,
+            Nombre = e.Nombre,
+            NIT = e.NIT,
+            Direccion = e.Direccion,
+            Telefono = e.Telefono,
+            Email = e.Email,
+            MonedaBaseId = e.MonedaBaseId,
+            SimboloMoneda = moneda?.Simbolo,
+            DecimalesMoneda = moneda?.Decimales ?? 2,
+            Activo = e.Activo,
+            FechaCreacion = e.FechaCreacion
+        };
+    }
 }

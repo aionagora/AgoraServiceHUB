@@ -60,14 +60,12 @@ public class SucursalService : ISucursalService
         if (!empresaId.HasValue)
             return Result<SucursalDto>.Failure("No hay empresa activa en la sesión.");
 
-        var sucursal = await _sucursalRepository.GetByIdAsync(id, ct);
+        var sucursales = await _sucursalRepository.FindAsync(s => s.Id == id && s.EmpresaId == empresaId.Value, ct);
+        var sucursal = sucursales.FirstOrDefault();
         if (sucursal == null)
         {
             return Result<SucursalDto>.Failure("Sucursal no encontrada.");
         }
-
-        if (sucursal.EmpresaId != empresaId.Value)
-            return Result<SucursalDto>.Failure("Sucursal no encontrada.");
 
         var dto = MapToDto(sucursal);
         return Result<SucursalDto>.Success(dto);

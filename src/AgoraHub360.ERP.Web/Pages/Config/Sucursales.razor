@@ -4,6 +4,7 @@
 @using AgoraHub360.ERP.Web.Services
 @inject HttpSucursalService SucursalSvc
 @inject EmpresaStateService EmpresaState
+@inject UiAuthorizationService UiAuth
 @inject NavigationManager Nav
 
 <PageTitle>Sucursales - AgoraHub360 ERP</PageTitle>
@@ -21,52 +22,56 @@
     </div>
 }
 
-<div class="card mb-4">
-    <div class="card-body py-3 d-flex flex-column flex-md-row align-items-md-center gap-3">
-        <div class="flex-grow-1">
-            <label class="form-label mb-1">Empresa activa</label>
-            <div class="form-control bg-light">
-                @(EmpresaState.EmpresaActiva?.Nombre ?? "—")
+<div class="alert alert-warning" role="alert" hidden="@(_puedeAccederSeccion)">
+    No tienes permisos para acceder a esta sección.
+</div>
+<div hidden="@(!_puedeAccederSeccion)">
+    <div class="card mb-4">
+        <div class="card-body py-3 d-flex flex-column flex-md-row align-items-md-center gap-3">
+            <div class="flex-grow-1">
+                <label class="form-label mb-1">Empresa activa</label>
+                <div class="form-control bg-light">
+                    @(EmpresaState.EmpresaActiva?.Nombre ?? "—")
+                </div>
+            </div>
+            <div class="pt-md-4">
+                <button class="btn btn-primary" @onclick="GoToCreate" disabled="@(!_tieneEmpresaActiva || !_esTenantAdmin)">
+                    <i class="bi bi-plus-circle me-1"></i> Nueva Sucursal
+                </button>
             </div>
         </div>
-        <div class="pt-md-4">
-            <button class="btn btn-primary" @onclick="GoToCreate" disabled="@(!_tieneEmpresaActiva)">
-                <i class="bi bi-plus-circle me-1"></i> Nueva Sucursal
-            </button>
-        </div>
-    </div>
-</div>
-
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center py-3">
-        <span>Listado de Sucursales (@_sucursales.Count)</span>
     </div>
 
-    @if (_loading)
-    {
-        <div class="card-body text-center py-5">
-            <div class="spinner-border text-primary" role="status"></div>
-            <p class="text-muted mt-2">Cargando sucursales...</p>
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center py-3">
+            <span>Listado de Sucursales (@_sucursales.Count)</span>
         </div>
-    }
-    else if (!_tieneEmpresaActiva)
-    {
-        <div class="card-body text-center py-5">
-            <i class="bi bi-buildings" style="font-size: 3rem; color: var(--agora-text-light);"></i>
-            <p class="text-muted mt-3">Seleccione una empresa activa para ver sus sucursales.</p>
-        </div>
-    }
-    else if (_sucursales.Count == 0)
-    {
-        <div class="card-body text-center py-5">
-            <i class="bi bi-shop" style="font-size: 3rem; color: var(--agora-text-light);"></i>
-            <p class="text-muted mt-3">No hay sucursales registradas para esta empresa.</p>
-        </div>
-    }
-    else
-    {
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
+
+        @if (_loading)
+        {
+            <div class="card-body text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="text-muted mt-2">Cargando sucursales...</p>
+            </div>
+        }
+        @if (!_loading && !_tieneEmpresaActiva)
+        {
+            <div class="card-body text-center py-5">
+                <i class="bi bi-buildings" style="font-size: 3rem; color: var(--agora-text-light);"></i>
+                <p class="text-muted mt-3">Seleccione una empresa activa para ver sus sucursales.</p>
+            </div>
+        }
+        @if (!_loading && _tieneEmpresaActiva && _sucursales.Count == 0)
+        {
+            <div class="card-body text-center py-5">
+                <i class="bi bi-shop" style="font-size: 3rem; color: var(--agora-text-light);"></i>
+                <p class="text-muted mt-3">No hay sucursales registradas para esta empresa.</p>
+            </div>
+        }
+        @if (!_loading && _tieneEmpresaActiva && _sucursales.Count > 0)
+        {
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
                 <thead>
                     <tr>
                         <th>C&oacute;digo</th>
@@ -89,7 +94,7 @@
                                 {
                                     <span class="badge bg-primary">Casa Matriz</span>
                                 }
-                                else
+                                @if (!suc.EsCentral)
                                 {
                                     <span class="badge bg-light text-dark">Sucursal</span>
                                 }
@@ -99,37 +104,41 @@
                                 {
                                     <span class="badge bg-success" style="cursor: pointer" @onclick="() => ToggleEstado(suc)" title="Clic para desactivar">Activa</span>
                                 }
-                                else
+                                @if (!suc.Activo)
                                 {
                                     <span class="badge bg-secondary" style="cursor: pointer" @onclick="() => ToggleEstado(suc)" title="Clic para activar">Inactiva</span>
                                 }
                             </td>
                             <td class="text-end text-nowrap">
-                                @if (!suc.EsCentral && suc.Activo)
+                                @if (_esTenantAdmin)
                                 {
-                                    <button class="btn btn-outline-info btn-sm me-1"
-                                            @onclick="() => SetPrincipal(suc)" title="Establecer como Casa Matriz">
-                                        <i class="bi bi-star"></i>
+                                    @if (!suc.EsCentral && suc.Activo)
+                                    {
+                                        <button class="btn btn-outline-info btn-sm me-1"
+                                                @onclick="() => SetPrincipal(suc)" title="Establecer como Casa Matriz">
+                                            <i class="bi bi-star"></i>
+                                        </button>
+                                    }
+                                    <button class="btn btn-outline-primary btn-sm me-1"
+                                            @onclick="() => GoToEdit(suc.Id)" title="Editar">
+                                        <i class="bi bi-pencil"></i>
                                     </button>
-                                }
-                                <button class="btn btn-outline-primary btn-sm me-1"
-                                        @onclick="() => GoToEdit(suc.Id)" title="Editar">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                                @if (!suc.EsCentral)
-                                {
-                                    <button class="btn btn-outline-danger btn-sm"
-                                            @onclick="() => ConfirmDelete(suc)" title="Eliminar">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
+                                    @if (!suc.EsCentral)
+                                    {
+                                        <button class="btn btn-outline-danger btn-sm"
+                                                @onclick="() => ConfirmDelete(suc)" title="Eliminar">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    }
                                 }
                             </td>
                         </tr>
                     }
                 </tbody>
-            </table>
-        </div>
-    }
+                </table>
+            </div>
+        }
+    </div>
 </div>
 
 <!-- Modal Confirmar Eliminacion -->
@@ -164,6 +173,7 @@
 @code {
     private List<SucursalListadoDto> _sucursales = new();
     private bool _tieneEmpresaActiva;
+    private bool _puedeAccederSeccion;
     private bool _loading = false;
     private string? _mensaje;
     private bool _esError;
@@ -172,8 +182,17 @@
 
     private SucursalListadoDto? _deleteTarget;
 
+    private bool _esTenantAdmin => UiAuth.IsTenantAdmin;
+
     protected override async Task OnInitializedAsync()
     {
+        _puedeAccederSeccion = UiAuth.CanManageSucursales();
+        if (!_puedeAccederSeccion)
+        {
+            _loading = false;
+            return;
+        }
+
         _tieneEmpresaActiva = EmpresaState.EmpresaActivaId.HasValue;
         if (_tieneEmpresaActiva)
             await LoadSucursalesAsync();
@@ -181,6 +200,9 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        if (!_puedeAccederSeccion)
+            return;
+
         var tieneEmpresa = EmpresaState.EmpresaActivaId.HasValue;
         if (_tieneEmpresaActiva != tieneEmpresa)
         {
@@ -194,6 +216,9 @@
 
     private async Task LoadSucursalesAsync()
     {
+        if (!_puedeAccederSeccion)
+            return;
+
         if (!EmpresaState.EmpresaActivaId.HasValue)
         {
             _sucursales.Clear();
@@ -205,31 +230,43 @@
         {
             _sucursales = await SucursalSvc.GetAllAsync();
         }
-        catch (Exception ex)
+        catch
         {
-            ShowMsg($"Error al cargar las sucursales: {ex.Message}", true);
+            ShowMsg("No se pudieron cargar las sucursales.", true);
         }
         _loading = false;
     }
 
     private void GoToCreate()
     {
+        if (!_puedeAccederSeccion)
+            return;
+
         if (!EmpresaState.EmpresaActivaId.HasValue) return;
         Nav.NavigateTo($"/config/sucursales/nueva?empresaId={EmpresaState.EmpresaActivaId.Value}");
     }
 
     private void GoToEdit(int id)
     {
+        if (!_puedeAccederSeccion)
+            return;
+
         Nav.NavigateTo($"/config/sucursales/editar/{id}");
     }
 
     private void ConfirmDelete(SucursalListadoDto sucursal)
     {
+        if (!_puedeAccederSeccion)
+            return;
+
         _deleteTarget = sucursal;
     }
 
     private async Task DeleteAsync()
     {
+        if (!_puedeAccederSeccion)
+            return;
+
         if (_deleteTarget == null) return;
 
         _saving = true;
@@ -245,12 +282,15 @@
         }
         else
         {
-            ShowMsg(r.Message ?? "Ocurri&oacute; un error.", true);
+            ShowMsg(SanitizeError(r.Message, "No se pudo desactivar la sucursal."), true);
         }
     }
 
     private async Task SetPrincipal(SucursalListadoDto suc)
     {
+        if (!_puedeAccederSeccion)
+            return;
+
         var r = await SucursalSvc.PatchPrincipalAsync(suc.Id);
         if (r.Success)
         {
@@ -259,12 +299,15 @@
         }
         else
         {
-            ShowMsg(r.Message ?? "No se pudo establecer como matriz.", true);
+            ShowMsg(SanitizeError(r.Message, "No se pudo establecer la casa matriz."), true);
         }
     }
 
     private async Task ToggleEstado(SucursalListadoDto suc)
     {
+        if (!_puedeAccederSeccion)
+            return;
+
         if (suc.EsCentral && suc.Activo)
         {
             ShowMsg("No se puede desactivar la casa matriz.", true);
@@ -279,7 +322,7 @@
         }
         else
         {
-            ShowMsg(r.Message ?? "Error al cambiar el estado.", true);
+            ShowMsg(SanitizeError(r.Message, "No se pudo cambiar el estado de la sucursal."), true);
         }
     }
 
@@ -287,5 +330,23 @@
     {
         _mensaje = msg;
         _esError = error;
+    }
+
+    private static string SanitizeError(string? message, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+            return fallback;
+
+        if (message.Contains("Error HTTP", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("System.", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("stack", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("trace", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("Exception", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("{"))
+        {
+            return fallback;
+        }
+
+        return message;
     }
 }

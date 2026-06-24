@@ -21,21 +21,34 @@ public class CategoryService : ICategoryService
 
     public async Task<Result<IReadOnlyList<CategoryDto>>> GetAllAsync(long? catalogId = null, CancellationToken ct = default)
     {
+        var empresaId = _currentUser.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<IReadOnlyList<CategoryDto>>.Failure("No existe empresa activa en la sesión.");
+
         var items = await _repo.FindAsync(
-            c => catalogId == null || c.CatalogId == catalogId, ct);
+            c => c.EmpresaId == empresaId.Value && (catalogId == null || c.CatalogId == catalogId), ct);
         return Result<IReadOnlyList<CategoryDto>>.Success(items.Select(Map).ToList().AsReadOnly());
     }
 
     public async Task<Result<IReadOnlyList<CategoryDto>>> GetByCatalogAsync(long catalogId, CancellationToken ct = default)
     {
-        var items = await _repo.FindAsync(c => c.CatalogId == catalogId, ct);
+        var empresaId = _currentUser.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<IReadOnlyList<CategoryDto>>.Failure("No existe empresa activa en la sesión.");
+
+        var items = await _repo.FindAsync(c => c.EmpresaId == empresaId.Value && c.CatalogId == catalogId, ct);
         return Result<IReadOnlyList<CategoryDto>>.Success(items.Select(Map).ToList().AsReadOnly());
     }
 
     public async Task<Result<CategoryDto>> GetByIdAsync(long id, CancellationToken ct = default)
     {
-        var entity = await _repo.GetByIdAsync(id, ct);
-        if (entity is null) return Result<CategoryDto>.Failure($"Category {id} not found.");
+        var empresaId = _currentUser.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<CategoryDto>.Failure("No existe empresa activa en la sesión.");
+
+        var entities = await _repo.FindAsync(c => c.CategoryId == id && c.EmpresaId == empresaId.Value, ct);
+        var entity = entities.FirstOrDefault();
+        if (entity is null) return Result<CategoryDto>.Failure("Categoría no encontrada.");
         return Result<CategoryDto>.Success(Map(entity));
     }
 

@@ -18,6 +18,7 @@ public static class DependencyInjection
         services.AddValidatorsFromAssemblyContaining<TareaCreateValidator>();
 
         services.AddScoped<IEmpresaService, EmpresaService>();
+        services.AddScoped<IEmpresaDemoService, EmpresaDemoService>();
         services.AddScoped<ISucursalService, SucursalService>();
         services.AddScoped<IRolService, RolService>();
         services.AddScoped<ISeguridadDinamicaService, SeguridadDinamicaService>();
@@ -25,16 +26,21 @@ public static class DependencyInjection
         services.AddScoped<IUsuarioSucursalAccesoService, UsuarioSucursalAccesoService>();
         services.AddScoped<IParametroSistemaService, ParametroSistemaService>();
         services.AddScoped<INumeracionDocumentoService, NumeracionDocumentoService>();
+        services.AddScoped<IConfiguracionInicialEmpresaService, ConfiguracionInicialEmpresaService>();
         services.AddScoped<IGeografiaService, GeografiaService>();
 
         // MDM: third parties
         services.AddScoped<IClienteService, ClienteService>();
+        services.AddScoped<IClientePerfilFiscalService, ClientePerfilFiscalService>();
         services.AddScoped<IClienteSucursalService, ClienteSucursalService>();
         services.AddScoped<IContactoService, ContactoService>();
         services.AddScoped<IContactoUsuarioAccesoService, ContactoUsuarioAccesoService>();
         services.AddScoped<IProveedorService, ProveedorService>();
         services.AddScoped<IAlmacenService, AlmacenService>();
         services.AddScoped<IPedidoVentaService, PedidoVentaService>();
+        services.AddScoped<IVentaService, VentaService>();
+        services.AddScoped<IFacturaVentaService, FacturaVentaService>();
+        services.AddScoped<ISiatMetodoPagoService, SiatMetodoPagoService>();
 
         // MDM: unified catalog
         services.AddScoped<ICatalogService, CatalogService>();
@@ -100,8 +106,16 @@ public static class DependencyInjection
         // BNC: Conciliación Bancaria
         services.AddScoped<IConciliacionBancariaService, ConciliacionBancariaService>();
 
-        // WF: Workflow
+                // WF: Workflow
         services.AddScoped<IWorkflowService, WorkflowService>();
+
+        // CXC: Cuentas por Cobrar
+        services.AddScoped<ICuentasPorCobrarService, CuentasPorCobrarService>();
+        services.AddScoped<IClienteCreditoConfiguracionService, ClienteCreditoConfiguracionService>();
+
+        // FE: Facturación Electrónica
+        services.AddScoped<IConfiguracionFEService, ConfiguracionFEService>();
+        services.AddScoped<IFacturacionElectronicaService, FacturacionElectronicaService>();
 
         return services;
     }

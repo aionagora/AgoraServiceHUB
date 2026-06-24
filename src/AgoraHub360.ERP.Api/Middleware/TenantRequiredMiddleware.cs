@@ -1,6 +1,7 @@
 namespace AgoraHub360.ERP.Api.Middleware;
 
 using System.Text.Json;
+using AgoraHub360.ERP.Shared.Constants;
 
 /// <summary>
 /// Middleware que valida que las peticiones tenant-aware (rutas que NO son /empresas ni /diagnostics)
@@ -16,7 +17,13 @@ public class TenantRequiredMiddleware
         "/api/v1/auth/login",
         "/api/v1/auth/seleccionar-empresa",
         "/api/v1/auth/mis-empresas",
+        "/api/v1/auth/me",
+        "/api/v1/auth/refresh",
         "/api/v1/empresas/mis-empresas",
+        "/api/v1/empresas/demo/crear-completa",
+        "/api/v1/empresas",
+        "/api/v1/health",
+        "/api/health",
         "/api/v1/health",
         "/health",
         "/swagger"
@@ -41,7 +48,8 @@ public class TenantRequiredMiddleware
 
         if (isTenantAware && isAuthenticated)
         {
-            var empresaIdClaim = context.User.FindFirst("EmpresaId")?.Value;
+            var empresaIdClaim = context.User.FindFirst(ClaimTypesCustom.TenantId)?.Value
+                                ?? context.User.FindFirst(ClaimTypesCustom.EmpresaId)?.Value;
             if (string.IsNullOrEmpty(empresaIdClaim) || !int.TryParse(empresaIdClaim, out _))
             {
                 Console.WriteLine($"[TEMP-LOG] TenantRequired bloqueó {method} {path}. Motivo: EmpresaId ausente/invalid.");

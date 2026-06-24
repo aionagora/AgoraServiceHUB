@@ -1,35 +1,25 @@
-// ─── Funciones de descarga movidas a file-download.js ────────────────────────
+// Mitiga rechazos de scripts externos (p.ej. Funding Choices / ads)
+(function () {
+  if (typeof window === 'undefined') return;
 
-window.printElement = function(elementId) {
-    const el = document.getElementById(elementId);
-    if (!el) {
-        console.error("No se encontró el elemento a imprimir: " + elementId);
+  window.addEventListener('unhandledrejection', function (event) {
+    try {
+      var reason = event && event.reason;
+
+      // Caso observado: Promise rechazada con Set(4) { gdpr, cpra, offerwall, ad_blocking }
+      if (reason instanceof Set && reason.size === 4) {
+        event.preventDefault();
+        console.warn('[safe-guard] Rechazo externo controlado (Set(4)):', Array.from(reason));
         return;
+      }
+
+      // Fallback: algunos runtimes serializan el motivo como texto
+      if (typeof reason === 'string' && reason.indexOf('Set(4)') !== -1) {
+        event.preventDefault();
+        console.warn('[safe-guard] Rechazo externo controlado (Set(4) string).');
+      }
+    } catch {
+      // no-op
     }
-
-    // Copiar estilos de la página principal para mantener el diseño
-    let stylesHtml = '';
-    const styleNodes = document.querySelectorAll('link[rel="stylesheet"], style');
-    styleNodes.forEach(node => {
-        stylesHtml += node.outerHTML;
-    });
-
-    const win = window.open('', '_blank', 'width=900,height=800');
-    if (!win) {
-        console.error("El navegador bloqueó la ventana emergente.");
-        return;
-    }
-
-    win.document.write('<!DOCTYPE html><html><head><title>Imprimir Comprobante</title>');
-    win.document.write(stylesHtml);
-    win.document.write('</head><body class="vp-printing">');
-    win.document.write(el.outerHTML);
-    win.document.write('</body></html>');
-    win.document.close();
-
-    // Esperar a que carguen los estilos antes de imprimir
-    win.setTimeout(() => {
-        win.focus();
-        win.print();
-    }, 500); 
-};
+  });
+})();

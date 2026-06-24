@@ -6,6 +6,7 @@ using AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Entities.VTA;
 using AgoraHub360.ERP.Domain.Interfaces;
 using AgoraHub360.ERP.Shared.DTOs.Ventas;
+using AgoraHub360.ERP.Shared.DTOs;
 using DomainResult = AgoraHub360.ERP.Domain.Common.Result;
 
 namespace AgoraHub360.ERP.Application.Services;
@@ -77,6 +78,7 @@ public class PedidoVentaService : IPedidoVentaService
                 VendedorId = x.VendedorId,
                 ClienteId = x.ClienteId,
                 ClienteSucursalId = x.ClienteSucursalId,
+                Prioridad = x.Prioridad,
                 Estado = x.Estado,
                 Subtotal = x.Subtotal,
                 Impuestos = x.Impuestos,
@@ -87,6 +89,122 @@ public class PedidoVentaService : IPedidoVentaService
             .AsReadOnly();
 
         return Result<IReadOnlyList<PedidoVentaDto>>.Success(data);
+    }
+
+    public async Task<Result<PaginatedResultDto<PedidoVentaDto>>> GetPagedAsync(
+        PedidoVentaFilterDto filter,
+        CancellationToken ct = default)
+    {
+        if (!_currentUser.EmpresaId.HasValue)
+            return Result<PaginatedResultDto<PedidoVentaDto>>.Failure("No se pudo determinar la empresa activa.");
+
+        var empresaId = _currentUser.EmpresaId.Value;
+
+        var pedidos = await _pedidoRepo.FindAsync(
+            x => x.EmpresaId == empresaId && x.Activo,
+            ct);
+
+        var filtered = pedidos.AsEnumerable();
+
+        // ── Búsqueda general ─────────────────────────────────────────────────
+        if (!string.IsNullOrWhiteSpace(filter.Busqueda))
+        {
+            var term = filter.Busqueda.Trim();
+            filtered = filtered.Where(x =>
+                x.Numero.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                (x.Observaciones != null && x.Observaciones.Contains(term, StringComparison.OrdinalIgnoreCase)));
+        }
+
+        // ── Filtro Nro pedido ────────────────────────────────────────────────
+        if (!string.IsNullOrWhiteSpace(filter.NumeroPedido))
+        {
+            filtered = filtered.Where(x =>
+                x.Numero.Contains(filter.NumeroPedido, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // ── Filtro Cliente ───────────────────────────────────────────────────
+        if (filter.ClienteId.HasValue)
+        {
+            filtered = filtered.Where(x => x.ClienteId == filter.ClienteId.Value);
+        }
+
+        // ── Filtro Estado ────────────────────────────────────────────────────
+        if (!string.IsNullOrWhiteSpace(filter.EstadoPedido) &&
+            !string.Equals(filter.EstadoPedido, "Todos", StringComparison.OrdinalIgnoreCase))
+        {
+            filtered = filtered.Where(x =>
+                string.Equals(x.Estado, filter.EstadoPedido, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // ── Filtro Prioridad ─────────────────────────────────────────────────
+        if (!string.IsNullOrWhiteSpace(filter.Prioridad) &&
+            !string.Equals(filter.Prioridad, "Todos", StringComparison.OrdinalIgnoreCase))
+        {
+            filtered = filtered.Where(x =>
+                string.Equals(x.Prioridad, filter.Prioridad, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // ── Filtro FechaDesde ────────────────────────────────────────────────
+        if (filter.FechaDesde.HasValue)
+        {
+            filtered = filtered.Where(x => x.FechaEmision.Date >= filter.FechaDesde.Value.Date);
+        }
+
+        // ── Filtro FechaHasta ────────────────────────────────────────────────
+        if (filter.FechaHasta.HasValue)
+        {
+            filtered = filtered.Where(x => x.FechaEmision.Date <= filter.FechaHasta.Value.Date);
+        }
+
+        // ── Ordenar ──────────────────────────────────────────────────────────
+        var sorted = filtered
+            .OrderByDescending(x => x.FechaEmision)
+            .ThenByDescending(x => x.Id)
+            .Select(x => new PedidoVentaDto
+            {
+                Id = x.Id,
+                Numero = x.Numero,
+                FechaEmision = x.FechaEmision,
+                FechaEntregaEsperada = x.FechaEntregaEsperada,
+                SucursalId = x.SucursalId,
+                AlmacenId = x.AlmacenId,
+                VendedorId = x.VendedorId,
+                ClienteId = x.ClienteId,
+                ClienteSucursalId = x.ClienteSucursalId,
+                Prioridad = x.Prioridad,
+                Estado = x.Estado,
+                Subtotal = x.Subtotal,
+                Impuestos = x.Impuestos,
+                Total = x.Total,
+                Observaciones = x.Observaciones
+            });
+
+        var top = filter.Top;
+        if (top > 0)
+        {
+            sorted = sorted.Take(top);
+        }
+
+        var sortedList = sorted.ToList();
+        var totalItems = sortedList.Count;
+
+        var pagina = filter.Page ?? filter.Pagina;
+        var tamanoPagina = filter.PageSize ?? filter.TamanoPagina;
+
+        var items = sortedList
+            .Skip((pagina - 1) * tamanoPagina)
+            .Take(tamanoPagina)
+            .ToList();
+
+        var paginatedResult = new PaginatedResultDto<PedidoVentaDto>
+        {
+            Items = items,
+            TotalItems = totalItems,
+            Pagina = pagina,
+            TamanoPagina = tamanoPagina
+        };
+
+        return Result<PaginatedResultDto<PedidoVentaDto>>.Success(paginatedResult);
     }
 
     public async Task<Result<PedidoVentaDto>> GetByIdAsync(long id, CancellationToken ct = default)
@@ -201,6 +319,7 @@ public class PedidoVentaService : IPedidoVentaService
             VendedorId = vendedorId,
             ClienteId = dto.ClienteId,
             ClienteSucursalId = dto.ClienteSucursalId,
+            Prioridad = dto.Prioridad,
             Estado = "Borrador",
             Observaciones = dto.Observaciones,
             Detalles = dto.Detalles.Select(d => new PedidoVentaDetalle
@@ -262,6 +381,7 @@ public class PedidoVentaService : IPedidoVentaService
         entity.AlmacenId = dto.AlmacenId;
         entity.ClienteId = dto.ClienteId;
         entity.ClienteSucursalId = dto.ClienteSucursalId;
+        entity.Prioridad = dto.Prioridad;
         entity.Observaciones = dto.Observaciones;
         entity.Estado = dto.Estado ?? entity.Estado;
 
@@ -309,12 +429,12 @@ public class PedidoVentaService : IPedidoVentaService
         return Result<bool>.Success(true);
     }
 
-    public async Task<DomainResult> ConfirmAsync(long id, CancellationToken ct = default)
+    public async Task<Result<bool>> ConfirmAsync(long id, CancellationToken ct = default)
     {
         try
         {
             if (!_currentUser.EmpresaId.HasValue)
-                return DomainResult.Failure("No existe empresa activa en la sesión.");
+                return Result<bool>.Failure("No existe empresa activa en la sesión.");
 
             var empresaId = _currentUser.EmpresaId.Value;
             Console.WriteLine($"[TEMP-LOG] ConfirmAsync pedidoId: {id}");
@@ -322,40 +442,40 @@ public class PedidoVentaService : IPedidoVentaService
 
             var pedido = await _pedidoRepo.GetByIdAsync(id, ct);
             if (pedido is null)
-                return DomainResult.Failure("Pedido de venta no encontrado.");
+                return Result<bool>.Failure("Pedido de venta no encontrado.");
 
             var detalles = await _pedidoDetalleRepo.FindAsync(x => x.PedidoVentaId == id, ct);
             pedido.Detalles = detalles.ToList();
 
             if (pedido.EmpresaId != empresaId)
-                return DomainResult.Failure("El pedido no pertenece a la empresa activa.");
+                return Result<bool>.Failure("El pedido no pertenece a la empresa activa.");
 
             if (!string.Equals(pedido.Estado, "Borrador", StringComparison.OrdinalIgnoreCase))
-                return DomainResult.Failure("Solo se pueden confirmar pedidos en estado Borrador.");
+                return Result<bool>.Failure("Solo se pueden confirmar pedidos en estado Borrador.");
 
             if (pedido.ReservaAplicada || pedido.InventarioDescontado)
-                return DomainResult.Failure("El pedido ya fue confirmado o procesado.");
+                return Result<bool>.Failure("El pedido ya fue confirmado o procesado.");
 
             var almacen = await _almacenRepo.GetByIdAsync(pedido.AlmacenId, ct);
             if (almacen is null || almacen.EmpresaId != empresaId)
-                return DomainResult.Failure("El almacén no existe o no pertenece a la empresa activa.");
+                return Result<bool>.Failure("El almacén no existe o no pertenece a la empresa activa.");
 
             Console.WriteLine($"[TEMP-LOG] ConfirmAsync AlmacenId: {pedido.AlmacenId}");
 
             foreach (var detalle in pedido.Detalles)
             {
                 if (detalle.CompanyProductId <= 0)
-                    return DomainResult.Failure("El detalle contiene un CompanyProductId inválido.");
+                    return Result<bool>.Failure("El detalle contiene un CompanyProductId inválido.");
 
                 var companyProduct = await _companyProductRepo.GetByIdAsync(detalle.CompanyProductId, ct);
                 if (companyProduct is null)
-                    return DomainResult.Failure("El producto del detalle no existe.");
+                    return Result<bool>.Failure("El producto del detalle no existe.");
 
                 if (companyProduct.EmpresaId != empresaId)
-                    return DomainResult.Failure("El producto del detalle no pertenece a la empresa activa.");
+                    return Result<bool>.Failure("El producto del detalle no pertenece a la empresa activa.");
 
                 if (detalle.CantidadSolicitada <= 0)
-                    return DomainResult.Failure("La cantidad solicitada debe ser mayor a cero.");
+                    return Result<bool>.Failure("La cantidad solicitada debe ser mayor a cero.");
 
                 var stock = (await _stockProductoRepo.FindAsync(
                     x => x.EmpresaId == empresaId
@@ -364,13 +484,13 @@ public class PedidoVentaService : IPedidoVentaService
                     ct)).FirstOrDefault();
 
                 if (stock is null)
-                    return DomainResult.Failure("No existe stock para el producto en el almacén seleccionado.");
+                    return Result<bool>.Failure("No existe stock para el producto en el almacén seleccionado.");
 
                 var disponible = stock.CurrentStock - stock.ReservedStock;
                 Console.WriteLine($"[TEMP-LOG] ConfirmAsync linea CompanyProductId={detalle.CompanyProductId}, CurrentStock={stock.CurrentStock}, ReservedStock={stock.ReservedStock}, Disponible={disponible}, CantidadSolicitada={detalle.CantidadSolicitada}");
 
                 if (disponible < detalle.CantidadSolicitada)
-                    return DomainResult.Failure($"Stock disponible insuficiente para el producto {detalle.CompanyProductId}.");
+                    return Result<bool>.Failure($"Stock disponible insuficiente para el producto {detalle.CompanyProductId}.");
 
                 stock.ReservedStock += detalle.CantidadSolicitada;
                 detalle.CantidadReservada = detalle.CantidadSolicitada;
@@ -387,20 +507,20 @@ public class PedidoVentaService : IPedidoVentaService
             await _pedidoRepo.UpdateAsync(pedido, ct);
             await _unitOfWork.SaveChangesAsync(ct);
 
-            return DomainResult.Success();
+            return Result<bool>.Success(true);
         }
         catch (Exception ex)
         {
-            return DomainResult.Failure($"No se pudo confirmar el pedido. {ex.Message}");
+            return Result<bool>.Failure($"No se pudo confirmar el pedido. {ex.Message}");
         }
     }
 
-    public async Task<DomainResult> DispatchAsync(long id, CancellationToken ct = default)
+    public async Task<Result<bool>> DispatchAsync(long id, CancellationToken ct = default)
     {
         try
         {
             if (!_currentUser.EmpresaId.HasValue)
-                return DomainResult.Failure("No existe empresa activa en la sesión.");
+                return Result<bool>.Failure("No existe empresa activa en la sesión.");
 
             var empresaId = _currentUser.EmpresaId.Value;
             Console.WriteLine($"[TEMP-LOG] DispatchAsync pedidoId: {id}");
@@ -408,23 +528,23 @@ public class PedidoVentaService : IPedidoVentaService
 
             var pedido = await _pedidoRepo.GetByIdAsync(id, ct);
             if (pedido is null)
-                return DomainResult.Failure("Pedido de venta no encontrado.");
+                return Result<bool>.Failure("Pedido de venta no encontrado.");
 
             var detalles = await _pedidoDetalleRepo.FindAsync(x => x.PedidoVentaId == id, ct);
             pedido.Detalles = detalles.ToList();
 
             if (pedido.EmpresaId != empresaId)
-                return DomainResult.Failure("El pedido no pertenece a la empresa activa.");
+                return Result<bool>.Failure("El pedido no pertenece a la empresa activa.");
 
             if (!string.Equals(pedido.Estado, "Confirmado", StringComparison.OrdinalIgnoreCase))
-                return DomainResult.Failure("Solo se pueden despachar pedidos en estado Confirmado.");
+                return Result<bool>.Failure("Solo se pueden despachar pedidos en estado Confirmado.");
 
             if (!pedido.ReservaAplicada || pedido.InventarioDescontado)
-                return DomainResult.Failure("El pedido ya fue despachado o no tiene reserva aplicada.");
+                return Result<bool>.Failure("El pedido ya fue despachado o no tiene reserva aplicada.");
 
             var almacen = await _almacenRepo.GetByIdAsync(pedido.AlmacenId, ct);
             if (almacen is null || almacen.EmpresaId != empresaId)
-                return DomainResult.Failure("El almacén no existe o no pertenece a la empresa activa.");
+                return Result<bool>.Failure("El almacén no existe o no pertenece a la empresa activa.");
 
             Console.WriteLine($"[TEMP-LOG] DispatchAsync AlmacenId: {pedido.AlmacenId}");
 
@@ -433,17 +553,17 @@ public class PedidoVentaService : IPedidoVentaService
             foreach (var detalle in pedido.Detalles)
             {
                 if (detalle.CompanyProductId <= 0)
-                    return DomainResult.Failure("El detalle contiene un CompanyProductId inválido.");
+                    return Result<bool>.Failure("El detalle contiene un CompanyProductId inválido.");
 
                 var companyProduct = await _companyProductRepo.GetByIdAsync(detalle.CompanyProductId, ct);
                 if (companyProduct is null)
-                    return DomainResult.Failure("El producto del detalle no existe.");
+                    return Result<bool>.Failure("El producto del detalle no existe.");
 
                 if (companyProduct.EmpresaId != empresaId)
-                    return DomainResult.Failure("El producto del detalle no pertenece a la empresa activa.");
+                    return Result<bool>.Failure("El producto del detalle no pertenece a la empresa activa.");
 
                 if (detalle.CantidadReservada <= 0)
-                    return DomainResult.Failure($"La línea del producto {detalle.CompanyProductId} no tiene cantidad reservada válida.");
+                    return Result<bool>.Failure($"La línea del producto {detalle.CompanyProductId} no tiene cantidad reservada válida.");
 
                 var stock = (await _stockProductoRepo.FindAsync(
                     x => x.EmpresaId == empresaId
@@ -452,10 +572,10 @@ public class PedidoVentaService : IPedidoVentaService
                     ct)).FirstOrDefault();
 
                 if (stock is null)
-                    return DomainResult.Failure("No existe stock para el producto en el almacén seleccionado.");
+                    return Result<bool>.Failure("No existe stock para el producto en el almacén seleccionado.");
 
                 if (stock.ReservedStock < detalle.CantidadReservada || stock.CurrentStock < detalle.CantidadReservada)
-                    return DomainResult.Failure($"Stock reservado/físico insuficiente para el producto {detalle.CompanyProductId}.");
+                    return Result<bool>.Failure($"Stock reservado/físico insuficiente para el producto {detalle.CompanyProductId}.");
 
                 stock.CurrentStock -= detalle.CantidadReservada;
                 stock.ReservedStock -= detalle.CantidadReservada;
@@ -492,21 +612,21 @@ public class PedidoVentaService : IPedidoVentaService
             await _pedidoRepo.UpdateAsync(pedido, ct);
             await _unitOfWork.SaveChangesAsync(ct);
 
-            return DomainResult.Success();
+            return Result<bool>.Success(true);
         }
         catch (Exception ex)
         {
-            return DomainResult.Failure($"No se pudo despachar el pedido. {ex.Message}");
+            return Result<bool>.Failure($"No se pudo despachar el pedido. {ex.Message}");
         }
     }
 
-    public async Task<DomainResult> CancelAsync(long id, CancellationToken ct = default)
+    public async Task<Result<bool>> CancelAsync(long id, CancellationToken ct = default)
     {
-        return DomainResult.Failure("Pendiente de implementar.");
+        return Result<bool>.Failure("Pendiente de implementar.");
     }
 
-    public async Task<DomainResult> MarkDeliveredAsync(long id, CancellationToken ct = default)
+    public async Task<Result<bool>> MarkDeliveredAsync(long id, CancellationToken ct = default)
     {
-        return DomainResult.Failure("Pendiente de implementar.");
+        return Result<bool>.Failure("Pendiente de implementar.");
     }
 }

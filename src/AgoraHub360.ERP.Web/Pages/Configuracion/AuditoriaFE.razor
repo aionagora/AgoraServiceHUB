@@ -1,0 +1,181 @@
+@page "/config/facturacion-electronica/auditoria"
+@attribute [Authorize]
+@using AgoraHub360.ERP.Shared.DTOs
+@using AgoraHub360.ERP.Shared.DTOs.FacturacionElectronica
+@inject FacturacionFEHttpService FeService
+@inject IJSRuntime JSRuntime
+
+<h3 class="mb-3">
+    <i class="bi bi-clock-history me-2"></i> Auditoría de Facturación Electrónica
+</h3>
+
+<p class="text-muted small mb-3">
+    Registro histórico de operaciones de emisión, anulación y consulta de estado contra el proveedor FE.
+    Read-only.
+</p>
+
+@if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <div class="alert alert-danger alert-dismissible" role="alert">
+        @_errorMessage
+        <button type="button" class="btn-close" @onclick="() => _errorMessage = null"></button>
+    </div>
+}
+
+<!-- Filtros -->
+<div class="card mb-3">
+    <div class="card-body">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label small">Desde</label>
+                <input type="date" class="form-control form-control-sm" @bind="_filtroDesde" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">Hasta</label>
+                <input type="date" class="form-control form-control-sm" @bind="_filtroHasta" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">Estado SIAT</label>
+                <select class="form-select form-select-sm" @bind="_filtroEstadoSiat">
+                    <option value="">Todos</option>
+                    <option value="NoEnviada">No Enviada</option>
+                    <option value="Pendiente">Pendiente</option>
+                    <option value="Validada">Validada</option>
+                    <option value="Rechazada">Rechazada</option>
+                    <option value="Anulada">Anulada</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">Proveedor</label>
+                <input type="text" class="form-control form-control-sm" @bind="_filtroProveedor" placeholder="CIRRUS" />
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small">Factura Venta ID</label>
+                <input type="number" class="form-control form-control-sm" @bind="_filtroFacturaVentaId" />
+            </div>
+            <div class="col-md-2 d-flex gap-1">
+                <button class="btn btn-primary btn-sm" @onclick="RefrescarAsync" disabled="@_cargando">
+                    @if (_cargando) { <span class="spinner-border spinner-border-sm"></span> }
+                    else { <i class="bi bi-search"></i> }
+                    Consultar
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" @onclick="LimpiarFiltrosAsync">
+                    <i class="bi bi-x-circle"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (_cargando)
+{
+    <div class="text-center py-4">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+    </div>
+}
+else if (!_registros.Any())
+{
+    <div class="alert alert-info">No se encontraron registros de auditoría.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-sm table-striped table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>Fecha/Hora</th>
+                    <th>Factura ID</th>
+                    <th>Proveedor</th>
+                    <th>Ambiente</th>
+                    <th>BillUuid</th>
+                    <th>CUF</th>
+                    <th>Estado SIAT</th>
+                    <th>Éxito</th>
+                    <th>Tiempo (ms)</th>
+                    <th>Usuario</th>
+                    <th>Error</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in _registros)
+                {
+                    <tr>
+                        <td class="small">@r.FechaHora.ToLocalTime().ToString("dd/MM/yy HH:mm:ss")</td>
+                        <td>@r.FacturaVentaId</td>
+                        <td>@r.ProveedorCodigo</td>
+                        <td>@r.AmbienteCodigo</td>
+                        <td title="@r.BillUuid">@Truncar(r.BillUuid, 16)</td>
+                        <td title="@r.Cuf">@Truncar(r.Cuf, 12)</td>
+                        <td>
+                            <span class="badge @(r.Exitoso ? "bg-success" : "bg-danger")">@r.EstadoSiat</span>
+                        </td>
+                        <td>
+                            @if (r.Exitoso) { <i class="bi bi-check-circle-fill text-success"></i> }
+                            else { <i class="bi bi-x-circle-fill text-danger"></i> }
+                        </td>
+                        <td class="text-end">@r.TiempoRespuestaMs</td>
+                        <td class="small">@r.UsuarioId</td>
+                        <td class="small text-danger" title="@r.MensajeError">@Truncar(r.MensajeError, 40)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private bool _cargando;
+    private string? _errorMessage;
+    private List<AuditoriaFEDto> _registros = new();
+
+    private DateTime? _filtroDesde;
+    private DateTime? _filtroHasta;
+    private string? _filtroEstadoSiat;
+    private string? _filtroProveedor;
+    private long? _filtroFacturaVentaId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _filtroDesde = DateTime.Today.AddDays(-7);
+        _filtroHasta = DateTime.Today.AddDays(1);
+        await RefrescarAsync();
+    }
+
+    private async Task RefrescarAsync()
+    {
+        _cargando = true;
+        try
+        {
+            _registros = await FeService.ListarAuditoriaAsync(
+                _filtroDesde, _filtroHasta,
+                _filtroEstadoSiat, _filtroProveedor, _filtroFacturaVentaId);
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error al cargar auditoría: {ex.Message}";
+            _registros = new();
+        }
+        finally
+        {
+            _cargando = false;
+        }
+    }
+
+    private async Task LimpiarFiltrosAsync()
+    {
+        _filtroDesde = DateTime.Today.AddDays(-7);
+        _filtroHasta = DateTime.Today.AddDays(1);
+        _filtroEstadoSiat = null;
+        _filtroProveedor = null;
+        _filtroFacturaVentaId = null;
+        await RefrescarAsync();
+    }
+
+    private static string Truncar(string? value, int maxLen)
+    {
+        if (string.IsNullOrEmpty(value)) return "-";
+        return value.Length <= maxLen ? value : value[..maxLen] + "...";
+    }
+}

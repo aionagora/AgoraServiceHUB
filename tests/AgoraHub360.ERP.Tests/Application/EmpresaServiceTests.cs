@@ -24,8 +24,10 @@ public class EmpresaServiceTests
             _repository, 
             _sucursalRepository, 
             _almacenRepository, 
+            new FakeMonedaRepository(),
             _unitOfWork, 
-            new FakeSeedService());
+            new FakeSeedService(),
+            new FakeConfiguracionInicialEmpresaService());
     }
 
     [Fact]
@@ -168,6 +170,12 @@ public class EmpresaServiceTests
             => Task.FromResult(AgoraHub360.ERP.Application.Common.Result<bool>.Success(true));
     }
 
+    private class FakeConfiguracionInicialEmpresaService : AgoraHub360.ERP.Application.Interfaces.IConfiguracionInicialEmpresaService
+    {
+        public Task<AgoraHub360.ERP.Application.Common.Result<ConfiguracionInicialEmpresaResultadoDto>> GenerarConfiguracionBasicaAsync(long empresaId, CancellationToken ct = default)
+            => Task.FromResult(AgoraHub360.ERP.Application.Common.Result<ConfiguracionInicialEmpresaResultadoDto>.Success(new ConfiguracionInicialEmpresaResultadoDto()));
+    }
+
     private class FakeSucursalRepository : IRepository<Sucursal>
     {
         public Task<IReadOnlyList<Sucursal>> FindAsync(Expression<Func<Sucursal, bool>> predicate, CancellationToken ct = default) => throw new NotImplementedException();
@@ -192,5 +200,18 @@ public class EmpresaServiceTests
         public Task<AgoraHub360.ERP.Domain.Entities.MDM.Almacen> AddAsync(AgoraHub360.ERP.Domain.Entities.MDM.Almacen entity, CancellationToken ct = default) => Task.FromResult(entity);
         public Task UpdateAsync(AgoraHub360.ERP.Domain.Entities.MDM.Almacen entity, CancellationToken ct = default) => Task.CompletedTask;
         public Task DeleteAsync(AgoraHub360.ERP.Domain.Entities.MDM.Almacen entity, CancellationToken ct = default) => Task.CompletedTask;
+    }
+
+    private class FakeMonedaRepository : IRepository<AgoraHub360.ERP.Domain.Entities.Core.Moneda>
+    {
+        public Task<IReadOnlyList<AgoraHub360.ERP.Domain.Entities.Core.Moneda>> FindAsync(Expression<Func<AgoraHub360.ERP.Domain.Entities.Core.Moneda, bool>> predicate, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<AgoraHub360.ERP.Domain.Entities.Core.Moneda>>(new List<AgoraHub360.ERP.Domain.Entities.Core.Moneda>().AsReadOnly());
+        public Task<IReadOnlyList<AgoraHub360.ERP.Domain.Entities.Core.Moneda>> FindIgnoreQueryFiltersAsync(Expression<Func<AgoraHub360.ERP.Domain.Entities.Core.Moneda, bool>> predicate, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<AgoraHub360.ERP.Domain.Entities.Core.Moneda>>(new List<AgoraHub360.ERP.Domain.Entities.Core.Moneda>().AsReadOnly());
+        public Task<IReadOnlyList<AgoraHub360.ERP.Domain.Entities.Core.Moneda>> GetAllAsync(CancellationToken ct = default) => Task.FromResult<IReadOnlyList<AgoraHub360.ERP.Domain.Entities.Core.Moneda>>(new List<AgoraHub360.ERP.Domain.Entities.Core.Moneda>().AsReadOnly());
+        public Task<AgoraHub360.ERP.Domain.Entities.Core.Moneda?> GetByIdAsync(int id, CancellationToken ct = default) => Task.FromResult<AgoraHub360.ERP.Domain.Entities.Core.Moneda?>(null);
+        public Task<AgoraHub360.ERP.Domain.Entities.Core.Moneda?> GetByIdAsync(long id, CancellationToken ct = default) => Task.FromResult<AgoraHub360.ERP.Domain.Entities.Core.Moneda?>(null);
+        public Task<AgoraHub360.ERP.Domain.Entities.Core.Moneda?> GetByIdIgnoreQueryFiltersAsync(int id, CancellationToken ct = default) => Task.FromResult<AgoraHub360.ERP.Domain.Entities.Core.Moneda?>(null);
+        public Task<AgoraHub360.ERP.Domain.Entities.Core.Moneda> AddAsync(AgoraHub360.ERP.Domain.Entities.Core.Moneda entity, CancellationToken ct = default) => Task.FromResult(entity);
+        public Task UpdateAsync(AgoraHub360.ERP.Domain.Entities.Core.Moneda entity, CancellationToken ct = default) => Task.CompletedTask;
+        public Task DeleteAsync(AgoraHub360.ERP.Domain.Entities.Core.Moneda entity, CancellationToken ct = default) => Task.CompletedTask;
     }
 }

@@ -1,0 +1,422 @@
+@page "/config/numeraciones-documento"
+@attribute [Authorize]
+@using AgoraHub360.ERP.Shared.DTOs.Numeracion
+@using AgoraHub360.ERP.Shared.DTOs.Sucursal
+@using AgoraHub360.ERP.Web.Services
+@inject NumeracionHttpService NumeracionSvc
+@inject HttpSucursalService SucursalSvc
+@inject EmpresaStateService EmpresaState
+@inject UiAuthorizationService UiAuth
+
+<PageTitle>Numeraciones Documentales - AgoraHub360 ERP</PageTitle>
+
+<div class="page-header">
+    <h1>Numeración Documental</h1>
+    <p class="text-muted mb-0">Sistema &rsaquo; Configuración Documental</p>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(_mensaje))
+{
+    <div class="alert @(_esError ? "alert-danger" : "alert-success") alert-dismissible fade show" role="alert">
+        @_mensaje
+        <button type="button" class="btn-close" @onclick="() => _mensaje = null"></button>
+    </div>
+}
+
+@if (!_puedeAccederSeccion)
+{
+    <div class="alert alert-warning" role="alert">
+        No tienes permisos para acceder a esta sección.
+    </div>
+}
+
+<div class="card mb-4" hidden="@(!_puedeAccederSeccion)">
+    <div class="card-body py-3 d-flex flex-column flex-md-row align-items-md-center gap-3">
+        <div class="flex-grow-1">
+            <label class="form-label mb-1">Empresa activa</label>
+            <div class="form-control bg-light">@(EmpresaState.EmpresaActiva?.Nombre ?? "—")</div>
+        </div>
+        <div class="pt-md-4">
+            <button class="btn btn-primary" @onclick="NuevaNumeracion" disabled="@(!_tieneEmpresaActiva || !_puedeAccederSeccion)">
+                <i class="bi bi-plus-circle me-1"></i> Nuevo
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="card" hidden="@(!_puedeAccederSeccion)">
+    <div class="card-header d-flex justify-content-between align-items-center py-3">
+        <span>Numeraciones (@_numeraciones.Count)</span>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="card-body text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="text-muted mt-2">Cargando numeraciones...</p>
+        </div>
+    }
+
+    @if (!_loading && !_tieneEmpresaActiva)
+    {
+        <div class="card-body text-center py-5">
+            <i class="bi bi-buildings" style="font-size: 3rem; color: var(--agora-text-light);"></i>
+            <p class="text-muted mt-3">Seleccione una empresa activa para administrar numeraciones.</p>
+        </div>
+    }
+
+    @if (!_loading && _tieneEmpresaActiva && _numeraciones.Count == 0)
+    {
+        <div class="card-body text-center py-5">
+            <i class="bi bi-123" style="font-size: 3rem; color: var(--agora-text-light);"></i>
+            <p class="text-muted mt-3">No hay numeraciones registradas.</p>
+        </div>
+    }
+
+    @if (!_loading && _tieneEmpresaActiva && _numeraciones.Count > 0)
+    {
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>TipoDocumento</th>
+                        <th>Sucursal</th>
+                        <th>Prefijo</th>
+                        <th>SiguienteNumero</th>
+                        <th class="text-center">Activo</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in _numeraciones.OrderBy(x => x.TipoDocumento).ThenBy(x => x.SucursalNombre))
+                    {
+                        <tr>
+                            <td><span class="badge bg-primary">@item.TipoDocumento</span></td>
+                            <td>@(string.IsNullOrWhiteSpace(item.SucursalNombre) ? "General" : item.SucursalNombre)</td>
+                            <td><code>@item.Prefijo</code></td>
+                            <td>@item.SiguienteNumero</td>
+                            <td class="text-center">
+                                @if (item.Activo)
+                                {
+                                    <span class="badge bg-success">Activo</span>
+                                }
+                                @if (!item.Activo)
+                                {
+                                    <span class="badge bg-secondary">Inactivo</span>
+                                }
+                            </td>
+                            <td class="text-end text-nowrap">
+                                @if (_puedeAccederSeccion)
+                                {
+                                    <button class="btn btn-outline-primary btn-sm me-1" @onclick="() => Editar(item)">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    @if (item.Activo)
+                                    {
+                                        <button class="btn btn-outline-warning btn-sm" @onclick="() => CambiarEstado(item, false)">
+                                            <i class="bi bi-pause-circle"></i>
+                                        </button>
+                                    }
+                                    @if (!item.Activo)
+                                    {
+                                        <button class="btn btn-outline-success btn-sm" @onclick="() => CambiarEstado(item, true)">
+                                            <i class="bi bi-play-circle"></i>
+                                        </button>
+                                    }
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@if (_mostrarModal && _puedeAccederSeccion)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(_editId.HasValue ? "Editar numeración" : "Nueva numeración")</h5>
+                    <button type="button" class="btn-close" @onclick="CerrarModal"></button>
+                </div>
+
+                <EditForm Model="_form" OnValidSubmit="GuardarAsync">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">TipoDocumento *</label>
+                                <InputText class="form-control" @bind-Value="_form.TipoDocumento" />
+                                <ValidationMessage For="() => _form.TipoDocumento" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Sucursal</label>
+                                <InputSelect class="form-select" @bind-Value="_form.SucursalId">
+                                    <option value="">General</option>
+                                    @foreach (var suc in _sucursales.OrderBy(x => x.Nombre))
+                                    {
+                                        <option value="@suc.Id">@suc.Nombre</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Prefijo *</label>
+                                <InputText class="form-control" @bind-Value="_form.Prefijo" />
+                                <ValidationMessage For="() => _form.Prefijo" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">SiguienteNumero *</label>
+                                <InputNumber class="form-control" @bind-Value="_form.SiguienteNumero" />
+                                <ValidationMessage For="() => _form.SiguienteNumero" />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">LongitudNumero *</label>
+                                <InputNumber class="form-control" @bind-Value="_form.LongitudNumero" />
+                                <ValidationMessage For="() => _form.LongitudNumero" />
+                            </div>
+                            <div class="col-md-6 d-flex align-items-end">
+                                <div class="form-check mb-2">
+                                    <InputCheckbox class="form-check-input" @bind-Value="_form.Activo" />
+                                    <label class="form-check-label">Activo</label>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Descripción *</label>
+                                <InputText class="form-control" @bind-Value="_form.Descripcion" />
+                                <ValidationMessage For="() => _form.Descripcion" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" @onclick="CerrarModal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" disabled="@_saving">
+                            @if (_saving)
+                            {
+                                <span class="spinner-border spinner-border-sm me-1"></span>
+                            }
+                            Guardar
+                        </button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private readonly List<NumeracionDocumentoDto> _numeraciones = new();
+    private readonly List<SucursalListadoDto> _sucursales = new();
+
+    private bool _loading;
+    private bool _saving;
+    private bool _mostrarModal;
+    private bool _tieneEmpresaActiva;
+    private bool _puedeAccederSeccion;
+    private int? _editId;
+
+    private string? _mensaje;
+    private bool _esError;
+
+    private ActualizarNumeracionDocumentoRequestDto _form = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _puedeAccederSeccion = UiAuth.CanManageParametrosNumeracion();
+        if (!_puedeAccederSeccion)
+        {
+            _loading = false;
+            return;
+        }
+
+        await CargarAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!_puedeAccederSeccion)
+            return;
+
+        var tieneEmpresa = EmpresaState.EmpresaActivaId.HasValue;
+        if (tieneEmpresa != _tieneEmpresaActiva)
+        {
+            await CargarAsync();
+        }
+    }
+
+    private async Task CargarAsync()
+    {
+        if (!_puedeAccederSeccion)
+            return;
+
+        _tieneEmpresaActiva = EmpresaState.EmpresaActivaId.HasValue;
+        if (!_tieneEmpresaActiva)
+        {
+            _numeraciones.Clear();
+            _sucursales.Clear();
+            return;
+        }
+
+        _loading = true;
+        _mensaje = null;
+        try
+        {
+            _numeraciones.Clear();
+            _numeraciones.AddRange(await NumeracionSvc.GetAllAsync());
+
+            _sucursales.Clear();
+            _sucursales.AddRange(await SucursalSvc.GetActivasAsync());
+        }
+        catch
+        {
+            MostrarMensaje("No se pudieron cargar las numeraciones.", true);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void NuevaNumeracion()
+    {
+        if (!_puedeAccederSeccion)
+            return;
+
+        _editId = null;
+        _form = new ActualizarNumeracionDocumentoRequestDto
+        {
+            Activo = true,
+            SiguienteNumero = 1,
+            LongitudNumero = 6
+        };
+        _mostrarModal = true;
+    }
+
+    private void Editar(NumeracionDocumentoDto item)
+    {
+        if (!_puedeAccederSeccion)
+            return;
+
+        _editId = item.Id;
+        _form = new ActualizarNumeracionDocumentoRequestDto
+        {
+            TipoDocumento = item.TipoDocumento,
+            Descripcion = item.Descripcion,
+            SucursalId = item.SucursalId,
+            Prefijo = item.Prefijo,
+            SiguienteNumero = item.SiguienteNumero,
+            LongitudNumero = item.LongitudNumero,
+            Activo = item.Activo
+        };
+        _mostrarModal = true;
+    }
+
+    private void CerrarModal()
+    {
+        _mostrarModal = false;
+        _editId = null;
+    }
+
+    private async Task GuardarAsync()
+    {
+        if (!_puedeAccederSeccion)
+            return;
+
+        _saving = true;
+        try
+        {
+            ApiResponse<NumeracionDocumentoDto> resultado;
+            if (_editId.HasValue)
+            {
+                resultado = await NumeracionSvc.UpdateAsync(_editId.Value, _form);
+            }
+            else
+            {
+                var create = new CrearNumeracionDocumentoRequestDto
+                {
+                    TipoDocumento = _form.TipoDocumento,
+                    Descripcion = _form.Descripcion,
+                    SucursalId = _form.SucursalId,
+                    Prefijo = _form.Prefijo,
+                    SiguienteNumero = _form.SiguienteNumero,
+                    LongitudNumero = _form.LongitudNumero,
+                    Activo = _form.Activo
+                };
+                resultado = await NumeracionSvc.CreateAsync(create);
+            }
+
+            if (!resultado.Success)
+            {
+                MostrarMensaje(SanitizeError(resultado.Message, "No se pudo guardar la numeración."), true);
+                return;
+            }
+
+            MostrarMensaje("Numeración guardada correctamente.");
+            CerrarModal();
+            await CargarAsync();
+        }
+        catch
+        {
+            MostrarMensaje("No se pudo guardar la numeración.", true);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private async Task CambiarEstado(NumeracionDocumentoDto item, bool activar)
+    {
+        if (!_puedeAccederSeccion)
+            return;
+
+        try
+        {
+            var resultado = activar
+                ? await NumeracionSvc.ActivarAsync(item.Id)
+                : await NumeracionSvc.DesactivarAsync(item.Id);
+
+            if (!resultado.Success)
+            {
+                MostrarMensaje(SanitizeError(resultado.Message, "No se pudo cambiar el estado."), true);
+                return;
+            }
+
+            MostrarMensaje(activar
+                ? "Numeración activada correctamente."
+                : "Numeración desactivada correctamente.");
+
+            await CargarAsync();
+        }
+        catch
+        {
+            MostrarMensaje("No se pudo cambiar el estado de la numeración.", true);
+        }
+    }
+
+    private void MostrarMensaje(string mensaje, bool esError = false)
+    {
+        _mensaje = mensaje;
+        _esError = esError;
+    }
+
+    private static string SanitizeError(string? message, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+            return fallback;
+
+        if (message.Contains("Error HTTP", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("System.", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("stack", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("trace", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("Exception", StringComparison.OrdinalIgnoreCase)
+            || message.Contains("{"))
+        {
+            return fallback;
+        }
+
+        return message;
+    }
+}

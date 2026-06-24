@@ -1,0 +1,490 @@
+@page "/config/facturacion-electronica"
+@attribute [Authorize]
+@inject FacturacionFEHttpService FeService
+@inject IJSRuntime JSRuntime
+@using AgoraHub360.ERP.Shared.DTOs.FacturacionElectronica
+@using AgoraHub360.ERP.Shared.DTOs
+
+<h3 class="mb-3">
+    <i class="bi bi-receipt me-2"></i>Configuración de Facturación Electrónica
+</h3>
+
+@* ─── Mensajes ──────────────────────────────────────────────────────────── *@
+@if (!string.IsNullOrWhiteSpace(_errorMessage))
+{
+    <div class="alert alert-danger alert-dismissible" role="alert">
+        @_errorMessage
+        <button type="button" class="btn-close" @onclick="() => _errorMessage = null"></button>
+    </div>
+}
+@if (!string.IsNullOrWhiteSpace(_successMessage))
+{
+    <div class="alert alert-success alert-dismissible" role="alert">
+        @_successMessage
+        <button type="button" class="btn-close" @onclick="() => _successMessage = null"></button>
+    </div>
+}
+
+@* ─── Lista de configuraciones ──────────────────────────────────────────── *@
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center py-3">
+        <span>Configuraciones activas</span>
+        <button class="btn btn-primary btn-sm" @onclick="MostrarNuevo">
+            <i class="bi bi-plus-circle me-1"></i> Nueva Configuración
+        </button>
+    </div>
+    <div class="card-body">
+        @if (_cargando)
+        {
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Cargando...</span>
+                </div>
+            </div>
+        }
+        else if (_configuraciones.Count == 0)
+        {
+            <div class="text-center py-5">
+                <i class="bi bi-receipt" style="font-size: 3rem; color: var(--agora-text-light);"></i>
+                <p class="text-muted mt-3">No hay configuraciones de Facturación Electrónica.</p>
+                <p class="text-muted small">Crea una nueva configuración para empezar a facturar electrónicamente.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Proveedor</th>
+                            <th>Ambiente</th>
+                            <th>ClientId</th>
+                            <th>ActivityCode</th>
+                            <th>NIT Emisor</th>
+                            <th class="text-center">Activa</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var cfg in _configuraciones)
+                        {
+                            <tr>
+                                <td class="fw-semibold">@cfg.NombreConfiguracion</td>
+                                <td>@cfg.ProveedorNombre</td>
+                                <td>
+                                    <span class="badge @(cfg.AmbienteCodigo == "PRODUCCION" ? "bg-danger" : "bg-info text-dark")">
+                                        @cfg.AmbienteNombre
+                                    </span>
+                                </td>
+                                <td class="small text-muted">@cfg.ClientId</td>
+                                <td>@cfg.ActivityCode</td>
+                                <td>@cfg.NitEmisor</td>
+                                <td class="text-center">
+                                    @if (cfg.EsConfiguracionActiva)
+                                    {
+                                        <span class="badge bg-success">Activa</span>
+                                    }
+                                    else
+                                    {
+                                        <button class="btn btn-outline-success btn-sm"
+                                                @onclick="() => ActivarAsync(cfg)"
+                                                title="Activar esta configuración">
+                                            <i class="bi bi-check-circle"></i>
+                                        </button>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <div class="d-flex justify-content-center gap-1">
+                                        <button class="btn btn-outline-secondary btn-sm"
+                                                @onclick="() => MostrarEditar(cfg)"
+                                                title="Editar">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        <button class="btn btn-outline-info btn-sm"
+                                                @onclick="() => TestConexionAsync(cfg)"
+                                                disabled="@(_probandoConexionId == cfg.Id)"
+                                                title="Probar conexión con el proveedor">
+                                            @if (_probandoConexionId == cfg.Id)
+                                            {
+                                                <span class="spinner-border spinner-border-sm"></span>
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-plug"></i>
+                                            }
+                                        </button>
+                                        @if (cfg.EsConfiguracionActiva)
+                                        {
+                                            <button class="btn btn-outline-warning btn-sm"
+                                                    @onclick="() => DesactivarAsync(cfg)"
+                                                    title="Desactivar">
+                                                <i class="bi bi-pause-circle"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@* ─── Modal de Configuración ────────────────────────────────────────────── *@
+@if (_mostrarModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,.5);">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        @(_editandoId.HasValue ? "Editar" : "Nueva") Configuración FE
+                    </h5>
+                    <button type="button" class="btn-close" @onclick="CerrarModal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label small">Nombre de Configuración</label>
+                            <input type="text" class="form-control form-control-sm" @bind="_formNombre" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">Proveedor</label>
+                            <select class="form-select form-select-sm" @bind="_formProveedorId">
+                                <option value="0">-- Seleccionar --</option>
+                                @foreach (var p in _proveedores)
+                                {
+                                    <option value="@p.Id">@p.Nombre (@p.Codigo)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">Ambiente</label>
+                            <select class="form-select form-select-sm" @bind="_formAmbienteId">
+                                <option value="0">-- Seleccionar --</option>
+                                @foreach (var a in _ambientes)
+                                {
+                                    <option value="@a.Id">@a.Nombre (@a.Codigo)</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">ClientId</label>
+                            <input type="text" class="form-control form-control-sm" @bind="_formClientId" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">ClientSecret</label>
+                            <input type="password" class="form-control form-control-sm" @bind="_formClientSecret" placeholder="Nuevo o dejar vacío para mantener" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">PosToken</label>
+                            <input type="password" class="form-control form-control-sm" @bind="_formPosToken" placeholder="Nuevo o dejar vacío para mantener" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">Token URL</label>
+                            <input type="text" class="form-control form-control-sm" @bind="_formTokenUrl" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">API Management URL</label>
+                            <input type="text" class="form-control form-control-sm" @bind="_formApiManagementUrl" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small">API Billing URL</label>
+                            <input type="text" class="form-control form-control-sm" @bind="_formApiBillingUrl" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small">ActivityCode</label>
+                            <input type="text" class="form-control form-control-sm" @bind="_formActivityCode" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small">NIT Emisor</label>
+                            <input type="text" class="form-control form-control-sm" @bind="_formNitEmisor" />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small">Timeout (segundos)</label>
+                            <input type="number" class="form-control form-control-sm" @bind="_formTimeout" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary btn-sm" @onclick="CerrarModal">Cancelar</button>
+                    <button type="button" class="btn btn-primary btn-sm" @onclick="GuardarAsync" disabled="@_guardando">
+                        @if (_guardando)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        @(_editandoId.HasValue ? "Actualizar" : "Crear")
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool _cargando;
+    private bool _guardando;
+    private bool _mostrarModal;
+    private int? _editandoId;
+    private string? _errorMessage;
+    private string? _successMessage;
+
+    private List<ConfiguracionFEDto> _configuraciones = new();
+    private List<ProveedorFEDto> _proveedores = new();
+    private List<AmbienteFEDto> _ambientes = new();
+    private int? _probandoConexionId;
+
+    // Form fields
+    private string _formNombre = "";
+    private int _formProveedorId;
+    private int _formAmbienteId;
+    private string _formClientId = "";
+    private string? _formClientSecret;
+    private string? _formPosToken;
+    private string _formTokenUrl = "";
+    private string _formApiManagementUrl = "";
+    private string _formApiBillingUrl = "";
+    private string _formActivityCode = "";
+    private string _formNitEmisor = "";
+    private int _formTimeout = 30;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CargarCatalogosAsync();
+        await CargarConfiguracionesAsync();
+    }
+
+    private async Task CargarCatalogosAsync()
+    {
+        try
+        {
+            _proveedores = await FeService.GetProveedoresAsync();
+            _ambientes = await FeService.GetAmbientesAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error al cargar catálogos: {ex.Message}";
+        }
+    }
+
+    private async Task CargarConfiguracionesAsync()
+    {
+        _cargando = true;
+        try
+        {
+            _configuraciones = await FeService.GetConfiguracionesAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error al cargar configuraciones: {ex.Message}";
+        }
+        finally
+        {
+            _cargando = false;
+        }
+    }
+
+    private void MostrarNuevo()
+    {
+        _editandoId = null;
+        LimpiarFormulario();
+        _mostrarModal = true;
+    }
+
+    private void MostrarEditar(ConfiguracionFEDto cfg)
+    {
+        _editandoId = cfg.Id;
+        _formNombre = cfg.NombreConfiguracion;
+        _formProveedorId = cfg.ProveedorFacturacionElectronicaId;
+        _formAmbienteId = cfg.AmbienteFacturacionElectronicaId;
+        _formClientId = cfg.ClientId;
+        _formClientSecret = null; // No se muestra por seguridad
+        _formPosToken = null;     // No se muestra por seguridad
+        _formTokenUrl = cfg.TokenUrl;
+        _formApiManagementUrl = cfg.ApiManagementUrl;
+        _formApiBillingUrl = cfg.ApiBillingUrl;
+        _formActivityCode = cfg.ActivityCode;
+        _formNitEmisor = cfg.NitEmisor;
+        _formTimeout = cfg.TimeoutSegundos;
+        _mostrarModal = true;
+    }
+
+    private void CerrarModal()
+    {
+        _mostrarModal = false;
+        _editandoId = null;
+    }
+
+    private void LimpiarFormulario()
+    {
+        _formNombre = "";
+        _formProveedorId = 0;
+        _formAmbienteId = 0;
+        _formClientId = "";
+        _formClientSecret = null;
+        _formPosToken = null;
+        _formTokenUrl = "";
+        _formApiManagementUrl = "";
+        _formApiBillingUrl = "";
+        _formActivityCode = "";
+        _formNitEmisor = "";
+        _formTimeout = 30;
+    }
+
+    private async Task GuardarAsync()
+    {
+        _errorMessage = null;
+        _successMessage = null;
+
+        if (string.IsNullOrWhiteSpace(_formNombre))
+        {
+            _errorMessage = "El nombre de configuración es obligatorio.";
+            return;
+        }
+        if (_formProveedorId == 0)
+        {
+            _errorMessage = "Debe seleccionar un proveedor.";
+            return;
+        }
+        if (_formAmbienteId == 0)
+        {
+            _errorMessage = "Debe seleccionar un ambiente.";
+            return;
+        }
+
+        _guardando = true;
+        try
+        {
+            if (_editandoId.HasValue)
+            {
+                var dto = new ActualizarConfiguracionFERequestDto
+                {
+                    NombreConfiguracion = _formNombre,
+                    ProveedorFacturacionElectronicaId = _formProveedorId,
+                    AmbienteFacturacionElectronicaId = _formAmbienteId,
+                    ClientId = _formClientId,
+                    ClientSecret = _formClientSecret,
+                    PosToken = _formPosToken,
+                    TokenUrl = _formTokenUrl,
+                    ApiManagementUrl = _formApiManagementUrl,
+                    ApiBillingUrl = _formApiBillingUrl,
+                    ActivityCode = _formActivityCode,
+                    NitEmisor = _formNitEmisor,
+                    TimeoutSegundos = _formTimeout
+                };
+
+                var result = await FeService.ActualizarConfiguracionAsync(_editandoId.Value, dto);
+                if (result.Success)
+                    _successMessage = "Configuración FE actualizada correctamente.";
+                else
+                    _errorMessage = result.Message ?? "Error al actualizar configuración FE.";
+            }
+            else
+            {
+                var dto = new CrearConfiguracionFERequestDto
+                {
+                    NombreConfiguracion = _formNombre,
+                    ProveedorFacturacionElectronicaId = _formProveedorId,
+                    AmbienteFacturacionElectronicaId = _formAmbienteId,
+                    ClientId = _formClientId,
+                    ClientSecret = _formClientSecret ?? "",
+                    PosToken = _formPosToken,
+                    TokenUrl = _formTokenUrl,
+                    ApiManagementUrl = _formApiManagementUrl,
+                    ApiBillingUrl = _formApiBillingUrl,
+                    ActivityCode = _formActivityCode,
+                    NitEmisor = _formNitEmisor,
+                    TimeoutSegundos = _formTimeout
+                };
+
+                var result = await FeService.CrearConfiguracionAsync(dto);
+                if (result.Success)
+                    _successMessage = "Configuración FE creada correctamente.";
+                else
+                    _errorMessage = result.Message ?? "Error al crear configuración FE.";
+            }
+
+            _mostrarModal = false;
+            await CargarConfiguracionesAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error inesperado: {ex.Message}";
+        }
+        finally
+        {
+            _guardando = false;
+        }
+    }
+
+    private async Task TestConexionAsync(ConfiguracionFEDto cfg)
+    {
+        _errorMessage = null;
+        _successMessage = null;
+        _probandoConexionId = cfg.Id;
+        try
+        {
+            var result = await FeService.TestConexionAsync(cfg.Id);
+            if (result.Success && result.Data != null)
+            {
+                if (result.Data.Exitoso)
+                    _successMessage = $"✅ {result.Data.Mensaje} ({(result.Data.TiempoRespuestaMs > 0 ? $"{result.Data.TiempoRespuestaMs}ms" : "")})";
+                else
+                    _errorMessage = $"❌ {result.Data.Mensaje}";
+            }
+            else
+            {
+                _errorMessage = result.Message ?? "Error al probar conexión.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error inesperado: {ex.Message}";
+        }
+        finally
+        {
+            _probandoConexionId = null;
+        }
+    }
+
+    private async Task ActivarAsync(ConfiguracionFEDto cfg)
+    {
+        _errorMessage = null;
+        _successMessage = null;
+        try
+        {
+            var result = await FeService.ActivarConfiguracionAsync(cfg.Id);
+            if (result.Success)
+                _successMessage = $"Configuración '{cfg.NombreConfiguracion}' activada.";
+            else
+                _errorMessage = result.Message ?? "Error al activar configuración.";
+            await CargarConfiguracionesAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error inesperado: {ex.Message}";
+        }
+    }
+
+    private async Task DesactivarAsync(ConfiguracionFEDto cfg)
+    {
+        _errorMessage = null;
+        _successMessage = null;
+        try
+        {
+            var result = await FeService.DesactivarConfiguracionAsync(cfg.Id);
+            if (result.Success)
+                _successMessage = $"Configuración '{cfg.NombreConfiguracion}' desactivada.";
+            else
+                _errorMessage = result.Message ?? "Error al desactivar configuración.";
+            await CargarConfiguracionesAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Error inesperado: {ex.Message}";
+        }
+    }
+}

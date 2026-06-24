@@ -1,21 +1,528 @@
 @page "/ventas/facturas"
+@attribute [Authorize]
+@using AgoraHub360.ERP.Web.Helpers
+@using AgoraHub360.ERP.Shared.DTOs
+@using AgoraHub360.ERP.Shared.DTOs.Ventas
+@using AgoraHub360.ERP.Shared.DTOs.MDM
+@inject FacturaVentaHttpService FacturaService
+@inject ClienteHttpService ClienteService
+@inject NavigationManager Nav
+@inject FacturacionFEHttpService FacturacionFE
 
 <PageTitle>Facturas - AgoraHub360 ERP</PageTitle>
 
-<div class="page-header">
-    <h1>Facturas</h1>
-    <p class="text-muted mb-0">Ventas &rsaquo; Facturas</p>
+<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+        <h1 class="mb-0 text-dark font-family-outfit">Facturas de Venta</h1>
+        <p class="text-muted mb-0">Ventas &rsaquo; Facturas</p>
+    </div>
 </div>
 
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center py-3">
-        <span>Listado de Facturas</span>
-        <button class="btn btn-primary btn-sm" disabled>
-            <i class="bi bi-plus-circle me-1"></i> Nueva Factura
+@if (!string.IsNullOrWhiteSpace(successMessage))
+{
+    <div class="alert alert-success alert-dismissible fade show my-3" role="alert">
+        <i class="bi bi-check-circle-fill me-1"></i>@successMessage
+        <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+    </div>
+}
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show my-3" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i>@errorMessage
+        <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+    </div>
+}
+
+<!-- Panel de Filtros -->
+<form @onsubmit="BuscarAsync" @onsubmit:preventDefault class="card border-0 shadow-sm mb-4 bg-white text-dark">
+    <div class="card-body p-3">
+        <h5 class="card-title mb-3 fs-6 fw-bold text-dark"><i class="bi bi-funnel-fill me-1 text-primary"></i> Filtros de Búsqueda</h5>
+        <div class="row g-2 align-items-end">
+            <div class="col-12 col-sm-6 col-md-3">
+                <label class="form-label small text-muted mb-1">Buscar</label>
+                <input type="text" class="form-control form-control-sm text-dark bg-light" placeholder="Nro factura, venta, cliente, NIT..." @bind="filterBusqueda" />
+            </div>
+            <div class="col-12 col-sm-6 col-md-3">
+                <label class="form-label small text-muted mb-1">Cliente</label>
+                <select class="form-select form-select-sm text-dark bg-light" @bind="filterClienteId">
+                    <option value="">-- Todos los Clientes --</option>
+                    @foreach (var c in clientes)
+                    {
+                        <option value="@c.Id">@c.RazonSocial (@c.Codigo)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-12 col-sm-6 col-md-2">
+                <label class="form-label small text-muted mb-1">Estado</label>
+                <select class="form-select form-select-sm text-dark bg-light" @bind="filterEstadoFactura">
+                    <option value="">-- Todos --</option>
+                    <option value="Borrador">Borrador</option>
+                    <option value="Generada">Generada</option>
+                    <option value="Anulada">Anulada</option>
+                </select>
+            </div>
+            <div class="col-12 col-sm-6 col-md-2">
+                <label class="form-label small text-muted mb-1">Moneda</label>
+                <select class="form-select form-select-sm text-dark bg-light" @bind="filterMoneda">
+                    <option value="">-- Todos --</option>
+                    <option value="Bs">Bs</option>
+                    <option value="USD">USD</option>
+                </select>
+            </div>
+            <div class="col-12 col-sm-6 col-md-2">
+                <label class="form-label small text-muted mb-1">Fecha Desde</label>
+                <input type="date" class="form-control form-control-sm text-dark bg-light" @bind="filterFechaDesde" />
+            </div>
+            <div class="col-12 col-sm-6 col-md-2">
+                <label class="form-label small text-muted mb-1">Fecha Hasta</label>
+                <input type="date" class="form-control form-control-sm text-dark bg-light" @bind="filterFechaHasta" />
+            </div>
+            <div class="col-12 col-sm-6 col-md-1">
+                <label class="form-label small text-muted mb-1">Top</label>
+                <select class="form-select form-select-sm text-dark bg-light" @bind="topLimit">
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="200">200</option>
+                </select>
+            </div>
+            <div class="col-12 col-sm-6 col-md-1">
+                <label class="form-label small text-muted mb-1">Tam. Pág.</label>
+                <select class="form-select form-select-sm text-dark bg-light" @bind="tamanoPagina">
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
+            <div class="col-12 col-md-4 d-flex gap-2 justify-content-end ms-auto">
+                <button type="submit" class="btn btn-primary btn-sm px-4" disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                    }
+                    else
+                    {
+                        <i class="bi bi-search me-1"></i>
+                    }
+                    Buscar
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="LimpiarFiltrosAsync" disabled="@isLoading" title="Limpiar filtros">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Limpiar
+                </button>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center py-3 bg-white">
+        <span class="text-dark fw-bold">Listado de Facturas</span>
+        <button class="btn btn-sm btn-outline-secondary" @onclick="LoadAsync" disabled="@isLoading">
+            <i class="bi bi-arrow-repeat me-1"></i> Recargar
         </button>
     </div>
-    <div class="card-body text-center py-5">
-        <i class="bi bi-file-earmark-text" style="font-size: 3rem; color: var(--agora-text-light);"></i>
-        <p class="text-muted mt-3">Modulo en construccion.</p>
+    <div class="card-body p-0">
+        @if (isLoading)
+        {
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="text-muted mt-2 mb-0">Cargando facturas...</p>
+            </div>
+        }
+        else if (facturas.Count == 0)
+        {
+            <div class="text-center py-5">
+                <i class="bi bi-file-earmark-text text-muted" style="font-size: 3rem;"></i>
+                <p class="text-muted mt-3 mb-0">No se encontraron facturas de venta.</p>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 text-dark bg-white">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Número</th>
+                            <th>Emisión</th>
+                            <th>Cliente Factura</th>
+                            <th>NIT/CI</th>
+                            <th>Moneda</th>
+                            <th class="text-end">Total</th>
+                            <th>Estado</th>
+                            <th>SIAT</th>
+                            <th>Estado Cobro</th>
+                            <th class="text-end">Total Pagado</th>
+                            <th class="text-end">Saldo Pendiente</th>
+                            <th>Fecha Vencimiento</th>
+                            <th class="text-end">Días Vencidos</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var fac in facturas)
+                        {
+                            <tr class="@(fac.DiasVencidos > 30 ? "table-danger" : "")">
+                                <td class="fw-semibold">@fac.NumeroFactura</td>
+                                <td>@fac.FechaEmision.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>@fac.RazonSocialFactura</td>
+                                <td>@fac.NitFactura</td>
+                                <td><span class="badge bg-light text-dark">@fac.MonedaCodigo</span></td>
+                                <td class="text-end fw-semibold">@FormatMoney(fac.Total)</td>
+                                <td>
+                                    <span class="@BadgeCssHelper.GetEstadoFacturaBadge(fac.EstadoFactura)">@fac.EstadoFactura</span>
+                                </td>
+                                <td>
+                                    <span class="badge @GetEstadoSiatBadge(fac.EstadoSiat)">@fac.EstadoSiat</span>
+                                </td>
+                                <td>
+                                    <span class="@BadgeCssHelper.GetEstadoCxCBadge(fac.EstadoCobro)">@fac.EstadoCobro</span>
+                                </td>
+                                <td class="text-end">@FormatMoney(fac.TotalPagado)</td>
+                                <td class="text-end fw-semibold">@FormatMoney(fac.SaldoPendiente)</td>
+                                <td>@(fac.FechaVencimiento?.ToString("dd/MM/yyyy") ?? "-")</td>
+                                <td class="text-end">@fac.DiasVencidos</td>
+                                <td class="text-end">
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => GoToVenta(fac.VentaId)" title="Ver Venta Asociada">
+                                        <i class="bi bi-eye"></i> Venta
+                                    </button>
+                                    @if (PuedeEmitirFE(fac))
+                                    {
+                                        <button class="btn btn-sm btn-success ms-1"
+                                                @onclick="() => EmitirFEAsync(fac.Id)"
+                                                disabled="@(isEmitiendoFE && emitiendoFacturaId == fac.Id)"
+                                                title="Emitir factura electrónica">
+                                            @if (isEmitiendoFE && emitiendoFacturaId == fac.Id)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-1"></span>
+                                            }
+                                            else
+                                            {
+                                                <i class="bi bi-send me-1"></i>
+                                            }
+                                            Emitir FE
+                                        </button>
+                                    }
+                                    @if (fac.EstadoFactura != "Anulada" && fac.EstadoFactura != "Anulado")
+                                    {
+                                        <button class="btn btn-sm btn-outline-danger ms-1" @onclick="() => MostrarModalAnular(fac)" title="Anular Factura">
+                                            <i class="bi bi-x-circle"></i>
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <!-- Paginación UI -->
+            <div class="card-footer bg-white border-top d-flex align-items-center justify-content-between p-3">
+                <div class="text-muted small">
+                    Mostrando de @(totalRegistros > 0 ? (paginaActual - 1) * tamanoPagina + 1 : 0) a @(Math.Min(paginaActual * tamanoPagina, totalRegistros)) de @totalRegistros registros
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="PaginaAnterior" disabled="@(paginaActual <= 1 || isLoading)">
+                        <i class="bi bi-chevron-left me-1"></i> Anterior
+                    </button>
+                    <span class="small fw-semibold text-dark">Página @paginaActual de @totalPaginas</span>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="PaginaSiguiente" disabled="@(paginaActual >= totalPaginas || isLoading)">
+                        Siguiente <i class="bi bi-chevron-right ms-1"></i>
+                    </button>
+                </div>
+            </div>
+        }
     </div>
 </div>
+
+<!-- Modal para Anular Factura -->
+@if (showAnularModal && facturaAAnular != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0, 0, 0, 0.5);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title text-danger"><i class="bi bi-exclamation-triangle-fill me-2"></i>Anular Factura</h5>
+                    <button type="button" class="btn-close" @onclick="CerrarModalAnular"></button>
+                </div>
+                <div class="modal-body text-dark">
+                    <p>¿Está seguro de que desea anular la factura <strong>@facturaAAnular.NumeroFactura</strong> por un total de <strong>@FormatMoney(facturaAAnular.Total)</strong>?</p>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Motivo de Anulación</label>
+                        <textarea class="form-control" rows="3" placeholder="Escriba el motivo de la anulación aquí..." @bind="motivoAnulacion"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CerrarModalAnular" disabled="@isActionLoading">Cancelar</button>
+                    <button type="button" class="btn btn-danger" @onclick="AnularConfirmadoAsync" disabled="@(string.IsNullOrWhiteSpace(motivoAnulacion) || isActionLoading)">
+                        @if (isActionLoading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                        }
+                        Confirmar Anulación
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private readonly List<FacturaVentaResumenDto> facturas = new();
+    private bool isLoading;
+    private bool isActionLoading;
+    private string? errorMessage;
+    private string? successMessage;
+
+    // Filtros
+    private string? filterBusqueda;
+    private int? filterClienteId;
+    private string? filterEstadoFactura;
+    private string? filterMoneda;
+    private DateTime? filterFechaDesde;
+    private DateTime? filterFechaHasta;
+    private int topLimit = 100;
+    private int paginaActual = 1;
+    private int tamanoPagina = 50;
+    private int totalRegistros = 0;
+    private int totalPaginas = 1;
+
+    private List<AgoraHub360.ERP.Shared.DTOs.MDM.ClienteDto> clientes = new();
+
+    // Modal Anulación
+    private bool showAnularModal;
+    private FacturaVentaResumenDto? facturaAAnular;
+    private string motivoAnulacion = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            clientes = await ClienteService.GetAllAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al cargar clientes: {ex.Message}";
+        }
+        await LoadAsync();
+    }
+
+    private async Task BuscarAsync()
+    {
+        paginaActual = 1;
+        await LoadAsync();
+    }
+
+    private async Task LimpiarFiltrosAsync()
+    {
+        filterBusqueda = null;
+        filterClienteId = null;
+        filterEstadoFactura = null;
+        filterMoneda = null;
+        filterFechaDesde = null;
+        filterFechaHasta = null;
+        topLimit = 100;
+        paginaActual = 1;
+        await LoadAsync();
+    }
+
+    private async Task PaginaAnterior()
+    {
+        if (paginaActual > 1)
+        {
+            paginaActual--;
+            await LoadAsync();
+        }
+    }
+
+    private async Task PaginaSiguiente()
+    {
+        if (paginaActual < totalPaginas)
+        {
+            paginaActual++;
+            await LoadAsync();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var filter = new FacturaVentaFilterDto
+            {
+                Busqueda = filterBusqueda,
+                ClienteId = filterClienteId,
+                EstadoFactura = filterEstadoFactura,
+                Moneda = filterMoneda,
+                FechaEmisionDesde = filterFechaDesde,
+                FechaEmisionHasta = filterFechaHasta,
+                Top = topLimit,
+                Pagina = paginaActual,
+                TamanoPagina = tamanoPagina
+            };
+
+            var response = await FacturaService.GetAllAsync(filter);
+            facturas.Clear();
+            if (response.Success && response.Data != null)
+            {
+                facturas.AddRange(response.Data.Items);
+                totalRegistros = response.Data.TotalItems;
+                totalPaginas = response.Data.TotalPaginas;
+            }
+            else
+            {
+                errorMessage = response.Message ?? "Error al listar facturas.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"No se pudo cargar el listado de facturas: {ex.Message}";
+            facturas.Clear();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void GoToVenta(long ventaId)
+    {
+        Nav.NavigateTo($"/ventas/comercial/{ventaId}");
+    }
+
+    private void MostrarModalAnular(FacturaVentaResumenDto fac)
+    {
+        facturaAAnular = fac;
+        motivoAnulacion = string.Empty;
+        showAnularModal = true;
+    }
+
+    private void CerrarModalAnular()
+    {
+        showAnularModal = false;
+        facturaAAnular = null;
+        motivoAnulacion = string.Empty;
+    }
+
+    private async Task AnularConfirmadoAsync()
+    {
+        if (facturaAAnular == null || string.IsNullOrWhiteSpace(motivoAnulacion)) return;
+
+        isActionLoading = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var response = await FacturaService.AnularAsync(facturaAAnular.Id, new AnularFacturaVentaRequestDto
+            {
+                MotivoAnulacion = motivoAnulacion.Trim()
+            });
+
+            if (response.Success)
+            {
+                successMessage = $"Factura {facturaAAnular.NumeroFactura} anulada correctamente.";
+                CerrarModalAnular();
+                await LoadAsync();
+            }
+            else
+            {
+                errorMessage = response.Message ?? "No se pudo anular la factura.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al intentar anular la factura: {ex.Message}";
+        }
+        finally
+        {
+            isActionLoading = false;
+        }
+    }
+
+
+
+    private bool isEmitiendoFE;
+    private long? emitiendoFacturaId;
+
+    private bool PuedeEmitirFE(FacturaVentaResumenDto fac)
+    {
+        if (fac is null) return false;
+        if (fac.EstadoFactura == "Anulada" || fac.EstadoFactura == "Anulado") return false;
+        if (!string.IsNullOrWhiteSpace(fac.Cuf)) return false;
+        return true;
+    }
+
+    private async Task EmitirFEAsync(long facturaVentaId)
+    {
+        isEmitiendoFE = true;
+        emitiendoFacturaId = facturaVentaId;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var result = await FacturacionFE.EmitirAsync(facturaVentaId);
+
+            if (result is null)
+            {
+                errorMessage = "No se pudo emitir la factura electrónica.";
+                return;
+            }
+
+            if (result.Success && result.Data is not null)
+            {
+                if (result.Data.Exitoso)
+                {
+                    successMessage = result.Data.EsOffline
+                        ? "Factura registrada en modo pendiente/offline."
+                        : "Factura electrónica emitida correctamente.";
+                }
+                else
+                {
+                    errorMessage = result.Data.Mensaje
+                        ?? result.Message
+                        ?? "La factura electrónica fue rechazada.";
+                }
+            }
+            else
+            {
+                errorMessage = result.Message ?? "La factura electrónica no pudo emitirse.";
+            }
+
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al emitir FE: {ex.Message}";
+        }
+        finally
+        {
+            isEmitiendoFE = false;
+            emitiendoFacturaId = null;
+        }
+    }
+
+    private static string GetEstadoSiatBadge(string? estado)
+    {
+        if (string.IsNullOrWhiteSpace(estado)) return "bg-secondary";
+
+        return estado.ToLowerInvariant() switch
+        {
+            "noenviada" => "bg-warning text-dark",
+            "no_enviada" => "bg-warning text-dark",
+            "pendiente" => "bg-warning text-dark",
+            "validada" => "bg-success",
+            "rechazada" => "bg-danger",
+            "observada" => "bg-info text-dark",
+            _ => "bg-secondary"
+        };
+    }
+
+    private static string FormatMoney(decimal value)
+        => FormatHelper.Money(value);
+}

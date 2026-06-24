@@ -1,22 +1,32 @@
 namespace AgoraHub360.ERP.Web.Services;
 
+using AgoraHub360.ERP.Shared.Constants;
 using AgoraHub360.ERP.Shared.DTOs.Seguridad;
 using Microsoft.JSInterop;
 
 public class SesionUsuarioStateService
 {
     private readonly SeguridadDinamicaHttpService _seguridadHttp;
+    private readonly AuthHttpService _authHttp;
+    private readonly JwtAuthStateProvider _authState;
     private readonly IJSRuntime _js;
     private const string SucursalStorageKey = "agorahub360_sucursal_activa";
 
     private SesionContextoDto? _contexto;
+    private JwtSessionContext _authContext = JwtSessionContext.Empty;
     private int? _sucursalActivaId;
 
     public event Action? OnChange;
 
-    public SesionUsuarioStateService(SeguridadDinamicaHttpService seguridadHttp, IJSRuntime js)
+    public SesionUsuarioStateService(
+        SeguridadDinamicaHttpService seguridadHttp,
+        AuthHttpService authHttp,
+        JwtAuthStateProvider authState,
+        IJSRuntime js)
     {
         _seguridadHttp = seguridadHttp;
+        _authHttp = authHttp;
+        _authState = authState;
         _js = js;
     }
 
@@ -25,6 +35,15 @@ public class SesionUsuarioStateService
     public IReadOnlyList<ModuloSistemaDto> Modulos => _contexto is null ? new List<ModuloSistemaDto>() : _contexto.ModulosPermitidos;
     public IReadOnlyList<PerfilUsuarioSesionDto> Perfiles => _contexto is null ? new List<PerfilUsuarioSesionDto>() : _contexto.Perfiles;
     public IReadOnlyList<UsuarioSucursalAccesoDto> Sucursales => _contexto is null ? new List<UsuarioSucursalAccesoDto>() : _contexto.SucursalesPermitidas;
+    public JwtSessionContext AuthContext => _authContext;
+
+    public string PlatformRole => _authContext.PlatformRole;
+    public string TenantRole => _authContext.TenantRole;
+    public int? TenantId => _authContext.TenantId;
+    public string TenantStatus => _authContext.TenantStatus;
+    public bool IsPlatformAdmin => _authContext.IsPlatformAdmin;
+    public bool IsTenantAdmin => _authContext.IsTenantAdmin;
+    public bool HasTenantSelected => _authContext.HasTenantSelected;
 
     public int? SucursalActivaId => _sucursalActivaId;
 
@@ -41,6 +60,17 @@ public class SesionUsuarioStateService
             }
             _contexto = null;
             _sucursalActivaId = null;
+        }
+
+        _authContext = await _authState.GetSessionContextAsync();
+        await RefreshAuthContextFromMeAsync();
+
+        if (!_authContext.IsAuthenticated || !_authContext.HasTenantSelected)
+        {
+            _contexto = null;
+            _sucursalActivaId = null;
+            OnChange?.Invoke();
+            return;
         }
 
         _contexto = await _seguridadHttp.GetContextoSesionAsync();
@@ -92,8 +122,33 @@ public class SesionUsuarioStateService
         }
 
         _contexto = null;
+        _authContext = JwtSessionContext.Empty;
         _sucursalActivaId = null;
         OnChange?.Invoke();
+    }
+
+    private async Task RefreshAuthContextFromMeAsync()
+    {
+        var me = await _authHttp.GetMeAsync();
+        if (me is null)
+            return;
+
+        var platformRole = string.IsNullOrWhiteSpace(me.PlatformRole) ? _authContext.PlatformRole : me.PlatformRole;
+        var tenantRole = string.IsNullOrWhiteSpace(me.TenantRole) ? _authContext.TenantRole : me.TenantRole;
+        var tenantStatus = string.IsNullOrWhiteSpace(me.TenantStatus)
+            ? _authContext.TenantStatus
+            : me.TenantStatus;
+
+        _authContext = _authContext with
+        {
+            UserId = string.IsNullOrWhiteSpace(me.UserId) ? _authContext.UserId : me.UserId,
+            UserName = string.IsNullOrWhiteSpace(me.UserName) ? _authContext.UserName : me.UserName,
+            Email = string.IsNullOrWhiteSpace(me.Email) ? _authContext.Email : me.Email,
+            PlatformRole = platformRole ?? Roles.None,
+            TenantRole = tenantRole ?? Roles.NoAccess,
+            TenantId = me.TenantId ?? _authContext.TenantId,
+            TenantStatus = tenantStatus ?? AgoraHub360.ERP.Shared.Constants.TenantStatus.NotSelected,
+        };
     }
 
     private async Task LoadSucursalActivaAsync()

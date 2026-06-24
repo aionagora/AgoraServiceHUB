@@ -10,6 +10,7 @@ using AgoraHub360.ERP.Domain.Entities.ACC;
 using AgoraHub360.ERP.Domain.Entities.INV;
 using AgoraHub360.ERP.Domain.Entities.LOG;
 using AgoraHub360.ERP.Domain.Entities.Workflow;
+using AgoraHub360.ERP.Domain.Entities.FE;
 using AgoraHub360.ERP.Domain.Entities.MDM;
 using AgoraHub360.ERP.Domain.Entities.PRC;
 using AgoraHub360.ERP.Domain.Entities.RUL;
@@ -17,9 +18,12 @@ using AgoraHub360.ERP.Domain.Entities.VER;
 using AgoraHub360.ERP.Domain.Entities.TRB;
 using AgoraHub360.ERP.Domain.Entities.ACT;
 using AgoraHub360.ERP.Domain.Entities.BNC;
+using AgoraHub360.ERP.Domain.Entities.CXC;
+using AgoraHub360.ERP.Domain.Entities.VTA;
 using AgoraHub360.ERP.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using System.Data;
 
 /// <summary>
 /// Main ERP DbContext with multi-tenant support and automatic auditing.
@@ -69,6 +73,7 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     // ── MDM: Third parties ────────────────────────────────────────────────────
     public DbSet<Cliente> Clientes => Set<Cliente>();
     public DbSet<ClienteSucursal> ClienteSucursales => Set<ClienteSucursal>();
+    public DbSet<ClientePerfilFiscal> ClientePerfilesFiscales => Set<ClientePerfilFiscal>();
     public DbSet<Contacto> Contactos => Set<Contacto>();
     public DbSet<ContactoUsuarioAcceso> ContactosUsuariosAccesos => Set<ContactoUsuarioAcceso>();
     public DbSet<Proveedor> Proveedores => Set<Proveedor>();
@@ -177,6 +182,25 @@ public class AgoraDbContext : DbContext, IUnitOfWork
     public DbSet<ExtractoBancario> ExtractosBancarios => Set<ExtractoBancario>();
     public DbSet<ConciliacionBancaria> ConciliacionesBancarias => Set<ConciliacionBancaria>();
 
+    // ── CXC: Cuentas por Cobrar ──────────────────────────────────────────────
+    public DbSet<CuentaPorCobrar> CuentasPorCobrar => Set<CuentaPorCobrar>();
+    public DbSet<ClienteCreditoConfiguracion> ClienteCreditoConfiguraciones => Set<ClienteCreditoConfiguracion>();
+
+    // ── FE: Facturación Electrónica ──────────────────────────────────────────
+    public DbSet<ProveedorFacturacionElectronica> ProveedoresFacturacionElectronica => Set<ProveedorFacturacionElectronica>();
+    public DbSet<AmbienteFacturacionElectronica> AmbientesFacturacionElectronica => Set<AmbienteFacturacionElectronica>();
+    public DbSet<ConfiguracionFacturacionElectronica> ConfiguracionesFacturacionElectronica => Set<ConfiguracionFacturacionElectronica>();
+    public DbSet<AuditoriaFacturacion> AuditoriaFacturacion => Set<AuditoriaFacturacion>();
+
+    // ── VTA: Ventas comerciales ───────────────────────────────────────────────
+    public DbSet<Venta> Ventas => Set<Venta>();
+    public DbSet<VentaDetalle> VentaDetalles => Set<VentaDetalle>();
+    public DbSet<VentaFacturacionDatos> VentaFacturacionDatos => Set<VentaFacturacionDatos>();
+    public DbSet<VentaPago> VentaPagos => Set<VentaPago>();
+    public DbSet<SiatMetodoPago> SiatMetodosPago => Set<SiatMetodoPago>();
+    public DbSet<FacturaVenta> FacturasVenta => Set<FacturaVenta>();
+    public DbSet<FacturaVentaDetalle> FacturaVentaDetalles => Set<FacturaVentaDetalle>();
+
     // ── Audit ─────────────────────────────────────────────────────────────────
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
@@ -240,9 +264,11 @@ public class AgoraDbContext : DbContext, IUnitOfWork
         _currentTransaction = null;
     }
 
-    /// <summary>
+        /// <summary>
     /// Envuelve <paramref name="operation"/> en una transacción compatible con
-    /// <see cref="Microsoft.EntityFrameworkCore.Storage.IExecutionStrategy"/>.
+    /// <see cref="Microsoft.EntityFrameworkCore.Storage.IExecutionStrategy"/> y
+    /// nivel de aislamiento <see cref="IsolationLevel.Serializable"/> para
+    /// prevenir race conditions en operaciones financieras concurrentes.
     /// Requerido cuando SQL Server tiene SqlServerRetryingExecutionStrategy activa.
     /// </summary>
     public async Task ExecuteInTransactionAsync(
@@ -252,7 +278,7 @@ public class AgoraDbContext : DbContext, IUnitOfWork
         var strategy = Database.CreateExecutionStrategy();
         await strategy.ExecuteAsync(async () =>
         {
-            await using var tx = await Database.BeginTransactionAsync(cancellationToken);
+            await using var tx = await Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
             try
             {
                 await operation();
@@ -274,7 +300,7 @@ public class AgoraDbContext : DbContext, IUnitOfWork
         var strategy = Database.CreateExecutionStrategy();
         return await strategy.ExecuteAsync(async () =>
         {
-            await using var tx = await Database.BeginTransactionAsync(cancellationToken);
+            await using var tx = await Database.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
             try
             {
                 var result = await operation();

@@ -3,6 +3,12 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using AgoraHub360.ERP.Web;
 using AgoraHub360.ERP.Web.Services;
+using System.Globalization;
+
+// ── Cultura global: punto decimal, coma miles (toda la app Blazor WASM) ──
+var fixedCulture = new CultureInfo("en-US");
+CultureInfo.DefaultThreadCurrentCulture = fixedCulture;
+CultureInfo.DefaultThreadCurrentUICulture = fixedCulture;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -12,9 +18,15 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 var apiBaseUrl = builder.Configuration.GetValue<string>("ApiBaseUrl")
     ?? builder.HostEnvironment.BaseAddress;
 
-builder.Services.AddScoped(sp => new HttpClient
+builder.Services.AddTransient<AuthMessageHandler>();
+builder.Services.AddScoped(sp =>
 {
-    BaseAddress = new Uri(apiBaseUrl)
+    var handler = sp.GetRequiredService<AuthMessageHandler>();
+    handler.InnerHandler = new HttpClientHandler();
+    return new HttpClient(handler)
+    {
+        BaseAddress = new Uri(apiBaseUrl)
+    };
 });
 
 // ──── Autenticación ────
@@ -24,6 +36,7 @@ builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredServ
 
 // ──── Servicios HTTP ────
 builder.Services.AddScoped<FileDownloadService>();
+builder.Services.AddScoped<PdfDownloadService>();
 builder.Services.AddScoped<AuthHttpService>();
 builder.Services.AddScoped<EmpresaHttpService>();
 builder.Services.AddScoped<EmpresaStateService>();
@@ -42,6 +55,7 @@ builder.Services.AddScoped<CatalogoHttpService>();
 builder.Services.AddScoped<UnidadMedidaHttpService>();
 builder.Services.AddScoped<ProductoHttpService>();
 builder.Services.AddScoped<ClienteHttpService>();
+builder.Services.AddScoped<ClientePerfilFiscalHttpService>();
 builder.Services.AddScoped<ClienteSucursalHttpService>();
 builder.Services.AddScoped<ProveedorHttpService>();
 builder.Services.AddScoped<AlmacenHttpService>();
@@ -80,6 +94,13 @@ builder.Services.AddScoped<ExpedienteImportacionHttpService>();
 
 // Ventas
 builder.Services.AddScoped<PedidoVentaHttpService>();
+builder.Services.AddScoped<VentaHttpService>();
+builder.Services.AddScoped<FacturaVentaHttpService>();
+builder.Services.AddScoped<CuentasPorCobrarHttpService>();
+builder.Services.AddScoped<ClienteCreditoConfiguracionHttpService>();
+
+// FE: Facturación Electrónica
+builder.Services.AddScoped<FacturacionFEHttpService>();
 
 // ──── Servicios HTTP Logística ────
 builder.Services.AddScoped<HojaRutaHttpService>();
@@ -91,6 +112,7 @@ builder.Services.AddScoped<IWorkflowClientService, WorkflowHttpService>();
 builder.Services.AddScoped<DashboardDataService>();
 builder.Services.AddScoped<SeguridadDinamicaHttpService>();
 builder.Services.AddScoped<SesionUsuarioStateService>();
+builder.Services.AddScoped<UiAuthorizationService>();
 
 // ──── Demo Seed ────
 builder.Services.AddScoped<EmpresaDemoService>();

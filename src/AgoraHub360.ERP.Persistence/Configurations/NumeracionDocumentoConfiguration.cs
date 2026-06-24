@@ -30,10 +30,16 @@ public class NumeracionDocumentoConfiguration : IEntityTypeConfiguration<Numerac
         builder.Property(n => n.Digitos)
             .IsRequired();
 
+        builder.HasOne(n => n.Sucursal)
+            .WithMany()
+            .HasForeignKey(n => n.SucursalId)
+            .OnDelete(DeleteBehavior.Restrict)
+            .IsRequired(false);
+
         builder.Property(n => n.CreadoPor).HasMaxLength(100);
         builder.Property(n => n.ModificadoPor).HasMaxLength(100);
 
-        // Tipo de documento único por empresa
-        builder.HasIndex(n => new { n.EmpresaId, n.TipoDocumento }).IsUnique();
+        // Tipo de documento único por empresa y sucursal (nullable para compatibilidad histórica)
+        builder.HasIndex(n => new { n.EmpresaId, n.TipoDocumento, n.SucursalId }).IsUnique();
     }
 }

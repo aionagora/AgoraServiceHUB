@@ -11,15 +11,54 @@ public class NumeracionDocumentoServiceTests
 {
     private readonly NumeracionDocumentoService _sut;
     private readonly FakeNumRepo _repo;
+    private readonly FakeSucursalRepo _sucursalRepo;
     private readonly FakeUow _uow;
     private readonly FakeCurrentUserService _currentUserService;
 
     public NumeracionDocumentoServiceTests()
     {
         _repo = new FakeNumRepo();
+        _sucursalRepo = new FakeSucursalRepo();
         _uow = new FakeUow();
         _currentUserService = new FakeCurrentUserService { EmpresaId = 1 };
-        _sut = new NumeracionDocumentoService(_repo, _uow, _currentUserService);
+        _sut = new NumeracionDocumentoService(_repo, _sucursalRepo, _uow, _currentUserService);
+    }
+
+    private class FakeSucursalRepo : IRepository<Sucursal>
+    {
+        private readonly List<Sucursal> _store = new();
+
+        public Task<Sucursal?> GetByIdAsync(int id, CancellationToken ct = default)
+            => Task.FromResult(_store.FirstOrDefault(x => x.Id == id));
+
+        public Task<Sucursal?> GetByIdAsync(long id, CancellationToken ct = default)
+            => Task.FromResult(_store.FirstOrDefault(x => x.Id == id));
+
+        public Task<Sucursal?> GetByIdIgnoreQueryFiltersAsync(int id, CancellationToken ct = default)
+            => Task.FromResult(_store.FirstOrDefault(x => x.Id == id));
+
+        public Task<IReadOnlyList<Sucursal>> GetAllAsync(CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<Sucursal>>(_store.AsReadOnly());
+
+        public Task<IReadOnlyList<Sucursal>> FindAsync(Expression<Func<Sucursal, bool>> predicate, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<Sucursal>>(_store.Where(predicate.Compile()).ToList().AsReadOnly());
+
+        public Task<IReadOnlyList<Sucursal>> FindIgnoreQueryFiltersAsync(Expression<Func<Sucursal, bool>> predicate, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<Sucursal>>(_store.Where(predicate.Compile()).ToList().AsReadOnly());
+
+        public Task<Sucursal> AddAsync(Sucursal entity, CancellationToken ct = default)
+        {
+            _store.Add(entity);
+            return Task.FromResult(entity);
+        }
+
+        public Task UpdateAsync(Sucursal entity, CancellationToken ct = default) => Task.CompletedTask;
+
+        public Task DeleteAsync(Sucursal entity, CancellationToken ct = default)
+        {
+            _store.Remove(entity);
+            return Task.CompletedTask;
+        }
     }
 
     [Fact]
@@ -37,13 +76,13 @@ public class NumeracionDocumentoServiceTests
     [Fact]
     public async Task CreateAsync_Valid_Succeeds()
     {
-        var dto = new CreateNumeracionDto
+        var dto = new CrearNumeracionDocumentoRequestDto
         {
             TipoDocumento = "OC",
             Descripcion = "Orden de Compra",
             Prefijo = "OC-",
             SiguienteNumero = 1,
-            Digitos = 6
+            LongitudNumero = 6
         };
 
         var result = await _sut.CreateAsync(dto);
@@ -60,7 +99,7 @@ public class NumeracionDocumentoServiceTests
     {
         _repo.Seed(new NumeracionDocumento { Id = 1, TipoDocumento = "OC", Prefijo = "OC-", EmpresaId = 1 });
 
-        var dto = new CreateNumeracionDto
+        var dto = new CrearNumeracionDocumentoRequestDto
         {
             TipoDocumento = "OC",
             Descripcion = "Duplicada",
@@ -81,9 +120,9 @@ public class NumeracionDocumentoServiceTests
     }
 
     [Fact]
-    public async Task DeleteAsync_NotFound_Fails()
+    public async Task DesactivarAsync_NotFound_Fails()
     {
-        var result = await _sut.DeleteAsync(999);
+        var result = await _sut.DesactivarAsync(999);
         Assert.False(result.IsSuccess);
     }
 
@@ -146,5 +185,10 @@ public class NumeracionDocumentoServiceTests
         public int? UserIdInt { get; set; }
         public string? UserName { get; set; }
         public int? EmpresaId { get; set; }
+        public int? TenantId { get; set; }
+        public string PlatformRole { get; set; } = string.Empty;
+        public string TenantRole { get; set; } = string.Empty;
+        public string TenantStatus { get; set; } = string.Empty;
+        public bool IsInRole(string role) => false;
     }
 }

@@ -1,0 +1,2394 @@
+@page "/ventas/comercial/nueva"
+@page "/ventas/comercial/{Id:long}"
+@attribute [Authorize]
+@using AgoraHub360.ERP.Web.Helpers
+@using AgoraHub360.ERP.Shared.DTOs.MDM
+@using AgoraHub360.ERP.Shared.DTOs.Sucursal
+@using AgoraHub360.ERP.Shared.DTOs.Ventas
+@using MdmClienteDto = AgoraHub360.ERP.Shared.DTOs.MDM.ClienteDto
+@inject VentaHttpService VentaService
+@inject FacturaVentaHttpService FacturaVentaService
+@inject ClienteHttpService ClienteService
+@inject ClienteCreditoConfiguracionHttpService CreditoConfigService
+@inject ClientePerfilFiscalHttpService ClientePerfilFiscalService
+@inject HttpSucursalService SucursalService
+@inject AlmacenHttpService AlmacenService
+@inject MdmCompanyProductHttpService CompanyProductService
+@inject ProductoHttpService ProductoService
+@inject NavigationManager Nav
+
+<PageTitle>@(IsNew ? "Nueva Venta Comercial" : "Editar Venta Comercial") - AgoraHub360 ERP</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3 align-items-center">
+        <div class="col">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a href="/ventas/comercial">Ventas Comercial</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">@(IsNew ? "Nueva" : "Editar")</li>
+                </ol>
+            </nav>
+            <h3 class="mb-0">
+                <i class="bi bi-receipt-cutoff me-2"></i>
+                @(IsNew ? "Nueva Venta Comercial" : $"Venta {form.NumeroVentaVisual}")
+            </h3>
+
+            <div class="card shadow-sm mt-3">
+                <div class="card-body py-2">
+                    <div class="row g-2 align-items-center small">
+                        <div class="col-md-3">
+                            <span class="text-muted me-1">Número:</span>
+                            <span class="fw-semibold">@(IsNew ? "BORRADOR / Sin guardar" : form.NumeroVentaVisual)</span>
+                        </div>
+                        <div class="col-md-2">
+                            <span class="text-muted me-1">Estado venta:</span>
+                            <span class="@BadgeCssHelper.GetEstadoVentaBadge(form.EstadoVenta)">@form.EstadoVenta</span>
+                        </div>
+                        <div class="col-md-2">
+                            <span class="text-muted me-1">Estado pago:</span>
+                            <span class="@BadgeCssHelper.GetEstadoPagoBadge(form.EstadoPago)">@form.EstadoPago</span>
+                        </div>
+                        <div class="col-md-2">
+                            <span class="text-muted me-1">Facturación:</span>
+                            @if (facturaActual is not null)
+                            {
+                                <span class="@BadgeCssHelper.GetEstadoFacturaBadge(facturaActual.EstadoFactura)">@facturaActual.EstadoFactura</span>
+                            }
+                            else
+                            {
+                                <span class="badge @(form.FacturaGenerada ? "bg-success" : "bg-secondary")">@(form.FacturaGenerada ? "Generada" : "Sin generar")</span>
+                            }
+                        </div>
+                        <div class="col-md-1">
+                            <span class="text-muted me-1">Tipo:</span>
+                            <span class="fw-semibold">@form.TipoVenta</span>
+                        </div>
+                        <div class="col-md-2 text-md-end">
+                            <span class="text-muted me-1">Total:</span>
+                            <span class="fw-bold text-primary">@FormatMoney(resumen.Total)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (form.PedidoVentaId.HasValue && form.PedidoVentaId.Value > 0)
+    {
+        <div class="alert alert-info" role="alert">
+            <i class="bi bi-link-45deg me-1"></i>
+            Generada desde Pedido @form.PedidoVentaId.Value
+        </div>
+    }
+
+    @if (!IsNew && form.FacturaGenerada)
+    {
+        <div class="alert alert-success" role="alert">
+            <span class="badge bg-success me-2">Factura generada</span>
+            La venta tiene facturación interna registrada.
+        </div>
+    }
+
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status"></div>
+            <p class="text-muted mt-2">Cargando formulario...</p>
+        </div>
+    }
+    else
+    {
+        <EditForm Model="form" OnValidSubmit="GuardarAsync">
+            <DataAnnotationsValidator />
+
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-light fw-bold">
+                    <i class="bi bi-journal-text me-1"></i> Datos de Venta
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Tipo Venta</label>
+                            <InputSelect class="form-select form-select-sm" @bind-Value="form.TipoVenta" disabled="@(!IsNew)">
+                                @foreach (var opt in tipoVentaOptions)
+                                {
+                                    <option value="@opt">@opt</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Pedido Venta Id</label>
+                            <InputNumber class="form-control form-control-sm" @bind-Value="form.PedidoVentaId" disabled="@(form.TipoVenta != "DesdePedido")" />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Sucursal *</label>
+                            <InputSelect TValue="int" class="form-select form-select-sm"
+                                         Value="form.SucursalId"
+                                         ValueChanged="@((int v) => OnSucursalChanged(v))"
+                                         ValueExpression="@(() => form.SucursalId)">
+                                <option value="0">-- Seleccione sucursal --</option>
+                                @foreach (var s in sucursales)
+                                {
+                                    <option value="@s.Id">@s.Nombre</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Almacén</label>
+                            <InputSelect class="form-select form-select-sm" @bind-Value="form.AlmacenId">
+                                <option value="">-- Sin almacén --</option>
+                                @foreach (var a in almacenesFiltrados)
+                                {
+                                    <option value="@a.Id">@a.Nombre</option>
+                                }
+                            </InputSelect>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Fecha Venta</label>
+                            <InputText class="form-control form-control-sm"
+                                       type="datetime-local"
+                                       @bind-Value="fechaVentaLocalTexto"
+                                       @bind-Value:event="oninput" />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Fecha Vencimiento Pago</label>
+                            <InputDate TValue="DateTime?" class="form-control form-control-sm"
+                                       Value="form.FechaVencimientoPago"
+                                       ValueChanged="OnFechaVencimientoChanged"
+                                       ValueExpression="() => form.FechaVencimientoPago" />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Moneda Código</label>
+                            <InputText class="form-control form-control-sm" @bind-Value="form.MonedaCodigo" />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Tipo Cambio</label>
+                            <InputNumber class="form-control form-control-sm text-end" @bind-Value="form.TipoCambio" />
+                        </div>
+
+                        <div class="col-md-12">
+                            <label class="form-label">Observaciones</label>
+                            <InputText class="form-control form-control-sm" @bind-Value="form.Observaciones" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-light fw-bold d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-person me-1"></i> Cliente Comercial</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" disabled>
+                        <i class="bi bi-person-plus me-1"></i> Registro rápido (próximamente)
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-8 position-relative">
+                            <label class="form-label">Cliente</label>
+                            <div class="input-group input-group-sm">
+                                <InputText class="form-control"
+                                           placeholder="Buscar cliente por nombre o NIT..."
+                                           @bind-Value="clienteBusquedaTexto"
+                                           @bind-Value:after="OnClienteBusquedaTextoChanged"
+                                           @onfocus="OnClienteBusquedaFocused" />
+                                <button type="button" class="btn btn-outline-secondary" @onclick="BuscarClientePorNit">
+                                    Buscar por NIT
+                                </button>
+                            </div>
+
+                            @if (mostrarResultadosClientes && clientesFiltradosBusqueda.Count > 0)
+                            {
+                                <div class="list-group position-absolute w-100 shadow-sm mt-1" style="z-index: 1050; max-height: 260px; overflow-y: auto;">
+                                    @foreach (var c in clientesFiltradosBusqueda)
+                                    {
+                                        <button type="button" class="list-group-item list-group-item-action"
+                                                @onclick="(() => SeleccionarClienteBusqueda(c))">
+                                            <div class="fw-semibold">@c.RazonSocial</div>
+                                            <small class="text-muted">@c.Codigo · NIT: @(string.IsNullOrWhiteSpace(c.NIT) ? "S/N" : c.NIT)</small>
+                                        </button>
+                                    }
+                                </div>
+                            }
+
+                            @if (form.ClienteId.HasValue && clienteSeleccionadoActual is not null)
+                            {
+                                <div class="form-text">
+                                    Seleccionado: <span class="fw-semibold">@clienteSeleccionadoActual.RazonSocial</span>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="form-text text-muted">Sin cliente seleccionado.</div>
+                            }
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">NIT cliente (búsqueda rápida)</label>
+                            <InputText class="form-control form-control-sm"
+                                       @bind-Value="nitBusquedaTexto"
+                                       @bind-Value:event="oninput"
+                                       placeholder="Ingrese NIT del cliente" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <span class="fw-bold"><i class="bi bi-box-seam me-1"></i> Detalle Productos / Servicios</span>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary" @onclick="AgregarProducto">
+                            <i class="bi bi-plus-circle me-1"></i> Agregar producto
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" @onclick="AgregarServicio">
+                            <i class="bi bi-plus-circle me-1"></i> Agregar servicio
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    @if (form.Detalles.Count == 0)
+                    {
+                        <div class="text-center py-4 text-muted">Agregue líneas de producto o servicio.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Tipo</th>
+                                        <th>Ítem catálogo</th>
+                                        <th>Almacén</th>
+                                        <th>Descripción</th>
+                                        <th>Detalle adicional</th>
+                                        <th class="text-end">Cant.</th>
+                                        <th class="text-end">P.Unit</th>
+                                        <th class="text-end">Desc %</th>
+                                        <th class="text-end">Desc Monto</th>
+                                        <th class="text-end">Imp Monto</th>
+                                        <th class="text-end">Total Línea</th>
+                                        <th class="text-center">Desc. Inv.</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (var i = 0; i < form.Detalles.Count; i++)
+                                    {
+                                        var det = form.Detalles[i];
+                                        var idx = i;
+                                        <tr>
+                                            <td>
+                                                <InputSelect TValue="string" class="form-select form-select-sm"
+                                                             Value="det.TipoItemVenta"
+                                                             ValueChanged="@((string v) => OnTipoItemChanged(idx, v))"
+                                                             ValueExpression="@(() => det.TipoItemVenta)">
+                                                    @foreach (var tipo in tipoItemOptions)
+                                                    {
+                                                        <option value="@tipo">@tipo</option>
+                                                    }
+                                                </InputSelect>
+                                            </td>
+                                            <td>
+                                                @if (EsProducto(det))
+                                                {
+                                                    <InputSelect TValue="long?" class="form-select form-select-sm"
+                                                                 Value="det.CompanyProductId"
+                                                                 ValueChanged="@((long? v) => OnCompanyProductSelected(idx, v))"
+                                                                 ValueExpression="@(() => det.CompanyProductId)">
+                                                        <option value="">-- Seleccione --</option>
+                                                        @foreach (var p in productosCatalogados)
+                                                        {
+                                                            <option value="@p.CompanyProductId">@p.Sku - @p.NombreComercial</option>
+                                                        }
+                                                    </InputSelect>
+                                                }
+                                                else
+                                                {
+                                                    <InputSelect TValue="long?" class="form-select form-select-sm"
+                                                                 Value="det.CompanyProductId"
+                                                                 ValueChanged="@((long? v) => OnCompanyProductSelected(idx, v))"
+                                                                 ValueExpression="@(() => det.CompanyProductId)">
+                                                        <option value="">-- Seleccione servicio --</option>
+                                                        @foreach (var p in serviciosCatalogados)
+                                                        {
+                                                            <option value="@p.CompanyProductId">@p.Sku - @p.NombreComercial</option>
+                                                        }
+                                                    </InputSelect>
+                                                }
+                                            </td>
+                                            <td>
+                                                @if (EsProducto(det))
+                                                {
+                                                    <InputSelect class="form-select form-select-sm" @bind-Value="det.AlmacenId">
+                                                        <option value="">-- Opcional --</option>
+                                                        @foreach (var a in almacenesFiltrados)
+                                                        {
+                                                            <option value="@a.Id">@a.Nombre</option>
+                                                        }
+                                                    </InputSelect>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted small">No aplica</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <InputText class="form-control form-control-sm" @bind-Value="det.Descripcion" />
+                                            </td>
+                                            <td>
+                                                <InputTextArea class="form-control form-control-sm"
+                                                               rows="2"
+                                                               placeholder="Detalle adicional del producto/servicio..."
+                                                               @bind-Value="det.DetalleAdicional" />
+                                            </td>
+                                            <td>
+                                                <InputNumber class="form-control form-control-sm text-end" @bind-Value="det.Cantidad" @bind-Value:after="RecalcularTotales" />
+                                            </td>
+                                            <td>
+                                                <InputNumber class="form-control form-control-sm text-end" @bind-Value="det.PrecioUnitario" @bind-Value:after="RecalcularTotales" />
+                                            </td>
+                                            <td>
+                                                <InputNumber class="form-control form-control-sm text-end" @bind-Value="det.DescuentoPorcentaje" @bind-Value:after="RecalcularTotales" />
+                                            </td>
+                                            <td>
+                                                <InputNumber class="form-control form-control-sm text-end" @bind-Value="det.DescuentoMonto" @bind-Value:after="RecalcularTotales" />
+                                            </td>
+                                            <td>
+                                                <InputNumber class="form-control form-control-sm text-end" @bind-Value="det.ImpuestoMonto" @bind-Value:after="RecalcularTotales" />
+                                            </td>
+                                            <td class="text-end fw-semibold">@FormatMoney(CalcularTotalLinea(det))</td>
+                                            <td class="text-center">
+                                                <InputCheckbox @bind-Value="det.DescuentaInventario" disabled="true" />
+                                            </td>
+                                            <td>
+                                                <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => RequestRemoveDetalleAsync(idx)">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-light fw-bold">
+                    <i class="bi bi-receipt me-1"></i> Facturación
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <div class="form-check mt-2">
+                                <InputCheckbox class="form-check-input" @bind-Value="form.FacturacionDatos.Facturar" />
+                                <label class="form-check-label">Facturar</label>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-check mt-2">
+                                <InputCheckbox class="form-check-input"
+                                               Value="form.FacturacionDatos.FacturarAlMismoCliente"
+                                               ValueChanged="OnFacturarAlMismoClienteChanged"
+                                               ValueExpression="@(() => form.FacturacionDatos.FacturarAlMismoCliente)"
+                                               disabled="@(!form.FacturacionDatos.Facturar || !form.ClienteId.HasValue)" />
+                                <label class="form-check-label">Facturar al mismo cliente</label>
+                            </div>
+                        </div>
+
+                        @if (form.FacturacionDatos.Facturar && !form.FacturacionDatos.FacturarAlMismoCliente)
+                        {
+                            <div class="col-md-6 position-relative">
+                                <label class="form-label">Facturar a</label>
+                                <InputSelect TValue="long?" class="form-select form-select-sm mb-2"
+                                             Value="@GetPerfilFiscalSelectorValue()"
+                                             ValueChanged="@OnPerfilFiscalChanged"
+                                             ValueExpression="@(() => form.FacturacionDatos.ClientePerfilFiscalId)"
+                                             disabled="@(!form.ClienteId.HasValue)">
+                                    <option value="">-- Seleccione perfil fiscal --</option>
+                                    <option value="@PerfilFiscalDatoOcasionalId">Nuevo dato de facturación</option>
+                                    @foreach (var perfil in perfilesFiscalesCliente)
+                                    {
+                                        <option value="@perfil.Id">@perfil.Alias (@perfil.NumeroDocumento)@(perfil.EsPredeterminado ? " [Predeterminado]" : string.Empty)</option>
+                                    }
+                                </InputSelect>
+
+                                <InputText class="form-control form-control-sm"
+                                           placeholder="Buscar por razón social, NIT o alias..."
+                                           @bind-Value="perfilFiscalBusquedaTexto"
+                                           @bind-Value:after="OnRazonSocialBusquedaTextoChanged"
+                                           @onfocus="OnRazonSocialBusquedaFocused"
+                                           disabled="@(!form.ClienteId.HasValue)" />
+
+                                @if (mostrarResultadosPerfilesFiscales && perfilesFiscalesFiltradosBusqueda.Count > 0)
+                                {
+                                    <div class="list-group position-absolute w-100 shadow-sm mt-1" style="z-index: 1050; max-height: 260px; overflow-y: auto;">
+                                        @foreach (var perfil in perfilesFiscalesFiltradosBusqueda)
+                                        {
+                                            <button type="button" class="list-group-item list-group-item-action"
+                                                    @onclick="(() => SeleccionarPerfilFiscalBusqueda(perfil))">
+                                                <div class="fw-semibold">@perfil.RazonSocial</div>
+                                                <small class="text-muted">@perfil.Alias · @perfil.NumeroDocumento</small>
+                                            </button>
+                                        }
+                                    </div>
+                                }
+
+                                @if (form.ClienteId.HasValue && !perfilesFiscalesFiltradosBusqueda.Any() && !string.IsNullOrWhiteSpace(perfilFiscalBusquedaTexto))
+                                {
+                                    <button type="button" class="btn btn-sm btn-outline-primary mt-2" @onclick="GuardarComoNuevoDatoFacturacionAsync">
+                                        Guardar como nuevo dato de facturación
+                                    </button>
+                                }
+                            </div>
+                        }
+
+                        <div class="col-md-3">
+                            <label class="form-label">Tipo Documento</label>
+                            <InputText class="form-control form-control-sm" @bind-Value="form.FacturacionDatos.TipoDocumentoIdentidad" disabled="@(!form.FacturacionDatos.Facturar)" />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">NIT Factura</label>
+                            <InputText class="form-control form-control-sm"
+                                       placeholder="Ingrese NIT o documento"
+                                       @bind-Value="form.FacturacionDatos.NitFactura"
+                                       @bind-Value:after="OnNitFacturaChanged"
+                                       disabled="@(!form.FacturacionDatos.Facturar)" />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Complemento</label>
+                            <InputText class="form-control form-control-sm" placeholder="Ingrese complemento (opcional)" @bind-Value="form.FacturacionDatos.Complemento" disabled="@(!form.FacturacionDatos.Facturar)" />
+                        </div>
+
+                        <div class="col-md-5">
+                            <label class="form-label">Razón Social Factura</label>
+                            <InputText class="form-control form-control-sm"
+                                       placeholder="Ingrese razón social"
+                                       @bind-Value="form.FacturacionDatos.RazonSocialFactura"
+                                       @bind-Value:after="OnRazonSocialFacturaChanged"
+                                       disabled="@(!form.FacturacionDatos.Facturar)" />
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label">Email Factura</label>
+                            <InputText class="form-control form-control-sm" placeholder="correo@empresa.com" @bind-Value="form.FacturacionDatos.EmailFactura" disabled="@(!form.FacturacionDatos.Facturar)" />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Teléfono Factura</label>
+                            <InputText class="form-control form-control-sm" placeholder="Ingrese teléfono" @bind-Value="form.FacturacionDatos.TelefonoFactura" disabled="@(!form.FacturacionDatos.Facturar)" />
+                        </div>
+
+                        @if (DatosFiscalesModificadosManual)
+                        {
+                            <div class="col-12">
+                                <div class="alert alert-info py-2 mb-0" role="alert">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Datos fiscales modificados para esta venta.
+                                </div>
+                            </div>
+                        }
+
+                        @if (!IsNew)
+                        {
+                            <div class="col-12">
+                                @if (!HasValidFiscalData())
+                                {
+                                    <div class="alert alert-warning py-2 mb-0" role="alert">
+                                        <i class="bi bi-exclamation-triangle me-1"></i>
+                                        Complete NIT y Razón Social para generar factura.
+                                    </div>
+                                }
+
+                                <div class="d-flex flex-wrap gap-2 mt-2">
+                                    @if (CanGenerateFactura())
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-success" @onclick="RequestGenerarFacturaAsync" disabled="@isFacturaActionLoading">
+                                            @if (isFacturaActionLoading)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                            }
+                                            <i class="bi bi-file-earmark-plus me-1"></i> Generar Factura
+                                        </button>
+                                    }
+
+                                    @if (CanAnularFactura())
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-danger" @onclick="RequestAnularFacturaAsync" disabled="@isFacturaActionLoading">
+                                            @if (isFacturaActionLoading)
+                                            {
+                                                <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                                            }
+                                            <i class="bi bi-file-earmark-x me-1"></i> Anular Factura
+                                        </button>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            @if (!IsNew && facturaActual is not null)
+            {
+                <div class="card shadow-sm mb-3 border-success">
+                    <div class="card-header bg-success bg-opacity-10 fw-bold text-success">
+                        <i class="bi bi-file-earmark-text me-1"></i> Resumen Factura Interna
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label text-muted">Número Factura</label>
+                                <div class="fw-semibold">@facturaActual.NumeroFactura</div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label text-muted">Fecha Emisión</label>
+                                <div class="fw-semibold">@facturaActual.FechaEmision.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label text-muted">NIT</label>
+                                <div class="fw-semibold">@facturaActual.NitFactura</div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label text-muted">Razón Social</label>
+                                <div class="fw-semibold">@facturaActual.RazonSocialFactura</div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label text-muted">Total</label>
+                                <div class="fw-bold text-primary">@FormatMoney(facturaActual.Total)</div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label text-muted">Estado Factura</label>
+                                <div><span class="@BadgeCssHelper.GetEstadoFacturaBadge(facturaActual.EstadoFactura)">@facturaActual.EstadoFactura</span></div>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label text-muted">Estado SIAT</label>
+                                <div><span class="badge @GetEstadoSiatBadge(facturaActual.EstadoSiat)">@facturaActual.EstadoSiat</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <div class="card shadow-sm mb-3">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <span class="fw-bold"><i class="bi bi-cash-coin me-1"></i> Pagos Iniciales</span>
+                    <button type="button" class="btn btn-sm btn-outline-primary" @onclick="AgregarPago">
+                        <i class="bi bi-plus-circle me-1"></i> Agregar pago
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    @if (IsNew)
+                    {
+                        <div class="alert alert-info m-3 mb-0 py-2" role="alert">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Este pago se guardará al guardar la venta.
+                        </div>
+                    }
+
+                    @if (form.Pagos.Count == 0)
+                    {
+                        <div class="text-center py-3 text-muted">Sin pagos iniciales.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Tipo Pago</th>
+                                        <th>Modo Pago</th>
+                                        <th class="text-end">Monto</th>
+                                        <th>Moneda</th>
+                                        <th class="text-end">Tipo Cambio</th>
+                                        <th>Referencia</th>
+                                        <th>CuentaCajaBancoId</th>
+                                        <th>Estado</th>
+                                        <th class="text-center">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (var i = 0; i < form.Pagos.Count; i++)
+                                    {
+                                        var pago = form.Pagos[i];
+                                        var pagoRegistrado = IsPagoRegistrado(pago);
+                                        var isPagoGuardando = pagosEnGuardado.Contains(pago);
+                                        <tr>
+                                            <td><InputDate class="form-control form-control-sm" @bind-Value="pago.FechaPago" /></td>
+                                            <td>
+                                                <InputSelect class="form-select form-select-sm" @bind-Value="pago.TipoPago">
+                                                    @foreach (var tipo in tipoPagoOptions)
+                                                    {
+                                                        <option value="@tipo">@tipo</option>
+                                                    }
+                                                </InputSelect>
+                                            </td>
+                                            <td>
+                                                <InputSelect class="form-select form-select-sm" @bind-Value="pago.ModoPago">
+                                                    @foreach (var modo in modoPagoOptions)
+                                                    {
+                                                        <option value="@modo">@modo</option>
+                                                    }
+                                                </InputSelect>
+                                            </td>
+                                            <td><InputNumber class="form-control form-control-sm text-end" @bind-Value="pago.Monto" @bind-Value:after="RecalcularTotales" /></td>
+                                            <td><InputText class="form-control form-control-sm" @bind-Value="pago.MonedaCodigo" /></td>
+                                            <td><InputNumber class="form-control form-control-sm text-end" @bind-Value="pago.TipoCambio" /></td>
+                                            <td><InputText class="form-control form-control-sm" @bind-Value="pago.Referencia" /></td>
+                                            <td><InputNumber class="form-control form-control-sm" @bind-Value="pago.CuentaCajaBancoId" /></td>
+                                            <td>
+                                                @if (pagoRegistrado)
+                                                {
+                                                    <span class="badge bg-success">Registrado</span>
+                                                }
+                                                else if (IsNew)
+                                                {
+                                                    <span class="badge bg-secondary">Pendiente local</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-warning text-dark">Pendiente de guardar</span>
+                                                }
+                                            </td>
+                                            <td class="text-center">
+                                                @if (!pagoRegistrado && !IsNew)
+                                                {
+                                                    <button type="button"
+                                                            class="btn btn-outline-success btn-sm me-1"
+                                                            title="Guardar pago"
+                                                            disabled="@isPagoGuardando"
+                                                            @onclick="() => GuardarPagoAsync(pago)">
+                                                        @if (isPagoGuardando)
+                                                        {
+                                                            <span class="spinner-border spinner-border-sm" role="status"></span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <i class="bi bi-check2-circle"></i>
+                                                        }
+                                                        <span class="ms-1">Guardar pago</span>
+                                                    </button>
+                                                }
+
+                                                <button type="button"
+                                                        class="btn btn-outline-danger btn-sm"
+                                                        title="Eliminar pago"
+                                                        disabled="@pagoRegistrado"
+                                                        @onclick="() => RemovePagoLocal(pago)"
+                                                        @onclick:stopPropagation="true">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light fw-bold">
+                    <i class="bi bi-calculator me-1"></i> Resumen
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-2">
+                            <label class="form-label text-muted">Subtotal</label>
+                            <div class="fw-semibold text-end">@FormatMoney(resumen.Subtotal)</div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-muted">Descuento Total</label>
+                            <div class="fw-semibold text-end">@FormatMoney(resumen.DescuentoTotal)</div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-muted">Impuesto Total</label>
+                            <div class="fw-semibold text-end">@FormatMoney(resumen.ImpuestoTotal)</div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-muted">Total</label>
+                            <div class="fw-bold text-end text-primary">@FormatMoney(resumen.Total)</div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-muted">Total Pagado</label>
+                            <div class="fw-semibold text-end">@FormatMoney(resumen.TotalPagado)</div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label text-muted">Saldo</label>
+                            <div class="fw-bold text-end @(resumen.Saldo > 0 ? "text-warning" : "text-success")">@FormatMoney(resumen.Saldo)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2 mb-4">
+                <button type="button" class="btn btn-outline-secondary" @onclick="VolverListado" disabled="@isSaving">
+                    <i class="bi bi-arrow-left me-1"></i> Volver al listado
+                </button>
+
+                @if (!IsNew)
+                {
+                    <button type="button" class="btn btn-outline-danger" @onclick="RequestAnularAsync" disabled="@isSaving">
+                        <i class="bi bi-x-circle me-1"></i> Anular
+                    </button>
+
+                    <button type="button" class="btn btn-outline-success" @onclick="RequestConfirmarAsync" disabled="@isSaving">
+                        <i class="bi bi-check-circle me-1"></i> Confirmar
+                    </button>
+                }
+
+                <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                    @if (isSaving)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    }
+                    <i class="bi bi-save me-1"></i> Guardar borrador
+                </button>
+            </div>
+        </EditForm>
+    }
+</div>
+
+@if (showModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0, 0, 0, .5);">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header @GetModalHeaderClass()">
+                    <h5 class="modal-title text-white">
+                        <i class="bi @GetModalIconClass() me-2"></i>@modalTitle
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" @onclick="CloseModal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0">@modalMessage</p>
+                </div>
+                <div class="modal-footer">
+                    @if (string.Equals(modalType, "confirm", StringComparison.OrdinalIgnoreCase))
+                    {
+                        <button type="button" class="btn btn-outline-secondary" @onclick="CloseModal">Cancelar</button>
+                        <button type="button" class="btn btn-primary" @onclick="ConfirmModalAsync">Confirmar</button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-primary" @onclick="CloseModal">Aceptar</button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public long? Id { get; set; }
+
+    private bool IsNew => !Id.HasValue || Id.Value == 0;
+
+    private readonly VentaFormModel form = new();
+    private readonly VentaResumenUx resumen = new();
+
+    private List<MdmClienteDto> clientes = new();
+    private List<MdmClienteDto> clientesFiltradosBusqueda = new();
+    private MdmClienteDto? clienteSeleccionadoActual;
+    private List<ClientePerfilFiscalDto> perfilesFiscalesCliente = new();
+    private List<SucursalListadoDto> sucursales = new();
+    private List<AlmacenDto> almacenes = new();
+    private List<AlmacenDto> almacenesFiltrados = new();
+    private List<CompanyProductDto> productos = new();
+    private Dictionary<long, ProductDto2> productosBasePorId = new();
+
+    private bool isLoading = true;
+    private bool isSaving;
+    private bool isFacturaActionLoading;
+    private string? errorMessage;
+    private string? successMessage;
+    private FacturaVentaDto? facturaActual;
+    private HashSet<VentaPagoDto> pagosCargadosDesdeBackend = new();
+    private HashSet<VentaPagoDto> pagosEnGuardado = new();
+    private const long PerfilFiscalDatoOcasionalId = -1;
+    private string modalTitle = string.Empty;
+    private string modalMessage = string.Empty;
+    private string modalType = "info";
+    private bool showModal;
+    private Func<Task>? pendingConfirmAction;
+    private string clienteBusquedaTexto = string.Empty;
+    private string nitBusquedaTexto = string.Empty;
+    private bool mostrarResultadosClientes;
+    private string perfilFiscalBusquedaTexto = string.Empty;
+    private bool mostrarResultadosPerfilesFiscales;
+    private List<ClientePerfilFiscalDto> perfilesFiscalesFiltradosBusqueda = new();
+    private bool nitFacturaEditadoManual;
+    private bool razonSocialFacturaEditadaManual;
+    private bool suppressFiscalManualTracking;
+    private bool fechaVencimientoModificadaManualmente;
+
+    private void OnFechaVencimientoChanged(DateTime? val)
+    {
+        form.FechaVencimientoPago = val;
+        fechaVencimientoModificadaManualmente = true;
+    }
+    private const string FechaVentaInputFormat = "yyyy-MM-ddTHH:mm";
+    private string fechaVentaLocalTexto = string.Empty;
+
+    private readonly string[] tipoVentaOptions = ["Directa", "DesdePedido"];
+    private readonly string[] tipoItemOptions = ["Producto", "Servicio"];
+    private readonly string[] tipoPagoOptions = ["Contado", "Credito", "Mixto"];
+    private readonly string[] modoPagoOptions = ["Efectivo", "QR", "Transferencia", "Tarjeta", "Cheque", "Deposito", "Otro"];
+
+    private bool DatosFiscalesModificadosManual => nitFacturaEditadoManual || razonSocialFacturaEditadaManual;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCatalogosAsync();
+
+        if (!IsNew)
+        {
+            await LoadVentaAsync(Id!.Value);
+            await LoadFacturaAsync(Id!.Value);
+        }
+        else
+        {
+            form.MonedaCodigo = "BOB";
+            form.TipoCambio = 1m;
+            form.FechaVenta = DateTime.Now;
+            form.TipoVenta = "Directa";
+            pagosCargadosDesdeBackend.Clear();
+            fechaVencimientoModificadaManualmente = false;
+        }
+
+        SincronizarFechaVentaInput();
+
+        RecalcularTotales();
+        isLoading = false;
+    }
+
+    private async Task LoadCatalogosAsync()
+    {
+        try
+        {
+            var clientesTask = ClienteService.GetAllAsync();
+            var sucursalesTask = SucursalService.GetActivasAsync();
+            var almacenesTask = AlmacenService.GetAllAsync();
+            var productosTask = CompanyProductService.GetAllAsync();
+            var productosBaseTask = ProductoService.GetAllAsync();
+
+            await Task.WhenAll(clientesTask, sucursalesTask, almacenesTask, productosTask, productosBaseTask);
+
+            clientes = (await clientesTask).Where(x => x.Activo).OrderBy(x => x.RazonSocial).ToList();
+            sucursales = (await sucursalesTask).Where(x => x.Activo).OrderBy(x => x.Nombre).ToList();
+            almacenes = (await almacenesTask).Where(x => x.Activo).OrderBy(x => x.Nombre).ToList();
+            productos = (await productosTask).Where(x => x.Activo).OrderBy(x => x.NombreComercial).ToList();
+            productosBasePorId = (await productosBaseTask).Where(x => x.Activo).ToDictionary(x => x.ProductId, x => x);
+        }
+        catch (Exception ex)
+        {
+            ShowErrorModal($"No se pudieron cargar catálogos: {ex.Message}");
+        }
+
+        ApplyAutoSelectionsForNewVenta();
+        FiltrarAlmacenes();
+        SincronizarClienteSeleccionado();
+        RefrescarFiltroClientesBusqueda();
+    }
+
+    private async Task LoadVentaAsync(long id)
+    {
+        try
+        {
+            var venta = await VentaService.GetByIdAsync(id);
+            if (venta is null)
+            {
+                ShowErrorModal("No se pudo cargar la venta solicitada.");
+                return;
+            }
+
+            form.Id = venta.Id;
+            Id = venta.Id;
+            form.NumeroVentaVisual = venta.NumeroVenta;
+            form.TipoVenta = string.IsNullOrWhiteSpace(venta.TipoVenta) ? "Directa" : venta.TipoVenta;
+            form.EstadoVenta = venta.EstadoVenta;
+            form.EstadoPago = string.IsNullOrWhiteSpace(venta.EstadoPago) ? "Pendiente" : venta.EstadoPago;
+            form.FacturaGenerada = venta.FacturaGenerada;
+            form.PedidoVentaId = venta.PedidoVentaId;
+            form.SucursalId = venta.SucursalId;
+            form.AlmacenId = venta.AlmacenId;
+            form.FechaVenta = venta.FechaVenta;
+            SincronizarFechaVentaInput();
+            form.FechaVencimientoPago = venta.FechaVencimientoPago;
+            fechaVencimientoModificadaManualmente = true;
+            form.MonedaCodigo = venta.MonedaCodigo ?? venta.MonedaId ?? "BOB";
+            form.TipoCambio = venta.TipoCambio <= 0 ? 1m : venta.TipoCambio;
+            form.Observaciones = venta.Observaciones;
+            form.ClienteId = venta.ClienteId;
+            SincronizarClienteSeleccionado();
+
+            form.FacturacionDatos = venta.FacturacionDatos ?? new VentaFacturacionDatosDto
+            {
+                Facturar = false,
+                FacturarAlMismoCliente = true
+            };
+
+            nitFacturaEditadoManual = false;
+            razonSocialFacturaEditadaManual = false;
+
+            form.Detalles = venta.Detalles.Select(d => new VentaDetalleDto
+            {
+                Id = d.Id,
+                TipoItemVenta = string.IsNullOrWhiteSpace(d.TipoItemVenta) ? "Producto" : d.TipoItemVenta,
+                CompanyProductId = d.CompanyProductId,
+                AlmacenId = d.AlmacenId,
+                Descripcion = d.Descripcion,
+                DetalleAdicional = d.DetalleAdicional,
+                Cantidad = d.Cantidad,
+                UnidadMedidaId = d.UnidadMedidaId,
+                PrecioUnitario = d.PrecioUnitario,
+                DescuentoPorcentaje = d.DescuentoPorcentaje,
+                DescuentoMonto = d.DescuentoMonto,
+                ImpuestoMonto = d.ImpuestoMonto,
+                TotalLinea = d.TotalLinea,
+                CostoUnitario = d.CostoUnitario,
+                DescuentaInventario = d.DescuentaInventario
+            }).ToList();
+
+            form.Pagos = venta.Pagos.Select(p => new VentaPagoDto
+            {
+                FechaPago = p.FechaPago,
+                TipoPago = p.TipoPago,
+                ModoPago = p.ModoPago,
+                CuentaCajaBancoId = p.CuentaCajaBancoId,
+                Monto = p.Monto,
+                MonedaId = p.MonedaId,
+                MonedaCodigo = p.MonedaCodigo,
+                TipoCambio = p.TipoCambio,
+                Referencia = p.Referencia,
+                EstadoPago = p.EstadoPago
+            }).ToList();
+            pagosCargadosDesdeBackend = form.Pagos.ToHashSet();
+
+            await LoadPerfilesFiscalesAsync(form.ClienteId, preserveCurrentSelection: true);
+
+            FiltrarAlmacenes();
+        }
+        catch (Exception ex)
+        {
+            ShowErrorModal($"No se pudo cargar la venta: {ex.Message}");
+        }
+    }
+
+    private async Task LoadFacturaAsync(long ventaId)
+    {
+        try
+        {
+            facturaActual = await FacturaVentaService.GetByVentaIdAsync(ventaId);
+        }
+        catch
+        {
+            facturaActual = null;
+        }
+    }
+
+    private bool CanGenerateFactura()
+        => !IsNew
+           && form.Id.HasValue
+           && !string.Equals(form.EstadoVenta, "Anulada", StringComparison.OrdinalIgnoreCase)
+           && !form.FacturaGenerada
+           && HasValidFiscalData()
+           && facturaActual is null;
+
+    private bool CanAnularFactura()
+        => facturaActual is not null
+           && !string.Equals(facturaActual.EstadoFactura, "Anulada", StringComparison.OrdinalIgnoreCase)
+           && !isFacturaActionLoading;
+
+    private bool HasValidFiscalData()
+        => !string.IsNullOrWhiteSpace(form.FacturacionDatos.NitFactura)
+           && !string.IsNullOrWhiteSpace(form.FacturacionDatos.RazonSocialFactura);
+
+    private Task RequestGenerarFacturaAsync()
+    {
+        if (!form.Id.HasValue)
+            return Task.CompletedTask;
+
+        ShowConfirmModal(
+            "Generar factura",
+            "¿Desea generar la factura interna de esta venta?",
+            ExecuteGenerarFacturaAsync);
+
+        return Task.CompletedTask;
+    }
+
+    private async Task ExecuteGenerarFacturaAsync()
+    {
+        if (!form.Id.HasValue) return;
+
+        isFacturaActionLoading = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var response = await FacturaVentaService.GenerarAsync(new GenerarFacturaVentaRequestDto
+            {
+                VentaId = form.Id.Value,
+                TipoDocumentoFactura = "Factura",
+                NitFactura = form.FacturacionDatos.NitFactura,
+                Complemento = form.FacturacionDatos.Complemento,
+                RazonSocialFactura = form.FacturacionDatos.RazonSocialFactura,
+                EmailFactura = form.FacturacionDatos.EmailFactura,
+                TelefonoFactura = form.FacturacionDatos.TelefonoFactura,
+                Observaciones = form.Observaciones
+            });
+
+            if (!response.Success || response.Data is null)
+            {
+                ShowErrorModal(BuildErrorMessage(response));
+                return;
+            }
+
+            ShowSuccessModal("Factura interna generada correctamente.");
+            await LoadVentaAsync(form.Id.Value);
+            await LoadFacturaAsync(form.Id.Value);
+            RecalcularTotales();
+        }
+
+        catch (Exception ex)
+        {
+            ShowErrorModal($"No se pudo generar la factura: {ex.Message}");
+        }
+        finally
+        {
+            isFacturaActionLoading = false;
+        }
+    }
+
+    private bool IsPagoRegistrado(VentaPagoDto pago)
+        => pago is not null && pagosCargadosDesdeBackend.Contains(pago);
+
+    private async Task GuardarPagoAsync(VentaPagoDto pago)
+    {
+        if (pago is null)
+            return;
+
+        if (IsNew || !form.Id.HasValue || form.Id.Value <= 0)
+        {
+            ShowWarningModal("Guarde la venta antes de registrar pagos independientes.");
+            return;
+        }
+
+        if (IsPagoRegistrado(pago))
+        {
+            ShowWarningModal("Este pago ya está registrado.");
+            return;
+        }
+
+        var pagoValidation = ValidatePagoForRegistro(pago);
+        if (!string.IsNullOrWhiteSpace(pagoValidation))
+        {
+            ShowWarningModal(pagoValidation);
+            return;
+        }
+
+        pagosEnGuardado.Add(pago);
+
+        try
+        {
+            var response = await VentaService.RegistrarPagoAsync(form.Id.Value, new RegistrarPagoVentaRequestDto
+            {
+                FechaPago = pago.FechaPago,
+                TipoPago = pago.TipoPago,
+                ModoPago = pago.ModoPago,
+                CuentaCajaBancoId = pago.CuentaCajaBancoId,
+                Monto = pago.Monto,
+                MonedaId = pago.MonedaId,
+                MonedaCodigo = pago.MonedaCodigo,
+                TipoCambio = pago.TipoCambio,
+                Referencia = pago.Referencia,
+                EstadoPago = string.IsNullOrWhiteSpace(pago.EstadoPago) ? "Pagado" : pago.EstadoPago
+            });
+
+            if (!response.Success || response.Data is null)
+            {
+                ShowErrorModal(BuildErrorMessage(response));
+                return;
+            }
+
+            await LoadVentaAsync(form.Id.Value);
+            RecalcularTotales();
+            ShowSuccessModal("Pago registrado correctamente.");
+        }
+        catch (Exception ex)
+        {
+            ShowErrorModal($"No se pudo registrar el pago: {ex.Message}");
+        }
+        finally
+        {
+            pagosEnGuardado.Remove(pago);
+        }
+    }
+
+    private string? ValidatePagoForRegistro(VentaPagoDto pago)
+    {
+        if (pago.Monto <= 0)
+            return "El monto del pago debe ser mayor a cero.";
+
+        if (string.IsNullOrWhiteSpace(pago.ModoPago))
+            return "Debe seleccionar el modo de pago.";
+
+        if (string.IsNullOrWhiteSpace(pago.TipoPago))
+            return "Debe seleccionar el tipo de pago.";
+
+        if (pago.FechaPago == default || pago.FechaPago.Year < 2000)
+            return "Debe ingresar una fecha de pago válida.";
+
+        var saldoPendienteRegistrable = ObtenerSaldoPendienteRegistrable();
+        if (pago.Monto > saldoPendienteRegistrable)
+            return $"El monto no puede ser mayor al saldo pendiente ({FormatMoney(saldoPendienteRegistrable)}).";
+
+        return null;
+    }
+
+    private decimal ObtenerSaldoPendienteRegistrable()
+    {
+        var totalRegistrado = form.Pagos
+            .Where(IsPagoRegistrado)
+            .Sum(x => x.Monto);
+
+        var saldo = resumen.Total - totalRegistrado;
+        return saldo <= 0 ? 0 : decimal.Round(saldo, 2);
+    }
+
+    private async Task OnClienteChanged(int? clienteId)
+    {
+        form.ClienteId = clienteId;
+        SincronizarClienteSeleccionado();
+        mostrarResultadosClientes = false;
+        await LoadPerfilesFiscalesAsync(clienteId, preserveCurrentSelection: false);
+
+        if (clienteId.HasValue)
+        {
+            try
+            {
+                var config = await CreditoConfigService.GetByClienteAsync(clienteId.Value);
+                if (config != null && config.CreditoHabilitado && config.DiasCredito > 0)
+                {
+                    if (!fechaVencimientoModificadaManualmente)
+                    {
+                        form.FechaVencimientoPago = form.FechaVenta.AddDays(config.DiasCredito);
+                    }
+                }
+                else
+                {
+                    if (!fechaVencimientoModificadaManualmente)
+                    {
+                        form.FechaVencimientoPago = form.FechaVenta;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error al sugerir fecha de vencimiento por crédito: {ex.Message}");
+            }
+        }
+        else
+        {
+            if (!fechaVencimientoModificadaManualmente)
+            {
+                form.FechaVencimientoPago = form.FechaVenta;
+            }
+        }
+    }
+
+    private Task OnClienteBusquedaTextoChanged()
+    {
+        clienteBusquedaTexto = clienteBusquedaTexto?.Trim() ?? string.Empty;
+        RefrescarFiltroClientesBusqueda();
+
+        if (string.IsNullOrWhiteSpace(clienteBusquedaTexto))
+        {
+            if (form.ClienteId.HasValue && clienteSeleccionadoActual is not null)
+                clienteBusquedaTexto = clienteSeleccionadoActual.RazonSocial;
+            mostrarResultadosClientes = false;
+            return Task.CompletedTask;
+        }
+
+        mostrarResultadosClientes = true;
+        return Task.CompletedTask;
+    }
+
+    private void OnClienteBusquedaFocused()
+    {
+        RefrescarFiltroClientesBusqueda();
+        mostrarResultadosClientes = clientesFiltradosBusqueda.Count > 0;
+    }
+
+    private async Task BuscarClientePorNit()
+    {
+        var nit = (nitBusquedaTexto ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(nit))
+        {
+            ShowWarningModal("Ingrese un NIT para buscar cliente.");
+            return;
+        }
+
+        var cliente = clientes.FirstOrDefault(c =>
+            string.Equals((c.NIT ?? string.Empty).Trim(), nit, StringComparison.OrdinalIgnoreCase));
+
+        if (cliente is null)
+        {
+            ShowWarningModal("No se encontró un cliente con el NIT indicado.");
+            return;
+        }
+
+        await SeleccionarClienteBusqueda(cliente);
+    }
+
+    private async Task SeleccionarClienteBusqueda(MdmClienteDto cliente)
+    {
+        if (cliente is null)
+            return;
+
+        clienteSeleccionadoActual = cliente;
+        clienteBusquedaTexto = cliente.RazonSocial ?? string.Empty;
+            nitBusquedaTexto = cliente.NIT ?? string.Empty;
+        clientesFiltradosBusqueda.Clear();
+        mostrarResultadosClientes = false;
+
+        await OnClienteChanged(cliente.Id);
+    }
+
+    private void SincronizarClienteSeleccionado()
+    {
+        if (!form.ClienteId.HasValue)
+        {
+            clienteSeleccionadoActual = null;
+            return;
+        }
+
+        clienteSeleccionadoActual = clientes.FirstOrDefault(c => c.Id == form.ClienteId.Value);
+        if (clienteSeleccionadoActual is null)
+            return;
+
+        if (string.IsNullOrWhiteSpace(clienteBusquedaTexto))
+            clienteBusquedaTexto = clienteSeleccionadoActual.RazonSocial ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(nitBusquedaTexto))
+            nitBusquedaTexto = clienteSeleccionadoActual.NIT ?? string.Empty;
+    }
+
+    private void RefrescarFiltroClientesBusqueda()
+    {
+        var termino = (clienteBusquedaTexto ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(termino))
+        {
+            clientesFiltradosBusqueda = clientes.Take(8).ToList();
+            return;
+        }
+
+        clientesFiltradosBusqueda = clientes
+            .Where(c => CoincideClienteBusqueda(c, termino))
+            .Take(15)
+            .ToList();
+    }
+
+    private static bool CoincideClienteBusqueda(MdmClienteDto cliente, string termino)
+    {
+        if (cliente is null || string.IsNullOrWhiteSpace(termino))
+            return false;
+
+        return Contiene(cliente.RazonSocial, termino)
+               || Contiene(cliente.Codigo, termino)
+               || Contiene(cliente.NIT, termino)
+               || Contiene(cliente.Email, termino)
+               || Contiene(cliente.Telefono, termino);
+    }
+
+    private static bool Contiene(string? value, string termino)
+        => !string.IsNullOrWhiteSpace(value)
+           && value.Contains(termino, StringComparison.OrdinalIgnoreCase);
+
+    private async Task LoadPerfilesFiscalesAsync(int? clienteId, bool preserveCurrentSelection)
+    {
+        perfilesFiscalesCliente = new List<ClientePerfilFiscalDto>();
+        perfilesFiscalesFiltradosBusqueda = new List<ClientePerfilFiscalDto>();
+        mostrarResultadosPerfilesFiscales = false;
+        perfilFiscalBusquedaTexto = string.Empty;
+
+        if (!clienteId.HasValue || clienteId.Value <= 0)
+        {
+            form.FacturacionDatos.ClientePerfilFiscalId = null;
+            return;
+        }
+
+        try
+        {
+            var perfiles = await ClientePerfilFiscalService.GetByClienteAsync(clienteId.Value);
+            perfilesFiscalesCliente = perfiles
+                .Where(x => x.Activo)
+                .OrderByDescending(x => x.EsPredeterminado)
+                .ThenBy(x => x.Alias)
+                .ToList();
+        }
+        catch
+        {
+            perfilesFiscalesCliente = new List<ClientePerfilFiscalDto>();
+        }
+
+        if (preserveCurrentSelection
+            && form.FacturacionDatos.ClientePerfilFiscalId.HasValue
+            && perfilesFiscalesCliente.Any(x => x.Id == form.FacturacionDatos.ClientePerfilFiscalId.Value))
+        {
+            return;
+        }
+
+        RefrescarFiltroPerfilesFiscalesBusqueda();
+
+        if (form.FacturacionDatos.FacturarAlMismoCliente)
+        {
+            AplicarReglaFacturarMismoCliente(forceOverwrite: !DatosFiscalesModificadosManual);
+            return;
+        }
+
+        if (!preserveCurrentSelection)
+            form.FacturacionDatos.ClientePerfilFiscalId = null;
+    }
+
+    private long? GetPerfilFiscalSelectorValue()
+    {
+        if (form.FacturacionDatos.ClientePerfilFiscalId.HasValue)
+            return form.FacturacionDatos.ClientePerfilFiscalId.Value;
+
+        return IsDatoOcasionalFiscal() ? PerfilFiscalDatoOcasionalId : null;
+    }
+
+    private void OnPerfilFiscalChanged(long? perfilId)
+    {
+        if (!perfilId.HasValue)
+        {
+            form.FacturacionDatos.ClientePerfilFiscalId = null;
+            return;
+        }
+
+        if (perfilId.Value == PerfilFiscalDatoOcasionalId)
+        {
+            form.FacturacionDatos.ClientePerfilFiscalId = null;
+            return;
+        }
+
+        var perfil = perfilesFiscalesCliente.FirstOrDefault(x => x.Id == perfilId.Value);
+        if (perfil is null)
+            return;
+
+        ApplyPerfilFiscal(perfil, markExplicitSelection: true);
+    }
+
+    private void ApplyPerfilFiscal(ClientePerfilFiscalDto perfil, bool markExplicitSelection = false)
+    {
+        suppressFiscalManualTracking = true;
+        form.FacturacionDatos.ClientePerfilFiscalId = perfil.Id;
+        form.FacturacionDatos.TipoDocumentoIdentidad = perfil.TipoDocumentoIdentidad;
+        form.FacturacionDatos.NitFactura = perfil.NumeroDocumento;
+        form.FacturacionDatos.Complemento = perfil.Complemento;
+        form.FacturacionDatos.RazonSocialFactura = perfil.RazonSocial;
+        form.FacturacionDatos.EmailFactura = perfil.EmailFactura;
+        form.FacturacionDatos.TelefonoFactura = perfil.TelefonoFactura;
+        suppressFiscalManualTracking = false;
+
+        if (markExplicitSelection)
+        {
+            nitFacturaEditadoManual = false;
+            razonSocialFacturaEditadaManual = false;
+        }
+
+            perfilFiscalBusquedaTexto = perfil.RazonSocial ?? perfil.Alias ?? string.Empty;
+        mostrarResultadosPerfilesFiscales = false;
+    }
+
+    private Task OnFacturarAlMismoClienteChanged(bool value)
+    {
+        form.FacturacionDatos.FacturarAlMismoCliente = value;
+        if (!form.FacturacionDatos.Facturar || !form.ClienteId.HasValue)
+            return Task.CompletedTask;
+
+        if (value)
+        {
+            AplicarReglaFacturarMismoCliente(forceOverwrite: true);
+            return Task.CompletedTask;
+        }
+
+        form.FacturacionDatos.ClientePerfilFiscalId = null;
+        RefrescarFiltroPerfilesFiscalesBusqueda();
+        return Task.CompletedTask;
+    }
+
+    private void AplicarReglaFacturarMismoCliente(bool forceOverwrite)
+    {
+        if (!form.ClienteId.HasValue)
+            return;
+
+        var predeterminado = perfilesFiscalesCliente.FirstOrDefault(x => x.EsPredeterminado);
+        if (predeterminado is not null)
+        {
+            if (forceOverwrite || !DatosFiscalesModificadosManual)
+                ApplyPerfilFiscal(predeterminado, markExplicitSelection: true);
+
+            return;
+        }
+
+        var cliente = clientes.FirstOrDefault(c => c.Id == form.ClienteId.Value);
+        if (cliente is null)
+            return;
+
+        if (!forceOverwrite && DatosFiscalesModificadosManual)
+            return;
+
+        suppressFiscalManualTracking = true;
+        form.FacturacionDatos.ClientePerfilFiscalId = null;
+        form.FacturacionDatos.TipoDocumentoIdentidad = string.IsNullOrWhiteSpace(form.FacturacionDatos.TipoDocumentoIdentidad)
+            ? "NIT"
+            : form.FacturacionDatos.TipoDocumentoIdentidad;
+        form.FacturacionDatos.NitFactura = cliente.NIT;
+        form.FacturacionDatos.RazonSocialFactura = cliente.RazonSocial;
+        form.FacturacionDatos.EmailFactura = cliente.Email;
+        form.FacturacionDatos.TelefonoFactura = cliente.Telefono;
+        suppressFiscalManualTracking = false;
+        nitFacturaEditadoManual = false;
+        razonSocialFacturaEditadaManual = false;
+
+        if (string.IsNullOrWhiteSpace(form.FacturacionDatos.NitFactura)
+            || string.IsNullOrWhiteSpace(form.FacturacionDatos.RazonSocialFactura))
+        {
+            ShowWarningModal("El cliente no tiene datos fiscales completos.");
+        }
+    }
+
+    private Task OnRazonSocialBusquedaTextoChanged()
+    {
+        perfilFiscalBusquedaTexto = perfilFiscalBusquedaTexto?.Trim() ?? string.Empty;
+        RefrescarFiltroPerfilesFiscalesBusqueda();
+        mostrarResultadosPerfilesFiscales = !string.IsNullOrWhiteSpace(perfilFiscalBusquedaTexto)
+                                          && perfilesFiscalesFiltradosBusqueda.Count > 0;
+        return Task.CompletedTask;
+    }
+
+    private void OnRazonSocialBusquedaFocused()
+    {
+        RefrescarFiltroPerfilesFiscalesBusqueda();
+        mostrarResultadosPerfilesFiscales = perfilesFiscalesFiltradosBusqueda.Count > 0;
+    }
+
+    private void RefrescarFiltroPerfilesFiscalesBusqueda()
+    {
+        if (!form.ClienteId.HasValue)
+        {
+            perfilesFiscalesFiltradosBusqueda = new List<ClientePerfilFiscalDto>();
+            return;
+        }
+
+        var termino = (perfilFiscalBusquedaTexto ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(termino))
+        {
+            perfilesFiscalesFiltradosBusqueda = perfilesFiscalesCliente.Take(10).ToList();
+            return;
+        }
+
+        perfilesFiscalesFiltradosBusqueda = perfilesFiscalesCliente
+            .Where(p => CoincidePerfilFiscalBusqueda(p, termino))
+            .Take(12)
+            .ToList();
+    }
+
+    private static bool CoincidePerfilFiscalBusqueda(ClientePerfilFiscalDto perfil, string termino)
+    {
+        if (perfil is null || string.IsNullOrWhiteSpace(termino))
+            return false;
+
+        return Contiene(perfil.RazonSocial, termino)
+               || Contiene(perfil.NumeroDocumento, termino)
+               || Contiene(perfil.Alias, termino);
+    }
+
+    private Task SeleccionarPerfilFiscalBusqueda(ClientePerfilFiscalDto perfil)
+    {
+        if (perfil is null)
+            return Task.CompletedTask;
+
+        ApplyPerfilFiscal(perfil, markExplicitSelection: true);
+        return Task.CompletedTask;
+    }
+
+    private async Task GuardarComoNuevoDatoFacturacionAsync()
+    {
+        if (!form.ClienteId.HasValue)
+        {
+            ShowWarningModal("Seleccione un cliente antes de guardar un dato de facturación.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(form.FacturacionDatos.NitFactura)
+            || string.IsNullOrWhiteSpace(form.FacturacionDatos.RazonSocialFactura))
+        {
+            ShowWarningModal("Complete NIT y Razón Social para guardar el dato de facturación.");
+            return;
+        }
+
+        var createDto = new CreateClientePerfilFiscalDto
+        {
+            Alias = string.IsNullOrWhiteSpace(perfilFiscalBusquedaTexto)
+                ? form.FacturacionDatos.RazonSocialFactura ?? "Dato fiscal"
+                : perfilFiscalBusquedaTexto,
+            TipoDocumentoIdentidad = string.IsNullOrWhiteSpace(form.FacturacionDatos.TipoDocumentoIdentidad)
+                ? "NIT"
+                : form.FacturacionDatos.TipoDocumentoIdentidad!,
+            NumeroDocumento = form.FacturacionDatos.NitFactura!,
+            Complemento = form.FacturacionDatos.Complemento,
+            RazonSocial = form.FacturacionDatos.RazonSocialFactura!,
+            EmailFactura = form.FacturacionDatos.EmailFactura,
+            TelefonoFactura = form.FacturacionDatos.TelefonoFactura,
+            RequiereEmail = false,
+            EsPredeterminado = false
+        };
+
+        var response = await ClientePerfilFiscalService.CreateAsync(form.ClienteId.Value, createDto);
+        if (!response.Success || response.Data is null)
+        {
+            ShowErrorModal(response.Message ?? "No se pudo guardar el nuevo dato de facturación.");
+            return;
+        }
+
+        await LoadPerfilesFiscalesAsync(form.ClienteId, preserveCurrentSelection: false);
+        ApplyPerfilFiscal(response.Data, markExplicitSelection: true);
+        ShowSuccessModal("Dato de facturación registrado correctamente.");
+    }
+
+    private Task OnNitFacturaChanged()
+    {
+        if (!suppressFiscalManualTracking)
+            nitFacturaEditadoManual = true;
+
+        return Task.CompletedTask;
+    }
+
+    private Task OnRazonSocialFacturaChanged()
+    {
+        if (!suppressFiscalManualTracking)
+            razonSocialFacturaEditadaManual = true;
+
+        if (!form.FacturacionDatos.FacturarAlMismoCliente)
+            perfilFiscalBusquedaTexto = form.FacturacionDatos.RazonSocialFactura ?? string.Empty;
+
+        return Task.CompletedTask;
+    }
+
+    private bool IsDatoOcasionalFiscal()
+    {
+        if (form.FacturacionDatos.ClientePerfilFiscalId.HasValue)
+            return false;
+
+        return !string.IsNullOrWhiteSpace(form.FacturacionDatos.TipoDocumentoIdentidad)
+               || !string.IsNullOrWhiteSpace(form.FacturacionDatos.NitFactura)
+               || !string.IsNullOrWhiteSpace(form.FacturacionDatos.Complemento)
+               || !string.IsNullOrWhiteSpace(form.FacturacionDatos.RazonSocialFactura)
+               || !string.IsNullOrWhiteSpace(form.FacturacionDatos.EmailFactura)
+               || !string.IsNullOrWhiteSpace(form.FacturacionDatos.TelefonoFactura);
+    }
+
+    private Task RequestAnularFacturaAsync()
+    {
+        if (!form.Id.HasValue || facturaActual is null)
+            return Task.CompletedTask;
+
+        ShowConfirmModal(
+            "Anular factura",
+            "¿Desea anular la factura interna de esta venta?",
+            ExecuteAnularFacturaAsync);
+
+        return Task.CompletedTask;
+    }
+
+    private async Task ExecuteAnularFacturaAsync()
+    {
+        if (!form.Id.HasValue || facturaActual is null) return;
+
+        isFacturaActionLoading = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var response = await FacturaVentaService.AnularAsync(facturaActual.Id, new AnularFacturaVentaRequestDto
+            {
+                MotivoAnulacion = string.IsNullOrWhiteSpace(form.Observaciones)
+                    ? "Anulación desde formulario comercial"
+                    : form.Observaciones!
+            });
+
+            if (!response.Success || response.Data is null)
+            {
+                ShowErrorModal(BuildErrorMessage(response));
+                return;
+            }
+
+            ShowSuccessModal("Factura interna anulada correctamente.");
+            await LoadVentaAsync(form.Id.Value);
+            await LoadFacturaAsync(form.Id.Value);
+            RecalcularTotales();
+        }
+        catch (Exception ex)
+        {
+            ShowErrorModal($"No se pudo anular la factura: {ex.Message}");
+        }
+        finally
+        {
+            isFacturaActionLoading = false;
+        }
+    }
+
+    private void OnSucursalChanged(int sucursalId)
+    {
+        form.SucursalId = sucursalId;
+        FiltrarAlmacenes();
+
+        if (form.AlmacenId.HasValue && !almacenesFiltrados.Any(a => a.Id == form.AlmacenId.Value))
+            form.AlmacenId = null;
+
+        foreach (var det in form.Detalles.Where(EsProducto))
+        {
+            if (det.AlmacenId.HasValue && !almacenesFiltrados.Any(a => a.Id == det.AlmacenId.Value))
+                det.AlmacenId = null;
+        }
+    }
+
+    private void FiltrarAlmacenes()
+    {
+        almacenesFiltrados = form.SucursalId > 0
+            ? almacenes.Where(a => a.SucursalId == form.SucursalId).OrderBy(a => a.Nombre).ToList()
+            : new List<AlmacenDto>();
+
+        if (IsNew && !form.AlmacenId.HasValue && almacenesFiltrados.Count == 1)
+            form.AlmacenId = almacenesFiltrados[0].Id;
+    }
+
+    private void ApplyAutoSelectionsForNewVenta()
+    {
+        if (!IsNew)
+            return;
+
+        if (form.SucursalId <= 0 && sucursales.Count == 1)
+            form.SucursalId = sucursales[0].Id;
+    }
+
+    private void AgregarProducto()
+    {
+        form.Detalles.Add(new VentaDetalleDto
+        {
+            TipoItemVenta = "Producto",
+            Cantidad = 1,
+            PrecioUnitario = 0,
+            DescuentoPorcentaje = 0,
+            DescuentoMonto = 0,
+            ImpuestoMonto = 0,
+            DescuentaInventario = true,
+            AlmacenId = form.AlmacenId
+        });
+
+        RecalcularTotales();
+    }
+
+    private void AgregarServicio()
+    {
+        form.Detalles.Add(new VentaDetalleDto
+        {
+            TipoItemVenta = "Servicio",
+            Cantidad = 1,
+            PrecioUnitario = 0,
+            DescuentoPorcentaje = 0,
+            DescuentoMonto = 0,
+            ImpuestoMonto = 0,
+            CompanyProductId = null,
+            AlmacenId = null,
+            DescuentaInventario = false
+        });
+
+        RecalcularTotales();
+    }
+
+    private void OnTipoItemChanged(int idx, string tipo)
+    {
+        if (idx < 0 || idx >= form.Detalles.Count) return;
+
+        var det = form.Detalles[idx];
+        det.TipoItemVenta = tipo;
+
+        if (string.Equals(tipo, "Servicio", StringComparison.OrdinalIgnoreCase))
+        {
+            det.AlmacenId = null;
+            det.DescuentaInventario = false;
+
+            if (det.CompanyProductId.HasValue)
+            {
+                var cp = serviciosCatalogados.FirstOrDefault(x => x.CompanyProductId == det.CompanyProductId.Value);
+                if (cp is null)
+                {
+                    // Mantener selección; solo se omite autocompletado cuando no se encuentra en el lookup.
+                }
+                else
+                {
+                    if (string.IsNullOrWhiteSpace(det.Descripcion))
+                        det.Descripcion = cp.NombreComercial;
+                }
+            }
+        }
+        else
+        {
+            det.DescuentaInventario = true;
+            det.AlmacenId ??= form.AlmacenId;
+
+            if (det.CompanyProductId.HasValue && !productosCatalogados.Any(x => x.CompanyProductId == det.CompanyProductId.Value))
+                det.CompanyProductId = null;
+        }
+
+        RecalcularTotales();
+    }
+
+    private void OnCompanyProductSelected(int idx, long? companyProductId)
+    {
+        if (idx < 0 || idx >= form.Detalles.Count) return;
+
+        var det = form.Detalles[idx];
+        det.CompanyProductId = companyProductId;
+
+        if (!companyProductId.HasValue)
+            return;
+
+        if (EsProducto(det))
+        {
+            var cp = productosCatalogados.FirstOrDefault(x => x.CompanyProductId == companyProductId.Value);
+            if (cp is null)
+            {
+                det.CompanyProductId = null;
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(det.Descripcion))
+                det.Descripcion = cp.NombreComercial;
+            return;
+        }
+
+        var servicio = serviciosCatalogados.FirstOrDefault(x => x.CompanyProductId == companyProductId.Value);
+        if (servicio is null)
+        {
+            return;
+        }
+
+        det.AlmacenId = null;
+        det.DescuentaInventario = false;
+        if (string.IsNullOrWhiteSpace(det.Descripcion))
+            det.Descripcion = servicio.NombreComercial;
+    }
+
+    private Task RequestRemoveDetalleAsync(int idx)
+    {
+        if (idx < 0 || idx >= form.Detalles.Count)
+            return Task.CompletedTask;
+
+        ShowConfirmModal(
+            "Eliminar detalle",
+            "¿Desea eliminar esta línea de detalle?",
+            async () =>
+            {
+                RemoveDetalle(idx);
+                await Task.CompletedTask;
+            });
+
+        return Task.CompletedTask;
+    }
+
+    private void RemoveDetalle(int idx)
+    {
+        if (idx < 0 || idx >= form.Detalles.Count) return;
+        form.Detalles.RemoveAt(idx);
+        RecalcularTotales();
+    }
+
+    private void AgregarPago()
+    {
+        form.Pagos.Add(new VentaPagoDto
+        {
+            FechaPago = DateTime.Today,
+            TipoPago = "Contado",
+            ModoPago = "Efectivo",
+            Monto = 0,
+            MonedaCodigo = form.MonedaCodigo,
+            TipoCambio = form.TipoCambio <= 0 ? 1m : form.TipoCambio,
+            EstadoPago = "Pendiente"
+        });
+
+        RecalcularTotales();
+    }
+
+    private void RemovePagoLocal(VentaPagoDto pago)
+    {
+        if (pago is null)
+            return;
+
+        if (!IsNew && pagosCargadosDesdeBackend.Contains(pago))
+        {
+            ShowWarningModal("La eliminación de pagos registrados se implementará en una siguiente fase.");
+            return;
+        }
+
+        var removed = form.Pagos.Remove(pago);
+
+        if (!removed)
+        {
+            var index = form.Pagos.IndexOf(pago);
+            if (index >= 0)
+                form.Pagos.RemoveAt(index);
+        }
+
+        RecalcularTotales();
+        StateHasChanged();
+    }
+
+    private Task RequestConfirmarAsync()
+    {
+        if (IsNew || !form.Id.HasValue || form.Id.Value <= 0)
+        {
+            ShowWarningModal("Debe guardar la venta antes de confirmar.");
+            return Task.CompletedTask;
+        }
+
+        ShowConfirmModal(
+            "Confirmar venta",
+            "¿Desea confirmar esta venta?",
+            ConfirmarAsync);
+
+        return Task.CompletedTask;
+    }
+
+    private Task RequestAnularAsync()
+    {
+        if (IsNew || !form.Id.HasValue || form.Id.Value <= 0)
+        {
+            ShowWarningModal("Debe guardar la venta antes de anular.");
+            return Task.CompletedTask;
+        }
+
+        ShowConfirmModal(
+            "Anular venta",
+            "¿Desea anular esta venta?",
+            AnularAsync);
+
+        return Task.CompletedTask;
+    }
+
+    private void ShowErrorModal(string message)
+    {
+        modalTitle = "Error";
+        modalMessage = message;
+        modalType = "error";
+        pendingConfirmAction = null;
+        showModal = true;
+    }
+
+    private void ShowSuccessModal(string message)
+    {
+        modalTitle = "Éxito";
+        modalMessage = message;
+        modalType = "success";
+        pendingConfirmAction = null;
+        showModal = true;
+    }
+
+    private void ShowWarningModal(string message)
+    {
+        modalTitle = "Advertencia";
+        modalMessage = message;
+        modalType = "warning";
+        pendingConfirmAction = null;
+        showModal = true;
+    }
+
+    private void ShowConfirmModal(string title, string message, Func<Task> onConfirm)
+    {
+        modalTitle = title;
+        modalMessage = message;
+        modalType = "confirm";
+        pendingConfirmAction = onConfirm;
+        showModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        pendingConfirmAction = null;
+    }
+
+    private async Task ConfirmModalAsync()
+    {
+        var action = pendingConfirmAction;
+        CloseModal();
+        if (action is not null)
+            await action();
+    }
+
+    private string GetModalHeaderClass()
+        => modalType switch
+        {
+            "error" => "bg-danger",
+            "success" => "bg-success",
+            "warning" => "bg-warning",
+            "confirm" => "bg-primary",
+            _ => "bg-secondary"
+        };
+
+    private string GetModalIconClass()
+        => modalType switch
+        {
+            "error" => "bi-exclamation-triangle-fill",
+            "success" => "bi-check-circle-fill",
+            "warning" => "bi-exclamation-circle-fill",
+            "confirm" => "bi-question-circle-fill",
+            _ => "bi-info-circle-fill"
+        };
+
+    private static string BuildErrorMessage(ApiResponse<VentaDto> response)
+    {
+        if (response.Errors is { Count: > 0 })
+            return $"{response.Message} {string.Join(" | ", response.Errors)}";
+
+        return response.Message ?? "Error no controlado al ejecutar la operación.";
+    }
+
+    private static string BuildErrorMessage(ApiResponse<FacturaVentaDto> response)
+    {
+        if (response.Errors is { Count: > 0 })
+            return $"{response.Message} {string.Join(" | ", response.Errors)}";
+
+        return response.Message ?? "Error no controlado al ejecutar la operación de factura.";
+    }
+
+    private async Task GuardarAsync()
+    {
+        errorMessage = null;
+        successMessage = null;
+
+        var validation = ValidateForm();
+        if (!string.IsNullOrWhiteSpace(validation))
+        {
+            ShowErrorModal(validation);
+            return;
+        }
+
+        isSaving = true;
+
+        try
+        {
+            ApiResponse<VentaDto> response;
+            var ventaId = form.Id;
+            var wasNew = IsNew;
+
+            if (wasNew)
+            {
+                response = await VentaService.CreateAsync(BuildCreateRequest());
+            }
+            else
+            {
+                if (!ventaId.HasValue || ventaId.Value <= 0)
+                {
+                    ShowErrorModal("No se pudo identificar el Id de la venta para actualizar. Recargue la página e intente nuevamente.");
+                    return;
+                }
+
+                response = await VentaService.UpdateAsync(ventaId.Value, BuildUpdateRequest());
+            }
+
+            if (!response.Success || response.Data is null)
+            {
+                ShowErrorModal(BuildErrorMessage(response));
+                return;
+            }
+
+            if (wasNew)
+            {
+                if (response.Data.Id <= 0)
+                {
+                    ShowErrorModal("La venta se guardó, pero no se recibió un Id válido para continuar en modo edición.");
+                    return;
+                }
+
+                ventaId = response.Data.Id;
+                Id = response.Data.Id;
+                form.Id = response.Data.Id;
+            }
+
+            ShowSuccessModal(wasNew ? "Venta creada en borrador." : "Venta actualizada en borrador.");
+
+            if (ventaId.HasValue && ventaId.Value > 0)
+            {
+                await LoadVentaAsync(ventaId.Value);
+                await LoadFacturaAsync(ventaId.Value);
+                RecalcularTotales();
+
+                if (wasNew)
+                    Nav.NavigateTo($"/ventas/comercial/{ventaId.Value}", replace: true);
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowErrorModal($"No se pudo guardar la venta: {ex.Message}");
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private async Task ConfirmarAsync()
+    {
+        if (IsNew || !form.Id.HasValue || form.Id.Value <= 0)
+        {
+            ShowWarningModal("Debe guardar la venta antes de confirmar.");
+            return;
+        }
+
+        isSaving = true;
+        errorMessage = null;
+        successMessage = null;
+
+        var response = await VentaService.ConfirmarAsync(form.Id.Value, new ConfirmarVentaRequestDto
+        {
+            Observaciones = form.Observaciones
+        });
+
+        if (response.Success)
+        {
+            ShowSuccessModal("Venta confirmada correctamente.");
+            await LoadVentaAsync(form.Id.Value);
+            await LoadFacturaAsync(form.Id.Value);
+            RecalcularTotales();
+        }
+        else
+        {
+            ShowErrorModal(BuildErrorMessage(response));
+        }
+
+        isSaving = false;
+    }
+
+    private async Task AnularAsync()
+    {
+        if (IsNew || !form.Id.HasValue) return;
+
+        isSaving = true;
+        errorMessage = null;
+        successMessage = null;
+
+        var response = await VentaService.AnularAsync(form.Id.Value, new AnularVentaRequestDto
+        {
+            MotivoAnulacion = string.IsNullOrWhiteSpace(form.Observaciones)
+                ? "Anulación desde formulario comercial"
+                : form.Observaciones!
+        });
+
+        if (response.Success)
+        {
+            ShowSuccessModal("Venta anulada correctamente.");
+            await LoadVentaAsync(form.Id.Value);
+            RecalcularTotales();
+        }
+        else
+        {
+            ShowErrorModal(BuildErrorMessage(response));
+        }
+
+        isSaving = false;
+    }
+
+    private void VolverListado() => Nav.NavigateTo("/ventas/comercial");
+
+    private void SincronizarFechaVentaInput()
+    {
+        var fecha = form.FechaVenta == default ? DateTime.Now : form.FechaVenta;
+        fechaVentaLocalTexto = fecha.ToString(FechaVentaInputFormat, System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private void SincronizarFechaVentaDesdeInput()
+    {
+        if (string.IsNullOrWhiteSpace(fechaVentaLocalTexto))
+            return;
+
+        if (DateTime.TryParseExact(
+                fechaVentaLocalTexto,
+                FechaVentaInputFormat,
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None,
+                out var fechaLocal))
+        {
+            form.FechaVenta = fechaLocal;
+        }
+    }
+
+
+
+    private CrearVentaRequestDto BuildCreateRequest()
+    {
+        SincronizarFechaVentaDesdeInput();
+        NormalizeDetalles();
+        var detalles = CloneDetallesForRequest();
+
+        return new CrearVentaRequestDto
+        {
+            SucursalId = form.SucursalId,
+            AlmacenId = form.AlmacenId,
+            ClienteId = form.ClienteId,
+            PedidoVentaId = form.TipoVenta == "DesdePedido" ? form.PedidoVentaId : null,
+            TipoVenta = form.TipoVenta,
+            FechaVenta = form.FechaVenta,
+            MonedaCodigo = form.MonedaCodigo,
+            TipoCambio = form.TipoCambio,
+            Observaciones = form.Observaciones,
+            FechaVencimientoPago = form.FechaVencimientoPago,
+            Detalles = detalles,
+            FacturacionDatos = form.FacturacionDatos,
+            Pagos = form.Pagos.Count == 0 ? null : form.Pagos
+        };
+    }
+
+    private static string FormatMoney(decimal value)
+        => FormatHelper.Money(value);
+
+    private ActualizarVentaRequestDto BuildUpdateRequest()
+    {
+        SincronizarFechaVentaDesdeInput();
+        NormalizeDetalles();
+        var detalles = CloneDetallesForRequest();
+
+        return new ActualizarVentaRequestDto
+        {
+            SucursalId = form.SucursalId,
+            AlmacenId = form.AlmacenId,
+            ClienteId = form.ClienteId,
+            FechaVenta = form.FechaVenta,
+            MonedaCodigo = form.MonedaCodigo,
+            TipoCambio = form.TipoCambio,
+            Observaciones = form.Observaciones,
+            FechaVencimientoPago = form.FechaVencimientoPago,
+            Detalles = detalles,
+            FacturacionDatos = form.FacturacionDatos
+        };
+    }
+
+    private List<VentaDetalleDto> CloneDetallesForRequest()
+        => form.Detalles.Select(d => new VentaDetalleDto
+        {
+            TipoItemVenta = d.TipoItemVenta,
+            CompanyProductId = d.CompanyProductId,
+            AlmacenId = d.AlmacenId,
+            Descripcion = d.Descripcion,
+            DetalleAdicional = d.DetalleAdicional,
+            Cantidad = d.Cantidad,
+            PrecioUnitario = d.PrecioUnitario,
+            DescuentoPorcentaje = d.DescuentoPorcentaje,
+            DescuentoMonto = d.DescuentoMonto,
+            ImpuestoMonto = d.ImpuestoMonto,
+            TotalLinea = d.TotalLinea,
+            CostoUnitario = d.CostoUnitario,
+            DescuentaInventario = d.DescuentaInventario
+        }).ToList();
+
+    private void NormalizeDetalles()
+    {
+        foreach (var det in form.Detalles)
+        {
+            if (!EsProducto(det))
+            {
+                det.AlmacenId = null;
+                det.DescuentaInventario = false;
+            }
+            else
+            {
+                det.DescuentaInventario = true;
+            }
+
+            det.TotalLinea = CalcularTotalLinea(det);
+        }
+    }
+
+    private string? ValidateForm()
+    {
+        if (form.SucursalId <= 0)
+            return "Debe seleccionar una sucursal.";
+
+        if (form.TipoVenta == "DesdePedido" && (!form.PedidoVentaId.HasValue || form.PedidoVentaId <= 0))
+            return "Debe indicar PedidoVentaId cuando el tipo de venta es DesdePedido.";
+
+        if (form.Detalles.Count == 0)
+            return "Debe registrar al menos una línea de detalle.";
+
+        for (var i = 0; i < form.Detalles.Count; i++)
+        {
+            var d = form.Detalles[i];
+            var nro = i + 1;
+
+            if (string.IsNullOrWhiteSpace(d.TipoItemVenta))
+                return $"La línea {nro} no tiene TipoItemVenta.";
+
+            if (EsProducto(d) && (!d.CompanyProductId.HasValue || d.CompanyProductId <= 0))
+                return $"La línea {nro} es Producto y requiere CompanyProductId.";
+
+            if (!EsProducto(d))
+            {
+                d.AlmacenId = null;
+                d.DescuentaInventario = false;
+            }
+
+            if (d.Cantidad <= 0)
+                return $"La línea {nro} debe tener cantidad mayor a cero.";
+
+            if (d.PrecioUnitario < 0)
+                return $"La línea {nro} tiene precio unitario inválido.";
+
+            if (string.IsNullOrWhiteSpace(d.Descripcion) && !d.CompanyProductId.HasValue)
+                return $"La línea {nro} debe tener descripción o producto seleccionado.";
+        }
+
+        if (form.FacturacionDatos.Facturar)
+        {
+            if (string.IsNullOrWhiteSpace(form.FacturacionDatos.NitFactura))
+                return "NIT Factura es obligatorio cuando Facturar = true.";
+
+            if (string.IsNullOrWhiteSpace(form.FacturacionDatos.RazonSocialFactura))
+                return "Razón Social Factura es obligatorio cuando Facturar = true.";
+        }
+
+        for (var i = 0; i < form.Pagos.Count; i++)
+        {
+            var p = form.Pagos[i];
+            if (p.Monto <= 0)
+                return $"El pago #{i + 1} debe tener monto mayor a cero.";
+        }
+
+        return null;
+    }
+
+    private static bool EsProducto(VentaDetalleDto d)
+        => string.Equals(d.TipoItemVenta, "Producto", StringComparison.OrdinalIgnoreCase);
+
+    private List<CompanyProductDto> productosCatalogados
+        => productos.Where(cp =>
+            productosBasePorId.TryGetValue(cp.ProductId, out var p)
+            && p.ProductKind != 2)
+            .ToList();
+
+    private List<CompanyProductDto> serviciosCatalogados
+        => productos.Where(cp =>
+            productosBasePorId.TryGetValue(cp.ProductId, out var p)
+            && (p.ProductKind == 2 || !p.IsStockable))
+            .ToList();
+
+    private decimal CalcularTotalLinea(VentaDetalleDto det)
+    {
+        var baseLinea = det.Cantidad * det.PrecioUnitario;
+        var descuentoPorcentaje = baseLinea * (det.DescuentoPorcentaje / 100m);
+        var descuentoTotalLinea = descuentoPorcentaje + det.DescuentoMonto;
+        var total = baseLinea - descuentoTotalLinea + det.ImpuestoMonto;
+        return total < 0 ? 0 : decimal.Round(total, 2);
+    }
+
+    private void RecalcularTotales()
+    {
+        decimal subtotal = 0;
+        decimal descuento = 0;
+        decimal impuesto = 0;
+        decimal total = 0;
+
+        foreach (var det in form.Detalles)
+        {
+            var baseLinea = det.Cantidad * det.PrecioUnitario;
+            var descuentoPorcentaje = baseLinea * (det.DescuentoPorcentaje / 100m);
+            var descuentoLinea = descuentoPorcentaje + det.DescuentoMonto;
+            var totalLinea = CalcularTotalLinea(det);
+            det.TotalLinea = totalLinea;
+
+            subtotal += baseLinea;
+            descuento += descuentoLinea;
+            impuesto += det.ImpuestoMonto;
+            total += totalLinea;
+        }
+
+        var totalPagado = form.Pagos.Sum(x => x.Monto);
+
+        resumen.Subtotal = decimal.Round(subtotal, 2);
+        resumen.DescuentoTotal = decimal.Round(descuento, 2);
+        resumen.ImpuestoTotal = decimal.Round(impuesto, 2);
+        resumen.Total = decimal.Round(total, 2);
+        resumen.TotalPagado = decimal.Round(totalPagado, 2);
+        resumen.Saldo = decimal.Round(total - totalPagado, 2);
+    }
+
+
+
+    private static string GetEstadoSiatBadge(string? estado)
+    {
+        if (string.IsNullOrWhiteSpace(estado)) return "bg-secondary";
+
+        return estado.ToLowerInvariant() switch
+        {
+            "noenviada" => "bg-secondary",
+            "pendiente" => "bg-warning text-dark",
+            "validada" => "bg-success",
+            "rechazada" => "bg-danger",
+            "anulada" => "bg-dark",
+            _ => "bg-secondary"
+        };
+    }
+
+    private class VentaFormModel
+    {
+        public long? Id { get; set; }
+        public string NumeroVentaVisual { get; set; } = "BORRADOR";
+        public string TipoVenta { get; set; } = "Directa";
+        public string EstadoVenta { get; set; } = "Borrador";
+        public string EstadoPago { get; set; } = "Pendiente";
+        public bool FacturaGenerada { get; set; }
+        public long? PedidoVentaId { get; set; }
+        public int SucursalId { get; set; }
+        public int? AlmacenId { get; set; }
+        public DateTime FechaVenta { get; set; } = DateTime.Now;
+        public DateTime? FechaVencimientoPago { get; set; }
+        public string? MonedaCodigo { get; set; } = "BOB";
+        public decimal TipoCambio { get; set; } = 1m;
+        public string? Observaciones { get; set; }
+        public int? ClienteId { get; set; }
+        public List<VentaDetalleDto> Detalles { get; set; } = new();
+        public VentaFacturacionDatosDto FacturacionDatos { get; set; } = new()
+        {
+            Facturar = false,
+            FacturarAlMismoCliente = true
+        };
+        public List<VentaPagoDto> Pagos { get; set; } = new();
+    }
+
+    private class VentaResumenUx
+    {
+        public decimal Subtotal { get; set; }
+        public decimal DescuentoTotal { get; set; }
+        public decimal ImpuestoTotal { get; set; }
+        public decimal Total { get; set; }
+        public decimal TotalPagado { get; set; }
+        public decimal Saldo { get; set; }
+    }
+}

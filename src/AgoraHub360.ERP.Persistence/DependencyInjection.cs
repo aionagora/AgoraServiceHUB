@@ -5,6 +5,7 @@ using AgoraHub360.ERP.Domain.Interfaces;
 using AgoraHub360.ERP.Persistence.Context;
 using AgoraHub360.ERP.Persistence.Interceptors;
 using AgoraHub360.ERP.Persistence.Repositories;
+using AgoraHub360.ERP.Persistence.Repositories.FE;
 using AgoraHub360.ERP.Persistence.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -40,6 +41,12 @@ public static class DependencyInjection
 
         // WF: Workflow
         services.AddScoped<IWorkflowRepository, WorkflowRepository>();
+
+        // FE: Facturación Electrónica
+        services.AddScoped<IConfiguracionFERepository, ConfiguracionFERepository>();
+        services.AddScoped<IAuditoriaFERepository, AuditoriaFERepository>();
+        services.AddScoped<IProveedorFERepository, ProveedorFERepository>();
+        services.AddScoped<IAmbienteFERepository, AmbienteFERepository>();
 
         // Servicio de consulta de AuditLog (implementación en Persistence por acceso IQueryable)
         services.AddScoped<IAuditLogService, AuditLogService>();
