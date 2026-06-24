@@ -371,4 +371,52 @@ public class PdfReporteService : IPdfReporteService
 
         return PdfGenerator.GenerarReporteCxcVencidas(dto);
     }
+
+    public async Task<byte[]> GenerarVentaPdfAsync(long ventaId, CancellationToken ct = default)
+    {
+        var empresaId = _currentUser.EmpresaId
+            ?? throw new InvalidOperationException("No se pudo determinar la empresa activa.");
+
+        var venta = await _ventaRepo.GetByIdAsync(ventaId, ct);
+        if (venta is null || venta.EmpresaId != empresaId)
+            throw new InvalidOperationException($"Venta {ventaId} no encontrada.");
+
+        var empresa = (await _empresaRepo.FindAsync(e => e.Id == empresaId, ct)).FirstOrDefault();
+        var cliente = venta.ClienteId.HasValue && venta.ClienteId.Value > 0
+            ? await _clienteRepo.GetByIdAsync(venta.ClienteId.Value, ct)
+            : null;
+
+        var dto = new ReporteVentaDto
+        {
+            EmpresaNombre = empresa?.Nombre ?? "AgoraHUB360 ERP",
+            EmpresaNit = empresa?.NIT,
+            NumeroVenta = venta.NumeroVenta,
+            FechaVenta = venta.FechaVenta,
+            FechaVencimientoPago = venta.FechaVencimientoPago,
+            MonedaCodigo = venta.MonedaCodigo ?? "BOB",
+            TipoCambio = venta.TipoCambio,
+            ClienteNombre = cliente?.RazonSocial ?? "-",
+            ClienteNit = cliente?.NIT ?? "-",
+            Observaciones = venta.Observaciones,
+            Subtotal = venta.Subtotal,
+            DescuentoTotal = venta.DescuentoTotal,
+            Total = venta.Total,
+            Items = venta.Detalles.Select(d => new ReporteVentaItemDto
+            {
+                Item = 0,
+                Sku = d.CompanyProduct?.Sku ?? "N/D",
+                Descripcion = d.Descripcion,
+                DetalleAdicional = d.DetalleAdicional,
+                Cantidad = d.Cantidad,
+                PrecioUnitario = d.PrecioUnitario,
+                DescuentoPorcentaje = d.DescuentoPorcentaje,
+                DescuentoMonto = d.DescuentoMonto,
+                TotalLinea = d.TotalLinea
+            }).ToList()
+        };
+
+        // PDF generation pending template implementation
+        // Will use PdfGenerator.GenerarVentaPdf(dto) once the template is created
+        throw new NotImplementedException("GenerarVentaPdfAsync: Pendiente de implementación del template PDF.");
+    }
 }

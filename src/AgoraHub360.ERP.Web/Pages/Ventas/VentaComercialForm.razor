@@ -7,6 +7,7 @@
 @using AgoraHub360.ERP.Shared.DTOs.Ventas
 @using MdmClienteDto = AgoraHub360.ERP.Shared.DTOs.MDM.ClienteDto
 @inject IJSRuntime JSRuntime
+@inject FileDownloadService FileDownloadService
 @inject VentaHttpService VentaService
 @inject FacturaVentaHttpService FacturaVentaService
 @inject ClienteHttpService ClienteService
@@ -724,9 +725,9 @@
     <div class="modal fade show d-block" tabindex="-1" role="dialog" style="background-color: rgba(0, 0, 0, .5);" @onclick:stopPropagation>
         <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
             <div class="modal-content" style="border:none; border-radius:0;">
-                <div class="modal-header d-print-none" style="background:#1a1a2e; color:white; border-radius:0; padding:10px 20px;">
+                <div class="modal-header no-print" style="background:#1a1a2e; color:white; border-radius:0; padding:10px 20px;">
                     <h5 class="modal-title mb-0" style="font-size:1rem;"><i class="bi bi-printer me-2"></i>Vista previa de impresión</h5>
-                    <button type="button" class="btn-close btn-close-white" @onclick="CerrarModalImprimir" style="font-size:0.8rem;"></button>
+                    <button type="button" class="btn-close btn-close-white no-print" @onclick="CerrarModalImprimir" style="font-size:0.8rem;"></button>
                 </div>
 
                 @* ═══════ COMPROBANTE IMPRIMIBLE ═══════ *@
@@ -807,13 +808,13 @@
                     </div>
                 </div>
 
-                <div class="modal-footer d-print-none" style="border-top:1px solid #eee; padding:10px 20px;">
-                    <button type="button" class="btn btn-outline-secondary btn-sm" @onclick="CerrarModalImprimir" style="border-radius:0;">Cerrar</button>
-                    <button type="button" class="btn btn-sm" style="background:#1a1a2e; color:white; border-radius:0;" @onclick="EjecutarImpresion">
+                <div class="modal-footer no-print" style="border-top:1px solid #eee; padding:10px 20px;">
+                    <button type="button" class="btn btn-outline-secondary btn-sm no-print" @onclick="CerrarModalImprimir" style="border-radius:0;">Cerrar</button>
+                    <button type="button" class="btn btn-sm no-print" style="background:#1a1a2e; color:white; border-radius:0;" @onclick="EjecutarImpresion">
                         <i class="bi bi-printer me-1"></i> Imprimir
                     </button>
-                    <button type="button" class="btn btn-sm" style="background:#dc3545; color:white; border-radius:0;" @onclick="GenerarPdfAsync">
-                        <i class="bi bi-filetype-pdf me-1"></i> PDF
+                    <button type="button" class="btn btn-sm no-print" style="background:#0d6efd; color:white; border-radius:0;" @onclick="DescargarVentaPdfAsync">
+                        <i class="bi bi-filetype-pdf me-1"></i> Descargar PDF
                     </button>
                 </div>
             </div>
@@ -823,14 +824,25 @@
 
 @* ═══════ CSS IMPRESIÓN ═══════ *@
 <style>
+    .no-print { display: none !important; }
     @@media print {
         @@page { size: letter; margin: 12mm; }
-        body * { visibility: hidden; }
-        #venta-print-area, #venta-print-area * { visibility: visible; }
-        #venta-print-area { position: absolute; left:0; top:0; width:100%; padding:0 !important; margin:0 !important; }
-        .modal-header, .modal-footer, .btn, .btn-close { display:none !important; }
+        body * { visibility: hidden !important; }
+        #venta-print-area, #venta-print-area * { visibility: visible !important; }
+        #venta-print-area { position: absolute; left: 0; top: 0; width: 100%; }
+        .no-print { display: none !important; }
         #venta-print-area table { page-break-inside: auto; }
         #venta-print-area tr { page-break-inside: avoid; }
+        .venta-print-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        .venta-print-table th, .venta-print-table td { padding: 4px 3px; font-size: 9pt; }
+        .venta-print-table .col-item { width:6%; text-align:center; }
+        .venta-print-table .col-sku { width:13%; text-align:left; }
+        .venta-print-table .col-prod { width:28%; text-align:left; }
+        .venta-print-table .col-det { width:22%; text-align:left; }
+        .venta-print-table .col-cant { width:8%; text-align:right; }
+        .venta-print-table .col-punit { width:9%; text-align:right; }
+        .venta-print-table .col-desc { width:7%; text-align:right; }
+        .venta-print-table .col-total { width:7%; text-align:right; }
     }
 </style>
 
@@ -936,16 +948,27 @@
         await JSRuntime.InvokeVoidAsync("window.print");
     }
 
-    private async Task GenerarPdfAsync()
+    private async Task DescargarVentaPdfAsync()
     {
-        await Task.Delay(200);
-        await JSRuntime.InvokeVoidAsync("window.print");
-    }
-
-    private async Task CopiarAlPortapapelesYDescargar()
-    {
-        await Task.Delay(200);
-        await JSRuntime.InvokeVoidAsync("window.print");
+        if (IsNew || !form.Id.HasValue || form.Id.Value <= 0)
+        {
+            errorMessage = "Debe guardar la venta antes de descargar PDF.";
+            return;
+        }
+        try
+        {
+            var ventaId = form.Id.Value;
+            var fileName = string.IsNullOrWhiteSpace(form.NumeroVentaVisual)
+                ? $"Venta-{ventaId:D6}.pdf"
+                : $"Venta-{form.NumeroVentaVisual}.pdf";
+            await FileDownloadService.DownloadFromApiAsync(
+                $"api/v1/reportes/ventas/{ventaId}/pdf",
+                fileName);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"No se pudo descargar el PDF: {ex.Message}";
+        }
     }
 
     private string ObtenerNombreSucursal()
