@@ -18,6 +18,7 @@ public class PdfReporteService : IPdfReporteService
     private readonly IRepository<FacturaVenta> _facturaRepo;
     private readonly IRepository<FacturaVentaDetalle> _facturaDetalleRepo;
     private readonly IRepository<Venta> _ventaRepo;
+    private readonly IRepository<VentaDetalle> _detalleRepo;
     private readonly IRepository<VentaPago> _pagoRepo;
     private readonly IRepository<Cliente> _clienteRepo;
     private readonly IRepository<Empresa> _empresaRepo;
@@ -28,6 +29,7 @@ public class PdfReporteService : IPdfReporteService
         IRepository<FacturaVenta> facturaRepo,
         IRepository<FacturaVentaDetalle> facturaDetalleRepo,
         IRepository<Venta> ventaRepo,
+        IRepository<VentaDetalle> detalleRepo,
         IRepository<VentaPago> pagoRepo,
         IRepository<Cliente> clienteRepo,
         IRepository<Empresa> empresaRepo,
@@ -37,6 +39,7 @@ public class PdfReporteService : IPdfReporteService
         _facturaRepo = facturaRepo;
         _facturaDetalleRepo = facturaDetalleRepo;
         _ventaRepo = ventaRepo;
+        _detalleRepo = detalleRepo;
         _pagoRepo = pagoRepo;
         _clienteRepo = clienteRepo;
         _empresaRepo = empresaRepo;
@@ -386,24 +389,35 @@ public class PdfReporteService : IPdfReporteService
             ? await _clienteRepo.GetByIdAsync(venta.ClienteId.Value, ct)
             : null;
 
+        // Cargar detalles explícitamente — Repository.GetByIdAsync no hace Include
+        var detalles = (await _detalleRepo.FindAsync(d => d.VentaId == ventaId, ct))
+            .OrderBy(d => d.Id)
+            .ToList();
+
         var dto = new ReporteVentaDto
         {
             EmpresaNombre = empresa?.Nombre ?? "AgoraHUB360 ERP",
             EmpresaNit = empresa?.NIT,
+            EmpresaDireccion = empresa?.Direccion,
+            EmpresaTelefono = empresa?.Telefono,
+            EmpresaEmail = empresa?.Email,
             NumeroVenta = venta.NumeroVenta,
             FechaVenta = venta.FechaVenta,
             FechaVencimientoPago = venta.FechaVencimientoPago,
             MonedaCodigo = venta.MonedaCodigo ?? "BOB",
             TipoCambio = venta.TipoCambio,
+            Origen = venta.TipoVenta.ToString(),
+            PedidoVentaId = venta.PedidoVentaId,
             ClienteNombre = cliente?.RazonSocial ?? "-",
             ClienteNit = cliente?.NIT ?? "-",
+            ClienteDireccion = cliente?.Direccion,
+            ClienteTelefono = cliente?.Telefono,
             Observaciones = venta.Observaciones,
             Subtotal = venta.Subtotal,
             DescuentoTotal = venta.DescuentoTotal,
             Total = venta.Total,
-            Items = venta.Detalles.Select(d => new ReporteVentaItemDto
+            Items = detalles.Select(d => new ReporteVentaItemDto
             {
-                Item = 0,
                 Sku = d.CompanyProduct?.Sku ?? "N/D",
                 Descripcion = d.Descripcion,
                 DetalleAdicional = d.DetalleAdicional,
