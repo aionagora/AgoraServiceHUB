@@ -26,7 +26,11 @@
         @* ── Sección de usuario en topbar derecha ── *@
         @if (_isAuthenticated)
         {
-            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="topbar-user-area">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="topbar-user-area">
+                <MudText Typo="Typo.caption" Class="d-none d-md-inline mr-2" Style="color:white; line-height:1.1;">
+                    @EmpresaDisplay
+                </MudText>
+
                 <MudMenu AnchorOrigin="Origin.BottomRight"
                          TransformOrigin="Origin.TopRight"
                          Dense="true"
@@ -34,8 +38,7 @@
                     <ActivatorContent>
                         <MudIconButton Icon="@Icons.Material.Filled.AccountCircle"
                                        Color="Color.Inherit"
-                                       Size="@Size.Medium"
-                                       Class="ml-2" />
+                                       Size="@Size.Medium" />
                     </ActivatorContent>
                     <ChildContent>
                         <MudMenuItem Disabled="true" Class="px-3 py-2">
@@ -70,6 +73,14 @@
                         </MudMenuItem>
                     </ChildContent>
                 </MudMenu>
+
+                @* Botón de respaldo visible siempre *@
+                <MudTooltip Text="Cerrar sesión">
+                    <MudIconButton Icon="@Icons.Material.Filled.Logout"
+                                   Color="Color.Inherit"
+                                   Size="@Size.Small"
+                                   OnClick="@(async () => await LogoutAsync())" />
+                </MudTooltip>
             </MudStack>
         }
         else
