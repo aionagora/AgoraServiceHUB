@@ -24,6 +24,9 @@ public static class DependencyInjection
         // PDF: Reportes
         services.AddScoped<IPdfReporteService, PdfReporteService>();
 
+        // Importación de Plan de Cuentas
+        services.AddScoped<IPlanCuentasImportService, PlanCuentasImportService>();
+
         return services;
     }
 }
