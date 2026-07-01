@@ -27,62 +27,45 @@
         @if (_isAuthenticated)
         {
             <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2" Class="topbar-user-area">
-                <MudStack Spacing="0" Class="d-none d-md-flex text-end">
-                    <MudText Typo="Typo.caption" Style="color:white;">
-                        @EmpresaDisplay
-                    </MudText>
-                    @if (!string.IsNullOrWhiteSpace(SucursalDisplay))
-                    {
-                        <MudText Typo="Typo.caption" Style="color:rgba(255,255,255,.75);">
-                            @SucursalDisplay
-                        </MudText>
-                    }
-                </MudStack>
-
                 <MudMenu AnchorOrigin="Origin.BottomRight"
                          TransformOrigin="Origin.TopRight"
-                         Dense="true">
+                         Dense="true"
+                         Class="agora-user-menu">
                     <ActivatorContent>
-                        <MudButton Variant="Variant.Text"
-                                   Color="Color.Inherit"
-                                   Class="px-2">
-                            <MudAvatar Size="Size.Small" Color="Color.Primary">
-                                <MudIcon Icon="@Icons.Material.Filled.Person" />
-                            </MudAvatar>
-                            <MudStack Spacing="0" Class="ms-2 d-none d-md-flex text-start">
-                                <MudText Typo="Typo.body2" Style="color:white; line-height:1.1;">
-                                    @UsuarioDisplay
-                                </MudText>
-                                <MudText Typo="Typo.caption" Style="color:rgba(255,255,255,.75); line-height:1.1;">
-                                    @RolDisplay
-                                </MudText>
-                            </MudStack>
-                            <MudIcon Icon="@Icons.Material.Filled.KeyboardArrowDown"
-                                     Size="Size.Small"
-                                     Class="ms-1" />
-                        </MudButton>
+                        <MudIconButton Icon="@Icons.Material.Filled.AccountCircle"
+                                       Color="Color.Inherit"
+                                       Size="@Size.Medium"
+                                       Class="ml-2" />
                     </ActivatorContent>
                     <ChildContent>
-                        <MudPaper Class="pa-3" Elevation="0" Style="min-width:260px;">
-                            <MudText Typo="Typo.subtitle2">@UsuarioDisplay</MudText>
-                            @if (!string.IsNullOrWhiteSpace(_userEmail))
-                            {
-                                <MudText Typo="Typo.caption">@_userEmail</MudText>
-                            }
-                            <MudText Typo="Typo.caption">@RolDisplay</MudText>
-                            <MudDivider Class="my-2" />
-                            <MudText Typo="Typo.caption">Empresa: @EmpresaDisplay</MudText>
-                            @if (!string.IsNullOrWhiteSpace(SucursalDisplay))
-                            {
-                                <MudText Typo="Typo.caption">Sucursal: @SucursalDisplay</MudText>
-                            }
-                        </MudPaper>
+                        <MudMenuItem Disabled="true" Class="px-3 py-2">
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.subtitle2">@UsuarioDisplay</MudText>
+                                @if (!string.IsNullOrWhiteSpace(_userEmail))
+                                {
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@_userEmail</MudText>
+                                }
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary mt-1">@RolDisplay</MudText>
+                            </MudStack>
+                        </MudMenuItem>
+                        <MudDivider />
+                        <MudMenuItem Disabled="true" Class="px-3 py-1">
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Empresa</MudText>
+                                <MudText Typo="Typo.body2">@EmpresaDisplay</MudText>
+                                @if (!string.IsNullOrWhiteSpace(SucursalDisplay))
+                                {
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary mt-1">Sucursal</MudText>
+                                    <MudText Typo="Typo.body2">@SucursalDisplay</MudText>
+                                }
+                            </MudStack>
+                        </MudMenuItem>
                         <MudDivider />
                         <MudMenuItem Icon="@Icons.Material.Filled.AccountCircle" OnClick="@GoToProfile">
                             Mi perfil
                         </MudMenuItem>
                         <MudDivider />
-                        <MudMenuItem Icon="@Icons.Material.Filled.Logout" OnClick="@LogoutAsync">
+                        <MudMenuItem Icon="@Icons.Material.Filled.Logout" OnClick="@(async () => await LogoutAsync())">
                             Cerrar sesión
                         </MudMenuItem>
                     </ChildContent>

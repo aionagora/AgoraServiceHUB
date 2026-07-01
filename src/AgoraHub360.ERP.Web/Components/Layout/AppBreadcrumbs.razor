@@ -5,7 +5,11 @@
     <MudBreadcrumbs Class="mb-4">
         @foreach (var item in Items)
         {
-            <MudBreadcrumbsItem Href="@item.Href" Title="@item.Title" />
+            <MudLink Href="@item.Href" Typo="@Typo.body2" Class="mud-breadcrumb-link">@item.Title</MudLink>
+            @if (item != Items.Last())
+            {
+                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Size="@Size.Small" Class="mud-breadcrumb-separator" />
+            }
         }
     </MudBreadcrumbs>
 }

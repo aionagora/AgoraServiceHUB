@@ -27,9 +27,6 @@
                    Class="agora-tenant-selector"
                    AnchorOrigin="@Origin.BottomCenter"
                    Disabled="_changingEmpresa">
-            <PrependContent>
-                <MudIcon Icon="@Icons.Material.Filled.Business" Size="@Size.Small" Color="Color.Primary" />
-            </PrependContent>
             @foreach (var emp in EmpresaState.Empresas.Where(e => e.Activo))
             {
                 <MudSelectItem T="int" Value="@emp.Id">@emp.Nombre</MudSelectItem>
@@ -81,8 +78,8 @@
     @* Menú de Usuario *@
     <AuthorizeView>
         <Authorized>
-            <MudMenu Direction="@Direction.Right" Class="agora-user-menu">
-                <ActivatorContent Context="menuContext">
+            <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Class="agora-user-menu">
+                <ActivatorContent Context="menuAct">
                     <MudIconButton Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Inherit" Size="@Size.Medium" Class="ml-2" />
                 </ActivatorContent>
                 <ChildContent>
