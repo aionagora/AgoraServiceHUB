@@ -1,5 +1,6 @@
 @inherits LayoutComponentBase
 @using System.Security.Claims
+@using AgoraHub360.ERP.Shared.Constants
 @inject EmpresaHttpService EmpresaSvc
 @inject EmpresaStateService EmpresaState
 @inject SesionUsuarioStateService SesionState
@@ -21,7 +22,74 @@
                        OnClick="@ToggleDrawer" />
         <MudText Typo="Typo.h6" Class="ml-2">AgoraHUB360 ERP</MudText>
         <MudSpacer />
-        <MudText Typo="Typo.body2">Sistema ERP</MudText>
+
+        @* ── Sección de usuario en topbar derecha ── *@
+        @if (_isAuthenticated)
+        {
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="topbar-user-area">
+                <MudText Typo="Typo.caption" Class="d-none d-md-inline mr-2" Style="color:white; line-height:1.1;">
+                    @EmpresaDisplay
+                </MudText>
+
+                <MudMenu AnchorOrigin="Origin.BottomRight"
+                         TransformOrigin="Origin.TopRight"
+                         Dense="true"
+                         Class="agora-user-menu">
+                    <ActivatorContent>
+                        <MudIconButton Icon="@Icons.Material.Filled.AccountCircle"
+                                       Color="Color.Inherit"
+                                       Size="@Size.Medium" />
+                    </ActivatorContent>
+                    <ChildContent>
+                        <MudMenuItem Disabled="true" Class="px-3 py-2">
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.subtitle2">@UsuarioDisplay</MudText>
+                                @if (!string.IsNullOrWhiteSpace(_userEmail))
+                                {
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@_userEmail</MudText>
+                                }
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary mt-1">@RolDisplay</MudText>
+                            </MudStack>
+                        </MudMenuItem>
+                        <MudDivider />
+                        <MudMenuItem Disabled="true" Class="px-3 py-1">
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary">Empresa</MudText>
+                                <MudText Typo="Typo.body2">@EmpresaDisplay</MudText>
+                                @if (!string.IsNullOrWhiteSpace(SucursalDisplay))
+                                {
+                                    <MudText Typo="Typo.caption" Class="mud-text-secondary mt-1">Sucursal</MudText>
+                                    <MudText Typo="Typo.body2">@SucursalDisplay</MudText>
+                                }
+                            </MudStack>
+                        </MudMenuItem>
+                        <MudDivider />
+                        <MudMenuItem Icon="@Icons.Material.Filled.AccountCircle" OnClick="@GoToProfile">
+                            Mi perfil
+                        </MudMenuItem>
+                        <MudDivider />
+                        <MudMenuItem Icon="@Icons.Material.Filled.Logout" OnClick="@(async () => await LogoutAsync())">
+                            Cerrar sesión
+                        </MudMenuItem>
+                    </ChildContent>
+                </MudMenu>
+
+                @* Botón de respaldo visible siempre *@
+                <MudTooltip Text="Cerrar sesión">
+                    <MudIconButton Icon="@Icons.Material.Filled.Logout"
+                                   Color="Color.Inherit"
+                                   Size="@Size.Small"
+                                   OnClick="@(async () => await LogoutAsync())" />
+                </MudTooltip>
+            </MudStack>
+        }
+        else
+        {
+            <MudText Typo="Typo.body2" Style="color:white;">
+                <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Class="mr-1" />
+                No autenticado
+            </MudText>
+        }
     </MudAppBar>
 
     <MudDrawer @bind-Open="_drawerOpen"
@@ -40,11 +108,114 @@
 
 @code {
     private bool _drawerOpen = true;
+    private bool _isAuthenticated;
+    private bool _isLoaded;
+    private string _userName = "";
+    private string _userEmail = "";
+    private string _userRole = "";
+    private string _empresaName = "";
+    private string _sucursalName = "";
+
+    private string UsuarioDisplay =>
+        !string.IsNullOrWhiteSpace(_userName) ? _userName
+        : !string.IsNullOrWhiteSpace(_userEmail) ? _userEmail
+        : "Usuario";
+
+    private string EmailDisplay => _userEmail ?? "";
+    private string RolDisplay => !string.IsNullOrWhiteSpace(_userRole) ? _userRole : "—";
+    private string EmpresaDisplay => !string.IsNullOrWhiteSpace(_empresaName) ? _empresaName : "Empresa no seleccionada";
+    private string SucursalDisplay => _sucursalName ?? "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        SesionState.OnChange += async () =>
+        {
+            await InvokeAsync(LoadUserData);
+            StateHasChanged();
+        };
+
+        EmpresaState.OnChange += async () =>
+        {
+            await InvokeAsync(LoadUserData);
+            StateHasChanged();
+        };
+
+        await LoadUserData();
+    }
+
+    private async Task LoadUserData()
+    {
+        try
+        {
+            var authState = await AuthState.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            _isAuthenticated = user.Identity?.IsAuthenticated == true;
+
+            if (_isAuthenticated)
+            {
+                _userName = user.FindFirst(ClaimTypes.Name)?.Value
+                            ?? user.FindFirst("name")?.Value
+                            ?? user.FindFirst(ClaimTypes.Email)?.Value
+                            ?? "";
+
+                _userEmail = user.FindFirst(ClaimTypes.Email)?.Value
+                             ?? user.FindFirst("email")?.Value
+                             ?? "";
+
+                _userRole = SesionState.PlatformRole != Roles.None
+                    ? SesionState.PlatformRole
+                    : SesionState.TenantRole;
+
+                var empresa = EmpresaState.EmpresaActiva;
+                _empresaName = empresa?.Nombre ?? "";
+
+                var sucursalId = SesionState.SucursalActivaId;
+                _sucursalName = sucursalId.HasValue
+                    ? $"Sucursal #{sucursalId.Value}"
+                    : "";
+
+                _isLoaded = true;
+            }
+        }
+        catch
+        {
+        }
+    }
 
     private void ToggleDrawer()
     {
         _drawerOpen = !_drawerOpen;
     }
 
-    public void Dispose() { }
+    private void GoToProfile()
+    {
+        Nav.NavigateTo("/mi-perfil");
+    }
+
+    private void GoToCompanyContext()
+    {
+        Nav.NavigateTo("/cambiar-empresa");
+    }
+
+    private async Task LogoutAsync()
+    {
+        await AuthState.LogoutAsync();
+        Nav.NavigateTo("/login", forceLoad: true);
+    }
+
+    public void Dispose()
+    {
+        SesionState.OnChange -= async () =>
+        {
+            await InvokeAsync(LoadUserData);
+            StateHasChanged();
+        };
+
+        EmpresaState.OnChange -= async () =>
+        {
+            await InvokeAsync(LoadUserData);
+            StateHasChanged();
+        };
+    }
 }

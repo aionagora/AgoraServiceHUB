@@ -3,6 +3,7 @@ namespace AgoraHub360.ERP.Web.Services;
 using System.Net.Http.Json;
 using AgoraHub360.ERP.Shared.DTOs;
 using AgoraHub360.ERP.Shared.DTOs.Contabilidad;
+using AgoraHub360.ERP.Shared.DTOs.Contabilidad.Importacion;
 
 public class CuentaContableHttpService
 {
@@ -82,5 +83,30 @@ public class CuentaContableHttpService
         }
         return await response.Content.ReadFromJsonAsync<ApiResponse<int>>()
             ?? ApiResponse<int>.Fail("Error de comunicación.");
+    }
+
+    // ── Importación CSV ──
+
+    public async Task<PlanCuentaImportPreviewDto> ImportPreviewAsync(MultipartFormDataContent content)
+    {
+        var response = await _http.PostAsync($"{Base}/import-preview", content);
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<PlanCuentaImportPreviewDto>>();
+        return result?.Data ?? new PlanCuentaImportPreviewDto { CanImport = false };
+    }
+
+    public async Task<PlanCuentaImportResultDto> ImportConfirmAsync(MultipartFormDataContent content)
+    {
+        var response = await _http.PostAsync($"{Base}/import-confirm", content);
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<ApiResponse<PlanCuentaImportResultDto>>();
+        return result?.Data ?? new PlanCuentaImportResultDto();
+    }
+
+    public async Task<byte[]?> DownloadTemplateAsync()
+    {
+        var response = await _http.GetAsync($"{Base}/import-template");
+        if (!response.IsSuccessStatusCode) return null;
+        return await response.Content.ReadAsByteArrayAsync();
     }
 }

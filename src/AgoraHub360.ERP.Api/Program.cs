@@ -221,12 +221,29 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowBlazorDev", policy =>
     {
+        var origins = new List<string>
+        {
+            "http://localhost:5001",
+            "https://localhost:5002"
+        };
+
+        var blazorBaseUrl = builder.Configuration.GetValue<string>("BlazorBaseUrl");
+        if (!string.IsNullOrEmpty(blazorBaseUrl) && !origins.Contains(blazorBaseUrl))
+            origins.Add(blazorBaseUrl);
+
+        // Orígenes adicionales desde variable de entorno o configuración
+        var corsOrigins = builder.Configuration.GetValue<string>("CorsOrigins");
+        if (!string.IsNullOrEmpty(corsOrigins))
+        {
+            foreach (var origin in corsOrigins.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                if (!origins.Contains(origin))
+                    origins.Add(origin);
+            }
+        }
+
         policy
-            .WithOrigins(
-                "http://localhost:5001",
-                "https://localhost:5002",
-                builder.Configuration.GetValue<string>("BlazorBaseUrl") ?? ""
-            )
+            .WithOrigins(origins.Distinct().ToArray())
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
