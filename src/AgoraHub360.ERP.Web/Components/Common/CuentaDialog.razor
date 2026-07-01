@@ -1,0 +1,260 @@
+@namespace AgoraHub360.ERP.Web.Components.Common
+@inject CuentaContableHttpService CuentaService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="@Typo.h6">
+            <MudIcon Icon="@(IsEditing ? Icons.Material.Filled.Edit : Icons.Material.Filled.AddCircle)" Class="me-2" Color="@Color.Primary" />
+            @(IsEditing ? "Editar" : "Nueva") Cuenta Contable
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="_form" Validation="@_validation">
+            @if (!IsEditing)
+            {
+                <MudTextField @bind-Value="_codigo"
+                              Label="Código *"
+                              Placeholder="Ej: 1.1.3.06"
+                              Variant="@Variant.Outlined"
+                              Dense="true"
+                              Required="true"
+                              RequiredError="El código es requerido"
+                              Class="mb-3" />
+            }
+            else
+            {
+                <MudTextField @bind-Value="_codigo"
+                              Label="Código"
+                              Variant="@Variant.Outlined"
+                              Dense="true"
+                              Disabled="true"
+                              Class="mb-3" />
+            }
+
+            <MudTextField @bind-Value="_nombre"
+                          Label="Nombre *"
+                          Variant="@Variant.Outlined"
+                          Dense="true"
+                          Required="true"
+                          RequiredError="El nombre es requerido"
+                          Class="mb-3" />
+
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="int" @bind-Value="_tipo"
+                               Label="Tipo *"
+                               Variant="@Variant.Outlined"
+                               Dense="true"
+                               Required="true"
+                               RequiredError="Seleccione un tipo"
+                               Class="mb-3">
+                        <MudSelectItem T="int" Value="1">Activo</MudSelectItem>
+                        <MudSelectItem T="int" Value="2">Pasivo</MudSelectItem>
+                        <MudSelectItem T="int" Value="3">Patrimonio</MudSelectItem>
+                        <MudSelectItem T="int" Value="4">Ingreso</MudSelectItem>
+                        <MudSelectItem T="int" Value="5">Gasto</MudSelectItem>
+                        <MudSelectItem T="int" Value="6">Costo</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="int" @bind-Value="_naturaleza"
+                               Label="Naturaleza *"
+                               Variant="@Variant.Outlined"
+                               Dense="true"
+                               Required="true"
+                               RequiredError="Seleccione una naturaleza"
+                               Class="mb-3">
+                        <MudSelectItem T="int" Value="1">Deudora</MudSelectItem>
+                        <MudSelectItem T="int" Value="2">Acreedora</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+            </MudGrid>
+
+            @if (!IsEditing)
+            {
+                <MudGrid>
+                    <MudItem xs="12" sm="6">
+                        <MudNumericField @bind-Value="_nivel"
+                                         Label="Nivel"
+                                         Variant="@Variant.Outlined"
+                                         Dense="true"
+                                         Min="1" Max="10"
+                                         Class="mb-3" />
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <MudSelect T="string" @bind-Value="_padreId"
+                                   Label="Cuenta Padre"
+                                   Variant="@Variant.Outlined"
+                                   Dense="true"
+                                   Class="mb-3">
+                            <MudSelectItem T="string">— Ninguna (raíz) —</MudSelectItem>
+                            @foreach (var c in AllCuentas.Where(x => !x.PermiteMovimientos).OrderBy(x => x.Codigo))
+                            {
+                                <MudSelectItem T="string" Value="@c.CuentaContableId.ToString()">@c.Codigo — @c.Nombre</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                </MudGrid>
+            }
+
+            <MudSwitch @bind-Value="_permiteMovimientos"
+                       Color="@Color.Primary"
+                       Class="mb-3">
+                <MudText Typo="@Typo.body2">Permite movimientos (cuenta de detalle)</MudText>
+            </MudSwitch>
+
+            <MudTextField @bind-Value="_descripcion"
+                          Label="Descripción"
+                          Variant="@Variant.Outlined"
+                          Dense="true"
+                          Lines="2"
+                          MaxLines="4" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="@Variant.Text" Color="@Color.Default" OnClick="Cancel">Cancelar</MudButton>
+        <MudButton Variant="@Variant.Filled"
+                   Color="@Color.Primary"
+                   Disabled="@_saving"
+                   OnClick="Save">
+            @if (_saving)
+            {
+                <MudProgressCircular Indeterminate="true" Size="@Size.Small" Class="me-1" />
+            }
+            <MudIcon Icon="@Icons.Material.Filled.Save" Class="me-1" Size="@Size.Small" />
+            @(IsEditing ? "Actualizar" : "Crear")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private IMudDialogInstance? MudDialog { get; set; }
+
+    [Parameter] public bool IsEditing { get; set; }
+    [Parameter] public List<CuentaContableDto> AllCuentas { get; set; } = new();
+    [Parameter] public CuentaContableDto? CuentaEditando { get; set; }
+    [Parameter] public CuentaContableDto? PadreCuenta { get; set; }
+
+    private MudForm? _form;
+    private bool _saving;
+
+    private string _codigo = "";
+    private string _nombre = "";
+    private int _tipo = 1;
+    private int _naturaleza = 1;
+    private int _nivel = 1;
+    private string? _padreId;
+    private bool _permiteMovimientos;
+    private string? _descripcion;
+
+    private Func<object, string?, string?> _validation => (model, _) =>
+    {
+        if (string.IsNullOrWhiteSpace(_codigo) && !IsEditing)
+            return "El código es requerido";
+        if (string.IsNullOrWhiteSpace(_nombre))
+            return "El nombre es requerido";
+        return null;
+    };
+
+    protected override void OnInitialized()
+    {
+        if (IsEditing && CuentaEditando is not null)
+        {
+            _codigo = CuentaEditando.Codigo;
+            _nombre = CuentaEditando.Nombre;
+            _tipo = TipoToNumber(CuentaEditando.Tipo);
+            _naturaleza = CuentaEditando.Naturaleza == "Acreedora" ? 2 : 1;
+            _nivel = CuentaEditando.Nivel;
+            _padreId = CuentaEditando.CuentaPadreId?.ToString();
+            _permiteMovimientos = CuentaEditando.PermiteMovimientos;
+            _descripcion = CuentaEditando.Descripcion;
+        }
+        else if (PadreCuenta is not null)
+        {
+            _codigo = PadreCuenta.Codigo + ".";
+            _tipo = TipoToNumber(PadreCuenta.Tipo);
+            _naturaleza = PadreCuenta.Naturaleza == "Acreedora" ? 2 : 1;
+            _nivel = PadreCuenta.Nivel + 1;
+            _padreId = PadreCuenta.CuentaContableId.ToString();
+        }
+    }
+
+    private void Cancel() => MudDialog?.Cancel();
+
+    private async Task Save()
+    {
+        await _form!.ValidateAsync();
+        if (!_form.IsValid) return;
+
+        _saving = true;
+        try
+        {
+            if (IsEditing && CuentaEditando is not null)
+            {
+                var dto = new UpdateCuentaContableDto
+                {
+                    Nombre = _nombre,
+                    Tipo = (byte)_tipo,
+                    Naturaleza = (byte)_naturaleza,
+                    PermiteMovimientos = _permiteMovimientos,
+                    Descripcion = _descripcion
+                };
+                var r = await CuentaService.UpdateAsync(CuentaEditando.CuentaContableId, dto);
+                if (r.Success)
+                {
+                    Snackbar.Add($"Cuenta {_codigo} actualizada.", Severity.Success);
+                    MudDialog?.Close(DialogResult.Ok(true));
+                }
+                else
+                {
+                    Snackbar.Add(r.Message ?? "Error al actualizar", Severity.Error);
+                }
+            }
+            else
+            {
+                int? padreId = !string.IsNullOrWhiteSpace(_padreId) && int.TryParse(_padreId, out var pid) ? pid : null;
+                var dto = new CreateCuentaContableDto
+                {
+                    Codigo = _codigo,
+                    Nombre = _nombre,
+                    Tipo = (byte)_tipo,
+                    Naturaleza = (byte)_naturaleza,
+                    Nivel = _nivel,
+                    CuentaPadreId = padreId,
+                    PermiteMovimientos = _permiteMovimientos,
+                    Descripcion = _descripcion
+                };
+                var r = await CuentaService.CreateAsync(dto);
+                if (r.Success)
+                {
+                    Snackbar.Add($"Cuenta {_codigo} creada.", Severity.Success);
+                    MudDialog?.Close(DialogResult.Ok(true));
+                }
+                else
+                {
+                    Snackbar.Add(r.Message ?? "Error al crear", Severity.Error);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private static int TipoToNumber(string tipo) => tipo switch
+    {
+        "Activo" => 1,
+        "Pasivo" => 2,
+        "Patrimonio" => 3,
+        "Ingreso" => 4,
+        "Gasto" => 5,
+        "Costo" => 6,
+        _ => 1
+    };
+}

@@ -2,6 +2,7 @@ namespace AgoraHub360.ERP.Application.Interfaces;
 
 using AgoraHub360.ERP.Application.Common;
 using AgoraHub360.ERP.Shared.DTOs.Contabilidad;
+using AgoraHub360.ERP.Shared.DTOs.Contabilidad.Importacion;
 
 public interface ICuentaContableService
 {
@@ -29,4 +30,12 @@ public interface ICuentaContableService
 
     /// <summary>Genera el plan de cuentas estándar Bolivia/NIIF para la empresa activa.</summary>
     Task<Result<int>> SeedPlanCuentasAsync(CancellationToken ct = default);
+
+    // ── Importación CSV ─────────────────────────────────────────────────────
+
+    /// <summary>Valida un CSV y devuelve vista previa con errores.</summary>
+    Task<Result<PlanCuentaImportPreviewDto>> PreviewImportAsync(string csvContent, CancellationToken ct = default);
+
+    /// <summary>Ejecuta la importación confirmada de un CSV válido.</summary>
+    Task<Result<PlanCuentaImportResultDto>> ConfirmImportAsync(string csvContent, CancellationToken ct = default);
 }

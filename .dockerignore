@@ -1,0 +1,69 @@
+# ─────────────────────────────────────────────────────────────
+# .dockerignore — AgoraHub360 ERP
+# Excluye archivos innecesarios del contexto de build Docker
+# ─────────────────────────────────────────────────────────────
+
+# ── .NET ─────────────────────────────────────────────────────
+**/bin/
+**/obj/
+**/*.user
+**/*.suo
+
+# ── Git ──────────────────────────────────────────────────────
+.git/
+.gitignore
+.gitattributes
+
+# ── Node / npm ───────────────────────────────────────────────
+node_modules/
+package-lock.json
+
+# ── Entorno local ────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── Exportación Docker (imágenes .tar) ──────────────────────
+DockerExport/
+*.tar
+
+# ── Resultados de diagnóstico ───────────────────────────────
+diagnose-*.ps1
+quick-db-test.ps1
+reset-*.ps1
+reset-admin-*.sql
+FASE_B_*.sql
+MigrateSucursalesSQL.sql
+diagnostico-conexiones.ps1
+Limpieza_Ventas_Productos.sql
+fix-tenant-required.ps1
+fix-tenant-required.sql
+CUSTOM-PASSWORD-SETUP.md
+RESET-ADMIN-*.md
+reset-admin-user.ps1
+verify-admin-user.ps1
+verify-mdm-*.ps1
+test-*.ps1
+start-system.ps1
+iniciar-sistema.ps1
+
+# ── IDE / Editor ─────────────────────────────────────────────
+.vs/
+.vscode/
+.idea/
+*.swp
+*.sln.DotSettings.user
+
+# ── Documentación y scripts locales ──────────────────────────
+docs/
+*.md
+*.bat
+*.ps1
+*.sh
+*.txt
+docker-compose.yml
+.env.example
+COMMIT_MESSAGE.txt
+
+# ── Tests (no van a producción) ──────────────────────────────
+tests/

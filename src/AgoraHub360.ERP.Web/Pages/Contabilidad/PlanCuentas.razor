@@ -2,290 +2,426 @@
 @attribute [Authorize]
 @inject CuentaContableHttpService CuentaService
 @inject IJSRuntime JS
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
 
 <PageTitle>Plan de Cuentas - AgoraHub360 ERP</PageTitle>
 
-<div class="container-fluid">
-    <div class="row mb-3">
-        <div class="col">
-            <h3><i class="bi bi-journal-bookmark-fill"></i> Plan de Cuentas</h3>
-            <p class="text-muted mb-0">Estructura jerárquica del plan de cuentas contable</p>
-        </div>
-        <div class="col-auto d-flex gap-2">
-            <button class="btn btn-outline-success" @onclick="SeedPlanCuentas" disabled="@seeding">
-                @if (seeding) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                <i class="bi bi-magic"></i> Generar Plan Estándar
-            </button>
-            <button class="btn btn-primary" @onclick="ShowCreateModal">
-                <i class="bi bi-plus-circle"></i> Nueva Cuenta
-            </button>
-        </div>
-    </div>
+<AppPageHeader Title="Plan de Cuentas"
+               Subtitle="Estructura jerárquica del plan de cuentas contable"
+               Icon="@Icons.Material.Filled.AccountBalance">
+    <Actions>
+        <MudButton Variant="@Variant.Outlined"
+                   Color="@Color.Success"
+                   StartIcon="@Icons.Material.Filled.AutoAwesome"
+                   Disabled="@seeding"
+                   OnClick="@SeedPlanCuentas">
+            Generar Plan Estándar
+        </MudButton>
+        <MudButton Variant="@Variant.Filled"
+                   Color="@Color.Primary"
+                   StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="@ShowCreateModal">
+            Nueva Cuenta
+        </MudButton>
+    </Actions>
+</AppPageHeader>
 
-    @if (!string.IsNullOrEmpty(successMessage))
-    {
-        <div class="alert alert-success alert-dismissible fade show">
-            <i class="bi bi-check-circle-fill"></i> @successMessage
-            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
-        </div>
-    }
-    @if (!string.IsNullOrEmpty(errorMessage))
-    {
-        <div class="alert alert-danger alert-dismissible fade show">
-            <i class="bi bi-exclamation-triangle-fill"></i> @errorMessage
-            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
-        </div>
-    }
-
-    @* ?? Filtros ?? *@
-    <div class="card mb-3">
-        <div class="card-body py-2">
-            <div class="row g-2 align-items-end">
-                <div class="col-md-3">
-                    <label class="form-label mb-1 small">Buscar</label>
-                    <input class="form-control form-control-sm" @bind="searchText" @bind:event="oninput" placeholder="Código o nombre..." />
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label mb-1 small">Vista</label>
-                    <select class="form-select form-select-sm" @bind="viewMode">
-                        <option value="tree">Árbol</option>
-                        <option value="flat">Lista plana</option>
-                    </select>
-                </div>
-                <div class="col-md-auto">
-                    <button class="btn btn-sm btn-outline-secondary" @onclick="LoadData"><i class="bi bi-arrow-clockwise"></i> Recargar</button>
-                    @if (viewMode == "tree")
-                    {
-                        <button class="btn btn-sm btn-outline-secondary ms-1" @onclick="ExpandAll"><i class="bi bi-arrows-expand"></i> Expandir</button>
-                        <button class="btn btn-sm btn-outline-secondary ms-1" @onclick="CollapseAll"><i class="bi bi-arrows-collapse"></i> Colapsar</button>
-                    }
-                </div>
-                <div class="col-md-auto ms-auto">
-                    <span class="badge bg-secondary">@allCuentas.Count cuentas</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    @* ?? Contenido ?? *@
-    <div class="card">
-        <div class="card-body p-0">
-            @if (loading)
-            {
-                <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
-            }
-            else if (allCuentas.Count == 0)
-            {
-                <div class="text-center py-5">
-                    <i class="bi bi-journal-x" style="font-size:2.5rem;"></i>
-                    <p class="text-muted mt-3">No hay cuentas contables. Use <strong>"Generar Plan Estándar"</strong> para crear el plan de cuentas Bolivia/NIIF.</p>
-                </div>
-            }
-            else if (viewMode == "tree")
-            {
-                <div class="table-responsive">
-                    <table class="table table-sm table-hover mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Código</th>
-                                <th>Nombre</th>
-                                <th>Tipo</th>
-                                <th>Naturaleza</th>
-                                <th class="text-center">Movimientos</th>
-                                <th class="text-end">Saldo</th>
-                                <th class="text-end">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var row in flatTreeRows)
-                            {
-                                @if (IsRowVisible(row) && MatchesSearch(row.Cuenta))
-                                {
-                                    <tr class="@(row.Cuenta.PermiteMovimientos ? "" : "table-light")">
-                                        <td style="padding-left:@(20 + row.Depth * 24)px">
-                                            @if (row.Cuenta.SubCuentas.Count > 0)
-                                            {
-                                                <button class="btn btn-sm btn-link p-0 me-1 text-dark" @onclick="() => ToggleExpand(row.Cuenta.Codigo)">
-                                                    <i class="bi @(expandedCodes.Contains(row.Cuenta.Codigo) ? "bi-chevron-down" : "bi-chevron-right")"></i>
-                                                </button>
-                                            }
-                                            else
-                                            {
-                                                <span style="display:inline-block;width:20px;"></span>
-                                            }
-                                            <code class="fw-bold">@row.Cuenta.Codigo</code>
-                                        </td>
-                                        <td>
-                                            @if (!row.Cuenta.PermiteMovimientos)
-                                            {
-                                                <strong>@row.Cuenta.Nombre</strong>
-                                            }
-                                            else
-                                            {
-                                                @row.Cuenta.Nombre
-                                            }
-                                        </td>
-                                        <td><span class="badge @GetTipoBadge(row.Cuenta.Tipo)">@row.Cuenta.Tipo</span></td>
-                                        <td><small>@row.Cuenta.Naturaleza</small></td>
-                                        <td class="text-center">@(row.Cuenta.PermiteMovimientos ? "?" : "—")</td>
-                                        <td class="text-end">@(row.Cuenta.SaldoActual != 0 ? row.Cuenta.SaldoActual.ToString("N2") : "—")</td>
-                                        <td class="text-end">
-                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditModal(row.Cuenta)" title="Editar"><i class="bi bi-pencil"></i></button>
-                                            @if (!row.Cuenta.PermiteMovimientos)
-                                            {
-                                                <button class="btn btn-sm btn-outline-success ms-1" @onclick="() => ShowCreateChildModal(row.Cuenta)" title="Agregar subcuenta"><i class="bi bi-plus"></i></button>
-                                            }
-                                            @if (row.Cuenta.SaldoActual == 0 && row.Cuenta.SubCuentas.Count == 0)
-                                            {
-                                                <button class="btn btn-sm btn-outline-danger ms-1" @onclick="() => DeleteCuenta(row.Cuenta)" title="Eliminar"><i class="bi bi-trash"></i></button>
-                                            }
-                                        </td>
-                                    </tr>
-                                }
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
-            else
-            {
-                <div class="table-responsive">
-                    <table class="table table-sm table-hover mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Código</th>
-                                <th>Nombre</th>
-                                <th>Tipo</th>
-                                <th>Naturaleza</th>
-                                <th>Nivel</th>
-                                <th>Padre</th>
-                                <th class="text-center">Mov.</th>
-                                <th class="text-end">Saldo</th>
-                                <th class="text-end">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var c in FilterFlat(allCuentas))
-                            {
-                                <tr>
-                                    <td><code class="fw-bold">@c.Codigo</code></td>
-                                    <td>@c.Nombre</td>
-                                    <td><span class="badge @GetTipoBadge(c.Tipo)">@c.Tipo</span></td>
-                                    <td><small>@c.Naturaleza</small></td>
-                                    <td><span class="badge bg-light text-dark">N@c.Nivel</span></td>
-                                    <td><small class="text-muted">@(c.CuentaPadreCodigo ?? "—")</small></td>
-                                    <td class="text-center">@(c.PermiteMovimientos ? "?" : "—")</td>
-                                    <td class="text-end">@(c.SaldoActual != 0 ? c.SaldoActual.ToString("N2") : "—")</td>
-                                    <td class="text-end">
-                                        <button class="btn btn-sm btn-outline-primary" @onclick="() => ShowEditModal(c)" title="Editar"><i class="bi bi-pencil"></i></button>
-                                        <button class="btn btn-sm btn-outline-success ms-1" @onclick="() => ShowCreateChildModal(c)" title="Agregar subcuenta"><i class="bi bi-plus"></i></button>
-                                        @if (c.SaldoActual == 0)
-                                        {
-                                            <button class="btn btn-sm btn-outline-danger ms-1" @onclick="() => DeleteCuenta(c)" title="Eliminar"><i class="bi bi-trash"></i></button>
-                                        }
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
-                </div>
-            }
-        </div>
-    </div>
-</div>
-
-@* ?????? Modal Crear/Editar ?????? *@
-@if (showModal)
+@* ── Alertas ── *@
+@if (!string.IsNullOrEmpty(successMessage))
 {
-    <div class="modal show d-block" tabindex="-1" style="background-color:rgba(0,0,0,0.5);">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-journal-plus"></i> @(isEditing ? "Editar" : "Nueva") Cuenta Contable</h5>
-                    <button type="button" class="btn-close" @onclick="CloseModal"></button>
-                </div>
-                <div class="modal-body">
-                    @if (!isEditing)
-                    {
-                        <div class="mb-3">
-                            <label class="form-label">Código *</label>
-                            <input class="form-control" @bind="formCodigo" placeholder="Ej: 1.1.3.06" />
-                        </div>
-                    }
-                    else
-                    {
-                        <div class="mb-3">
-                            <label class="form-label">Código</label>
-                            <input class="form-control" value="@formCodigo" disabled />
-                        </div>
-                    }
-                    <div class="mb-3">
-                        <label class="form-label">Nombre *</label>
-                        <input class="form-control" @bind="formNombre" />
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Tipo *</label>
-                            <select class="form-select" @bind="formTipo">
-                                <option value="1">Activo</option>
-                                <option value="2">Pasivo</option>
-                                <option value="3">Patrimonio</option>
-                                <option value="4">Ingreso</option>
-                                <option value="5">Gasto</option>
-                                <option value="6">Costo</option>
-                            </select>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label">Naturaleza *</label>
-                            <select class="form-select" @bind="formNaturaleza">
-                                <option value="1">Deudora</option>
-                                <option value="2">Acreedora</option>
-                            </select>
-                        </div>
-                    </div>
-                    @if (!isEditing)
-                    {
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Nivel</label>
-                                <input type="number" min="1" max="10" class="form-control" @bind="formNivel" />
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Cuenta Padre</label>
-                                <select class="form-select" @bind="formPadreId">
-                                    <option value="">— Ninguna (raíz) —</option>
-                                    @foreach (var c in allCuentas.Where(x => !x.PermiteMovimientos).OrderBy(x => x.Codigo))
-                                    {
-                                        <option value="@c.CuentaContableId">@c.Codigo — @c.Nombre</option>
-                                    }
-                                </select>
-                            </div>
-                        </div>
-                    }
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="chkMov" @bind="formPermiteMovimientos" />
-                            <label class="form-check-label" for="chkMov">Permite movimientos (cuenta de detalle)</label>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Descripción</label>
-                        <textarea class="form-control" rows="2" @bind="formDescripcion"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" @onclick="CloseModal">Cancelar</button>
-                    <button class="btn btn-primary" @onclick="SaveCuenta" disabled="@(saving || string.IsNullOrWhiteSpace(formCodigo) || string.IsNullOrWhiteSpace(formNombre))">
-                        @if (saving) { <span class="spinner-border spinner-border-sm me-1"></span> }
-                        @(isEditing ? "Actualizar" : "Crear")
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <MudAlert Severity="@Severity.Success" Variant="@Variant.Filled" Dense="true" Class="mb-4">
+        <MudText Typo="@Typo.body2">@successMessage</MudText>
+    </MudAlert>
+}
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <MudAlert Severity="@Severity.Error" Variant="@Variant.Filled" Dense="true" Class="mb-4">
+        <MudText Typo="@Typo.body2">@errorMessage</MudText>
+    </MudAlert>
 }
 
+@* ── Filtros y Acciones ── *@
+<AppSectionCard Title="Filtros" Subtitle="Buscar cuentas por código o nombre">
+    <Actions>
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="@Size.Small" OnClick="@LoadData" Title="Recargar" />
+        @if (viewMode == "tree")
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.UnfoldMore" Size="@Size.Small" OnClick="@ExpandAll" Title="Expandir todo" />
+            <MudIconButton Icon="@Icons.Material.Filled.UnfoldLess" Size="@Size.Small" OnClick="@CollapseAll" Title="Colapsar todo" />
+        }
+    </Actions>
+    <ChildContent>
+        <MudGrid>
+            <MudItem xs="12" sm="6" md="4">
+                <MudTextField @bind-Value="searchText"
+                              Label="Buscar"
+                              Placeholder="Código o nombre..."
+                              Variant="@Variant.Outlined"
+                              Dense="true"
+                              Clearable="true"
+                              For="@(() => searchText)" />
+            </MudItem>
+            <MudItem xs="6" sm="3" md="2">
+                <MudSelect T="string" @bind-Value="viewMode"
+                           Label="Vista"
+                           Variant="@Variant.Outlined"
+                           Dense="true">
+                    <MudSelectItem T="string" Value="@("tree")">Árbol</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("flat")">Lista plana</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="6" sm="3" md="2" Class="d-flex align-items-end">
+                <MudText Typo="@Typo.body2" Class="mud-text-secondary">
+                    @allCuentas.Count cuentas
+                </MudText>
+            </MudItem>
+        </MudGrid>
+    </ChildContent>
+</AppSectionCard>
+
+@* ── Importar desde CSV ── *@
+<MudPaper Elevation="1" Class="pa-4 mb-6">
+    <MudText Typo="@Typo.subtitle1" Class="mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.FileUpload" Class="me-2" Color="@Color.Primary" />
+        Importar desde CSV
+    </MudText>
+    <MudGrid>
+        <MudItem xs="12" sm="8" md="6">
+            <InputFile OnChange="@(args => OnFileSelected(args.GetMultipleFiles().ToArray()))" accept=".csv" />
+            @if (_selectedFileName is not null)
+            {
+                <MudText Typo="@Typo.body2" Class="mt-2 mud-text-secondary">@_selectedFileName</MudText>
+            }
+        </MudItem>
+    </MudGrid>
+    @if (_selectedFileName is not null)
+    {
+        <MudGrid Class="mt-2">
+            <MudItem>
+                <MudButton Variant="@Variant.Filled"
+                           Color="@Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Preview"
+                           Disabled="@_previewLoading"
+                           OnClick="@PreviewImport">
+                    Vista previa
+                </MudButton>
+            </MudItem>
+            <MudItem>
+                <MudButton Variant="@Variant.Filled"
+                           Color="@Color.Success"
+                           StartIcon="@Icons.Material.Filled.PlayArrow"
+                           Disabled="@(!_previewDone || _hasPreviewErrors || _importLoading)"
+                           OnClick="@ConfirmImport">
+                    Importar
+                </MudButton>
+            </MudItem>
+            <MudItem Class="d-flex align-items-center">
+                <MudButton Variant="@Variant.Text"
+                           Color="@Color.Default"
+                           StartIcon="@Icons.Material.Filled.Clear"
+                           OnClick="@ClearImport">
+                    Cancelar
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    }
+    @if (_previewLoading)
+    {
+        <MudProgressCircular Indeterminate="true" Size="@Size.Small" Class="mt-4" />
+    }
+    @if (_importResult is not null)
+    {
+        <MudAlert Severity="@(_importResult.Errors == 0 ? Severity.Success : Severity.Warning)"
+                  Variant="@Variant.Filled"
+                  Class="mt-4">
+            <MudText>
+                @(_importResult.Errors == 0
+                    ? $"✓ Se importaron {_importResult.Created} cuentas correctamente."
+                    : $"⚠ Se importaron {_importResult.Created} cuentas, {_importResult.Skipped} omitidas, {_importResult.Errors} errores.")
+            </MudText>
+        </MudAlert>
+        @if (_importResult.ErrorRows.Count > 0)
+        {
+            <MudTable Items="@_importResult.ErrorRows" Dense="true" Hover="true" Class="mt-2">
+                <HeaderContent>
+                    <MudTh>Fila</MudTh>
+                    <MudTh>Error</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@(context.Fila?.ToString() ?? "—")</MudTd>
+                    <MudTd><MudText Color="@Color.Error">@context.Mensaje</MudText></MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    }
+    @if (_previewResult is not null && _previewDone)
+    {
+        <MudAlert Severity="@(_previewResult.CanImport ? Severity.Success : Severity.Warning)"
+                  Variant="@Variant.Outlined"
+                  Class="mt-4">
+            <MudText>
+                @(_previewResult.CanImport
+                    ? $"✓ {_previewResult.ValidRows} cuentas válidas listas para importar (\"{_previewResult.FileName}\")."
+                    : $"⚠ {_previewResult.TotalRows} filas procesadas: {_previewResult.ValidRows} válidas, {_previewResult.InvalidRows} inválidas.")
+            </MudText>
+        </MudAlert>
+        @if (_previewResult.Rows.Any(r => !r.IsValid))
+        {
+            <MudTable Items="@_previewResult.Rows.Where(r => !r.IsValid)" Dense="true" Hover="true" Class="mt-2">
+                <HeaderContent>
+                    <MudTh>Fila</MudTh>
+                    <MudTh>Código</MudTh>
+                    <MudTh>Errores</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.RowNumber</MudTd>
+                    <MudTd><MudText Typo="@Typo.body2" Class="font-weight-bold">@context.Codigo</MudText></MudTd>
+                    <MudTd>
+                        @foreach (var err in context.Errors)
+                        {
+                            <MudText Color="@Color.Error" Typo="@Typo.caption">@err</MudText>
+                        }
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+        @if (_previewResult.Rows.Any(r => r.IsValid))
+        {
+            <MudTable Items="@_previewResult.Rows.Where(r => r.IsValid)" Dense="true" Hover="true" Class="mt-2">
+                <HeaderContent>
+                    <MudTh>#</MudTh>
+                    <MudTh>Código</MudTh>
+                    <MudTh>Nombre</MudTh>
+                    <MudTh>Tipo</MudTh>
+                    <MudTh>Nivel</MudTh>
+                    <MudTh>Padre</MudTh>
+                    <MudTh style="text-align:center;">Mov.</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd><MudText Typo="@Typo.caption" Class="mud-text-secondary">@context.RowNumber</MudText></MudTd>
+                    <MudTd><MudText Typo="@Typo.body2" Class="font-weight-bold">@context.Codigo</MudText></MudTd>
+                    <MudTd><MudText Typo="@Typo.body2">@context.Nombre</MudText></MudTd>
+                    <MudTd><AppStatusChip Status="@context.TipoCuenta" /></MudTd>
+                    <MudTd><MudChip T="string" Size="@Size.Small">N@(context.Nivel)</MudChip></MudTd>
+                    <MudTd><MudText Typo="@Typo.body2" Class="mud-text-secondary">@(context.CodigoPadre ?? "—")</MudText></MudTd>
+                    <MudTd Style="text-align:center;">
+                        @if (context.EsMovimiento)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="@Size.Small" Color="@Color.Success" />
+                        }
+                        else
+                        {
+                            <MudText Typo="@Typo.body2" Class="mud-text-disabled">—</MudText>
+                        }
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    }
+</MudPaper>
+
+@* ── Contenido ── *@
+@if (loading)
+{
+    <AppLoadingState Message="Cargando plan de cuentas..." />
+}
+else if (allCuentas.Count == 0)
+{
+    <AppEmptyState Title="No hay cuentas contables"
+                   Description="Use 'Generar Plan Estándar' para crear el plan de cuentas Bolivia/NIIF o agregue cuentas manualmente."
+                   Icon="@Icons.Material.Filled.AccountBalance">
+        <Actions>
+            <MudButton Variant="@Variant.Filled"
+                       Color="@Color.Success"
+                       StartIcon="@Icons.Material.Filled.AutoAwesome"
+                       OnClick="@SeedPlanCuentas">
+                Generar Plan Estándar
+            </MudButton>
+        </Actions>
+    </AppEmptyState>
+}
+else if (viewMode == "tree")
+{
+    <MudPaper Elevation="1" Class="pa-0">
+        <MudTable Items="@flatTreeRows"
+                  Hover="true"
+                  Dense="true"
+                  Class="mb-0">
+            <HeaderContent>
+                <MudTh><MudTableSortLabel SortBy="new Func<FlatTreeRow, object>(r => r.Cuenta.Codigo)">Código</MudTableSortLabel></MudTh>
+                <MudTh>Nombre</MudTh>
+                <MudTh>Tipo</MudTh>
+                <MudTh>Naturaleza</MudTh>
+                <MudTh Style="text-align:center;">Mov.</MudTh>
+                <MudTh Style="text-align:end;">Saldo</MudTh>
+                <MudTh Style="text-align:end;">Acciones</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                @{
+                    var row = context;
+                    var visible = IsRowVisible(row) && MatchesSearch(row.Cuenta);
+                }
+                @if (visible)
+                {
+                    <MudTr Class="@(row.Cuenta.PermiteMovimientos ? "" : "mud-theme-override")">
+                        <MudTd Style="@($"padding-left:{20 + row.Depth * 24}px")">
+                            @if (row.Cuenta.SubCuentas.Count > 0)
+                            {
+                                <MudIconButton Size="@Size.Small"
+                                               Icon="@(expandedCodes.Contains(row.Cuenta.Codigo) ? Icons.Material.Filled.ExpandMore : Icons.Material.Filled.ChevronRight)"
+                                               OnClick="() => ToggleExpand(row.Cuenta.Codigo)" />
+                            }
+                            else
+                            {
+                                <span style="display:inline-block;width:36px;"></span>
+                            }
+                            <MudText Typo="@Typo.body2" Class="font-weight-bold mud-primary-text" Style="display:inline;">@row.Cuenta.Codigo</MudText>
+                        </MudTd>
+                        <MudTd>
+                            @if (!row.Cuenta.PermiteMovimientos)
+                            {
+                                <MudText Typo="@Typo.body2" Class="font-weight-bold">@row.Cuenta.Nombre</MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="@Typo.body2">@row.Cuenta.Nombre</MudText>
+                            }
+                        </MudTd>
+                        <MudTd>
+                            <AppStatusChip Status="@row.Cuenta.Tipo" />
+                        </MudTd>
+                        <MudTd><MudText Typo="@Typo.body2">@row.Cuenta.Naturaleza</MudText></MudTd>
+                        <MudTd Style="text-align:center;">
+                            @if (row.Cuenta.PermiteMovimientos)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="@Size.Small" Color="@Color.Success" />
+                            }
+                            else
+                            {
+                                <MudText Typo="@Typo.body2" Class="mud-text-disabled">—</MudText>
+                            }
+                        </MudTd>
+                        <MudTd Style="text-align:end;">
+                            @if (row.Cuenta.SaldoActual != 0)
+                            {
+                                <MudText Typo="@Typo.body2">@row.Cuenta.SaldoActual.ToString("N2")</MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="@Typo.body2" Class="mud-text-disabled">—</MudText>
+                            }
+                        </MudTd>
+                        <MudTd Style="text-align:end;">
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                           Size="@Size.Small"
+                                           Color="@Color.Primary"
+                                           OnClick="() => ShowEditModal(row.Cuenta)"
+                                           Title="Editar" />
+                            @if (!row.Cuenta.PermiteMovimientos)
+                            {
+                                <MudIconButton Icon="@Icons.Material.Filled.AddCircleOutline"
+                                               Size="@Size.Small"
+                                               Color="@Color.Success"
+                                               OnClick="() => ShowCreateChildModal(row.Cuenta)"
+                                               Title="Agregar subcuenta" />
+                            }
+                            @if (row.Cuenta.SaldoActual == 0 && row.Cuenta.SubCuentas.Count == 0)
+                            {
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                               Size="@Size.Small"
+                                               Color="@Color.Error"
+                                               OnClick="() => ConfirmDeleteCuenta(row.Cuenta)"
+                                               Title="Eliminar" />
+                            }
+                        </MudTd>
+                    </MudTr>
+                }
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+}
+else
+{
+    <MudPaper Elevation="1" Class="pa-0">
+        <MudTable Items="@FilterFlat(allCuentas)"
+                  Hover="true"
+                  Dense="true"
+                  Class="mb-0">
+            <HeaderContent>
+                <MudTh>Código</MudTh>
+                <MudTh>Nombre</MudTh>
+                <MudTh>Tipo</MudTh>
+                <MudTh>Naturaleza</MudTh>
+                <MudTh>Nivel</MudTh>
+                <MudTh>Padre</MudTh>
+                <MudTh Style="text-align:center;">Mov.</MudTh>
+                <MudTh Style="text-align:end;">Saldo</MudTh>
+                <MudTh Style="text-align:end;">Acciones</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                @{
+                    var c = context;
+                }
+                <MudTr>
+                    <MudTd><MudText Typo="@Typo.body2" Class="font-weight-bold mud-primary-text">@c.Codigo</MudText></MudTd>
+                    <MudTd><MudText Typo="@Typo.body2">@c.Nombre</MudText></MudTd>
+                    <MudTd>
+                        <AppStatusChip Status="@c.Tipo" />
+                    </MudTd>
+                    <MudTd><MudText Typo="@Typo.body2">@c.Naturaleza</MudText></MudTd>
+                    <MudTd><MudChip T="string" Size="@Size.Small" Color="@Color.Default">N@(c.Nivel)</MudChip></MudTd>
+                    <MudTd><MudText Typo="@Typo.body2" Class="mud-text-secondary">@(c.CuentaPadreCodigo ?? "—")</MudText></MudTd>
+                    <MudTd Style="text-align:center;">
+                        @if (c.PermiteMovimientos)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="@Size.Small" Color="@Color.Success" />
+                        }
+                        else
+                        {
+                            <MudText Typo="@Typo.body2" Class="mud-text-disabled">—</MudText>
+                        }
+                    </MudTd>
+                    <MudTd Style="text-align:end;">
+                        @if (c.SaldoActual != 0)
+                        {
+                            <MudText Typo="@Typo.body2">@c.SaldoActual.ToString("N2")</MudText>
+                        }
+                        else
+                        {
+                            <MudText Typo="@Typo.body2" Class="mud-text-disabled">—</MudText>
+                        }
+                    </MudTd>
+                    <MudTd Style="text-align:end;">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                       Size="@Size.Small"
+                                       Color="@Color.Primary"
+                                       OnClick="() => ShowEditModal(c)"
+                                       Title="Editar" />
+                        <MudIconButton Icon="@Icons.Material.Filled.AddCircleOutline"
+                                       Size="@Size.Small"
+                                       Color="@Color.Success"
+                                       OnClick="() => ShowCreateChildModal(c)"
+                                       Title="Agregar subcuenta" />
+                        @if (c.SaldoActual == 0)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                           Size="@Size.Small"
+                                           Color="@Color.Error"
+                                           OnClick="() => ConfirmDeleteCuenta(c)"
+                                           Title="Eliminar" />
+                        }
+                    </MudTd>
+                </MudTr>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+}
+
+@* ── Variables ── *@
 @code {
+
+    // ── Estado general ──
     private List<CuentaContableDto> allCuentas = new();
     private List<CuentaContableDto> treeCuentas = new();
     private List<FlatTreeRow> flatTreeRows = new();
@@ -297,20 +433,17 @@
     private string viewMode = "tree";
     private string searchText = "";
 
-    // Modal
-    private bool showModal;
-    private bool isEditing;
-    private int editingId;
-    private string formCodigo = "";
-    private string formNombre = "";
-    private byte formTipo = 1;
-    private byte formNaturaleza = 1;
-    private int formNivel = 1;
-    private int? formPadreId;
-    private bool formPermiteMovimientos;
-    private string? formDescripcion;
+    // ── Import CSV ──
+    private IBrowserFile? _selectedFile;
+    private string? _selectedFileName;
+    private bool _previewLoading;
+    private bool _previewDone;
+    private bool _hasPreviewErrors;
+    private bool _importLoading;
+    private PlanCuentaImportPreviewDto? _previewResult;
+    private PlanCuentaImportResultDto? _importResult;
 
-    // Expanded nodes
+    // ── Expanded nodes ──
     private HashSet<string> expandedCodes = new();
 
     private record FlatTreeRow(CuentaContableDto Cuenta, int Depth, string? ParentCode);
@@ -353,7 +486,6 @@
     private bool IsRowVisible(FlatTreeRow row)
     {
         if (row.Depth == 0) return true;
-        // Walk up parentCode chain — all ancestors must be expanded
         var current = row;
         while (current.ParentCode != null)
         {
@@ -396,89 +528,72 @@
         return cuentas.Where(c => c.Codigo.ToLower().Contains(s) || c.Nombre.ToLower().Contains(s)).ToList();
     }
 
-    // ?? CRUD ??
-    private void ShowCreateModal()
+    // ── CRUD con MudDialog ──
+    private async Task ShowCreateModal()
     {
-        isEditing = false; editingId = 0;
-        formCodigo = ""; formNombre = ""; formTipo = 1; formNaturaleza = 1;
-        formNivel = 1; formPadreId = null; formPermiteMovimientos = false; formDescripcion = null;
-        showModal = true;
-    }
-
-    private void ShowCreateChildModal(CuentaContableDto padre)
-    {
-        isEditing = false; editingId = 0;
-        formCodigo = padre.Codigo + ".";
-        formNombre = "";
-        formTipo = byte.TryParse(TipoToNumber(padre.Tipo), out var t) ? t : (byte)1;
-        formNaturaleza = padre.Naturaleza == "Acreedora" ? (byte)2 : (byte)1;
-        formNivel = padre.Nivel + 1;
-        formPadreId = padre.CuentaContableId;
-        formPermiteMovimientos = false;
-        formDescripcion = null;
-        showModal = true;
-    }
-
-    private void ShowEditModal(CuentaContableDto cuenta)
-    {
-        isEditing = true; editingId = cuenta.CuentaContableId;
-        formCodigo = cuenta.Codigo;
-        formNombre = cuenta.Nombre;
-        formTipo = byte.TryParse(TipoToNumber(cuenta.Tipo), out var t) ? t : (byte)1;
-        formNaturaleza = cuenta.Naturaleza == "Acreedora" ? (byte)2 : (byte)1;
-        formNivel = cuenta.Nivel;
-        formPadreId = cuenta.CuentaPadreId;
-        formPermiteMovimientos = cuenta.PermiteMovimientos;
-        formDescripcion = cuenta.Descripcion;
-        showModal = true;
-    }
-
-    private void CloseModal() => showModal = false;
-
-    private async Task SaveCuenta()
-    {
-        saving = true; errorMessage = null;
-        try
+        var parameters = new DialogParameters<CuentaDialog>
         {
-            if (isEditing)
-            {
-                var dto = new UpdateCuentaContableDto
-                {
-                    Nombre = formNombre,
-                    Tipo = formTipo,
-                    Naturaleza = formNaturaleza,
-                    PermiteMovimientos = formPermiteMovimientos,
-                    Descripcion = formDescripcion
-                };
-                var r = await CuentaService.UpdateAsync(editingId, dto);
-                if (r.Success) { successMessage = $"Cuenta {formCodigo} actualizada."; CloseModal(); await LoadData(); }
-                else errorMessage = r.Message;
-            }
-            else
-            {
-                var dto = new CreateCuentaContableDto
-                {
-                    Codigo = formCodigo,
-                    Nombre = formNombre,
-                    Tipo = formTipo,
-                    Naturaleza = formNaturaleza,
-                    Nivel = formNivel,
-                    CuentaPadreId = formPadreId,
-                    PermiteMovimientos = formPermiteMovimientos,
-                    Descripcion = formDescripcion
-                };
-                var r = await CuentaService.CreateAsync(dto);
-                if (r.Success) { successMessage = $"Cuenta {formCodigo} creada."; CloseModal(); await LoadData(); }
-                else errorMessage = r.Message;
-            }
+            { x => x.IsEditing, false },
+            { x => x.AllCuentas, allCuentas }
+        };
+        var dialog = await DialogService.ShowAsync<CuentaDialog>("Nueva Cuenta Contable", parameters);
+        var result = await dialog.Result;
+        if (!result.Canceled)
+        {
+            successMessage = "Cuenta creada correctamente.";
+            await LoadData();
         }
-        catch (Exception ex) { errorMessage = ex.Message; }
-        finally { saving = false; }
     }
 
-    private async Task DeleteCuenta(CuentaContableDto cuenta)
+    private async Task ShowCreateChildModal(CuentaContableDto padre)
     {
-        if (!await JS.InvokeAsync<bool>("confirm", $"¿Eliminar cuenta {cuenta.Codigo} — {cuenta.Nombre}?")) return;
+        var parameters = new DialogParameters<CuentaDialog>
+        {
+            { x => x.IsEditing, false },
+            { x => x.AllCuentas, allCuentas },
+            { x => x.PadreCuenta, padre }
+        };
+        var dialog = await DialogService.ShowAsync<CuentaDialog>("Nueva Subcuenta", parameters);
+        var result = await dialog.Result;
+        if (!result.Canceled)
+        {
+            successMessage = "Subcuenta creada correctamente.";
+            await LoadData();
+        }
+    }
+
+    private async Task ShowEditModal(CuentaContableDto cuenta)
+    {
+        var parameters = new DialogParameters<CuentaDialog>
+        {
+            { x => x.IsEditing, true },
+            { x => x.AllCuentas, allCuentas },
+            { x => x.CuentaEditando, cuenta }
+        };
+        var dialog = await DialogService.ShowAsync<CuentaDialog>("Editar Cuenta Contable", parameters);
+        var result = await dialog.Result;
+        if (!result.Canceled)
+        {
+            successMessage = "Cuenta actualizada correctamente.";
+            await LoadData();
+        }
+    }
+
+    private async Task ConfirmDeleteCuenta(CuentaContableDto cuenta)
+    {
+        var parameters = new DialogParameters<AppConfirmDialog>
+        {
+            { x => x.Title, "Eliminar cuenta contable" },
+            { x => x.Message, $"¿Eliminar la cuenta {cuenta.Codigo} — {cuenta.Nombre}?" },
+            { x => x.ConfirmText, "Esta acción no se puede deshacer si la cuenta tiene saldos." },
+            { x => x.ConfirmLabel, "Eliminar" },
+            { x => x.ConfirmColor, Color.Error },
+            { x => x.ConfirmIcon, Icons.Material.Filled.Delete }
+        };
+        var dialog = await DialogService.ShowAsync<AppConfirmDialog>("Confirmar eliminación", parameters);
+        var result = await dialog.Result;
+        if (result.Canceled) return;
+
         try
         {
             var r = await CuentaService.DeleteAsync(cuenta.CuentaContableId);
@@ -490,7 +605,19 @@
 
     private async Task SeedPlanCuentas()
     {
-        if (!await JS.InvokeAsync<bool>("confirm", "¿Generar el plan de cuentas estándar Bolivia/NIIF? Esto creará ~100 cuentas predefinidas.")) return;
+        var parameters = new DialogParameters<AppConfirmDialog>
+        {
+            { x => x.Title, "Generar plan de cuentas estándar" },
+            { x => x.Message, "¿Generar el plan de cuentas estándar Bolivia/NIIF? Esto creará cuentas predefinidas." },
+            { x => x.ConfirmText, "Solo debe ejecutarse una vez por empresa." },
+            { x => x.ConfirmLabel, "Generar" },
+            { x => x.ConfirmColor, Color.Success },
+            { x => x.ConfirmIcon, Icons.Material.Filled.AutoAwesome }
+        };
+        var dialog = await DialogService.ShowAsync<AppConfirmDialog>("Confirmar", parameters);
+        var result = await dialog.Result;
+        if (result.Canceled) return;
+
         seeding = true; errorMessage = null;
         try
         {
@@ -502,26 +629,93 @@
         finally { seeding = false; }
     }
 
-    // ?? Helpers ??
-    private static string GetTipoBadge(string tipo) => tipo switch
+    // ── Import CSV ──
+    private void OnFileSelected(IBrowserFile[] files)
     {
-        "Activo" => "bg-primary",
-        "Pasivo" => "bg-danger",
-        "Patrimonio" => "bg-success",
-        "Ingreso" => "bg-info text-dark",
-        "Gasto" => "bg-warning text-dark",
-        "Costo" => "bg-secondary",
-        _ => "bg-secondary"
-    };
+        if (files.Length == 0) return;
+        _selectedFile = files[0];
+        _selectedFileName = _selectedFile.Name;
+        _previewResult = null;
+        _importResult = null;
+        _previewDone = false;
+        _hasPreviewErrors = false;
+    }
 
-    private static string TipoToNumber(string tipo) => tipo switch
+    private async Task PreviewImport()
     {
-        "Activo" => "1",
-        "Pasivo" => "2",
-        "Patrimonio" => "3",
-        "Ingreso" => "4",
-        "Gasto" => "5",
-        "Costo" => "6",
-        _ => "1"
-    };
+        if (_selectedFile is null) return;
+        _previewLoading = true;
+        _previewResult = null;
+        _importResult = null;
+        _hasPreviewErrors = false;
+        errorMessage = null;
+        try
+        {
+            using var ms = new MemoryStream();
+            await _selectedFile.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024).CopyToAsync(ms);
+            ms.Position = 0;
+            var content = new MultipartFormDataContent();
+            content.Add(new ByteArrayContent(ms.ToArray()), "file", _selectedFileName ?? "cuentas.csv");
+            _previewResult = await CuentaService.ImportPreviewAsync(content);
+            _previewDone = true;
+            _hasPreviewErrors = !_previewResult.CanImport;
+            if (_previewResult.CanImport)
+            {
+                Snackbar.Add($"✓ {_previewResult.ValidRows} cuentas válidas en vista previa", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add($"⚠ {_previewResult.InvalidRows} filas con errores en la vista previa", Severity.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al procesar archivo: {ex.Message}";
+            Snackbar.Add(errorMessage, Severity.Error);
+        }
+        finally { _previewLoading = false; }
+    }
+
+    private async Task ConfirmImport()
+    {
+        if (_selectedFile is null || _previewResult is null || _hasPreviewErrors) return;
+        _importLoading = true;
+        _importResult = null;
+        errorMessage = null;
+        try
+        {
+            using var ms = new MemoryStream();
+            await _selectedFile.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024).CopyToAsync(ms);
+            ms.Position = 0;
+            var content = new MultipartFormDataContent();
+            content.Add(new ByteArrayContent(ms.ToArray()), "file", _selectedFileName ?? "cuentas.csv");
+            _importResult = await CuentaService.ImportConfirmAsync(content);
+            if (_importResult.Errors == 0)
+            {
+                Snackbar.Add($"✓ {_importResult.Created} cuentas importadas", Severity.Success);
+                await LoadData();
+                ClearImport();
+            }
+            else
+            {
+                Snackbar.Add($"⚠ {_importResult.Created} importadas, {_importResult.Skipped} omitidas, {_importResult.Errors} errores", Severity.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error al importar: {ex.Message}";
+            Snackbar.Add(errorMessage, Severity.Error);
+        }
+        finally { _importLoading = false; }
+    }
+
+    private void ClearImport()
+    {
+        _selectedFile = null;
+        _selectedFileName = null;
+        _previewResult = null;
+        _importResult = null;
+        _previewDone = false;
+        _hasPreviewErrors = false;
+    }
 }

@@ -1,0 +1,184 @@
+@page "/mi-perfil"
+@attribute [Authorize]
+@inject AuthHttpService AuthSvc
+@inject EmpresaStateService EmpresaState
+@inject SesionUsuarioStateService SesionState
+@inject JwtAuthStateProvider AuthState
+@inject NavigationManager Nav
+
+<PageTitle>Mi Perfil - AgoraHub360 ERP</PageTitle>
+
+<div class="container-fluid">
+    <div class="row mb-3">
+        <div class="col">
+            <h3><i class="bi bi-person-circle"></i> Mi Perfil</h3>
+            <p class="text-muted mb-0">Información de mi cuenta y sesión</p>
+        </div>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Cargando...</span>
+            </div>
+        </div>
+    }
+    else if (_error is not null)
+    {
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle-fill"></i> @_error
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            @* Datos del usuario *@
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="card-title mb-0"><i class="bi bi-person"></i> Datos del Usuario</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-sm table-borderless mb-0">
+                            <tr>
+                                <td class="fw-bold text-muted" style="width:140px;">Nombre</td>
+                                <td>@_userName</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold text-muted">Email</td>
+                                <td>@_userEmail</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold text-muted">Rol</td>
+                                <td>
+                                    <span class="badge bg-primary">@_userRole</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold text-muted">Estado</td>
+                                <td>
+                                    <span class="badge bg-success">Activo</span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            @* Contexto de sesión *@
+            <div class="col-md-6">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="card-title mb-0"><i class="bi bi-building"></i> Contexto de Sesión</h5>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-sm table-borderless mb-0">
+                            <tr>
+                                <td class="fw-bold text-muted" style="width:140px;">Empresa</td>
+                                <td>@_empresaName</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold text-muted">Sucursal</td>
+                                <td>@_sucursalName</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold text-muted">Autenticado</td>
+                                <td>
+                                    <span class="badge bg-success">Sí</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold text-muted">Sesión activa</td>
+                                <td>
+                                    <span class="badge bg-success">Sí</span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @* Botones *@
+        <div class="mt-4 d-flex gap-2">
+            <button class="btn btn-outline-secondary" @onclick="GoBack">
+                <i class="bi bi-arrow-left"></i> Volver
+            </button>
+            <button class="btn btn-outline-danger" @onclick="LogoutAsync">
+                <i class="bi bi-box-arrow-right"></i> Cerrar sesión
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    private bool _loading = true;
+    private string? _error;
+    private string _userName = "";
+    private string _userEmail = "";
+    private string _userRole = "";
+    private string _empresaName = "";
+    private string _sucursalName = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Obtener datos desde claims del token
+            var authState = await AuthState.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (user.Identity?.IsAuthenticated == true)
+            {
+                _userName = user.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value
+                            ?? user.FindFirst("name")?.Value
+                            ?? user.Identity.Name
+                            ?? "—";
+
+                _userEmail = user.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+                             ?? user.FindFirst("email")?.Value
+                             ?? "—";
+
+                var platformRole = SesionState.PlatformRole;
+                var tenantRole = SesionState.TenantRole;
+                _userRole = !string.IsNullOrWhiteSpace(platformRole) && platformRole != "None"
+                    ? platformRole
+                    : !string.IsNullOrWhiteSpace(tenantRole) && tenantRole != "NoAccess"
+                        ? tenantRole
+                        : "—";
+
+                var empresa = EmpresaState.EmpresaActiva;
+                _empresaName = empresa?.Nombre ?? "No seleccionada";
+
+                var sucursalId = SesionState.SucursalActivaId;
+                _sucursalName = sucursalId.HasValue
+                    ? $"Sucursal #{sucursalId.Value}"
+                    : "No seleccionada";
+            }
+            else
+            {
+                _error = "No hay sesión activa.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"Error al cargar perfil: {ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void GoBack()
+    {
+        Nav.NavigateTo("/");
+    }
+
+    private async Task LogoutAsync()
+    {
+        await AuthState.LogoutAsync();
+        Nav.NavigateTo("/login", forceLoad: true);
+    }
+}

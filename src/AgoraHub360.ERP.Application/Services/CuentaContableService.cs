@@ -1,12 +1,15 @@
 namespace AgoraHub360.ERP.Application.Services;
 
+using System.Text;
 using AgoraHub360.ERP.Application.Common;
 using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Domain.Entities.ACC;
 using AgoraHub360.ERP.Domain.Enums;
 using AgoraHub360.ERP.Domain.Interfaces;
 using AgoraHub360.ERP.Shared.DTOs.Contabilidad;
+using AgoraHub360.ERP.Shared.DTOs.Contabilidad.Importacion;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 
 public class CuentaContableService : ICuentaContableService
 {
@@ -254,6 +257,272 @@ public class CuentaContableService : ICuentaContableService
 
         InvalidateCache(empresaId.Value);
         return Result<int>.Success(cuentas.Count);
+    }
+
+    // ── Importación CSV ─────────────────────────────────────────────────────
+
+    public async Task<Result<PlanCuentaImportPreviewDto>> PreviewImportAsync(
+        string csvContent, CancellationToken ct)
+    {
+        var empresaId = _currentUser.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<PlanCuentaImportPreviewDto>.Failure("No active company.");
+
+        if (string.IsNullOrWhiteSpace(csvContent))
+            return Result<PlanCuentaImportPreviewDto>.Failure("CSV content is empty.");
+
+        var preview = new PlanCuentaImportPreviewDto();
+        var allRows = new List<PlanCuentaImportRowDto>();
+
+        var lines = csvContent.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        if (lines.Length < 2)
+        {
+            preview.CanImport = false;
+            preview.TotalRows = lines.Length;
+            return Result<PlanCuentaImportPreviewDto>.Success(preview);
+        }
+
+        // Skip header row
+        var dataLines = lines.Skip(1).Where(l => !string.IsNullOrWhiteSpace(l.Trim('\r', ' '))).ToArray();
+        preview.TotalRows = dataLines.Length;
+
+        // Pre-load existing codes for this company
+        var existentes = await _repo.FindAsync(c => c.EmpresaId == empresaId.Value && c.Activo, ct);
+        var codigosExistentes = new HashSet<string>(existentes.Select(c => c.Codigo), StringComparer.OrdinalIgnoreCase);
+        var codigosEnArchivo = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var rowsByCodigo = new Dictionary<string, PlanCuentaImportRowDto>(StringComparer.OrdinalIgnoreCase);
+
+        int filaNum = 0;
+        foreach (var rawLine in dataLines)
+        {
+            filaNum++;
+            var line = rawLine.Trim('\r', ' ');
+            if (string.IsNullOrWhiteSpace(line)) continue;
+
+            var row = new PlanCuentaImportRowDto { RowNumber = filaNum };
+            var errors = new List<string>();
+
+            var cols = ParseCsvLine(line);
+
+            // ── Codigo (required) ──
+            if (cols.Count < 1 || string.IsNullOrWhiteSpace(cols[0]))
+                errors.Add("El código es obligatorio.");
+            else
+            {
+                row.Codigo = cols[0].Trim();
+                if (!codigosEnArchivo.Add(row.Codigo))
+                    errors.Add($"Código duplicado en el archivo: '{row.Codigo}'.");
+                else if (codigosExistentes.Contains(row.Codigo))
+                    errors.Add($"El código '{row.Codigo}' ya existe en el plan de cuentas.");
+            }
+
+            // ── Nombre (required) ──
+            if (cols.Count < 2 || string.IsNullOrWhiteSpace(cols[1]))
+                errors.Add("El nombre es obligatorio.");
+            else
+                row.Nombre = cols[1].Trim();
+
+            // ── TipoCuenta (required) ──
+            if (cols.Count < 3 || string.IsNullOrWhiteSpace(cols[2]))
+                errors.Add("El tipo de cuenta es obligatorio.");
+            else
+            {
+                row.TipoCuenta = cols[2].Trim();
+                if (MapTipoCuenta(row.TipoCuenta) is null)
+                    errors.Add($"Tipo de cuenta inválido '{row.TipoCuenta}'. Valores: Activo, Pasivo, Patrimonio, Ingreso, Gasto, Costo.");
+            }
+
+            // ── CodigoPadre (optional) ──
+            if (cols.Count > 4 && !string.IsNullOrWhiteSpace(cols[4]))
+            {
+                row.CodigoPadre = cols[4].Trim();
+                bool parentInFile = rowsByCodigo.ContainsKey(row.CodigoPadre) || codigosEnArchivo.Contains(row.CodigoPadre);
+                bool parentInDb = codigosExistentes.Contains(row.CodigoPadre);
+                if (!parentInFile && !parentInDb)
+                    errors.Add($"El código de cuenta padre '{row.CodigoPadre}' no existe en el archivo ni en la BD.");
+            }
+
+            // ── Nivel ──
+            if (cols.Count > 5 && int.TryParse(cols[5].Trim(), out var parsedNivel) && parsedNivel > 0)
+                row.Nivel = parsedNivel;
+            else
+                row.Nivel = row.Codigo.Count(c => c == '.') + 1;
+
+            // ── EsMovimiento ──
+            if (cols.Count > 6)
+                row.EsMovimiento = cols[6].Trim().ToLowerInvariant() switch
+                {
+                    "true" or "1" or "yes" or "sí" or "si" => true,
+                    _ => false
+                };
+
+            // ── Activo ──
+            if (cols.Count > 7)
+                row.Activo = cols[7].Trim().ToLowerInvariant() switch
+                {
+                    "false" or "0" or "no" => false,
+                    _ => true
+                };
+
+            // Validate parent not movimiento
+            if (row.CodigoPadre is not null && rowsByCodigo.TryGetValue(row.CodigoPadre, out var parentRow) && parentRow.EsMovimiento)
+                errors.Add($"La cuenta padre '{row.CodigoPadre}' es de detalle (EsMovimiento=true). No puede tener subcuentas.");
+
+            // Validate level > 1 requires parent
+            if (row.Nivel > 1 && string.IsNullOrEmpty(row.CodigoPadre))
+                errors.Add($"La cuenta tiene nivel {row.Nivel} (>1) y requiere un código de cuenta padre.");
+
+            row.IsValid = errors.Count == 0;
+            row.Errors = errors;
+            allRows.Add(row);
+            if (row.IsValid)
+                rowsByCodigo[row.Codigo] = row;
+        }
+
+        preview.Rows = allRows;
+        preview.ValidRows = allRows.Count(r => r.IsValid);
+        preview.InvalidRows = allRows.Count(r => !r.IsValid);
+        preview.CanImport = preview.ValidRows > 0 && preview.InvalidRows == 0;
+
+        return Result<PlanCuentaImportPreviewDto>.Success(preview);
+    }
+
+    public async Task<Result<PlanCuentaImportResultDto>> ConfirmImportAsync(
+        string csvContent, CancellationToken ct)
+    {
+        var empresaId = _currentUser.EmpresaId;
+        if (!empresaId.HasValue)
+            return Result<PlanCuentaImportResultDto>.Failure("No active company.");
+
+        if (string.IsNullOrWhiteSpace(csvContent))
+            return Result<PlanCuentaImportResultDto>.Failure("CSV content is empty.");
+
+        var previewResult = await PreviewImportAsync(csvContent, ct);
+        if (!previewResult.IsSuccess)
+            return Result<PlanCuentaImportResultDto>.Failure(previewResult.Error!);
+
+        var preview = previewResult.Value!;
+        if (!preview.CanImport || preview.Rows.Count == 0)
+            return Result<PlanCuentaImportResultDto>.Failure("La validación previa falló. Corrija los errores antes de importar.");
+
+        var validRows = preview.Rows.Where(r => r.IsValid).ToList();
+        var result = new PlanCuentaImportResultDto();
+        var errorRows = new List<ImportErrorDto>();
+
+        // Pre-load existing codes for parent ID resolution
+        var existentes = await _repo.FindAsync(c => c.EmpresaId == empresaId.Value && c.Activo, ct);
+        var codigoToIdMap = existentes.ToDictionary(c => c.Codigo, c => (int?)c.CuentaContableId, StringComparer.OrdinalIgnoreCase);
+
+        // Insert in order: parents before children
+        var ordered = validRows.OrderBy(r => r.Nivel).ThenBy(r => r.Codigo.Length).ThenBy(r => r.Codigo).ToList();
+        var inserted = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        int creadas = 0;
+
+        foreach (var row in ordered)
+        {
+            try
+            {
+                int? padreId = null;
+                if (!string.IsNullOrEmpty(row.CodigoPadre))
+                {
+                    if (inserted.TryGetValue(row.CodigoPadre, out var newId))
+                        padreId = newId;
+                    else if (codigoToIdMap.TryGetValue(row.CodigoPadre, out var existingId))
+                        padreId = existingId;
+                }
+
+                var cuenta = new CuentaContable
+                {
+                    EmpresaId = empresaId.Value,
+                    Codigo = row.Codigo,
+                    Nombre = row.Nombre,
+                    Tipo = MapTipoCuenta(row.TipoCuenta) ?? TipoCuenta.Activo,
+                    Naturaleza = NaturalezaCuenta.Deudora,
+                    Nivel = row.Nivel,
+                    CuentaPadreId = padreId,
+                    PermiteMovimientos = row.EsMovimiento,
+                    Descripcion = null,
+                    SaldoActual = 0,
+                    Activo = row.Activo
+                };
+
+                await _repo.AddAsync(cuenta, ct);
+                await _unitOfWork.SaveChangesAsync(ct);
+                inserted[row.Codigo] = cuenta.CuentaContableId;
+                creadas++;
+            }
+            catch (Exception ex)
+            {
+                errorRows.Add(new ImportErrorDto { Fila = row.RowNumber, Mensaje = $"Error al importar '{row.Codigo}': {ex.Message}" });
+            }
+        }
+
+        if (creadas > 0) InvalidateCache(empresaId.Value);
+
+        result.Created = creadas;
+        result.Skipped = validRows.Count - creadas;
+        result.Errors = errorRows.Count;
+        result.ErrorRows = errorRows;
+        result.Message = errorRows.Count == 0
+            ? $"Se importaron {creadas} cuentas correctamente."
+            : $"Se importaron {creadas} cuentas con {errorRows.Count} errores.";
+
+        return Result<PlanCuentaImportResultDto>.Success(result);
+    }
+
+    // ── CSV parsing helpers ──
+
+    /// <summary>Parses a CSV line respecting simple quoted fields.</summary>
+    private static List<string> ParseCsvLine(string line)
+    {
+        var result = new List<string>();
+        var current = new System.Text.StringBuilder();
+        bool inQuotes = false;
+
+        for (int i = 0; i < line.Length; i++)
+        {
+            var c = line[i];
+            if (c == '"')
+            {
+                inQuotes = !inQuotes;
+            }
+            else if (c == ';' && !inQuotes)
+            {
+                result.Add(current.ToString());
+                current.Clear();
+            }
+            else
+            {
+                current.Append(c);
+            }
+        }
+
+        result.Add(current.ToString());
+        return result;
+    }
+
+    private static TipoCuenta? MapTipoCuenta(string tipo)
+    {
+        return tipo.Trim().ToLowerInvariant() switch
+        {
+            "activo" or "1" => TipoCuenta.Activo,
+            "pasivo" or "2" => TipoCuenta.Pasivo,
+            "patrimonio" or "3" => TipoCuenta.Patrimonio,
+            "ingreso" or "4" => TipoCuenta.Ingreso,
+            "gasto" or "5" => TipoCuenta.Gasto,
+            "costo" or "6" => TipoCuenta.Costo,
+            _ => null
+        };
+    }
+
+    private static string MapNaturaleza(string naturaleza)
+    {
+        return naturaleza.Trim().ToLowerInvariant() switch
+        {
+            "deudora" or "1" => "Deudora",
+            "acreedora" or "2" => "Acreedora",
+            _ => null!
+        };
     }
 
     // ── Cache helpers ──

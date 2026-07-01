@@ -3,6 +3,7 @@ namespace AgoraHub360.ERP.Api.Controllers.V1;
 using AgoraHub360.ERP.Application.Interfaces;
 using AgoraHub360.ERP.Shared.DTOs;
 using AgoraHub360.ERP.Shared.DTOs.Contabilidad;
+using AgoraHub360.ERP.Shared.DTOs.Contabilidad.Importacion;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -94,5 +95,58 @@ public class CuentasContablesController : ControllerBase
         if (!result.IsSuccess)
             return BadRequest(ApiResponse<int>.Fail(result.Error!));
         return Ok(ApiResponse<int>.Ok(result.Value!, $"Plan de cuentas generado: {result.Value} cuentas creadas."));
+    }
+
+    // ── Importación CSV ─────────────────────────────────────────────────────
+
+    /// <summary>Descarga la plantilla CSV de ejemplo.</summary>
+    [HttpGet("import-template")]
+    public IActionResult DownloadTemplate()
+    {
+        var csv = "Codigo;Nombre;TipoCuenta;Naturaleza;CodigoPadre;Nivel;EsMovimiento;Activo;Descripcion\n"
+                + "1;ACTIVO;Activo;Deudora;;1;false;true;\n"
+                + "1.1;ACTIVO CORRIENTE;Activo;Deudora;1;2;false;true;\n"
+                + "1.1.1;DISPONIBLE;Activo;Deudora;1.1;3;false;true;\n"
+                + "1.1.1.01;CAJA;Activo;Deudora;1.1.1;4;true;true;Caja general\n"
+                + "1.1.1.02;BANCOS;Activo;Deudora;1.1.1;4;true;true;Cuentas bancarias\n";
+        var bytes = System.Text.Encoding.UTF8.GetPreamble().Concat(System.Text.Encoding.UTF8.GetBytes(csv)).ToArray();
+        return File(bytes, "text/csv", "plantilla-plan-cuentas.csv");
+    }
+
+    /// <summary>Valida un archivo CSV y devuelve vista previa.</summary>
+    [HttpPost("import-preview")]
+    public async Task<IActionResult> ImportPreview(IFormFile file, CancellationToken ct)
+    {
+        if (file is null || file.Length == 0)
+            return BadRequest(ApiResponse<PlanCuentaImportPreviewDto>.Fail("Debe enviar un archivo CSV."));
+
+        if (!file.FileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
+            return BadRequest(ApiResponse<PlanCuentaImportPreviewDto>.Fail("Solo se aceptan archivos CSV."));
+
+        using var reader = new StreamReader(file.OpenReadStream());
+        var csvContent = await reader.ReadToEndAsync(ct);
+        var result = await _service.PreviewImportAsync(csvContent, ct);
+
+        if (!result.IsSuccess)
+            return BadRequest(ApiResponse<PlanCuentaImportPreviewDto>.Fail(result.Error!));
+
+        return Ok(ApiResponse<PlanCuentaImportPreviewDto>.Ok(result.Value!));
+    }
+
+    /// <summary>Ejecuta la importación de un archivo CSV previamente validado.</summary>
+    [HttpPost("import-confirm")]
+    public async Task<IActionResult> ImportConfirm(IFormFile file, CancellationToken ct)
+    {
+        if (file is null || file.Length == 0)
+            return BadRequest(ApiResponse<PlanCuentaImportResultDto>.Fail("Debe enviar un archivo CSV."));
+
+        using var reader = new StreamReader(file.OpenReadStream());
+        var csvContent = await reader.ReadToEndAsync(ct);
+        var result = await _service.ConfirmImportAsync(csvContent, ct);
+
+        if (!result.IsSuccess)
+            return BadRequest(ApiResponse<PlanCuentaImportResultDto>.Fail(result.Error!));
+
+        return Ok(ApiResponse<PlanCuentaImportResultDto>.Ok(result.Value!));
     }
 }
