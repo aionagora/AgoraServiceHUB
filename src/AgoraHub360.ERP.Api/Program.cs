@@ -17,6 +17,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
@@ -66,6 +67,7 @@ builder.Services.AddAuthentication(options =>
     StubAuthHandler.SchemeName, _ => { });
 
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<AdminPasswordResetService>();
 builder.Services.AddScoped<IAuthorizationHandler, TenantMembershipHandler>();
 builder.Services.AddScoped<IAuthorizationHandler, BranchAccessHandler>();
 
@@ -270,6 +272,25 @@ app.UseMiddleware<GlobalExceptionMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
+    // ──── Aplicar migraciones pendientes (Development only) ────
+    // Crea/actualiza el esquema de la base de datos automaticamente.
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<AgoraDbContext>();
+        await db.Database.MigrateAsync();
+    }
+
+    // ──── Admin password reset (Development only) ────
+    // Busca al usuario admin@agorahub360.com y actualiza su contraseña
+    // usando el valor configurado en AdminPasswordReset:Password.
+    // Para configurar: dotnet user-secrets set "AdminPasswordReset:Password" "NuevaClave123"
+    // Para retirar: eliminar este bloque y AdminPasswordResetService.cs
+    using (var scope = app.Services.CreateScope())
+    {
+        var resetService = scope.ServiceProvider.GetRequiredService<AdminPasswordResetService>();
+        await resetService.ResetAdminPasswordAsync();
+    }
+
     app.UseSwagger();
     app.UseSwaggerUI(options =>
     {
